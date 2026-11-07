@@ -21,6 +21,15 @@ private Q_SLOTS:
   void roundTripOptionsListFormat();
   void truncatedOptionsListReturnsFalse();
   void invalidIntegerLengthThrows();
+  void writeStringBinaryExact_data();
+  void writeStringBinaryExact();
+  void writeRawBinaryExact_data();
+  void writeRawBinaryExact();
+  void mixedWriterFormatExact();
+  void readBinaryStrings_data();
+  void readBinaryStrings();
+  void truncatedStringPreservesDestination_data();
+  void truncatedStringPreservesDestination();
 
 private:
   Log m_log;

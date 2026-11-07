@@ -16,8 +16,51 @@
 #include <algorithm>
 #include <cstring>
 #include <deque>
+#include <set>
 
 namespace {
+
+std::string binaryPayload(size_t size)
+{
+  std::string result(size, '\0');
+  for (size_t i = 0; i < size; ++i) {
+    result[i] = static_cast<char>((i * 131 + 17) & 0xff);
+  }
+  if (size > 0) {
+    result[0] = '\0';
+  }
+  if (size > 1) {
+    result[1] = static_cast<char>(0xff);
+  }
+  return result;
+}
+
+std::string encodedString(const std::string &payload)
+{
+  const auto size = static_cast<uint32_t>(payload.size());
+  std::string result;
+  result.push_back(static_cast<char>((size >> 24) & 0xff));
+  result.push_back(static_cast<char>((size >> 16) & 0xff));
+  result.push_back(static_cast<char>((size >> 8) & 0xff));
+  result.push_back(static_cast<char>(size & 0xff));
+  result += payload;
+  return result;
+}
+
+class ObservedReadStream : public MemoryStream
+{
+public:
+  uint32_t read(void *buffer, uint32_t count) override
+  {
+    const auto result = MemoryStream::read(buffer, count);
+    bytesRead += result;
+    if (result == 0)
+      ++emptyReads;
+    return result;
+  }
+  size_t bytesRead = 0;
+  unsigned emptyReads = 0;
+};
 
 } // namespace
 
@@ -124,6 +167,102 @@ void ProtocolUtilTests::invalidIntegerLengthThrows()
     threw = true;
   }
   QVERIFY(threw);
+}
+
+void ProtocolUtilTests::writeStringBinaryExact_data()
+{
+  QTest::addColumn<int>("payloadBytes");
+  for (const int size : {0, 32, 4096, 262144}) {
+    QTest::newRow(std::to_string(size).c_str()) << size;
+  }
+}
+
+void ProtocolUtilTests::writeStringBinaryExact()
+{
+  QFETCH(int, payloadBytes);
+  const std::string payload = binaryPayload(payloadBytes);
+  BufferWriteStream stream;
+  ProtocolUtil::writef(&stream, "%s", &payload);
+  QCOMPARE(stream.str(), encodedString(payload));
+}
+
+void ProtocolUtilTests::writeRawBinaryExact_data()
+{
+  writeStringBinaryExact_data();
+}
+
+void ProtocolUtilTests::writeRawBinaryExact()
+{
+  QFETCH(int, payloadBytes);
+  const std::string payload = binaryPayload(payloadBytes);
+  const uint8_t sentinel = 0;
+  const auto *data = payload.empty() ? &sentinel : reinterpret_cast<const uint8_t *>(payload.data());
+  BufferWriteStream stream;
+  ProtocolUtil::writef(&stream, "%S", static_cast<uint32_t>(payload.size()), data);
+  QCOMPARE(stream.str(), encodedString(payload));
+}
+
+void ProtocolUtilTests::mixedWriterFormatExact()
+{
+  const auto text = binaryPayload(32);
+  const auto raw = binaryPayload(4096);
+  BufferWriteStream stream;
+  ProtocolUtil::writef(
+      &stream, "MIXD%2i%s%S", uint32_t{0x1234}, &text, static_cast<uint32_t>(raw.size()),
+      reinterpret_cast<const uint8_t *>(raw.data())
+  );
+  QCOMPARE(stream.str(), std::string("MIXD\x12\x34", 6) + encodedString(text) + encodedString(raw));
+}
+
+void ProtocolUtilTests::readBinaryStrings_data()
+{
+  QTest::addColumn<int>("payloadBytes");
+  for (const int size : {0, 1, 127, 128, 129, 4096, 65536}) {
+    QTest::newRow(std::to_string(size).c_str()) << size;
+  }
+}
+
+void ProtocolUtilTests::readBinaryStrings()
+{
+  QFETCH(int, payloadBytes);
+  const auto payload = binaryPayload(payloadBytes);
+  ObservedReadStream stream;
+  stream.push(encodedString(payload));
+  std::string destination = "unchanged sentinel";
+  QVERIFY(ProtocolUtil::readf(&stream, "%s", &destination));
+  QCOMPARE(destination, payload);
+  QCOMPARE(stream.bytesRead, payload.size() + 4);
+  QCOMPARE(stream.emptyReads, 0u);
+  QCOMPARE(stream.getSize(), 0u);
+}
+
+void ProtocolUtilTests::truncatedStringPreservesDestination_data()
+{
+  QTest::addColumn<int>("payloadBytes");
+  QTest::addColumn<int>("wireBytes");
+  for (int prefix = 0; prefix < 4; ++prefix) {
+    QTest::newRow(("prefix-" + std::to_string(prefix)).c_str()) << 129 << prefix;
+  }
+  for (const int size : {128, 129, 4096}) {
+    for (const int cut : std::set<int>{0, 1, 127, 128, 129, size - 1}) {
+      if (cut < size) {
+        QTest::newRow((std::to_string(size) + "-payload-" + std::to_string(cut)).c_str()) << size << (4 + cut);
+      }
+    }
+  }
+}
+
+void ProtocolUtilTests::truncatedStringPreservesDestination()
+{
+  QFETCH(int, payloadBytes);
+  QFETCH(int, wireBytes);
+  ObservedReadStream stream;
+  stream.push(encodedString(binaryPayload(payloadBytes)).substr(0, wireBytes));
+  std::string destination = "unchanged sentinel";
+  QVERIFY(!ProtocolUtil::readf(&stream, "%s", &destination));
+  QCOMPARE(destination, std::string("unchanged sentinel"));
+  QCOMPARE(stream.bytesRead, static_cast<size_t>(wireBytes));
+  QCOMPARE(stream.emptyReads, 1u);
 }
 
 QTEST_MAIN(ProtocolUtilTests)
