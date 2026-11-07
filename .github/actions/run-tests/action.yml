@@ -12,11 +12,67 @@ runs:
       # Relative to the project directory (the repository root).
       working-directory: .
       run: |
+        # Refuse indirect diagnostic paths before cleanup or the no-tests route.
+        for diagnostic_path in build build/src build/src/unittests \
+          build/src/unittests/test-results build/src/unittests/Testing \
+          build/src/unittests/Testing/Temporary \
+          build/src/unittests/Testing/Temporary/LastTest.log \
+          build/src/unittests/test-results/*.txt; do
+          if [ -L "$diagnostic_path" ]; then
+            echo "Refusing symlink diagnostic path: $diagnostic_path"
+            exit 1
+          fi
+        done
         # BUILD_TESTS=OFF legs (debian-12, ubuntu-24.04, rocky) and Qt5
         # fallback (debian-13-x86_64) produce no unittests directory.
         if [ ! -d "build/src/unittests" ]; then
           echo "No unit tests built (BUILD_TESTS=OFF or Qt5); skipping."
           exit 0
         fi
+        # Remove only fixed build outputs so a crash cannot reuse old results.
+        rm -f -- build/src/unittests/test-results/*.txt \
+          build/src/unittests/Testing/Temporary/LastTest.log
         ctest --test-dir "build/src/unittests" --output-on-failure
       shell: bash
+
+    - name: Show current test failure diagnostics
+      if: ${{ failure() }}
+      working-directory: .
+      shell: bash
+      run: |
+        for diagnostic_path in build build/src build/src/unittests \
+          build/src/unittests/test-results build/src/unittests/Testing \
+          build/src/unittests/Testing/Temporary \
+          build/src/unittests/Testing/Temporary/LastTest.log \
+          build/src/unittests/test-results/*.txt; do
+          if [ -L "$diagnostic_path" ]; then
+            echo "Refusing symlink diagnostic path: $diagnostic_path"
+            exit 1
+          fi
+        done
+        found_result=false
+        for result in build/src/unittests/test-results/*.txt; do
+          if [ -f "$result" ]; then
+            found_result=true
+            echo "=== $result ==="
+            if [ -s "$result" ]; then
+              cat -- "$result"
+            else
+              echo "Empty current Qt text result: $result"
+            fi
+          fi
+        done
+        if [ "$found_result" = false ]; then
+          echo "Missing current Qt text results."
+        fi
+        last_test=build/src/unittests/Testing/Temporary/LastTest.log
+        if [ -f "$last_test" ]; then
+          echo "=== $last_test ==="
+          if [ -s "$last_test" ]; then
+            cat -- "$last_test"
+          else
+            echo "Empty current CTest LastTest.log."
+          fi
+        else
+          echo "Missing current CTest LastTest.log."
+        fi
