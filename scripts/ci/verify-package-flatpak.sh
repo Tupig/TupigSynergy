@@ -42,9 +42,25 @@ dbus-run-session -- flatpak --user run --unshare=network --command=sh "$app_ref"
   if grep -q "not found" "$task_home/dependencies"; then exit 1; fi
   if grep -E " => /" "$task_home/dependencies" | grep -Ev " => /(app|usr)/"; then exit 1; fi
   /app/bin/synergy-core --version
-  QT_QPA_PLATFORM=offscreen QT_DEBUG_PLUGINS=1 LD_DEBUG=libs /app/bin/synergy --help > "$task_home/gui.out" 2> "$task_home/gui.err"
-  grep -E "libqoffscreen.*loaded library|loaded library.*libqoffscreen" "$task_home/gui.err" > /dev/null
-  if grep "calling init:" "$task_home/gui.err" | grep -Ev "calling init: /(app|usr)/"; then exit 1; fi
+  if ! QT_QPA_PLATFORM=offscreen QT_DEBUG_PLUGINS=1 LD_DEBUG=libs /app/bin/synergy --help > "$task_home/gui.out" 2> "$task_home/gui.err"; then
+    cat "$task_home/gui.err" >&2
+    exit 1
+  fi
+  grep -E "libqoffscreen.*loaded library|loaded library.*libqoffscreen" "$task_home/gui.err" > /dev/null || {
+    cat "$task_home/gui.err" >&2
+    exit 1
+  }
+  sed -n "s/.*calling init:[[:space:]]*//p" "$task_home/gui.err" | while IFS= read -r loaded; do
+    # Resolve inside this sandbox: /lib can alias the shipped /usr runtime.
+    resolved=$(readlink -e -- "$loaded") || {
+      cat "$task_home/gui.err" >&2
+      exit 1
+    }
+    case "$resolved" in
+      /app/*|/usr/*) ;;
+      *) cat "$task_home/gui.err" >&2; exit 1 ;;
+    esac
+  done
   test -d /app/share/licenses/libei
   test -d /app/share/licenses/libportal
 '
