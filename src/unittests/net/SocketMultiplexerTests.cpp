@@ -281,7 +281,7 @@ private Q_SLOTS:
     SocketMultiplexer multiplexer;
     TCPListenSocket listener(nullptr, &multiplexer, IArchNetwork::AddressFamily::INet);
     listener.close();
-    QVERIFY_EXCEPTION_THROWN(listener.close(), IOClosedException);
+    QVERIFY_THROWS_EXCEPTION(IOClosedException, listener.close());
   }
 
   void callbackCanRemoveItselfAndDiscardNextJob()
