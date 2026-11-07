@@ -18,9 +18,9 @@
 
 const QString ScreenSetupModel::m_MimeType = "application/x-synergy-screen";
 
-ScreenSetupModel::ScreenSetupModel(ScreenList &screens, int numColumns, int numRows)
+ScreenSetupModel::ScreenSetupModel(synergy::gui::ScreenList &screens, int numColumns, int numRows)
     : QAbstractTableModel(nullptr),
-      m_Screens(screens),
+      m_screens(screens),
       m_NumColumns(numColumns),
       m_NumRows(numRows)
 {
@@ -138,10 +138,11 @@ bool ScreenSetupModel::dropMimeData(
   if (sourceColumn == pColumn && sourceRow == pRow)
     return false;
 
-  Screen droppedScreen;
+  synergy::gui::Screen droppedScreen;
   stream >> droppedScreen;
 
-  if (auto oldScreen = Screen(screen(pColumn, pRow)); !oldScreen.isNull() && sourceColumn != -1 && sourceRow != -1) {
+  if (auto oldScreen = synergy::gui::Screen(screen(pColumn, pRow));
+      !oldScreen.isNull() && sourceColumn != -1 && sourceRow != -1) {
     // mark the screen so it isn't deleted after the dragndrop succeeded
     // see ScreenSetupView::startDrag()
     oldScreen.setSwapped(true);
@@ -155,14 +156,14 @@ bool ScreenSetupModel::dropMimeData(
   return true;
 }
 
-void ScreenSetupModel::addScreen(const Screen &newScreen)
+void ScreenSetupModel::addScreen(const synergy::gui::Screen &newScreen)
 {
-  m_Screens.addScreenByPriority(newScreen);
+  m_screens.addScreenByPriority(newScreen);
   Q_EMIT screensChanged();
 }
 
 bool ScreenSetupModel::isFull() const
 {
-  auto emptyScreen = std::ranges::find_if(m_Screens, [](const Screen &item) { return item.isNull(); });
-  return (static_cast<QList<Screen>::const_iterator>(emptyScreen) == m_Screens.cend());
+  auto emptyScreen = std::ranges::find_if(m_screens, [](const synergy::gui::Screen &item) { return item.isNull(); });
+  return (static_cast<QList<synergy::gui::Screen>::const_iterator>(emptyScreen) == m_screens.cend());
 }

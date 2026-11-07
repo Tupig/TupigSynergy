@@ -21,9 +21,9 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
-using enum ScreenConfig::SwitchCorner;
+using enum synergy::gui::ScreenConfig::SwitchCorner;
 
-ServerConfigDialog::ServerConfigDialog(QWidget *parent, ServerConfig &config)
+ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConfig &config)
     : QDialog(parent, Qt::WindowTitleHint | Qt::WindowSystemMenuHint),
       ui{std::make_unique<Ui::ServerConfigDialog>()},
       m_originalServerConfig(config),
@@ -160,16 +160,16 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, ServerConfig &config)
   ui->screenSetupView->setModel(&m_screenSetupModel);
 
   auto &screens = serverConfig().screens();
-  auto server = std::ranges::find_if(screens, [this](const Screen &screen) {
+  auto server = std::ranges::find_if(screens, [this](const synergy::gui::Screen &screen) {
     return (screen.name() == serverConfig().getServerName());
   });
 
   if (server == screens.end()) {
-    Screen serverScreen(serverConfig().getServerName());
-    serverScreen.markAsServer();
+    synergy::gui::Screen serverScreen(serverConfig().getServerName());
+    serverScreen.markAsPrimary();
     model().screen(serverConfig().numColumns() / 2, serverConfig().numRows() / 2) = serverScreen;
   } else {
-    server->markAsServer();
+    server->markAsPrimary();
   }
 
   onChange();
@@ -334,7 +334,7 @@ void ServerConfigDialog::toggleClipboard(bool enabled)
 {
   ui->sbClipboardSizeLimit->setEnabled(enabled);
   if (enabled && !ui->sbClipboardSizeLimit->value()) {
-    auto size = static_cast<int>((ServerConfig::defaultClipboardSharingSize() + 512) / 1024);
+    auto size = static_cast<int>((synergy::gui::ServerConfig::defaultClipboardSharingSize() + 512) / 1024);
     ui->sbClipboardSizeLimit->setValue(size ? size : 1);
   }
   serverConfig().setClipboardSharing(enabled);
@@ -498,9 +498,9 @@ bool ServerConfigDialog::browseConfigFile()
 bool ServerConfigDialog::addComputer(const QString &clientName, bool doSilent)
 {
   bool isAccepted = false;
-  Screen newScreen(clientName);
+  synergy::gui::Screen newScreen(clientName);
 
-  if (ScreenSettingsDialog dlg(this, &newScreen, &model().m_Screens); doSilent || dlg.exec() == QDialog::Accepted) {
+  if (ScreenSettingsDialog dlg(this, &newScreen, &model().m_screens); doSilent || dlg.exec() == QDialog::Accepted) {
     model().addScreen(newScreen);
     isAccepted = true;
   }

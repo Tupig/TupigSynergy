@@ -51,3 +51,24 @@ elseif(UNIX)
     )
   endif()
 endif()
+
+# Pure policy seams used by Win32 production code, runnable on every host.
+foreach(policy Desks Hook Watchdog)
+  create_test(
+    NAME MSWindows${policy}Tests
+    DEPENDS base
+    LIBS arch
+    SOURCE MSWindows${policy}Tests.cpp
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/platform"
+  )
+endforeach()
+
+if(WIN32)
+  create_test(
+    NAME MSWindowsKeyStateTests
+    DEPENDS platform
+    LIBS base arch mt app
+    SOURCE MSWindowsKeyStateTests.cpp
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/platform"
+  )
+endif()

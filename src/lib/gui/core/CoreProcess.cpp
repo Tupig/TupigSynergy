@@ -111,7 +111,7 @@ QString CoreProcess::wrapIpv6(const QString &address)
 // CoreProcess
 //
 
-CoreProcess::CoreProcess(const ServerConfig &serverConfig)
+CoreProcess::CoreProcess(const synergy::gui::ServerConfig &serverConfig)
     : m_serverConfig(serverConfig),
       m_daemonIpcClient{new ipc::DaemonIpcClient(this)}
 {

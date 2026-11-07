@@ -6,11 +6,14 @@
  */
 
 #include "ScreenConfig.h"
+namespace synergy::gui {
 
-const char *ScreenConfig::m_ModifierNames[] = {"shift", "ctrl", "alt", "meta", "super", "altgr", "none"};
+const char *ScreenConfig::m_modifierNames[] = {"shift", "ctrl", "alt", "meta", "super", "altgr", "none"};
 
-const char *ScreenConfig::m_FixNames[] = {
+const char *ScreenConfig::m_fixNames[] = {
     "halfDuplexCapsLock", "halfDuplexNumLock", "halfDuplexScrollLock", "xtestIsXineramaUnaware"
 };
 
-const char *ScreenConfig::m_SwitchCornerNames[] = {"top-left", "top-right", "bottom-left", "bottom-right"};
+const char *ScreenConfig::m_switchCornerNames[] = {"top-left", "top-right", "bottom-left", "bottom-right"};
+
+} // namespace synergy::gui

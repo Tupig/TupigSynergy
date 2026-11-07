@@ -14,9 +14,6 @@
 
 #include <QList>
 
-const auto kDefaultColumns = 5;
-const auto kDefaultRows = 3;
-
 class QTextStream;
 class QSettings;
 class QString;
@@ -25,13 +22,13 @@ class ServerConfigDialog;
 
 namespace synergy::gui {
 
-const auto kDefaultProtocol = NetworkProtocol::Synergy;
-
-} // namespace synergy::gui
+inline constexpr int kDefaultColumns = 5;
+inline constexpr int kDefaultRows = 3;
+inline constexpr auto kDefaultProtocol = NetworkProtocol::Synergy;
 
 class ServerConfig : public ScreenConfig
 {
-  friend class ServerConfigDialog;
+  friend class ::ServerConfigDialog;
   friend QTextStream &operator<<(QTextStream &outStream, const ServerConfig &config);
 
 public:
@@ -42,7 +39,7 @@ public:
 
   const ScreenList &screens() const
   {
-    return m_Screens;
+    return m_screens;
   }
 
   //
@@ -50,79 +47,79 @@ public:
   //
   int numColumns() const
   {
-    return m_Columns;
+    return m_columns;
   }
   int numRows() const
   {
-    return m_Rows;
+    return m_rows;
   }
   bool hasHeartbeat() const
   {
-    return m_HasHeartbeat;
+    return m_hasHeartbeat;
   }
   int heartbeat() const
   {
-    return m_Heartbeat;
+    return m_heartbeat;
   }
   NetworkProtocol protocol() const
   {
-    return m_Protocol;
+    return m_protocol;
   }
   bool relativeMouseMoves() const
   {
-    return m_RelativeMouseMoves;
+    return m_relativeMouseMoves;
   }
   bool win32KeepForeground() const
   {
-    return m_Win32KeepForeground;
+    return m_win32KeepForeground;
   }
   bool hasSwitchDelay() const
   {
-    return m_HasSwitchDelay;
+    return m_hasSwitchDelay;
   }
   int switchDelay() const
   {
-    return m_SwitchDelay;
+    return m_switchDelay;
   }
   bool hasSwitchDoubleTap() const
   {
-    return m_HasSwitchDoubleTap;
+    return m_hasSwitchDoubleTap;
   }
   int switchDoubleTap() const
   {
-    return m_SwitchDoubleTap;
+    return m_switchDoubleTap;
   }
   bool switchCorner(int c) const
   {
-    return m_SwitchCorners[c];
+    return m_switchCorners[c];
   }
   int switchCornerSize() const
   {
-    return m_SwitchCornerSize;
+    return m_switchCornerSize;
   }
   const QList<bool> &switchCorners() const
   {
-    return m_SwitchCorners;
+    return m_switchCorners;
   }
   const HotkeyList &hotkeys() const
   {
-    return m_Hotkeys;
+    return m_hotkeys;
   }
   bool defaultLockToScreenState() const
   {
-    return m_DefaultLockToScreenState;
+    return m_defaultLockToScreenState;
   }
   bool disableLockToScreen() const
   {
-    return m_DisableLockToScreen;
+    return m_disableLockToScreen;
   }
   bool clipboardSharing() const
   {
-    return m_ClipboardSharing;
+    return m_clipboardSharing;
   }
   size_t clipboardSharingSize() const
   {
-    return m_ClipboardSharingSize;
+    return m_clipboardSharingSize;
   }
   static size_t defaultClipboardSharingSize();
 
@@ -144,117 +141,118 @@ private:
   QSettingsProxy &settings();
   ScreenList &screens()
   {
-    return m_Screens;
+    return m_screens;
   }
   void setScreens(const ScreenList &screens)
   {
-    m_Screens = screens;
+    m_screens = screens;
   }
   void addScreen(const Screen &screen)
   {
-    m_Screens.append(screen);
+    m_screens.append(screen);
   }
   void setNumColumns(int n)
   {
-    m_Columns = n;
+    m_columns = n;
   }
   void setNumRows(int n)
   {
-    m_Rows = n;
+    m_rows = n;
   }
   void haveHeartbeat(bool on)
   {
-    m_HasHeartbeat = on;
+    m_hasHeartbeat = on;
   }
   void setHeartbeat(int val)
   {
-    m_Heartbeat = val;
+    m_heartbeat = val;
   }
   void setProtocol(NetworkProtocol val)
   {
-    m_Protocol = val;
+    m_protocol = val;
   }
   void setRelativeMouseMoves(bool on)
   {
-    m_RelativeMouseMoves = on;
+    m_relativeMouseMoves = on;
   }
   void setWin32KeepForeground(bool on)
   {
-    m_Win32KeepForeground = on;
+    m_win32KeepForeground = on;
   }
   void haveSwitchDelay(bool on)
   {
-    m_HasSwitchDelay = on;
+    m_hasSwitchDelay = on;
   }
   void setSwitchDelay(int val)
   {
-    m_SwitchDelay = val;
+    m_switchDelay = val;
   }
   void haveSwitchDoubleTap(bool on)
   {
-    m_HasSwitchDoubleTap = on;
+    m_hasSwitchDoubleTap = on;
   }
   void setSwitchDoubleTap(int val)
   {
-    m_SwitchDoubleTap = val;
+    m_switchDoubleTap = val;
   }
   void setSwitchCorner(int c, bool on)
   {
-    m_SwitchCorners[c] = on;
+    m_switchCorners[c] = on;
   }
   void setSwitchCornerSize(int val)
   {
-    m_SwitchCornerSize = val;
+    m_switchCornerSize = val;
   }
   void setDefaultLockToScreenState(bool on)
   {
-    m_DefaultLockToScreenState = on;
+    m_defaultLockToScreenState = on;
   }
   void setDisableLockToScreen(bool on)
   {
-    m_DisableLockToScreen = on;
+    m_disableLockToScreen = on;
   }
   void setClipboardSharing(bool on)
   {
-    m_ClipboardSharing = on;
+    m_clipboardSharing = on;
   }
   void setConfigFile(const QString &configFile) const;
   void setUseExternalConfig(bool useExternalConfig) const;
   size_t setClipboardSharingSize(size_t size);
   QList<bool> &switchCorners()
   {
-    return m_SwitchCorners;
+    return m_switchCorners;
   }
   HotkeyList &hotkeys()
   {
-    return m_Hotkeys;
+    return m_hotkeys;
   }
   int adjacentScreenIndex(int idx, int deltaColumn, int deltaRow) const;
   bool findScreenName(const QString &name, int &index);
   bool fixNoServer(const QString &name, int &index);
 
 private:
-  bool m_HasHeartbeat = false;
-  int m_Heartbeat = 0;
-  NetworkProtocol m_Protocol = synergy::gui::kDefaultProtocol;
-  bool m_RelativeMouseMoves = false;
-  bool m_Win32KeepForeground = false;
-  bool m_HasSwitchDelay = false;
-  int m_SwitchDelay = 0;
-  bool m_HasSwitchDoubleTap = false;
-  int m_SwitchDoubleTap = 0;
-  int m_SwitchCornerSize = 0;
-  bool m_DefaultLockToScreenState = false;
-  bool m_DisableLockToScreen = false;
-  bool m_ClipboardSharing = true;
-  QString m_ClientAddress = "";
-  QList<bool> m_SwitchCorners;
-  HotkeyList m_Hotkeys;
+  bool m_hasHeartbeat = false;
+  int m_heartbeat = 0;
+  NetworkProtocol m_protocol = synergy::gui::kDefaultProtocol;
+  bool m_relativeMouseMoves = false;
+  bool m_win32KeepForeground = false;
+  bool m_hasSwitchDelay = false;
+  int m_switchDelay = 0;
+  bool m_hasSwitchDoubleTap = false;
+  int m_switchDoubleTap = 0;
+  int m_switchCornerSize = 0;
+  bool m_defaultLockToScreenState = false;
+  bool m_disableLockToScreen = false;
+  bool m_clipboardSharing = true;
+  QList<bool> m_switchCorners;
+  HotkeyList m_hotkeys;
 
-  ScreenList m_Screens;
-  int m_Columns;
-  int m_Rows;
-  size_t m_ClipboardSharingSize = defaultClipboardSharingSize();
+  ScreenList m_screens;
+  int m_columns;
+  int m_rows;
+  size_t m_clipboardSharingSize = defaultClipboardSharingSize();
 };
 
 QTextStream &operator<<(QTextStream &outStream, const ServerConfig &config);
+
+} // namespace synergy::gui

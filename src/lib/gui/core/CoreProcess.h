@@ -41,7 +41,7 @@ public:
     StartFailed
   };
 
-  explicit CoreProcess(const ServerConfig &serverConfig);
+  explicit CoreProcess(const synergy::gui::ServerConfig &serverConfig);
 
   void start(std::optional<ProcessMode> processMode = std::nullopt);
   void stop(std::optional<ProcessMode> processMode = std::nullopt);
@@ -128,7 +128,7 @@ private:
   static QString processStateToString(const CoreProcess::ProcessState state);
   static QString wrapIpv6(const QString &address);
 
-  const ServerConfig &m_serverConfig;
+  const synergy::gui::ServerConfig &m_serverConfig;
   QString m_address;
   ProcessState m_processState = ProcessState::Stopped;
   ConnectionState m_connectionState = ConnectionState::Disconnected;

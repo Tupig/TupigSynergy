@@ -23,6 +23,9 @@ public:
   CFStringRef getOSXFormat() const override = 0;
 
 protected:
+  // Shared encoding conversion for plain text and legacy HTML payloads.
+  static std::string convertString(const std::string &data, CFStringEncoding fromEncoding, CFStringEncoding toEncoding);
+
   //! Convert from IClipboard format
   /*!
   Do UTF-8 conversion and linefeed conversion.

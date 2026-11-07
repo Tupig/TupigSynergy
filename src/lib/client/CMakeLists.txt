@@ -9,6 +9,7 @@ add_library(client STATIC
   ClientConfig.h
   IServerProxyClient.h
   ServerProxy.cpp
+  ServerProxyInput.cpp
   ServerProxy.h
 )
 

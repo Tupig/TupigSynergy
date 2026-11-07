@@ -31,12 +31,20 @@ add_library(server STATIC
   ClientProxyUnknown.cpp
   ClientProxyUnknown.h
   Config.cpp
+  config/ConfigRead.cpp
+  config/ConfigActions.cpp
+  config/ConfigWrite.cpp
+  config/ConfigLinks.cpp
+  config/ConfigReadContext.cpp
   Config.h
   InputFilter.cpp
   InputFilter.h
   PrimaryClient.cpp
   PrimaryClient.h
   Server.cpp
+  ServerClipboard.cpp
+  ServerSwitching.cpp
+  ServerInput.cpp
   Server.h
 )
 

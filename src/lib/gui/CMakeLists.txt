@@ -28,6 +28,8 @@ add_library(${target} STATIC
   Logger.cpp
   Logger.h
   MainWindow.cpp
+  mainwindow/MainWindowConfiguration.cpp
+  mainwindow/MainWindowConnection.cpp
   MainWindow.h
   MainWindow.ui
   Messages.cpp
@@ -117,6 +119,9 @@ add_library(${target} STATIC
   widgets/TrashScreenWidget.cpp
   widgets/TrashScreenWidget.h
 )
+
+# Main-window responsibilities live in a subdirectory; their shared form remains here.
+set_property(TARGET ${target} PROPERTY AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(
   ${target}

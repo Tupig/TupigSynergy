@@ -10,7 +10,7 @@
 namespace validators {
 
 ScreenDuplicationsValidator::ScreenDuplicationsValidator(
-    const QString &message, const QString &defaultName, const ScreenList *pScreens
+    const QString &message, const QString &defaultName, const synergy::gui::ScreenList *pScreens
 )
     : IStringValidator(message),
       m_defaultName(defaultName),
@@ -25,7 +25,7 @@ bool ScreenDuplicationsValidator::validate(const QString &input) const
 
   if (m_pScreenList) {
     for (const auto &screen : (*m_pScreenList)) {
-      if (!screen.isNull() && !screen.isServer() && input != m_defaultName && input == screen.name()) {
+      if (!screen.isNull() && !screen.isPrimary() && input != m_defaultName && input == screen.name()) {
         result = false;
         break;
       }

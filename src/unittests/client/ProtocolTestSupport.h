@@ -66,7 +66,12 @@ public:
   void addEvent(Event &&event) override
   {
     ++counts[event.getType()];
-    pending.push_back(std::move(event));
+    if ((event.getFlags() & Event::EventFlags::DeliverImmediately) != 0) {
+      dispatchEvent(event);
+      release(event);
+    } else {
+      pending.push_back(std::move(event));
+    }
   }
   void drain()
   {

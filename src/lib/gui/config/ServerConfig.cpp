@@ -15,6 +15,8 @@
 #include <QPushButton>
 #include <QTextStream>
 
+namespace synergy::gui {
+
 using enum ScreenConfig::Modifier;
 using enum ScreenConfig::SwitchCorner;
 using enum ScreenConfig::Fix;
@@ -29,12 +31,11 @@ static const struct
     {-1, 0, "left"},
     {0, -1, "up"},
     {0, 1, "down"},
-
 };
 
 const int serverDefaultIndex = 7;
 
-ServerConfig::ServerConfig(int columns, int rows) : m_Screens(columns), m_Columns(columns), m_Rows(rows)
+ServerConfig::ServerConfig(int columns, int rows) : m_screens(columns), m_columns(columns), m_rows(rows)
 {
   recall();
 }
@@ -53,25 +54,15 @@ bool ServerConfig::save(const QString &fileName) const
 
 bool ServerConfig::operator==(const ServerConfig &sc) const
 {
-  return m_Screens == sc.m_Screens &&                                   //
-         m_Columns == sc.m_Columns &&                                   //
-         m_Rows == sc.m_Rows &&                                         //
-         m_HasHeartbeat == sc.m_HasHeartbeat &&                         //
-         m_Heartbeat == sc.m_Heartbeat &&                               //
-         m_Protocol == sc.m_Protocol &&                                 //
-         m_RelativeMouseMoves == sc.m_RelativeMouseMoves &&             //
-         m_Win32KeepForeground == sc.m_Win32KeepForeground &&           //
-         m_HasSwitchDelay == sc.m_HasSwitchDelay &&                     //
-         m_SwitchDelay == sc.m_SwitchDelay &&                           //
-         m_HasSwitchDoubleTap == sc.m_HasSwitchDoubleTap &&             //
-         m_SwitchDoubleTap == sc.m_SwitchDoubleTap &&                   //
-         m_SwitchCornerSize == sc.m_SwitchCornerSize &&                 //
-         m_SwitchCorners == sc.m_SwitchCorners &&                       //
-         m_Hotkeys == sc.m_Hotkeys &&                                   //
-         m_DefaultLockToScreenState == sc.m_DefaultLockToScreenState && //
-         m_DisableLockToScreen == sc.m_DisableLockToScreen &&           //
-         m_ClipboardSharing == sc.m_ClipboardSharing &&                 //
-         m_ClipboardSharingSize == sc.m_ClipboardSharingSize;
+  return m_screens == sc.m_screens && m_columns == sc.m_columns && m_rows == sc.m_rows &&
+         m_hasHeartbeat == sc.m_hasHeartbeat && m_heartbeat == sc.m_heartbeat && m_protocol == sc.m_protocol &&
+         m_relativeMouseMoves == sc.m_relativeMouseMoves && m_win32KeepForeground == sc.m_win32KeepForeground &&
+         m_hasSwitchDelay == sc.m_hasSwitchDelay && m_switchDelay == sc.m_switchDelay &&
+         m_hasSwitchDoubleTap == sc.m_hasSwitchDoubleTap && m_switchDoubleTap == sc.m_switchDoubleTap &&
+         m_switchCornerSize == sc.m_switchCornerSize && m_switchCorners == sc.m_switchCorners &&
+         m_hotkeys == sc.m_hotkeys && m_defaultLockToScreenState == sc.m_defaultLockToScreenState &&
+         m_disableLockToScreen == sc.m_disableLockToScreen && m_clipboardSharing == sc.m_clipboardSharing &&
+         m_clipboardSharingSize == sc.m_clipboardSharingSize;
 }
 
 void ServerConfig::save(QFile &file) const
@@ -86,7 +77,6 @@ void ServerConfig::setupScreens()
   screens().clear();
   hotkeys().clear();
 
-  // m_NumSwitchCorners is used as a fixed size array. See Screen::init()
   for (int i = 0; i < static_cast<int>(NumSwitchCorners); i++)
     switchCorners() << false;
 
@@ -128,7 +118,7 @@ void ServerConfig::commit()
     const auto &screen = screens()[i];
     screen.saveSettings(settings());
     auto screenName = Settings::value(Settings::Core::ComputerName).toString();
-    if (screen.isServer() && screenName != screen.name()) {
+    if (screen.isPrimary() && screenName != screen.name()) {
       Settings::setValue(Settings::Core::ComputerName, screen.name());
     }
   }
@@ -182,7 +172,7 @@ void ServerConfig::recall()
     settings().setArrayIndex(i);
     screens()[i].loadSettings(settings());
     if (getServerName() == screens()[i].name()) {
-      screens()[i].markAsServer();
+      screens()[i].markAsPrimary();
     }
   }
   settings().endArray();
@@ -321,7 +311,7 @@ QString ServerConfig::getServerName() const
 void ServerConfig::updateServerName()
 {
   for (auto &screen : screens()) {
-    if (screen.isServer()) {
+    if (screen.isPrimary()) {
       screen.setName(Settings::value(Settings::Core::ComputerName).toString());
       break;
     }
@@ -372,12 +362,12 @@ void ServerConfig::addClient(const QString &clientName)
   const auto screenName = Settings::value(Settings::Core::ComputerName).toString();
 
   if (findScreenName(screenName, serverIndex)) {
-    m_Screens[serverIndex].markAsServer();
+    m_screens[serverIndex].markAsPrimary();
   } else {
     fixNoServer(screenName, serverIndex);
   }
 
-  m_Screens.addScreenByPriority(Screen(clientName));
+  m_screens.addScreenByPriority(Screen(clientName));
 }
 
 void ServerConfig::setConfigFile(const QString &configFile) const
@@ -407,8 +397,8 @@ bool ServerConfig::fixNoServer(const QString &name, int &index)
 {
   bool fixed = false;
   if (screens()[serverDefaultIndex].isNull()) {
-    m_Screens[serverDefaultIndex].setName(name);
-    m_Screens[serverDefaultIndex].markAsServer();
+    m_screens[serverDefaultIndex].setName(name);
+    m_screens[serverDefaultIndex].markAsPrimary();
     index = serverDefaultIndex;
     fixed = true;
   }
@@ -432,7 +422,7 @@ size_t ServerConfig::setClipboardSharingSize(size_t size)
     setClipboardSharing(false);
   }
   using std::swap;
-  swap(size, m_ClipboardSharingSize);
+  swap(size, m_clipboardSharingSize);
   return size;
 }
 
@@ -440,3 +430,5 @@ QSettingsProxy &ServerConfig::settings()
 {
   return Settings::proxy();
 }
+
+} // namespace synergy::gui

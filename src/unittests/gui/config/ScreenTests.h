@@ -13,6 +13,9 @@ private Q_SLOTS:
   // Test are run in order top to bottom
   void initTestCase();
   void basicFunctionality();
+  void binaryStreamPreservesLegacyLayout_data();
+  void binaryStreamPreservesLegacyLayout();
+  void truncatedBinaryStreamReportsError();
 
 private:
   inline static const QString m_settingsPath = QStringLiteral("tmp/test");

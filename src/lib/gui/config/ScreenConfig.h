@@ -12,6 +12,8 @@
 
 #include "common/QSettingsProxy.h"
 
+namespace synergy::gui {
+
 /// @brief Screen configuration base class
 class ScreenConfig
 {
@@ -89,19 +91,21 @@ protected:
 public:
   static const char *modifierName(int idx)
   {
-    return m_ModifierNames[idx];
+    return m_modifierNames[idx];
   }
   static const char *fixName(int idx)
   {
-    return m_FixNames[idx];
+    return m_fixNames[idx];
   }
   static const char *switchCornerName(int idx)
   {
-    return m_SwitchCornerNames[idx];
+    return m_switchCornerNames[idx];
   }
 
 private:
-  static const char *m_ModifierNames[];
-  static const char *m_FixNames[];
-  static const char *m_SwitchCornerNames[];
+  static const char *m_modifierNames[];
+  static const char *m_fixNames[];
+  static const char *m_switchCornerNames[];
 };
+
+} // namespace synergy::gui
