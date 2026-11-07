@@ -21,16 +21,48 @@ def output(command):
 def copy_files(files, destination):
     destination.mkdir(parents=True, exist_ok=True)
     copied = False
-    for file in sorted(set(files)):
+    expanded = []
+    for file in files:
+        source = Path(file)
+        if source.is_dir():
+            # Some packages list a license directory, including a symlink to
+            # their shared notices. Resolve that root once; rglob does not
+            # descend into nested directory symlinks and cannot cycle there.
+            expanded.extend(str(child) for child in source.resolve().rglob("*") if child.is_file())
+        else:
+            expanded.append(file)
+    for file in sorted(set(expanded)):
         source = Path(file)
         if source.is_file():
+            content = source.read_bytes()
+            if not content:
+                continue
             target = destination / source.name
-            if target.exists() and target.read_bytes() != source.read_bytes():
-                suffix = hashlib.sha256(source.read_bytes()).hexdigest()[:12]
-                target = destination / (source.name + "-" + suffix)
+            counter = 0
+            while target.exists() and target.read_bytes() != content:
+                suffix = hashlib.sha256(content).hexdigest()[:12]
+                tail = "" if counter == 0 else "-" + str(counter)
+                target = destination / (source.name + "-" + suffix + tail)
+                counter += 1
             shutil.copy2(source, target, follow_symlinks=True)
             copied = True
     return copied
+
+
+def package_notices(listing):
+    files = []
+    for file in listing:
+        if "/licenses/" in file or re.search(r"/(COPYING|LICENSE|copyright)", file, re.I):
+            files.append(file)
+        elif re.match(r"README(?:[._-]|$)", Path(file).name, re.I) and Path(file).is_file():
+            # libglvnd embeds its complete notices in its package-owned README.
+            # Discover notices, without treating an arbitrary README as one.
+            text = Path(file).read_text(errors="replace")
+            if (re.search(r"\blicens(?:e|ed|ing)\b", text, re.I)
+                    and re.search(r"\bcopyright\b", text, re.I)
+                    and re.search(r"permission\s+is\s+hereby\s+granted|redistribution\s+and\s+use", text, re.I)):
+                files.append(file)
+    return files
 
 
 def main():
@@ -56,6 +88,8 @@ def main():
         shutil.copytree(source, target)
 
     manifest = []
+    rpm_sources = None
+    rpm_notices = {}
     for source in Path(source_list).read_text().splitlines():
         path = Path(source)
         if copyrights and os.path.commonpath([str(path.resolve()), str(vcpkg.resolve())]) == str(vcpkg.resolve()):
@@ -92,13 +126,31 @@ def main():
                 files = glob.glob(f"/usr/share/doc/{name}/copyright")
         elif shutil.which("rpm"):
             manager = "rpm"
-            package = output(["rpm", "-qf", "--qf", "%{NAME}", str(path)])
+            for candidate in candidates:
+                package = output(["rpm", "-qf", "--qf", "%{NAME}", candidate])
+                if package:
+                    break
             if package:
-                listing = output(["rpm", "-ql", package]).splitlines()
-                files = [file for file in listing if "/licenses/" in file or re.search(r"/(COPYING|LICENSE|copyright)", file, re.I)]
+                source_rpm = output(["rpm", "-q", "--qf", "%{SOURCERPM}", package])
+                owners = [package]
+                if source_rpm and source_rpm != "(none)":
+                    if rpm_sources is None:
+                        rpm_sources = []
+                        for line in output(["rpm", "-qa", "--qf", "%{NAME}\t%{SOURCERPM}\n"]).splitlines():
+                            fields = line.split("\t")
+                            if len(fields) == 2:
+                                rpm_sources.append(fields)
+                    owners += [name for name, source in rpm_sources if source == source_rpm and name != package]
+                for owner in owners:
+                    if owner not in rpm_notices:
+                        rpm_notices[owner] = package_notices(output(["rpm", "-ql", owner]).splitlines())
+                    files.extend(rpm_notices[owner])
         elif shutil.which("pacman"):
             manager = "pacman"
-            package = output(["pacman", "-Qoq", str(path)])
+            for candidate in candidates:
+                package = output(["pacman", "-Qoq", candidate])
+                if package:
+                    break
             if package:
                 listing = output(["pacman", "-Qlq", package]).splitlines()
                 files = [file for file in listing if "/licenses/" in file]
