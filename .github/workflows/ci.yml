@@ -6,7 +6,7 @@
 #   4. analysis (only workflow_dispatch with analyze=true)
 #   5. ci-passed, the branch-protection gate
 #
-# Triggers — one run does not start another:
+# Triggers - one run does not start another:
 #   push to main          lint, then Windows, macOS, and the free Linux subset.
 #                         Unsigned snapshot artifacts. No publish or notifications.
 #                         A newer push cancels the older one.
@@ -469,6 +469,7 @@ jobs:
         uses: ./.github/actions/test-package
 
       - name: Upload package
+        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
@@ -632,6 +633,7 @@ jobs:
         uses: ./.github/actions/test-package
 
       - name: Upload package
+        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
@@ -798,6 +800,7 @@ jobs:
           like: ${{ matrix.target.like }}
 
       - name: Upload package
+        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
@@ -835,7 +838,7 @@ jobs:
         run: flatpak-builder-lint appstream deploy/linux/com.tupig.synergy.metainfo.xml
 
       # appid-url-not-reachable: the linter probes https://tupig.com (app-id
-      # namespace), which fails TLS from CI — same class as A-39 (#63). Covered by
+      # namespace), which fails TLS from CI - same class as A-39 (#63). Covered by
       # ci-build-lint-exceptions.json; without --exceptions this step hard-fails.
       - name: Lint manifest
         run: flatpak-builder-lint --exceptions --user-exceptions deploy/linux/flatpak/ci-build-lint-exceptions.json manifest deploy/linux/flatpak/com.tupig.synergy.yml
@@ -852,6 +855,8 @@ jobs:
           cache-key: flatpak-builder-${{matrix.flatpak.arch}}-2.0
           arch: ${{matrix.flatpak.arch}}
           upload-artifact: false
+          restore-cache: true
+          save-cache: false
 
       - name: Validate build
         run: flatpak-builder-lint --exceptions --user-exceptions deploy/linux/flatpak/ci-build-lint-exceptions.json repo repo
@@ -862,6 +867,7 @@ jobs:
           scripts/ci/package-flatpak-offline.sh repo "${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_linux_${{ matrix.flatpak.arch }}-flatpak-offline.tar.zst" "${{ matrix.flatpak.arch }}"
 
       - name: Upload package
+        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-flatpak-${{matrix.flatpak.arch}}
@@ -948,7 +954,7 @@ jobs:
 
   # Upload release packages to AWS S3 for distribution. Snapshot validation
   # never enters this job or reads AWS credentials. Release publication
-  # uploads whatever artifacts exist — one failed target must not block shipping
+  # uploads whatever artifacts exist - one failed target must not block shipping
   # the rest (a flaky distro should not discard other release artifacts).
   # The publication decision comes from get-version, which supplies the path. Layout: <dir>/<dev|snapshot|release>/<version>/...
   # No checkout (download-artifact only). Artifacts land at the workspace root under dist/.
@@ -1029,12 +1035,12 @@ jobs:
           {
             echo "text<<EOF"
             echo "<!channel>"
-            echo "❌ Synergy CI failed"
-            [ "${{ needs.build-windows.result }}" = "failure" ] && echo "• Windows build failed"
-            [ "${{ needs.build-macos.result }}" = "failure" ] && echo "• macOS build failed"
-            [ "${{ needs.build-linux.result }}" = "failure" ] && echo "• Linux build failed"
-            [ "${{ needs.build-flatpak.result }}" = "failure" ] && echo "• Flatpak build failed"
-            [ "${{ needs.s3-upload.result }}" = "failure" ] && echo "• S3 upload failed"
+            printf '\342\235\214 Synergy CI failed\n'
+            [ "${{ needs.build-windows.result }}" = "failure" ] && printf '\342\200\242 Windows build failed\n'
+            [ "${{ needs.build-macos.result }}" = "failure" ] && printf '\342\200\242 macOS build failed\n'
+            [ "${{ needs.build-linux.result }}" = "failure" ] && printf '\342\200\242 Linux build failed\n'
+            [ "${{ needs.build-flatpak.result }}" = "failure" ] && printf '\342\200\242 Flatpak build failed\n'
+            [ "${{ needs.s3-upload.result }}" = "failure" ] && printf '\342\200\242 S3 upload failed\n'
             echo "<$link|View workflow>"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
@@ -1086,7 +1092,7 @@ jobs:
         uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4
         with:
           version: "6.9.3"
-          cache: true
+          cache: false
       - name: Generate compile commands
         run: |
           cmake -B build -G Ninja \
@@ -1102,7 +1108,7 @@ jobs:
               --warnings-as-errors='*' \
             2>&1 | tee clang-tidy-output.txt
       - name: Upload results
-        if: always()
+        if: ${{ always() && env.SYNERGY_VERSION_RELEASE == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: clang-tidy-results
@@ -1133,7 +1139,7 @@ jobs:
             src/
           cat cppcheck-results.txt
       - name: Upload results
-        if: always()
+        if: ${{ always() && env.SYNERGY_VERSION_RELEASE == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: cppcheck-results
@@ -1328,7 +1334,7 @@ jobs:
              && ok "${{needs.codeql.result}}" \
              && ok "${{needs.sonar.result}}" \
              && ok "${{needs.valgrind.result}}"; then
-            echo "✅ CI passed" > "$GITHUB_STEP_SUMMARY"
+            printf '\342\234\205 CI passed\n' > "$GITHUB_STEP_SUMMARY"
           else
             exit 1
           fi

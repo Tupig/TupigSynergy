@@ -9,13 +9,13 @@
 # Pipeline:
 #   1. bootstrap the repository-local vcpkg at the pinned baseline
 #   2. resolve every locked package with `vcpkg install --dry-run`
-#   3. convert the plan into a CycloneDX SBOM (uploaded as an artifact)
+#   3. convert the plan into a CycloneDX SBOM (printed in the job log)
 #   4. self-test: scan a fixture SBOM with a known vulnerable version, so a
 #      silently broken scan fails the job instead of passing empty
 #   5. scan the real SBOM and gate on the report
 #
 # Policy: findings at CRITICAL severity fail the job; HIGH and below are kept
-# in the JSON report artifact and the job log. Accepted false positives are
+# in the JSON report and the job log. Accepted false positives are
 # listed with a written reason in scripts/ci/cve-exceptions.json and filtered
 # by the gate; that file is re-reviewed on every vcpkg baseline bump.
 #
@@ -98,15 +98,12 @@ jobs:
       - name: Generate CycloneDX SBOM
         run: python3 scripts/ci/generate-vcpkg-sbom.py vcpkg-plan.txt synergy-deps.cdx.json
 
-      - name: Upload SBOM
-        uses: actions/upload-artifact@v7
-        with:
-          name: dependency-sbom
-          path: synergy-deps.cdx.json
-          if-no-files-found: error
+      - name: Show SBOM
+        shell: bash
+        run: cat synergy-deps.cdx.json
 
       - name: Cache cve-bin-tool data
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         with:
           path: ~/.cache/cve-bin-tool
           key: cve-bin-tool-data-${{ github.run_id }}
@@ -138,13 +135,15 @@ jobs:
             --format json2 --output-file cve-report.json
           test -s cve-report.json
 
-      - name: Upload CVE report
+      - name: Show CVE report
         if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: cve-report
-          path: cve-report.json
-          if-no-files-found: warn
+        shell: bash
+        run: |
+          if [ -f cve-report.json ]; then
+            cat cve-report.json
+          else
+            echo "No current CVE report"
+          fi
 
       - name: Gate on critical findings
         if: always()
