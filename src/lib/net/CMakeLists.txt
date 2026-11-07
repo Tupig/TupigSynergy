@@ -13,6 +13,12 @@ endif()
 find_package(Qt${QT_VERSION_MAJOR} ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS Network)
 find_package(OpenSSL ${REQUIRED_OPENSSL_VERSION} REQUIRED COMPONENTS SSL Crypto)
 
+if(APPLE)
+  # Inspect the same providers net links, after discovery in this target scope.
+  synergy_check_macos_target(OpenSSL::SSL REQUIRED)
+  synergy_check_macos_target(OpenSSL::Crypto REQUIRED)
+endif()
+
 add_library(net STATIC
   Fingerprint.cpp
   Fingerprint.h
