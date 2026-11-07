@@ -44,7 +44,7 @@ if(CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
   if(NOT _crt_dlls)
     message(FATAL_ERROR "Dynamic CRT packaging requires official VC redistributable DLLs for this architecture")
   endif()
-  install(FILES ${_crt_dlls} DESTINATION "${CMAKE_INSTALL_BINDIR}")
+  # Discover official sources here; pre-cpack copies only imported CRT dependencies.
 else()
   message(STATUS "Static CRT: no VC redistributable payload is needed")
 endif()
