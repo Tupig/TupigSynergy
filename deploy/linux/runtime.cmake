@@ -30,6 +30,7 @@ if(QT_IS_SHARED)
   if(NOT _qt_query EQUAL 0 OR NOT IS_DIRECTORY "${SYNERGY_QT_PLUGIN_DIR}")
     message(FATAL_ERROR "Cannot locate the selected Qt runtime plugins")
   endif()
+  message(STATUS "Packaging Qt ${QT_VERSION_MAJOR} plugins from ${SYNERGY_QT_PLUGIN_DIR}")
 endif()
 
 set(SYNERGY_EXTRA_LICENSE_DIRS "" CACHE STRING

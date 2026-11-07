@@ -5,7 +5,12 @@
 # calling CMAKE_CURRENT_LIST_DIR after include would return the wrong scope var
 set(MY_DIR ${CMAKE_CURRENT_LIST_DIR})
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+option(SYNERGY_FLATPAK_BUILD "Build inside Flatpak with a separately delivered platform runtime" OFF)
+if(SYNERGY_FLATPAK_BUILD AND
+    (NOT CMAKE_INSTALL_PREFIX STREQUAL "/app" OR NOT EXISTS "/.flatpak-info"))
+  message(FATAL_ERROR "SYNERGY_FLATPAK_BUILD is only valid inside the Flatpak /app build sandbox")
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT SYNERGY_FLATPAK_BUILD)
   include("${MY_DIR}/runtime.cmake")
 endif()
 

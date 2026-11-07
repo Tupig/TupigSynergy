@@ -53,6 +53,7 @@ on:
           - windows
           - macos
           - linux
+          - flatpak
       analyze:
         description: "Also run clang-tidy, cppcheck, CodeQL, SonarCloud and Valgrind. Does not change which platforms build."
         required: false
@@ -207,6 +208,9 @@ jobs:
                 fi
                 if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "all" ] || [ "$PLATFORM" = "linux" ]; then
                   build_linux=true
+                  build_flatpak=true
+                fi
+                if [ "$PLATFORM" = "flatpak" ]; then
                   build_flatpak=true
                 fi
               fi
@@ -771,7 +775,7 @@ jobs:
     if: ${{ needs.get-version.outputs.build_flatpak == 'true' }}
     name: flatpak-${{matrix.flatpak.arch}}
     runs-on: ${{matrix.flatpak.runs-on}}
-    timeout-minutes: 60
+    timeout-minutes: 90
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
       options: --privileged
@@ -818,11 +822,16 @@ jobs:
       - name: Validate build
         run: flatpak-builder-lint --exceptions --user-exceptions deploy/linux/flatpak/ci-build-lint-exceptions.json repo repo
 
+      - name: Export and verify complete offline repository
+        shell: bash
+        run: |
+          scripts/ci/package-flatpak-offline.sh repo "${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_linux_${{ matrix.flatpak.arch }}-flatpak-offline.tar.zst" "${{ matrix.flatpak.arch }}"
+
       - name: Upload package
         uses: actions/upload-artifact@v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-flatpak-${{matrix.flatpak.arch}}
-          path: ${{github.workspace}}/${{ env.PACKAGE_PREFIX }}[-_]*.flatpak
+          path: ${{github.workspace}}/${{ env.PACKAGE_PREFIX }}[-_]*-flatpak-offline.tar.zst
           retention-days: 14
 
   # Attach the CPack/Flatpak packages to the GitHub Release v<X.Y.Z>. Actions
@@ -903,19 +912,19 @@ jobs:
             gh release create "$tag" "${files[@]}" --title "$title" --notes "${notes}"$'\n\n'"${marker}" --latest
           fi
 
-  # Upload all packages that built to AWS S3 for distribution. Runs after the
-  # build jobs on push/dispatch/release events (PRs skipped, no secrets), and
+  # Upload release packages to AWS S3 for distribution. Snapshot validation
+  # never enters this job or reads AWS credentials. Release publication
   # uploads whatever artifacts exist — one failed target must not block shipping
-  # the rest (a flaky distro shouldn't sink a whole nightly snapshot). Gated only
-  # on get-version, which supplies the path. Layout: <dir>/<dev|snapshot|release>/<version>/...
+  # the rest (a flaky distro should not discard other release artifacts).
+  # The publication decision comes from get-version, which supplies the path. Layout: <dir>/<dev|snapshot|release>/<version>/...
   # No checkout (download-artifact only). Artifacts land at the workspace root under dist/.
   # Secrets cannot be referenced from a job-level `if` (context unavailable
   # there), so gate each AWS step individually: when secrets are unset the
   # job still runs but every upload step is skipped - job stays green (A-30 (#54)).
   s3-upload:
     needs: [get-version, build-windows, build-macos, build-linux, build-flatpak]
-    # Free tier: no push auto-upload; snapshot S3 only via release / manual dispatch.
-    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.skip_unchanged != 'true' && (github.event_name == 'workflow_dispatch' || github.event_name == 'release' || github.event_name == 'schedule') }}
+    # Snapshot validation must never read AWS credentials or upload externally.
+    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.publish_release == 'true' && needs.get-version.outputs.skip_unchanged != 'true' }}
     runs-on: ubuntu-latest
 
     steps:

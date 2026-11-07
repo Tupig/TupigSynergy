@@ -34,7 +34,6 @@ cleanup:
   - /lib/pkgconfig
   - /share/pkgconfig
   - /share/cmake
-  - /share/doc
   - /share/gir-1.0
   - /lib/girepository-1.0
 modules:
@@ -58,6 +57,18 @@ modules:
       - '*'
   - name: libei
     buildsystem: meson
+    post-install:
+      - |
+        license_dir=/app/share/licenses/libei
+        install -d "$license_dir"
+        count=0
+        for license in COPYING* LICENSE*; do
+          if test -f "$license"; then
+            install -m644 "$license" "$license_dir/"
+            count=$((count + 1))
+          fi
+        done
+        test "$count" -gt 0
     config-opts:
         - -Ddocumentation=[]
         - -Dtests=disabled
@@ -72,6 +83,18 @@ modules:
             tag-pattern: ^([\\d.]+)$
   - name: libportal
     buildsystem: meson
+    post-install:
+      - |
+        license_dir=/app/share/licenses/libportal
+        install -d "$license_dir"
+        count=0
+        for license in COPYING* LICENSE*; do
+          if test -f "$license"; then
+            install -m644 "$license" "$license_dir/"
+            count=$((count + 1))
+          fi
+        done
+        test "$count" -gt 0
     config-opts:
       - -Ddocs=false
       - -Dtests=false
@@ -87,6 +110,7 @@ modules:
     buildsystem: cmake-ninja
     config-opts:
       - "-DCMAKE_BUILD_TYPE=Release"
+      - "-DSYNERGY_FLATPAK_BUILD=ON"
     sources:
       - type: dir
         path: ../../../
