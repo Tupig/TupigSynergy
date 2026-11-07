@@ -74,6 +74,7 @@ The following components are enabled by default:
 | `BUILD_X11_SUPPORT` | Build X11 backend (Linux/BSD) | `ON` |
 | `BUILD_OSX_BUNDLE` | Build macOS `.app` bundle | `ON` |
 | `SKIP_BUILD_TESTS` | Skip tests during build | `ON` |
+| `SYNERGY_ENABLE_INTERACTIVE_TESTS` | Enable tests that inject input or change the system clipboard | `OFF` |
 | `ENABLE_COVERAGE` | Enable code coverage reports | `OFF` |
 | `CLEAN_TRS` | Remove obsolete translation strings | `OFF` |
 | `SYNERGY_CORE_FLAVOR` | Build as "TuPig Synergy Core"; seeds headless defaults (GUI/tests/installer off) | `OFF` |
@@ -320,6 +321,10 @@ cmake -S . -B build \
 
 Tests are registered under `src/unittests`, so `ctest --test-dir build` reports that no tests were found. `BUILD_TESTS` defaults to `ON` (the test binaries are compiled). `SKIP_BUILD_TESTS` defaults to `ON`, which only skips running them at the end of the build.
 
+`SYNERGY_ENABLE_INTERACTIVE_TESTS` defaults to `OFF`. CTest keeps the available interactive targets registered and built, but reports them as `Disabled` / `Not Run`; count them separately from passing tests. The exact targets are `OSXKeyStateTests` (real key injection into the focused application), `OSXClipboardTests` and `MSWindowsClipboardTests` (replace or clear the system clipboard), and `XWindowsClipboardTests` when X11 is enabled (changes X11 clipboard selection ownership). Pure Windows conversion, DropData, key-state and policy tests remain enabled. `SKIP_BUILD_TESTS` does not opt into interactive targets.
+
+Only a disposable test environment should explicitly configure `-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON`; the shared native CI Configure command does this. The option does not derive its value from `CI` or `GITHUB_ACTIONS`, and an explicit `OFF` remains off. Opting in permits these side effects; it does not grant macOS permissions or establish secure-desktop, hardware or multi-machine acceptance. Directly launching a test executable bypasses CTest's disabled property. Review new tests for host side effects before registering them.
+
 ```bash
 # Windows (Visual Studio preset)
 ctest --test-dir build/src/unittests -C Release --output-on-failure
@@ -464,6 +469,7 @@ CMake 显式列出每个编译单元。拆分源码时必须保留平台条件�
 | `BUILD_X11_SUPPORT` | 编译 X11 后端 (Linux/BSD) | `ON` |
 | `BUILD_OSX_BUNDLE` | 编译 macOS `.app` 包 | `ON` |
 | `SKIP_BUILD_TESTS` | 跳过编译时测试 | `ON` |
+| `SYNERGY_ENABLE_INTERACTIVE_TESTS` | 启用注入真实输入或改变系统剪贴板的测试 | `OFF` |
 | `ENABLE_COVERAGE` | 启用代码覆盖率报告 | `OFF` |
 | `CLEAN_TRS` | 清理翻译文件中过时字符串 | `OFF` |
 | `SYNERGY_CORE_FLAVOR` | 以 “TuPig Synergy Core” 构建；同时将 GUI/测试/安装包默认置为关闭（无界面构建） | `OFF` |
@@ -663,6 +669,10 @@ cmake -S . -B build \
 ### 🧪 测试
 
 测试注册在 `src/unittests`，所以 `ctest --test-dir build` 会报找不到测试。`BUILD_TESTS` 默认 `ON`（会编译测试程序）。`SKIP_BUILD_TESTS` 默认 `ON`，只是不在构建结束时自动跑它们。
+
+`SYNERGY_ENABLE_INTERACTIVE_TESTS` 默认 `OFF`。CTest 仍注册并编译当前平台存在的交互目标，但将其报告为 `Disabled` / `Not Run`，须与通过的测试分开计数。精确范围为 `OSXKeyStateTests`（向当前焦点应用注入真实按键）、`OSXClipboardTests` 与 `MSWindowsClipboardTests`（替换或清空系统剪贴板），以及启用 X11 时的 `XWindowsClipboardTests`（改变 X11 剪贴板 selection 所有权）。纯 Windows 转换、DropData、键状态和策略测试保持启用。`SKIP_BUILD_TESTS` 不会启用交互目标。
+
+仅在一次性测试环境中显式配置 `-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON`；原生 CI 的公共 Configure 命令已这样处理。选项不会根据 `CI` 或 `GITHUB_ACTIONS` 自动开启，显式 `OFF` 保持关闭。开启即允许上述副作用，不会授予 macOS 权限，也不代表安全桌面、硬件或多机验收通过。直接启动测试程序会绕过 CTest 的禁用属性。注册新测试前须检查宿主副作用。
 
 ```bash
 # Windows（Visual Studio 预设）

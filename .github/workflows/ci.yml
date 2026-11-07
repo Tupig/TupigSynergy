@@ -81,7 +81,7 @@ concurrency:
 
 env:
   PACKAGE_PREFIX: ${{ vars.SYNERGY_PACKAGE_PREFIX || 'synergy' }}
-  CMAKE_CONFIGURE: "cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DSKIP_BUILD_TESTS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON"
+  CMAKE_CONFIGURE: "cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DSKIP_BUILD_TESTS=ON -DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON"
   # Third-party Node actions (vcpkg) print DeprecationWarning on Node 20. That is not a project defect.
   NODE_OPTIONS: --no-deprecation
 

@@ -113,6 +113,12 @@ release builds and for every local build. The exception carries three requiremen
    `scripts/build.bat release` (the runtime block in `CMakeLists.txt` derives the CRT from the
    triplet).
 
+### Interactive test safety
+
+Review host side effects before registering new tests. Default CTest execution must not inject real input or replace the live system clipboard. `SYNERGY_ENABLE_INTERACTIVE_TESTS` defaults to `OFF`: keep `OSXKeyStateTests`, `OSXClipboardTests`, `MSWindowsClipboardTests`, and X11's `XWindowsClipboardTests` registered and built when available, but set their CTest `DISABLED` property. The first injects keys into the focused application; the clipboard targets clear/replace clipboard contents or change X11 selection ownership. Keep pure Windows conversion, DropData, key-state and policy tests enabled. Report disabled targets as `Disabled` / `Not Run`, separately from passes.
+
+Explicit `-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON` is reserved for a disposable test environment; native CI sets it in the common Configure command. Do not infer consent from CI environment variables, grant OS permissions, or treat opt-in as hardware/secure-desktop acceptance. Direct test-executable invocation bypasses this CTest safeguard.
+
 ### Package runtime completeness (RPACKAGE)
 
 Every distributed MSI, portable archive, macOS app/DMG and native Linux package must contain the third-party libraries and plugins its applications need, including transitive dependencies and license notices. A build runner's Qt, OpenSSL, package manager or search path must not supply missing application dependencies at runtime. Static builds copy only dependencies that remain dynamically linked; static dependency license notices still ship.
@@ -256,6 +262,12 @@ manifest 仍是发布构建与所有本地构建的唯一真源。该例外附�
 4. Windows 上 CI 使用**动态 CRT（`/MD`）**，而 manifest 的 Windows triplet 使用**静态 CRT（`/MT`）**；
    CI 的 Windows 腿从不覆盖 `/MT`。该路径请用本地 `scripts\build.bat release` 验证
    （运行库由 `CMakeLists.txt` 的运行库块依据 triplet 推导）。
+
+### 交互测试安全
+
+注册新测试前须审查宿主副作用。默认 CTest 不得注入真实输入或替换用户实时系统剪贴板。`SYNERGY_ENABLE_INTERACTIVE_TESTS` 默认 `OFF`：当前平台存在的 `OSXKeyStateTests`、`OSXClipboardTests`、`MSWindowsClipboardTests` 及 X11 的 `XWindowsClipboardTests` 仍注册并编译，但设置 CTest `DISABLED` 属性。第一个会向焦点应用注入按键；剪贴板目标会清空/替换内容或改变 X11 selection 所有权。纯 Windows 转换、DropData、键状态和策略测试保持启用。禁用目标按 `Disabled` / `Not Run` 单独报告，不计为通过。
+
+仅在一次性测试环境中显式设置 `-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON`；原生 CI 在公共 Configure 命令中设置。不得根据 CI 环境变量猜测同意、授予系统权限，或将开启选项当作硬件/安全桌面验收。直接运行测试程序会绕过这层 CTest 保护。
 
 ### 打包运行依赖完整性（RPACKAGE）
 

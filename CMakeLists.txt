@@ -378,6 +378,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 # Disable Qt keywords (conflict with glib)
 add_definitions(-DQT_NO_KEYWORDS)
 
+# Tests that inject input or change the system clipboard require explicit opt-in.
+option(SYNERGY_ENABLE_INTERACTIVE_TESTS
+  "Enable tests that inject input or change the system clipboard" OFF)
+
 # Platform options
 if(UNIX AND NOT APPLE)
   option(BUILD_X11_SUPPORT "Build with x11 support" ON)
