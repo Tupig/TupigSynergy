@@ -701,6 +701,8 @@ jobs:
         run: |
           apt-get install -y -qq meson pkg-config
           git clone --depth 1 --branch 0.9.1 https://github.com/flatpak/libportal.git /tmp/libportal
+          portal_commit=$(git -C /tmp/libportal rev-parse HEAD)
+          test "$portal_commit" = 8f5dc8d192f6e31dafe69e35219e3b707bde71ce
           meson setup /tmp/libportal/_build /tmp/libportal --prefix=/usr --libdir="lib/$(gcc -dumpmachine)" \
             --default-library=static \
             -Dbackend-gtk3=disabled -Dbackend-gtk4=disabled -Dbackend-qt5=disabled -Dbackend-qt6=disabled \
@@ -708,14 +710,16 @@ jobs:
           meson install -C /tmp/libportal/_build
           license_dir=/usr/share/licenses/tupig-build/libportal
           mkdir -p "$license_dir"
-          license_count=0
-          for license in /tmp/libportal/COPYING*; do
-            if [ -f "$license" ]; then
-              cp "$license" "$license_dir/"
-              license_count=$((license_count + 1))
-            fi
-          done
-          test "$license_count" -gt 0
+          python3 - "$license_dir" "$portal_commit" <<'PY'
+          import importlib.util
+          import sys
+          spec = importlib.util.spec_from_file_location("runtime_notices", "scripts/ci/prepare-runtime-notices.py")
+          notices = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(notices)
+          payload = notices.download_runtime_source("libportal", "0.9.1")
+          notices.prepare("libportal", "0.9.1", payload, ["libportal.so.1"], sys.argv[1],
+                          "static source build libportal 0.9.1 gitcommit " + sys.argv[2])
+          PY
           rm -f "/usr/lib/$(gcc -dumpmachine)"/libportal.so*
           ldconfig
 
@@ -731,9 +735,12 @@ jobs:
           providers=()
           case "$TARGET_NAME" in
             fedora-*) providers=(libdrm xcb-util-keysyms) ;;
-            rocky-*) providers=(libdrm) ;;
-            opensuse-*) providers=(libdrm libX11) ;;
-            archlinux-*) providers=(e2fsprogs glib libgudev) ;;
+            rocky-*) providers=(libdrm xcb-util-keysyms) ;;
+            opensuse-*) providers=(libdrm libX11 libXext libXi libXinerama libXrandr libXrender libXtst
+                                   brotli e2fsprogs gcc graphite2 krb5 icu mtdev libproxy tslib libxcb
+                                   xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms
+                                   xcb-util-renderutil xcb-util) ;;
+            archlinux-*) providers=(e2fsprogs glib libgudev libidn2 keyutils libportal libproxy systemd tslib libunistring) ;;
           esac
           for provider in "${providers[@]}"; do
             provider_map=$(python3 scripts/ci/prepare-runtime-notices.py \
