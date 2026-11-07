@@ -169,7 +169,10 @@ void ClientProxyTests::negotiatesSupportedVersions()
   );
   stream->written.clear();
   const std::string name = "synthetic-client";
-  stream->push("Synergy" + protocol_test::integers16({1, minor}) + protocol_test::integer32(name.size()) + name);
+  stream->push(
+      "Synergy" + protocol_test::integers16({1, minor}) + protocol_test::integer32(static_cast<uint32_t>(name.size())) +
+      name
+  );
   QVERIFY(fixture.events.dispatchEvent(Event(EventTypes::StreamInputReady, stream)));
   QVERIFY(unknown.getStream() == nullptr);
   QVERIFY(unknown.orphanClientProxy() == nullptr);
@@ -187,7 +190,8 @@ void ClientProxyTests::negotiatesSupportedVersions()
   const std::type_info *versions[] = {&typeid(ClientProxy1_0), &typeid(ClientProxy1_1), &typeid(ClientProxy1_2),
                                       &typeid(ClientProxy1_3), &typeid(ClientProxy1_4), &typeid(ClientProxy1_5),
                                       &typeid(ClientProxy1_6), &typeid(ClientProxy1_7), &typeid(ClientProxy1_8)};
-  QVERIFY(typeid(*proxy) == *versions[minor]);
+  const auto *negotiatedProxy = proxy.get();
+  QVERIFY(typeid(*negotiatedProxy) == *versions[minor]);
   QVERIFY(!fixture.events.hasHandler(EventTypes::Timer, &unknown));
   proxy.reset();
   QCOMPARE(*destroyed, 1);
