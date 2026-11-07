@@ -91,9 +91,15 @@ def command(args, trace=False, require_offscreen=False, launcher=False):
             if not os_library.fullmatch(path.name) and not contained(path):
                 raise RuntimeError("Runtime loaded a non-OS host library: " + path.name)
         if require_offscreen:
-            plugin = str(private / "plugins/platforms/libqoffscreen.so")
-            if not any(plugin in line and "loaded library" in line for line in result.stderr.splitlines()):
-                raise RuntimeError("Qt did not load the packaged offscreen platform plugin")
+            plugin = (private / "plugins/platforms/libqoffscreen.so").resolve()
+            qt_loaded = re.findall(r'''["'](/[^"'\r\n]+)["']\s+loaded library(?:\s|$)''', result.stderr)
+            initialized = re.findall(r"calling init:\s*(/[^\n]+)", result.stderr)
+            if not any(Path(path.strip()).is_file() and Path(path.strip()).resolve() == plugin
+                       and contained(Path(path.strip())) for path in qt_loaded + initialized):
+                detail = [line[:500] for line in result.stderr.splitlines()
+                          if "qt." in line.lower() or "calling init:" in line or "libqoffscreen" in line]
+                raise RuntimeError("Qt did not load the packaged offscreen platform plugin: {} ({})\n{}".format(
+                    plugin, Path(args[0]).name, "\n".join(detail[-16:])))
     return result.stdout
 
 def contained(path):
