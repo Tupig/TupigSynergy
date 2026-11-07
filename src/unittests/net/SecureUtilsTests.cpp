@@ -12,6 +12,7 @@
 
 #include <QFile>
 #include <QTemporaryDir>
+#include <limits>
 #include <memory>
 #include <openssl/pem.h>
 
@@ -61,7 +62,10 @@ void SecureUtilsTests::generatedCertificateHasSelfSignedSubject()
   QFile file(path);
   QVERIFY(file.open(QIODevice::ReadOnly));
   const auto pem = file.readAll();
-  const std::unique_ptr<BIO, decltype(&BIO_free)> input(BIO_new_mem_buf(pem.constData(), pem.size()), BIO_free);
+  QVERIFY(pem.size() <= (std::numeric_limits<int>::max)());
+  const std::unique_ptr<BIO, decltype(&BIO_free)> input(
+      BIO_new_mem_buf(pem.constData(), static_cast<int>(pem.size())), BIO_free
+  );
   QVERIFY(input != nullptr);
   const std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> key(
       PEM_read_bio_PrivateKey(input.get(), nullptr, nullptr, nullptr), EVP_PKEY_free
