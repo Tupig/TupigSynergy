@@ -11,7 +11,7 @@ create_test(
 create_test(
   NAME ClientTests
   DEPENDS client
-  LIBS base arch io mt
+  LIBS base arch io mt net
   SOURCE ClientTests.cpp
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/client"
 )
