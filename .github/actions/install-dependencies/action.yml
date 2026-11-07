@@ -74,11 +74,21 @@ runs:
                 fi
               done
             elif [ ${{inputs.like}} == "fedora" ]; then
-              dnf install -y cmake make ninja-build gcc-c++ rpm-build openssl-devel patchelf binutils python3 \
+              # The container excludes %doc by default; libglvnd embeds its
+              # runtime notices in its package-owned README.
+              dnf install -y --setopt=tsflags= cmake make ninja-build gcc-c++ rpm-build openssl-devel patchelf binutils python3 \
                 glib2-devel libXtst-devel libxkbfile-devel qt6-qtbase-devel qt6-qttools-devel \
                 qt6-qttranslations qt6-qtsvg \
                 gtk3-devel libei-devel libportal-devel help2man doxygen
+              if [ ! -s /usr/share/doc/libglvnd/README.md ]; then
+                dnf reinstall -y --setopt=tsflags= \
+                  "libglvnd-$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}' libglvnd)"
+              fi
+              test -s /usr/share/doc/libglvnd/README.md
             elif [ ${{inputs.like}} == "suse" ]; then
+              # Override the image vendor drop-in before dependency install.
+              mkdir -p /etc/zypp/zypp.conf.d
+              printf '[main]\nrpm.install.excludedocs = no\n' > /etc/zypp/zypp.conf.d/excludedocs.conf
               zypper refresh
               zypper install -y --force-resolution \
                 cmake make ninja gcc-c++ rpm-build libopenssl-devel patchelf binutils python3 \
@@ -86,6 +96,11 @@ runs:
                 qt6-linguist-devel qt6-translations libQt6Svg6 \
                 gtk3-devel doxygen \
                 libei-devel libportal-devel help2man
+              if [ ! -s /usr/share/doc/packages/libglvnd/README.md ]; then
+                zypper install -y --force \
+                  "libglvnd.$(rpm -q --qf '%{ARCH}' libglvnd)=$(rpm -q --qf '%{VERSION}-%{RELEASE}' libglvnd)"
+              fi
+              test -s /usr/share/doc/packages/libglvnd/README.md
             elif [ ${{ inputs.like }} == "arch" ]; then
               pacman -Syu --noconfirm base-devel cmake ninja patchelf binutils python \
                 gcc openssl glib2 libxtst libxkbfile libei libportal \
