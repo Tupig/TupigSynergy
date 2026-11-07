@@ -10,9 +10,12 @@ import json
 from pathlib import Path, PurePosixPath
 import posixpath
 import re
+import socket
 import subprocess
 import sys
 import tarfile
+import time
+import urllib.error
 import urllib.request
 
 
@@ -202,6 +205,23 @@ def prepare(provider, version, archive_bytes, sonames, destination, package_iden
     return {name: str(directory) for name in sorted(set(sonames))}
 
 
+def download_source(url):
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as response:
+                data = response.read(32 * 1024 * 1024 + 1)
+            if len(data) > 32 * 1024 * 1024:
+                raise RuntimeError("Runtime source archive exceeds download limit")
+            return data
+        except (urllib.error.URLError, ConnectionResetError, TimeoutError, socket.timeout) as error:
+            reason = error.reason if isinstance(error, urllib.error.URLError) else error
+            if not isinstance(reason, (ConnectionResetError, TimeoutError, socket.timeout)) or attempt == 2:
+                raise
+            print("Transient runtime source transport failure; retrying ({}/3)".format(attempt + 2),
+                  file=sys.stderr)
+            time.sleep(attempt + 1)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--provider", required=True, choices=sorted(SONAMES))
@@ -209,10 +229,7 @@ def main():
     args = parser.parse_args()
     version, identity, names = discover(args.provider)
     pin = SOURCES[(args.provider, version)]
-    with urllib.request.urlopen(pin["url"], timeout=60) as response:
-        data = response.read(32 * 1024 * 1024 + 1)
-    if len(data) > 32 * 1024 * 1024:
-        raise RuntimeError("Runtime source archive exceeds download limit")
+    data = download_source(pin["url"])
     mapping = prepare(args.provider, version, data, names, args.destination, identity)
     print(";".join(name + "=" + directory for name, directory in sorted(mapping.items())))
 
