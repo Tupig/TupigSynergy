@@ -368,7 +368,9 @@ All shipped MSI/portable, app/DMG and native Linux packages include application 
 
 Windows packages keep application DLLs and required VC redistributables beside the executables, with Qt plugins selected through package-local `qt.conf`. The portable archive omits the service daemon; the MSI keeps it. Distribute complete packages rather than a GUI executable detached from its runtime files.
 
-macOS deploys the GUI and `synergy-core`, fixes third-party load commands inside the app, removes build-machine RPATHs, and signs after dependency fixups and resource installation. The verifier copies the DMG's app into a temporary directory, audits all Mach-O files and plugins, starts GUI `QApplication`/Cocoa through `--help`, and connects a real core client to a private loopback listener without completing an input-sharing handshake. This is package startup evidence, not main-window, TCC permission or input-sharing acceptance.
+macOS deploys the GUI and `synergy-core`, fixes third-party load commands inside the app, removes build-machine RPATHs, and signs after dependency fixups and resource installation. The verifier copies the DMG's app into a temporary directory, audits all Mach-O files and plugins, starts GUI `QApplication`/Cocoa through `--help`, and connects a real core client to a private TLS loopback server with a disposable identity and trust store. It requires a TLS handshake, client certificate and the core's peer-fingerprint acceptance before stopping without a Synergy greeting. Actual loaded images must remain inside the package or system directories. This is package TLS/startup evidence, not main-window, TCC permission or input-sharing acceptance. Translation catalogues live only in `Contents/Resources/translations`.
+
+The prebuilt Qt 6 OpenSSL plugin resolves OpenSSL ABI 3 dynamically, so import-table scans alone cannot close its dependencies. macOS packaging explicitly copies that runtime and its provider notices into the app when needed; CI installs `openssl@3` for this purpose as part of its prebuilt-Qt dependency exception. Homebrew discovery is restricted to GitHub Actions; local manifest builds use their selected SDK and fail if it lacks a required runtime. The installed app does not depend on Homebrew. A separately statically linked core OpenSSL does not satisfy this plugin runtime. CI runner success also does not establish compatibility with the minimum macOS deployment target; current provider objects may require a newer OS.
 
 Linux packages keep application executables, libraries and plugins under an app-private `libexec/synergy` tree and provide launch wrappers. The verifier extracts native packages without installing them or fetching dependencies, checks ELF closure, and exercises the bundled Qt platform plugin with build search paths removed.
 
@@ -706,7 +708,9 @@ encoding FAIL count=1 checked=669 allowed=utf-8 mode=fail
 
 Windows 包把应用 DLL 和必需的 VC 可再分发运行库放在可执行文件旁，通过包内 `qt.conf` 定位 Qt 插件。便携包省略服务 daemon，MSI 保留。交付完整软件包，不把 GUI 可执行文件与运行依赖拆开分发。
 
-macOS 同时部署 GUI 与 `synergy-core`，将第三方加载路径改为 app 内部位置，去除构建机 RPATH，并在依赖修复及资源安装后签名。验证器把 DMG 中的 app 复制到临时目录，检查所有 Mach-O 文件和插件，通过 `--help` 启动 GUI 的 `QApplication`/Cocoa，并让真实 core 客户端连接私有回环监听器，但不完成输入共享握手。这是包启动证据，不是主窗口、TCC 权限或输入共享功能验收。
+macOS 同时部署 GUI 与 `synergy-core`，将第三方加载路径改为 app 内部位置，去除构建机 RPATH，并在依赖修复及资源安装后签名。验证器把 DMG 中的 app 复制到临时目录，检查所有 Mach-O 文件和插件，通过 `--help` 启动 GUI 的 `QApplication`/Cocoa，并让真实 core 客户端使用一次性身份和信任库连接私有 TLS 回环服务。必须完成 TLS 握手、客户端证书检查以及 core 对服务端指纹的接受，随后停止且不发送 Synergy 问候消息。实际加载的库必须位于包内或系统目录。这是包 TLS/启动证据，不是主窗口、TCC 权限或输入共享功能验收。翻译文件只放在 `Contents/Resources/translations`。
+
+预编译 Qt 6 的 OpenSSL 插件动态解析 OpenSSL ABI 3，因此仅扫描导入表无法覆盖全部依赖。macOS 打包会在需要时显式把该运行库及提供方许可文本复制进 app；CI 为此安装 `openssl@3`，这是预编译 Qt 依赖例外的一部分。Homebrew 查找仅限 GitHub Actions；本地 manifest 构建使用选定 SDK，缺少必需运行库时失败。安装后的 app 不依赖 Homebrew。core 另行静态链接的 OpenSSL 无法代替此插件运行库。CI runner 通过也不能证明最低 macOS 部署版本兼容性；当前提供方对象可能要求较新的系统。
 
 Linux 包将应用可执行文件、库和插件放在应用私有的 `libexec/synergy` 目录，提供启动包装脚本。验证器只解包原生软件包，不安装它们或联网下载依赖，检查 ELF 依赖闭包，并在移除构建搜索路径后加载包内 Qt 平台插件。
 

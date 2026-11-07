@@ -35,6 +35,32 @@ if (OSX_BUNDLE)
   if(QT_IS_SHARED)
     find_program(DEPLOYQT NAMES macdeployqt HINTS "${MAC_QT_ROOT}/bin")
   endif()
+  # Qt's prebuilt Qt 6 OpenSSL plugin resolves ABI 3 with QLibrary, so this
+  # dependency is invisible to otool/fixup_bundle when Qt is not openssl-linked.
+  # A provider is used only while packaging; installed apps load their own copy.
+  set(MAC_QT_SSL_ROOT "")
+  set(qt_ssl_roots "${MAC_OPENSSL_ROOT}" "${MAC_QT_ROOT}")
+  if(QT_IS_SHARED AND QT_VERSION_MAJOR EQUAL 6)
+    # Homebrew is an explicit CI-provider exception, never a local manifest
+    # fallback. Local builds must obtain the matching runtime from their SDK.
+    if("$ENV{GITHUB_ACTIONS}" STREQUAL "true")
+      find_program(MAC_BREW_EXECUTABLE NAMES brew)
+    endif()
+    if("$ENV{GITHUB_ACTIONS}" STREQUAL "true" AND MAC_BREW_EXECUTABLE)
+      execute_process(COMMAND "${MAC_BREW_EXECUTABLE}" --prefix openssl@3
+        RESULT_VARIABLE brew_result OUTPUT_VARIABLE brew_ssl_root
+        OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+      if(brew_result EQUAL 0)
+        list(APPEND qt_ssl_roots "${brew_ssl_root}")
+      endif()
+    endif()
+    foreach(root IN LISTS qt_ssl_roots)
+      if(EXISTS "${root}/lib/libssl.3.dylib" AND EXISTS "${root}/lib/libcrypto.3.dylib")
+        get_filename_component(MAC_QT_SSL_ROOT "${root}" REALPATH)
+        break()
+      endif()
+    endforeach()
+  endif()
   set(MAC_VCPKG_SHARE "")
   if(VCPKG_INSTALLED_DIR AND VCPKG_TARGET_TRIPLET)
     set(MAC_VCPKG_SHARE "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share")

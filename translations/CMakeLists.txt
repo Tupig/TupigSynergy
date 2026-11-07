@@ -116,14 +116,4 @@ add_custom_target(app_translations ALL DEPENDS ${TRS} ${QT_TRANSLATION_FILES})
 if (NOT BUILD_OSX_BUNDLE)
   # install our translations
   install(FILES ${TRS} ${QT_TRANSLATION_FILES} DESTINATION ${CMAKE_INSTALL_I18N_DIR})
-else()
-  #when making the bundle copy our translation into the bundle
-  # Target name is CMAKE_PROJECT_NAME (no spaces); PROPER_NAME is display-only.
-  set(BUNDLE_TR_DIR $<TARGET_BUNDLE_CONTENT_DIR:${CMAKE_PROJECT_NAME}>/Resources/translations)
-
-  add_custom_command(
-    TARGET app_translations POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${BUNDLE_TR_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TRS} ${QT_TRANSLATION_FILES} ${BUNDLE_TR_DIR}
-  )
 endif()

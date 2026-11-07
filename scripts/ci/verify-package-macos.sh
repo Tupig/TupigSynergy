@@ -8,13 +8,16 @@ if [ "$(uname -s)" != Darwin ]; then
   exit 1
 fi
 python3 - "$@" <<'PY'
+import hashlib
 import os
 import plistlib
 import re
 import socket
+import ssl
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 
@@ -178,7 +181,7 @@ def launch(gui, core, root):
            'DYLD_PRINT_LIBRARIES': '1', 'LC_ALL': 'C'}
 
     def check_loaded(output):
-        count = 0
+        loaded = set()
         for line in output.splitlines():
             match = re.match(r'dyld(?:\[\d+\])?:\s+(?:<[^>]+>\s+|loaded:\s+)?(/.*)', line)
             if not match:
@@ -186,8 +189,8 @@ def launch(gui, core, root):
             path = match.group(1).strip()
             if not system(path) and not inside(Path(path).resolve(), gui.parents[2].resolve()):
                 raise ValueError('Startup loaded an external non-system image: ' + path)
-            count += 1
-        return count
+            loaded.add(str(Path(path).resolve()))
+        return loaded
 
     gui_result = subprocess.run([str(gui), '--help'], env=env, capture_output=True, text=True, timeout=30)
     (root / 'gui.log').write_text(gui_result.stdout + gui_result.stderr)
@@ -195,22 +198,55 @@ def launch(gui, core, root):
         raise ValueError('GUI QApplication/Cocoa startup failed (exit ' + str(gui_result.returncode) + ')')
     check_loaded(gui_result.stderr)
     print('PASS: clean-environment GUI QApplication/Cocoa help startup (no main-window/TCC acceptance)')
-    # A private listener proves real client startup without connecting to any existing service.
+    # The server and identity belong only to this test. No host TLS settings,
+    # keychain, certificate files or existing services are used.
+    tls = private / 'tls'
+    tls.mkdir(mode=0o700)
+    certificate = tls / 'server.pem'
+    key = tls / 'key.pem'
+    openssl_config = tls / 'openssl.cnf'
+    openssl_config.write_text('[req]\ndistinguished_name=dn\nx509_extensions=extensions\n'
+                              '[dn]\n[extensions]\nbasicConstraints=critical,CA:TRUE\n')
+    run(['/usr/bin/openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes',
+         '-days', '1', '-subj', '/CN=package-smoke', '-config', str(openssl_config),
+         '-keyout', str(key), '-out', str(certificate)], timeout=30)
+    identity = tls / 'identity.pem'
+    identity.write_bytes(certificate.read_bytes() + key.read_bytes())
+    identity.chmod(0o600)
+    der = ssl.PEM_cert_to_DER_cert(certificate.read_text())
+    fingerprint = hashlib.sha256(der).hexdigest()
+    (tls / 'trusted-servers').write_text('v2:sha256:' + fingerprint + '\n')
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.load_cert_chain(str(certificate), str(key))
+    context.load_verify_locations(cafile=str(certificate))
+    context.verify_mode = ssl.CERT_REQUIRED
     with socket.socket() as listener:
         listener.bind(('127.0.0.1', 0))
         listener.listen(1)
         listener.settimeout(20)
         settings.write_text(settings.read_text().replace('port=0\n', 'port=' + str(listener.getsockname()[1]) + '\n') +
-                            '[client]\nremoteHost=127.0.0.1\n[security]\ntlsEnabled=false\n')
+                            '[client]\nremoteHost=127.0.0.1\n[security]\ntlsEnabled=true\ncertificate=' +
+                            str(identity) + '\n')
         with (root / 'core.log').open('w') as log:
             process = subprocess.Popen([str(core), 'client', '--new-instance', '--settings', str(settings)],
                                        env=env, stdout=log, stderr=log)
             try:
                 connection, _ = listener.accept()
-                connection.close()  # No protocol greeting, so screen/input sharing never activates.
-                if process.poll() is not None:
-                    raise ValueError('Core exited during isolated client startup')
-                print('PASS: clean-environment core client reached private loopback listener')
+                connection.settimeout(20)
+                with connection, context.wrap_socket(connection, server_side=True) as secure:
+                    if hashlib.sha256(secure.getpeercert(binary_form=True)).hexdigest() != fingerprint:
+                        raise ValueError('Core did not present the private test identity')
+                    deadline = time.monotonic() + 10
+                    # Handshake alone does not prove the product accepted its peer.
+                    # Its existing success log occurs only after fingerprint checks.
+                    while 'peer tls certificate info: package-smoke' not in (root / 'core.log').read_text():
+                        if process.poll() is not None or time.monotonic() >= deadline:
+                            raise ValueError('Core did not accept the trusted TLS peer')
+                        time.sleep(0.05)
+                    print('PASS: clean-environment core completed', secure.version(),
+                          'loopback handshake and accepted private trusted identity')
+                    # No Synergy greeting is sent; input sharing never activates.
             finally:
                 if process.poll() is None:
                     process.terminate()
@@ -219,7 +255,15 @@ def launch(gui, core, root):
                     except subprocess.TimeoutExpired:
                         process.kill()
                         process.wait(timeout=5)
-        check_loaded((root / 'core.log').read_text())
+        loaded = check_loaded((root / 'core.log').read_text())
+        if not loaded:
+            raise ValueError('TLS smoke has no loaded-image evidence')
+        bundle = gui.parents[2]
+        if (bundle / 'Contents/PlugIns/tls/libqopensslbackend.dylib').exists():
+            for stem in ('libssl.', 'libcrypto.'):
+                if not any(Path(path).name.startswith(stem) for path in loaded):
+                    raise ValueError('Retained Qt OpenSSL backend did not load packaged ' + stem + ' runtime')
+        print('PASS: TLS loaded-image closure stays inside package/system paths')
 
 
 def main():

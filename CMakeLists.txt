@@ -411,27 +411,25 @@ endif()
 
 add_subdirectory(src)
 
-# Deploy the generated translation catalogues next to the executables.
-#
-# I18N looks for them in <applicationDirPath>/translations first. That holds for
-# an installed tree (CMAKE_INSTALL_I18N_DIR puts them beside the binaries), but
-# not for a plain build tree, where the catalogues live in
-# <build>/translations while the binaries are in <build>/bin/<config>. Without
-# this copy a freshly built binary reports "initial language: en" even on a
-# Chinese system.
-#
-# Deliberately an always-run ALL target rather than a POST_BUILD step: POST_BUILD
-# only fires when its target relinks, so the catalogues would silently go stale
-# (or be missing entirely) on incremental builds.
+# Deploy catalogues on every build so incremental translation edits are copied.
+# Bundles keep data in Resources; MacOS is reserved for executable code and
+# codesign treats files there as nested code. I18N supports both layouts.
 if(BUILD_GUI AND TARGET synergy AND SYNERGY_TRANSLATION_FILES)
+  set(translation_destination "$<TARGET_FILE_DIR:synergy>/translations")
+  set(translation_cleanup "")
+  if(BUILD_OSX_BUNDLE)
+    set(translation_destination "$<TARGET_BUNDLE_CONTENT_DIR:synergy>/Resources/translations")
+    # Remove the obsolete generated duplicate when updating an existing build.
+    set(translation_cleanup COMMAND ${CMAKE_COMMAND} -E remove_directory
+      "$<TARGET_FILE_DIR:synergy>/translations")
+  endif()
   add_custom_target(deploy_translations ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-      "$<TARGET_FILE_DIR:synergy>/translations"
+    ${translation_cleanup}
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${translation_destination}"
     COMMAND ${CMAKE_COMMAND} -E copy
-      ${SYNERGY_TRANSLATION_FILES}
-      "$<TARGET_FILE_DIR:synergy>/translations"
+      ${SYNERGY_TRANSLATION_FILES} "${translation_destination}"
     DEPENDS synergy app_translations
-    COMMENT "Deploying translations next to the executables"
+    COMMENT "Deploying translation resources"
     VERBATIM
   )
 endif()
