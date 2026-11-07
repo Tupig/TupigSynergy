@@ -19,6 +19,8 @@ private Q_SLOTS:
   void serverRefusalDoesNotActivateScreen();
   void suspendAndResumeReconnects();
   void truncatedHelloCannotConnect();
+  void malformedBodyDisconnectsSafely_data();
+  void malformedBodyDisconnectsSafely();
 
 private:
   Arch m_arch;

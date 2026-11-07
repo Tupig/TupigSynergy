@@ -16,7 +16,10 @@ namespace {
 class Socket : public IDataSocket
 {
 public:
-  Socket(IEventQueue *events, std::shared_ptr<int> destroyed) : IDataSocket(events), stream(std::move(destroyed))
+  Socket(IEventQueue *events, std::shared_ptr<int> destroyed, std::shared_ptr<std::string> output)
+      : IDataSocket(events),
+        stream(std::move(destroyed)),
+        output(std::move(output))
   {
   }
   void connect(const NetworkAddress &) override
@@ -37,6 +40,7 @@ public:
   void write(const void *data, uint32_t size) override
   {
     stream.write(data, size);
+    output->append(static_cast<const char *>(data), size);
   }
   void flush() override
   {
@@ -69,6 +73,7 @@ public:
     return nullptr;
   }
   protocol_test::Stream stream;
+  std::shared_ptr<std::string> output;
   int connectCalls = 0;
 };
 
@@ -81,7 +86,7 @@ public:
   std::unique_ptr<IDataSocket> create(IArchNetwork::AddressFamily, SecurityLevel) const override
   {
     ++creates;
-    auto result = std::make_unique<Socket>(events, destroyed);
+    auto result = std::make_unique<Socket>(events, destroyed, output);
     last = result.get();
     return result;
   }
@@ -91,6 +96,7 @@ public:
   }
   IEventQueue *events;
   std::shared_ptr<int> destroyed = std::make_shared<int>(0);
+  std::shared_ptr<std::string> output = std::make_shared<std::string>();
   mutable Socket *last = nullptr;
   mutable int creates = 0;
 };
@@ -143,6 +149,7 @@ void ClientTests::initTestCase()
 void ClientTests::handshakeEnablesScreenAndDisconnectCleansUp()
 {
   Fixture fixture;
+  const auto handlers = fixture.events.handlerCount();
   QVERIFY(!fixture.client.isConnected());
   QVERIFY(!fixture.client.isConnecting());
   fixture.connect();
@@ -166,6 +173,7 @@ void ClientTests::handshakeEnablesScreenAndDisconnectCleansUp()
   QCOMPARE(fixture.platform->disables, 1);
   QCOMPARE(*fixture.factory->destroyed, 1);
   QCOMPARE(fixture.events.count(EventTypes::ClientDisconnected), 1);
+  QCOMPARE(fixture.events.handlerCount(), handlers);
   QCOMPARE(fixture.events.timerCount(), size_t(0));
 }
 
@@ -226,6 +234,82 @@ void ClientTests::truncatedHelloCannotConnect()
   QCOMPARE(fixture.platform->enables, 0);
   QCOMPARE(fixture.events.count(EventTypes::ClientConnectionFailed), 1);
   QCOMPARE(*fixture.factory->destroyed, 1);
+}
+
+void ClientTests::malformedBodyDisconnectsSafely_data()
+{
+  QTest::addColumn<QByteArray>("payload");
+  QTest::addColumn<bool>("handshake");
+  const auto addTruncations = [](const std::string &frame, bool handshake) {
+    for (size_t size = 4; size < frame.size(); ++size) {
+      const auto name =
+          std::string(handshake ? "handshake-" : "connected-") + frame.substr(0, 4) + "-" + std::to_string(size - 4);
+      QTest::newRow(name.c_str()) << QByteArray(frame.data(), static_cast<qsizetype>(size)) << handshake;
+    }
+  };
+  const auto key = protocol_test::integers16({65, 0, 12});
+  const auto text = protocol_test::integer32(2) + "en";
+  for (const auto &frame :
+       {"DKDN" + key, "DKDL" + key + text, "DKRP" + protocol_test::integers16({65, 0, 1, 12}) + text, "DKUP" + key,
+        std::string("DMDN") + char(1), std::string("DMUP") + char(1), "DMMV" + protocol_test::integers16({5, 7}),
+        "DMRM" + protocol_test::integers16({5, 7}), "DMWM" + protocol_test::integers16({5, 7}),
+        "CINN" + protocol_test::integers16({5, 7}) + protocol_test::integer32(1) + protocol_test::integers16({0}),
+        std::string("CCLP") + char(0) + protocol_test::integer32(1), std::string("CSEC") + char(1),
+        "DSOP" + protocol_test::integer32(2) + protocol_test::integer32(0) + protocol_test::integer32(0), "SECN" + text,
+        std::string("DCLP") + char(0) + protocol_test::integer32(1) + char(0) + text}) {
+    addTruncations(frame, false);
+  }
+  addTruncations(
+      "DSOP" + protocol_test::integer32(2) + protocol_test::integer32(0) + protocol_test::integer32(0), true
+  );
+  addTruncations("LSYN" + text, true);
+  addTruncations("EICV" + protocol_test::integers16({1, 8}), true);
+  const auto invalidClipboard =
+      std::string("DCLP") + char(127) + protocol_test::integer32(1) + char(127) + protocol_test::integer32(0);
+  QTest::newRow("connected-invalid-clipboard")
+      << QByteArray(invalidClipboard.data(), static_cast<qsizetype>(invalidClipboard.size())) << false;
+}
+
+void ClientTests::malformedBodyDisconnectsSafely()
+{
+  QFETCH(QByteArray, payload);
+  QFETCH(bool, handshake);
+  Fixture fixture;
+  const auto handlers = fixture.events.handlerCount();
+  fixture.connect();
+  if (handshake) {
+    fixture.hello();
+  } else {
+    fixture.finishHandshake();
+  }
+  const auto output = *fixture.factory->output;
+  const int enables = fixture.platform->enables;
+  const int options = fixture.platform->optionsCalls;
+  const int clipboards = fixture.platform->clipboardSets;
+  fixture.receive(std::string(payload.constData(), static_cast<size_t>(payload.size())));
+  QVERIFY(!fixture.client.isConnected());
+  QVERIFY(!fixture.client.isConnecting());
+  QCOMPARE(fixture.platform->enables, enables);
+  QCOMPARE(fixture.platform->optionsCalls, options);
+  QCOMPARE(fixture.platform->enters, 0);
+  QCOMPARE(fixture.platform->inputCalls(), 0);
+  QCOMPARE(fixture.platform->clipboardSets, clipboards);
+  QCOMPARE(fixture.platform->screensavers, 0);
+  QCOMPARE(fixture.events.count(EventTypes::ClientConnected), handshake ? 0 : 1);
+  QCOMPARE(fixture.events.count(EventTypes::ClientConnectionFailed), 1);
+  QCOMPARE(*fixture.factory->destroyed, 1);
+  QCOMPARE(fixture.events.timerCount(), size_t(0));
+  QCOMPARE(*fixture.factory->output, output);
+  QCOMPARE(fixture.events.handlerCount(), handlers);
+  fixture.connect();
+  fixture.finishHandshake();
+  QVERIFY(fixture.client.isConnected());
+  QCOMPARE(fixture.events.count(EventTypes::ClientConnected), handshake ? 1 : 2);
+  QCOMPARE(*fixture.factory->destroyed, 1);
+  fixture.client.disconnect(nullptr);
+  QCOMPARE(*fixture.factory->destroyed, 2);
+  QCOMPARE(fixture.events.handlerCount(), handlers);
+  QCOMPARE(fixture.events.timerCount(), size_t(0));
 }
 
 QTEST_MAIN(ClientTests)

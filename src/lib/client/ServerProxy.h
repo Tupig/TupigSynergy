@@ -12,7 +12,9 @@
 #include "ClipboardTypes.h"
 #include "KeyTypes.h"
 #include "KeyboardLayoutManager.h"
+#include "ProtocolUtil.h"
 #include "client/ClientConfig.h"
+#include "client/IServerProxyClient.h"
 #include "synergy/input/InputValidator.h"
 #include "synergy/protocol/FileTransferReceiver.h"
 
@@ -75,7 +77,8 @@ private:
   //! Read a message body from the server, disconnecting the peer when the
   //! stream ends mid-message.  ProtocolUtil::readf returns false on such a
   //! truncation and leaves output arguments partially written, so the caller
-  //! must not forward them.  Returns false after disconnecting.
+  //! must not forward them. Disconnect can synchronously delete this proxy;
+  //! callers must return Disconnect without further member access on failure.
   template <typename... Args> bool readOrDisconnect(const char *format, Args &&...args);
 
   void sendInfo(const ClientInfo &);
@@ -92,25 +95,25 @@ private:
   void handleKeepAliveAlarm();
 
   // message handlers
-  void enter();
+  bool enter();
   void leave();
-  void setClipboard();
-  void grabClipboard();
+  bool setClipboard();
+  bool grabClipboard();
   void keyDown(uint16_t id, uint16_t mask, uint16_t button, const std::string &lang);
-  void keyRepeat();
-  void keyUp();
-  void mouseDown();
-  void mouseUp();
-  void mouseMove();
-  void mouseRelativeMove();
-  void mouseWheel();
-  void screensaver();
+  bool keyRepeat();
+  bool keyUp();
+  bool mouseDown();
+  bool mouseUp();
+  bool mouseMove();
+  bool mouseRelativeMove();
+  bool mouseWheel();
+  bool screensaver();
   void resetOptions();
-  void setOptions();
+  bool setOptions();
   void queryInfo();
   void infoAcknowledgment();
-  void secureInputNotification();
-  void setServerLanguages();
+  bool secureInputNotification();
+  bool setServerLanguages();
   void setActiveServerLanguage(const std::string_view &language);
 
   //! Consume a `DDRG` announce from the server.
@@ -164,3 +167,14 @@ private:
   */
   std::unique_ptr<FileTransferReceiver> m_fileTransferReceiver;
 };
+
+template <typename... Args> bool ServerProxy::readOrDisconnect(const char *format, Args &&...args)
+{
+  if (ProtocolUtil::readf(m_stream, format, args...)) {
+    return true;
+  }
+  // readf returns false when the stream ends mid-message, leaving the output
+  // arguments partially written; never forward those values
+  m_client->disconnect("truncated message");
+  return false;
+}

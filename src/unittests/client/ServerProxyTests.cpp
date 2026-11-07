@@ -373,7 +373,9 @@ void ServerProxyTests::optionsAreForwarded()
 void ServerProxyTests::truncatedInputDoesNotDispatch_data()
 {
   QTest::addColumn<QByteArray>("code");
-  for (const auto *code : {"DKDN", "DKUP", "DKRP", "DMDN", "DMUP", "DMMV", "DMRM", "DMWM", "CINN"})
+  for (const auto *code :
+       {"DKDN", "DKDL", "DKUP", "DKRP", "DMDN", "DMUP", "DMMV", "DMRM", "DMWM", "CINN", "CCLP", "CSEC", "DSOP", "SECN",
+        "DCLP"})
     QTest::newRow(code) << QByteArray(code);
 }
 
@@ -384,7 +386,10 @@ void ServerProxyTests::truncatedInputDoesNotDispatch()
   FakeServerProxyClient client;
   MemoryStream stream;
   TestableServerProxy proxy(&client, &stream, &events, ServerProxyConfig{});
-  proxy.parseMessage(reinterpret_cast<const uint8_t *>(code.constData()));
+  QCOMPARE(
+      proxy.parseMessage(reinterpret_cast<const uint8_t *>(code.constData())),
+      TestableServerProxy::ConnectionResult::Disconnect
+  );
   QCOMPARE(client.disconnectCalls, 1);
   QCOMPARE(client.keyDownCalls + client.keyUpCalls + client.keyRepeatCalls, 0);
   QCOMPARE(

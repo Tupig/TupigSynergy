@@ -261,7 +261,13 @@ public:
   int enables = 0, disables = 0, enters = 0, leaves = 0;
   bool allowLeave = true, mousePressed = false;
   int32_t cursorX = 400, cursorY = 300;
-  int keyDowns = 0, keyUps = 0, mouseMoves = 0;
+  int keyDowns = 0, keyUps = 0, keyRepeats = 0, mouseMoves = 0, mouseButtons = 0;
+  mutable int relativeMoves = 0, mouseWheels = 0;
+  int clipboardSets = 0, screensavers = 0, optionsCalls = 0;
+  int inputCalls() const
+  {
+    return keyDowns + keyUps + keyRepeats + mouseMoves + mouseButtons + relativeMoves + mouseWheels;
+  }
   KeyModifierMask modifiers = 0;
   void enable() override
   {
@@ -285,6 +291,7 @@ public:
   }
   bool setClipboard(ClipboardID, const IClipboard *) override
   {
+    ++clipboardSets;
     return true;
   }
   bool getClipboard(ClipboardID, IClipboard *) const override
@@ -302,12 +309,14 @@ public:
   }
   void screensaver(bool) override
   {
+    ++screensavers;
   }
   void resetOptions() override
   {
   }
   void setOptions(const OptionsList &) override
   {
+    ++optionsCalls;
   }
   void setSequenceNumber(uint32_t) override
   {
@@ -377,6 +386,7 @@ public:
   }
   void fakeMouseButton(ButtonID, bool) override
   {
+    ++mouseButtons;
   }
   void fakeMouseMove(int32_t x, int32_t y) override
   {
@@ -386,9 +396,11 @@ public:
   }
   void fakeMouseRelativeMove(int32_t, int32_t) const override
   {
+    ++relativeMoves;
   }
   void fakeMouseWheel(ScrollDelta) const override
   {
+    ++mouseWheels;
   }
   void updateKeyMap() override
   {
@@ -405,6 +417,7 @@ public:
   }
   bool fakeKeyRepeat(KeyID, KeyModifierMask, int32_t, KeyButton, const std::string &) override
   {
+    ++keyRepeats;
     return true;
   }
   bool fakeKeyUp(KeyButton) override
