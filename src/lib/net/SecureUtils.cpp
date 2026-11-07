@@ -108,14 +108,17 @@ void generatePemSelfSignedCert(const QString &path, int keyLength)
   ensure(X509_gmtime_adj(X509_get_notAfter(cert), expirationDays * 24 * 3600) != nullptr, "could not set validity end");
   ensure(X509_set_pubkey(cert, privateKey) == 1, "could not set public key");
 
-  auto *name = X509_get_subject_name(cert);
-  ensure(name != nullptr, "could not get subject name");
+  // Build an owned name: OpenSSL 4 exposes certificate names as const views.
+  auto *name = X509_NAME_new();
+  ensure(name != nullptr, "could not allocate subject name");
+  auto nameFree = finally([name]() { X509_NAME_free(name); });
   ensure(
       X509_NAME_add_entry_by_txt(
           name, "CN", MBSTRING_ASC, reinterpret_cast<const unsigned char *>(kAppName), -1, -1, 0
       ) == 1,
       "could not set common name"
   );
+  ensure(X509_set_subject_name(cert, name) == 1, "could not set subject name");
   ensure(X509_set_issuer_name(cert, name) == 1, "could not set issuer name");
 
   ensure(X509_sign(cert, privateKey, EVP_sha256()) > 0, "could not sign certificate");
