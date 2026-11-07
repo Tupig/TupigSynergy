@@ -381,6 +381,8 @@ The prebuilt Qt 6 OpenSSL plugin resolves OpenSSL ABI 3 dynamically, so import-t
 
 Linux packages keep application executables, libraries and plugins under an app-private `libexec/synergy` tree and provide launch wrappers. The verifier extracts native packages without installing them or fetching dependencies, checks ELF closure, and exercises the bundled Qt platform plugin with build search paths removed.
 
+Linux CI retains packaged license documentation and restores missing notices from the exact installed RPM when needed. For observed distribution packages that omit notices, `scripts/ci/prepare-runtime-notices.py` binds installed package source identity and actual ELF SONAMEs to a finite registry of independently verified upstream archives. Unknown versions, owners or hashes stop packaging; maintainers must update the source pins and regression checks before rerunning affected native verification. This CI supplement does not change local manifest dependency or notice sources.
+
 The host boundary is the supported OS kernel/ABI and system APIs; on macOS this includes `/usr/lib` and `/System/Library`, and on Linux glibc/loader plus POSIX shell/coreutils. Display services, fonts and GPU drivers remain on the host. Qt, OpenSSL and application plugins are included rather than delegated to those host boundaries. Native DEB/RPM/Arch metadata may name the minimal OS runtime prerequisites.
 
 Run package checks with `scripts\ci\verify-package-windows.bat build`, `bash scripts/ci/verify-package-macos.sh build`, or `bash scripts/ci/verify-package-linux.sh build <distribution-family>`. Report each result against its exact build commit. A green CI run with prebuilt/shared dependencies does not prove the local vcpkg static release path. The Flatpak delivery target is an offline OSTree repository `.tar.zst` containing the app, runtime and extensions for each supported architecture, with hashes and bilingual offline instructions. This requires separate exact-commit verification; a standalone app file or an unfinished offline pipeline must not be reported as a complete delivery.
@@ -722,6 +724,8 @@ macOS 同时部署 GUI 与 `synergy-core`，将第三方加载路径改为 app �
 预编译 Qt 6 的 OpenSSL 插件动态解析 OpenSSL ABI 3，因此仅扫描导入表无法覆盖全部依赖。macOS 打包会在需要时显式把该运行库及提供方许可文本复制进 app；CI 为此安装 `openssl@3`，这是预编译 Qt 依赖例外的一部分。Homebrew 查找仅限 GitHub Actions；本地 manifest 构建使用选定 SDK，缺少必需运行库时失败。安装后的 app 不依赖 Homebrew。core 另行静态链接的 OpenSSL 无法代替此插件运行库。CI runner 通过也不能证明最低 macOS 部署版本兼容性；当前提供方对象可能要求较新的系统。
 
 Linux 包将应用可执行文件、库和插件放在应用私有的 `libexec/synergy` 目录，提供启动包装脚本。验证器只解包原生软件包，不安装它们或联网下载依赖，检查 ELF 依赖闭包，并在移除构建搜索路径后加载包内 Qt 平台插件。
+
+Linux CI 保留发行包的许可文档，必要时仅从已安装 RPM 的精确版本恢复缺失声明。对已确认漏装许可的发行包，`scripts/ci/prepare-runtime-notices.py` 将已安装包的来源身份和实际 ELF SONAME 绑定到有限登记、经独立核验的上游归档。未知版本、提供方或哈希均阻止打包；维护者须先更新来源固定值及回归检查，再重新执行受影响的原生验证。本项 CI 补充不改变本地 manifest 的依赖或许可来源。
 
 宿主边界是受支持的操作系统内核/ABI 和系统 API；macOS 包括 `/usr/lib` 与 `/System/Library`，Linux 包括 glibc/加载器及 POSIX shell/coreutils。显示服务、字体及 GPU 驱动由宿主提供。Qt、OpenSSL 和应用插件应随包携带，不能算作这些宿主边界。DEB/RPM/Arch 元数据可以声明最小操作系统运行前提。
 

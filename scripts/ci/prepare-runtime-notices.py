@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
 # SPDX-License-Identifier: MIT
-"""Prepare exact-source notices for two CI runtime providers, never at app runtime."""
+"""Prepare exact-source notices for four CI runtime providers, never at app runtime."""
 
 import argparse
 import hashlib
@@ -45,6 +45,16 @@ SOURCES = {
         "url": "https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.4/e2fsprogs-1.47.4.tar.xz",
         "authority": "https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.4/sha256sums.asc",
     },
+    ("xcb-util-keysyms", "0.4.1"): {
+        "sha256": "7c260a5294412aed429df1da2f8afd3bd07b7cba3fec772fba15a613a6d5c638",
+        "url": "https://www.x.org/releases/individual/xcb/xcb-util-keysyms-0.4.1.tar.xz",
+        "authority": "https://lists.x.org/archives/xorg-announce/2022-October/003233.html",
+    },
+    ("glib", "2.90.1"): {
+        "sha256": "93c941aa17d5eb1d53fe838365f29a8b4e539c222a256d974ec8f30fc413e396",
+        "url": "https://download.gnome.org/sources/glib/2.90/glib-2.90.1.tar.xz",
+        "authority": "https://download.gnome.org/sources/glib/2.90/glib-2.90.1.sha256sum",
+    },
 }
 # Names/ABI majors are declared by the authenticated libdrm meson sources.
 SONAMES = {
@@ -52,6 +62,9 @@ SONAMES = {
                "libdrm_radeon.so.1", "libdrm_freedreno.so.1", "libdrm_tegra.so.0", "libdrm_omap.so.1",
                "libdrm_exynos.so.1", "libdrm_etnaviv.so.1"},
     "e2fsprogs": {"libcom_err.so.2"},
+    "xcb-util-keysyms": {"libxcb-keysyms.so.1"},
+    "glib": {"libglib-2.0.so.0", "libgobject-2.0.so.0", "libgmodule-2.0.so.0",
+             "libgthread-2.0.so.0", "libgio-2.0.so.0", "libgirepository-2.0.so.0"},
 }
 
 
@@ -68,23 +81,34 @@ def validate_sonames(provider, names):
 
 
 def discover(provider):
-    pattern = r"libdrm(?:_[a-z]+)?\.so\.[0-9.]+" if provider == "libdrm" else r"libcom_err\.so\.[0-9.]+"
-    if provider == "libdrm":
+    patterns = {
+        "libdrm": r"libdrm(?:_[a-z]+)?\.so\.[0-9.]+",
+        "e2fsprogs": r"libcom_err\.so\.[0-9.]+",
+        "xcb-util-keysyms": r"libxcb-keysyms\.so\.[0-9.]+",
+        "glib": r"lib(?:glib|gobject|gmodule|gthread|gio|girepository)-2\.0\.so\.[0-9.]+",
+    }
+    if provider not in patterns:
+        raise RuntimeError("Unsupported runtime notice provider")
+    pattern = patterns[provider]
+    if provider in {"libdrm", "xcb-util-keysyms"}:
         query = ["--qf", "%{NAME}\t%{VERSION}\t%{SOURCERPM}"]
-        record = command(["rpm", "-q", "--whatprovides"] + query + ["libdrm.so.2()(64bit)"])
+        capability = "libdrm.so.2()(64bit)" if provider == "libdrm" else "libxcb-keysyms.so.1()(64bit)"
+        primary_names = {"libdrm", "libdrm2"} if provider == "libdrm" else {"xcb-util-keysyms"}
+        record = command(["rpm", "-q", "--whatprovides"] + query + [capability])
         fields = record.split("\t")
-        if (len(fields) != 3 or fields[0] not in {"libdrm", "libdrm2"}
-                or not fields[2].startswith("libdrm-" + fields[1] + "-") or not fields[2].endswith(".src.rpm")):
-            raise RuntimeError("Unknown installed libdrm source identity")
+        if (len(fields) != 3 or fields[0] not in primary_names
+                or not fields[2].startswith(provider + "-" + fields[1] + "-") or not fields[2].endswith(".src.rpm")):
+            raise RuntimeError("Unknown installed runtime source identity")
         version = fields[1]
-        runtime_names = {"libdrm"} | {name.replace(".so.", "") for name in SONAMES[provider]}
+        runtime_names = ({"libdrm"} | {name.replace(".so.", "") for name in SONAMES[provider]}
+                         if provider == "libdrm" else {"xcb-util-keysyms"})
         owners = {fields[0]: record}
         for entry in command(["rpm", "-qa", "--qf", "%{NAME}\t%{VERSION}\t%{SOURCERPM}\n"]).splitlines():
             sibling = entry.split("\t")
             if len(sibling) != 3 or sibling[0] not in runtime_names:
                 continue
             if sibling[1:] != fields[1:]:
-                raise RuntimeError("Conflicting installed libdrm runtime source family")
+                raise RuntimeError("Conflicting installed runtime source family")
             owners[sibling[0]] = entry
         identity = " | ".join(value.replace("\t", " ") for value in sorted(owners.values()))
         listing = []
@@ -97,15 +121,14 @@ def discover(provider):
                     raise RuntimeError("Ambiguous installed runtime file owner")
                 expected_owners[path] = owner_record
                 listing.append(path)
-    elif provider == "e2fsprogs":
-        identity = command(["pacman", "-Q", "e2fsprogs"])
+    elif provider in {"e2fsprogs", "glib"}:
+        package, expected_version = ("e2fsprogs", "1.47.4-1") if provider == "e2fsprogs" else ("glib2", "2.90.1-1")
+        identity = command(["pacman", "-Q", package])
         fields = identity.split()
-        if len(fields) != 2 or fields[0] != "e2fsprogs" or fields[1] != "1.47.4-1":
-            raise RuntimeError("Unknown installed e2fsprogs package identity")
+        if len(fields) != 2 or fields[0] != package or fields[1] != expected_version:
+            raise RuntimeError("Unknown installed runtime package identity")
         version = fields[1].rsplit("-", 1)[0]
-        listing = command(["pacman", "-Qlq", "e2fsprogs"]).splitlines()
-    else:
-        raise RuntimeError("Unsupported runtime notice provider")
+        listing = command(["pacman", "-Qlq", package]).splitlines()
     if (provider, version) not in SOURCES:
         raise RuntimeError("Unknown installed runtime provider version")
     names = set()
@@ -116,11 +139,11 @@ def discover(provider):
             continue
         if not path.is_absolute() or not path.is_file():
             raise RuntimeError("Missing installed runtime provider file")
-        if provider == "libdrm":
+        if provider in {"libdrm", "xcb-util-keysyms"}:
             owner = command(["rpm", "-qf"] + query + [str(path)])
             if owner != expected_owners[listed]:
                 raise RuntimeError("Installed runtime file has a different package owner")
-        elif command(["pacman", "-Qoq", str(path)]) != "e2fsprogs":
+        elif command(["pacman", "-Qoq", str(path)]) != package:
             raise RuntimeError("Installed runtime file has a different package owner")
         resolved = str(path.resolve())
         if resolved in visited:
@@ -140,6 +163,7 @@ def discover(provider):
 def source_files(data, expected_root):
     files = {}
     seen = set()
+    copying_alias = None
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:*") as archive:
         members = archive.getmembers()
         if len(members) > 20000 or sum(member.size for member in members) > 256 * 1024 * 1024:
@@ -151,6 +175,10 @@ def source_files(data, expected_root):
                 raise RuntimeError("Unsafe, duplicate or wrong-version source member")
             seen.add(str(path))
             if member.issym() or member.islnk():
+                if expected_root == "glib-2.90.1" and str(path) == expected_root + "/COPYING":
+                    if not member.issym() or member.linkname != "LICENSES/LGPL-2.1-or-later.txt":
+                        raise RuntimeError("Unsupported GLib COPYING alias")
+                    copying_alias = expected_root + "/" + member.linkname
                 target = member.linkname if member.islnk() else posixpath.join(posixpath.dirname(member.name), member.linkname)
                 normalized = PurePosixPath(posixpath.normpath(target))
                 if normalized.is_absolute() or not normalized.parts or normalized.parts[0] != expected_root:
@@ -162,9 +190,21 @@ def source_files(data, expected_root):
                 raise RuntimeError("Unsupported source archive member")
         result = {}
         for name, member in files.items():
-            if name.endswith((".c", ".h")) or name == expected_root + "/NOTICE":
+            if (name.endswith((".c", ".h")) or name in {expected_root + "/NOTICE", expected_root + "/COPYING"}
+                    or name.startswith(expected_root + "/LICENSES/")):
                 result[name] = archive.extractfile(member).read()
+        if copying_alias is not None:
+            if copying_alias not in files:
+                raise RuntimeError("Missing ordinary GLib COPYING alias target")
+            result[expected_root + "/COPYING"] = result[copying_alias]
         return result
+
+
+def source_comments(data):
+    # C literals may contain comment-like text; consume those tokens without shipping them.
+    tokens = re.finditer(rb'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|(?P<comment>/\*.*?\*/(?:\r?\n)?|//[^\n]*(?:\n|$))',
+                         data, re.S)
+    return [token.group("comment") for token in tokens if token.group("comment") is not None]
 
 
 def prepare(provider, version, archive_bytes, sonames, destination, package_identity):
@@ -176,21 +216,36 @@ def prepare(provider, version, archive_bytes, sonames, destination, package_iden
         raise RuntimeError("Runtime source archive checksum mismatch")
     root = provider + "-" + version
     files = source_files(archive_bytes, root)
-    foundation = root + ("/xf86drm.c" if provider == "libdrm" else "/lib/et/com_err.c")
-    if foundation not in files:
+    foundations = {
+        "libdrm": ["xf86drm.c"], "e2fsprogs": ["lib/et/com_err.c"],
+        "xcb-util-keysyms": ["keysyms/keysyms.c"],
+        "glib": ["glib/glib.h", "gobject/gobject.h", "gmodule/gmodule.h", "gthread/gthread-impl.c",
+                 "gio/gio.h", "girepository/girepository.h"],
+    }
+    if any(root + "/" + name not in files for name in foundations[provider]):
         raise RuntimeError("Missing foundational runtime source notice")
-    package_notice = files.get(root + "/NOTICE", b"") if provider == "e2fsprogs" else b""
-    if provider == "e2fsprogs" and not package_notice.strip():
-        raise RuntimeError("Missing exact e2fsprogs package NOTICE")
+    package_notice = files.get(root + "/NOTICE", b"") if provider == "e2fsprogs" else files.get(root + "/COPYING", b"")
+    if provider != "libdrm" and not package_notice.strip():
+        raise RuntimeError("Missing exact runtime package notice")
+    license_files = {name[len(root) + 1:]: data for name, data in files.items()
+                     if name.startswith(root + "/LICENSES/")} if provider == "glib" else {}
+    if provider == "glib" and (not license_files.get("LICENSES/LGPL-2.1-or-later.txt")
+                               or any(not data.strip() for data in license_files.values())):
+        raise RuntimeError("Missing or empty complete GLib license text")
     notices = []
+    comment_roots = {"e2fsprogs": ["lib/et/"], "xcb-util-keysyms": ["keysyms/"],
+                     "glib": ["glib/", "gobject/", "gmodule/", "gthread/", "gio/", "girepository/"]}
     for name in sorted(files):
-        if not name.endswith((".c", ".h")) or (provider == "e2fsprogs" and not name.startswith(root + "/lib/et/")):
+        if (not name.endswith((".c", ".h")) or provider in comment_roots and
+                not any(name.startswith(root + "/" + prefix) for prefix in comment_roots[provider])):
             continue
-        comments = re.findall(rb"/\*.*?\*/(?:\r?\n)?|(?m:^[ \t]*//[^\n]*(?:\n|$))", files[name], re.S)
+        comments = (source_comments(files[name]) if provider in {"xcb-util-keysyms", "glib"} else
+                    re.findall(rb"/\*.*?\*/(?:\r?\n)?|(?m:^[ \t]*//[^\n]*(?:\n|$))", files[name], re.S))
         if comments:
             notices.append(b"\nSOURCE " + name.encode("utf-8") + b"\n" + b"\n".join(comments))
     content = b"\n".join(notices)
-    if not content or b"copyright" not in content.lower() or b"permission" not in content.lower():
+    license_marker = b"spdx-license-identifier: lgpl-2.1" if provider == "glib" else b"permission"
+    if not content or b"copyright" not in content.lower() or license_marker not in content.lower():
         raise RuntimeError("Missing complete source copyright and permission notice")
     directory = Path(destination).resolve() / root
     if any(char in str(directory) for char in ";=\r\n"):
@@ -199,6 +254,10 @@ def prepare(provider, version, archive_bytes, sonames, destination, package_iden
     (directory / "COPYING.source-notices").write_bytes(content)
     if package_notice:
         (directory / "COPYING.package-NOTICE").write_bytes(package_notice)
+    for relative, data in sorted(license_files.items()):
+        target = directory / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
     provenance = dict(pin, provider=provider, version=version, package_identity=package_identity,
                       sonames=sorted(set(sonames)))
     (directory / "provenance.json").write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n")

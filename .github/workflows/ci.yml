@@ -728,18 +728,26 @@ jobs:
           license_args=()
           source_license_map=""
           notice_root="$PWD/build/ci-runtime-notices"
+          providers=()
           case "$TARGET_NAME" in
-            fedora-*|rocky-*|opensuse-*)
-              source_license_map=$(python3 scripts/ci/prepare-runtime-notices.py \
-                --provider libdrm --destination "$notice_root")
-              test -n "$source_license_map"
-              ;;
-            archlinux-*)
-              source_license_map=$(python3 scripts/ci/prepare-runtime-notices.py \
-                --provider e2fsprogs --destination "$notice_root")
-              test -n "$source_license_map"
-              ;;
+            fedora-*) providers=(libdrm xcb-util-keysyms) ;;
+            rocky-*|opensuse-*) providers=(libdrm) ;;
+            archlinux-*) providers=(e2fsprogs glib) ;;
           esac
+          for provider in "${providers[@]}"; do
+            provider_map=$(python3 scripts/ci/prepare-runtime-notices.py \
+              --provider "$provider" --destination "$notice_root")
+            test -n "$provider_map"
+            IFS=';' read -r -a provider_entries <<< "$provider_map"
+            for entry in "${provider_entries[@]}"; do
+              soname=${entry%%=*}
+              if [[ ";$source_license_map;" == *";$soname="* ]]; then
+                echo "ERROR: Duplicate runtime notice SONAME: $soname" >&2
+                exit 1
+              fi
+            done
+            source_license_map+="${source_license_map:+;}$provider_map"
+          done
           if [[ "$TARGET_NAME" == ubuntu-24.04* ]]; then
             license_args=(-DSYNERGY_EXTRA_LICENSE_DIRS=/usr/share/licenses/tupig-build)
             source_license_map=libportal.so.1=/usr/share/licenses/tupig-build/libportal
