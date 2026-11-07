@@ -7,6 +7,7 @@
 
 #include "SecureUtilsTests.h"
 
+#include "base/FinalAction.h"
 #include "common/Constants.h"
 #include "net/SecureUtils.h"
 
@@ -80,9 +81,17 @@ void SecureUtilsTests::generatedCertificateHasSelfSignedSubject()
   QVERIFY(subject != nullptr);
   QVERIFY(issuer != nullptr);
   QCOMPARE(X509_NAME_cmp(subject, issuer), 0);
-  char commonName[256] = {};
-  QVERIFY(X509_NAME_get_text_by_NID(subject, NID_commonName, commonName, sizeof(commonName)) > 0);
-  QCOMPARE(QByteArray(commonName), QByteArray(kAppName));
+  const auto commonNameIndex = X509_NAME_get_index_by_NID(subject, NID_commonName, -1);
+  QVERIFY(commonNameIndex >= 0);
+  const auto *entry = X509_NAME_get_entry(subject, commonNameIndex);
+  QVERIFY(entry != nullptr);
+  const auto *data = X509_NAME_ENTRY_get_data(entry);
+  QVERIFY(data != nullptr);
+  unsigned char *commonName = nullptr;
+  const int length = ASN1_STRING_to_UTF8(&commonName, data);
+  const auto commonNameFree = finally([commonName]() { OPENSSL_free(commonName); });
+  QVERIFY(length > 0);
+  QCOMPARE(QByteArray(reinterpret_cast<const char *>(commonName), length), QByteArray(kAppName));
   QCOMPARE(X509_check_private_key(cert.get(), key.get()), 1);
   QCOMPARE(X509_verify(cert.get(), key.get()), 1);
   QVERIFY(EVP_PKEY_bits(key.get()) >= kMinimumRsaBits);
