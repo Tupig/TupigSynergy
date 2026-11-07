@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 
 // -----------------------------------------------------------------------------
 // Input Filter Condition Classes
@@ -36,7 +37,7 @@ InputFilter::KeystrokeCondition::KeystrokeCondition(IEventQueue *events, IPlatfo
       m_mask(info->m_mask),
       m_events(events)
 {
-  free(info);
+  delete info;
 }
 
 InputFilter::KeystrokeCondition::KeystrokeCondition(IEventQueue *events, KeyID key, KeyModifierMask mask)
@@ -430,13 +431,15 @@ InputFilter::KeystrokeAction::KeystrokeAction(IEventQueue *events, IPlatformScre
 
 InputFilter::KeystrokeAction::~KeystrokeAction()
 {
-  free(m_keyInfo);
+  delete m_keyInfo;
 }
 
 void InputFilter::KeystrokeAction::adoptInfo(IPlatformScreen::KeyInfo *info)
 {
-  free(m_keyInfo);
-  m_keyInfo = info;
+  if (m_keyInfo != info) {
+    delete m_keyInfo;
+    m_keyInfo = info;
+  }
 }
 
 const IPlatformScreen::KeyInfo *InputFilter::KeystrokeAction::getInfo() const
@@ -530,11 +533,12 @@ void InputFilter::MouseButtonAction::perform(const Event &event)
 {
   // send modifiers
   using enum EventTypes;
-  IPlatformScreen::KeyInfo *modifierInfo = nullptr;
   if (m_buttonInfo.m_mask != 0) {
     KeyID key = m_press ? kKeySetModifiers : kKeyClearModifiers;
-    modifierInfo = IKeyState::KeyInfo::alloc(key, m_buttonInfo.m_mask, 0, 1);
-    m_events->addEvent(Event(KeyStateKeyDown, event.getTarget(), modifierInfo, Event::EventFlags::DeliverImmediately));
+    auto modifierInfo = std::unique_ptr<IKeyState::KeyInfo>(IKeyState::KeyInfo::alloc(key, m_buttonInfo.m_mask, 0, 1));
+    m_events->addEvent(
+        Event(KeyStateKeyDown, event.getTarget(), std::move(modifierInfo), Event::EventFlags::DeliverImmediately)
+    );
   }
 
   // send button

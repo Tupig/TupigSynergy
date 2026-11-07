@@ -12,6 +12,7 @@
 #include <cstring>
 #include <iterator>
 #include <list>
+#include <memory>
 
 static const KeyButton kButtonMask = (KeyButton)(IKeyState::s_numButtons - 1);
 
@@ -86,16 +87,20 @@ void KeyState::sendKeyEvent(
     if (isAutoRepeat) {
       // ignore auto-repeat on half-duplex keys
     } else {
-      m_events->addEvent(Event(KeyStateKeyDown, target, KeyInfo::alloc(key, mask, button, 1)));
-      m_events->addEvent(Event(KeyStateKeyUp, target, KeyInfo::alloc(key, mask, button, 1)));
+      m_events->addEvent(Event(KeyStateKeyDown, target, std::unique_ptr<KeyInfo>(KeyInfo::alloc(key, mask, button, 1)))
+      );
+      m_events->addEvent(Event(KeyStateKeyUp, target, std::unique_ptr<KeyInfo>(KeyInfo::alloc(key, mask, button, 1))));
     }
   } else {
     if (isAutoRepeat) {
-      m_events->addEvent(Event(KeyStateKeyRepeat, target, KeyInfo::alloc(key, mask, button, count)));
+      m_events->addEvent(
+          Event(KeyStateKeyRepeat, target, std::unique_ptr<KeyInfo>(KeyInfo::alloc(key, mask, button, count)))
+      );
     } else if (press) {
-      m_events->addEvent(Event(KeyStateKeyDown, target, KeyInfo::alloc(key, mask, button, 1)));
+      m_events->addEvent(Event(KeyStateKeyDown, target, std::unique_ptr<KeyInfo>(KeyInfo::alloc(key, mask, button, 1)))
+      );
     } else {
-      m_events->addEvent(Event(KeyStateKeyUp, target, KeyInfo::alloc(key, mask, button, 1)));
+      m_events->addEvent(Event(KeyStateKeyUp, target, std::unique_ptr<KeyInfo>(KeyInfo::alloc(key, mask, button, 1))));
     }
   }
 }
