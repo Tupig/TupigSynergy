@@ -142,6 +142,16 @@ runs:
                   "lz4-libs-$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}' lz4-libs)"
               fi
               test -s /usr/share/doc/lz4-libs/LICENSE
+              # libxcb keeps its notices in the matching noarch documentation package.
+              libxcb_version_release=$(rpm -q --qf '%{VERSION}-%{RELEASE}' libxcb)
+              dnf install -y --enablerepo=devel --setopt=tsflags= "libxcb-doc-$libxcb_version_release.noarch"
+              test "$(rpm -q --qf '%{SOURCERPM}' libxcb-doc)" = \
+                "$(rpm -q --qf '%{SOURCERPM}' libxcb)"
+              if [ ! -s /usr/share/doc/libxcb/COPYING ]; then
+                dnf reinstall -y --enablerepo=devel --setopt=tsflags= "libxcb-doc-$libxcb_version_release.noarch"
+              fi
+              test -s /usr/share/doc/libxcb/COPYING
+              test "$(rpm -qf --qf '%{NAME}' /usr/share/doc/libxcb/COPYING)" = libxcb-doc
             else
               echo "Unknown like"
             fi
