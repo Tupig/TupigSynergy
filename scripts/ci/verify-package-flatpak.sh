@@ -18,11 +18,11 @@ export FLATPAK_CONFIG_DIR="$work/config" XDG_CONFIG_HOME="$work/home/config" XDG
 export XDG_CACHE_HOME="$work/home/cache" XDG_RUNTIME_DIR="$work/runtime" FLATPAK_GL_DRIVERS=default
 mkdir -p "$HOME" "$FLATPAK_CONFIG_DIR" "$XDG_RUNTIME_DIR" "$FLATPAK_SYSTEM_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
-[[ -z $(flatpak --user list --columns=ref) ]]
+[[ -z $(flatpak --user list --all --columns=ref) ]]
 bash "$payload/install-offline.sh"
 app_ref=$(cat "$payload/app.ref")
 runtime_ref=$(cat "$payload/runtime.ref")
-actual_count=$(flatpak --user list --columns=ref | wc -l)
+actual_count=$(flatpak --user list --all --columns=ref | wc -l)
 expected_count=$(wc -l < "$payload/refs.tsv")
 [[ $actual_count -eq $expected_count ]]
 

@@ -27,11 +27,13 @@ runtime_ref="runtime/$(flatpak --user info --show-runtime "$app_ref")"
 printf '%s\n' "$app_ref" > "$payload/app.ref"
 printf '%s\n' "$runtime_ref" > "$payload/runtime.ref"
 ostree --repo="$payload/repo" init --mode=archive-z2
-flatpak --user list --columns=ref | LC_ALL=C sort > "$work/refs"
+flatpak --user list --all --columns=ref | LC_ALL=C sort > "$work/refs"
 while IFS= read -r ref; do
   ref=$(flatpak --user info --show-ref "$ref")
   [[ $ref == app/* || $ref == runtime/* ]]
-  [[ $ref != *.Sdk/* && $ref != *.Debug/* && $ref != *.Sources/* ]]
+  case "$ref" in
+    *.Sdk/*|*.Debug/*|*.Sources/*) continue ;;
+  esac
   commit=$(flatpak --user info --show-commit "$ref")
   origin=$(flatpak --user info --show-origin "$ref")
   # Extra-data commits omit externally downloaded payloads. Do not claim such
