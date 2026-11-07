@@ -38,6 +38,15 @@ create_test(
 )
 
 create_test(
+  NAME QtNetworkTransportTests
+  DEPENDS net
+  LIBS base arch mt io ${extra_libs}
+  SOURCE QtNetworkTransportTests.cpp
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/net"
+)
+set_tests_properties(QtNetworkTransportTests PROPERTIES TIMEOUT 30)
+
+create_test(
   NAME NetworkAddressTests
   DEPENDS net
   LIBS base arch mt io ${extra_libs}
