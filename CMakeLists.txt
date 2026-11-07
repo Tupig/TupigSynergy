@@ -19,6 +19,13 @@ if(POLICY CMP0156)
   cmake_policy(SET CMP0156 NEW)
 endif()
 
+# This is a requested local build floor, not a supported-OS acceptance claim.
+# Set it before project() initializes the Apple compiler. Explicit cache values
+# (including CI artifact floors) win; provider metadata is checked below.
+if(CMAKE_HOST_APPLE)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "12" CACHE STRING "Requested minimum macOS deployment version")
+endif()
+
 # C++20
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -381,6 +388,14 @@ endif()
 # Libraries (vcpkg handles find_package)
 include(cmake/Libraries.cmake)
 configure_libs()
+if(APPLE)
+  include(cmake/MacDeployment.cmake)
+  synergy_check_macos_provider("${OPENSSL_SSL_LIBRARY}")
+  synergy_check_macos_provider("${OPENSSL_CRYPTO_LIBRARY}")
+  foreach(component IN ITEMS Core Gui Widgets Network Svg DBus)
+    synergy_check_macos_target(Qt${QT_VERSION_MAJOR}::${component})
+  endforeach()
+endif()
 
 if(BUILD_OSX_BUNDLE AND APPLE_CODESIGN_DEV)
   include(cmake/MacCodesign.cmake)

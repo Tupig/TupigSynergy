@@ -12,8 +12,22 @@ if("@QT_IS_SHARED@")
   if(NOT EXISTS "@DEPLOYQT@")
     message(FATAL_ERROR "Shared Qt packaging requires macdeployqt")
   endif()
+  # -no-codesign is not available in older Qt deployment tools (e.g. 6.9).
+  # Probe capabilities; all versions still receive final explicit bundle signing.
+  execute_process(COMMAND "@DEPLOYQT@" --help
+    RESULT_VARIABLE help_result OUTPUT_VARIABLE deploy_help ERROR_VARIABLE deploy_help_error)
+  # Qt 6.9 prints valid usage and returns 1 for every help invocation.
+  set(deploy_usage "${deploy_help}${deploy_help_error}")
+  if((NOT help_result EQUAL 0 AND NOT help_result EQUAL 1) OR
+     NOT deploy_usage MATCHES "Usage: macdeployqt" OR NOT deploy_usage MATCHES "-executable=")
+    message(FATAL_ERROR "Could not query macdeployqt capabilities (${help_result})")
+  endif()
+  set(deploy_sign_options "")
+  if(deploy_usage MATCHES "-no-codesign")
+    list(APPEND deploy_sign_options -no-codesign)
+  endif()
   execute_process(
-    COMMAND "@DEPLOYQT@" "${app}" "-executable=${core}" -no-codesign
+    COMMAND "@DEPLOYQT@" "${app}" "-executable=${core}" ${deploy_sign_options}
     RESULT_VARIABLE deploy_result
   )
   if(NOT deploy_result EQUAL 0)

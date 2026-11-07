@@ -494,15 +494,15 @@ jobs:
             runs-on: macos-15
             timeout: 10
             qt-version: 6.11.1
-            # Deployment target is set once in cmake/Synergy.cmake (single
-            # source of truth); don't pass -DCMAKE_OSX_DEPLOYMENT_TARGET here.
-            config-args: '-DCMAKE_OSX_ARCHITECTURES="arm64"'
+            # These CI artifacts use providers built for macOS 15. The local
+            # manifest build retains its separately checked requested floor.
+            config-args: '-DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0'
 
           - name: "macos-x64"
             runs-on: macos-15-intel
             timeout: 20
             qt-version: 6.9.3
-            config-args: '-DCMAKE_OSX_ARCHITECTURES="x86_64"'
+            config-args: '-DCMAKE_OSX_ARCHITECTURES="x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0'
 
     steps:
       - name: Checkout

@@ -183,8 +183,13 @@ brew install cmake ninja
 `./scripts/build.sh` selects preset `macos-release` (Ninja, triplet `arm64-osx`). That
 preset is Apple Silicon. Intel x86_64 is the Actions job `macos-x64`
 (`CMAKE_OSX_ARCHITECTURES=x86_64` on `macos-15-intel`), which produces a separate DMG
-(`mac_x64`), not a universal binary. The deployment target is macOS 12 and is set only
-in `cmake/Synergy.cmake`. Do not pass `-DCMAKE_OSX_DEPLOYMENT_TARGET`.
+(`mac_x64`), not a universal binary. Local builds default to a requested deployment
+target of macOS 12; this is not a compatibility acceptance claim. Override it with
+`-DCMAKE_OSX_DEPLOYMENT_TARGET=<version>` when the selected dependencies need a newer
+OS. Both CI artifacts explicitly target macOS 15 because their provider archives
+require it. Configure checks selected Qt/OpenSSL slices and static archive members;
+packaging checks every bundled Mach-O slice and the app's `LSMinimumSystemVersion`.
+Providers newer than the requested floor are rejected, never relabeled as compatible.
 
 Output: `build/bin/TuPig Synergy.app` and `build/bin/synergy-core`.
 
@@ -366,7 +371,7 @@ A clean run is one line: `encoding OK checked=669 violations=0 allowed=utf-8 mod
 
 All shipped MSI/portable, app/DMG and native Linux packages include application runtime dependencies and their license notices. Deployment follows the actual linked dependency graph, including GUI/core helpers and dynamically loaded Qt plugins. Missing libraries, unresolved loader paths, wrong architectures or missing license sources stop packaging or verification. Static Qt builds retain only their actual dynamic dependencies and include licenses for statically linked libraries as well.
 
-Windows packages keep application DLLs and required VC redistributables beside the executables, with Qt plugins selected through package-local `qt.conf`. The portable archive omits the service daemon; the MSI keeps it. Distribute complete packages rather than a GUI executable detached from its runtime files.
+Windows packages keep application DLLs and required VC redistributables beside the executables, with Qt plugins selected through package-local `qt.conf`. The portable archive omits the service daemon; the MSI keeps it. Distribute complete packages rather than a GUI executable detached from its runtime files. The current Windows CI Qt deployment selects its Schannel TLS plugin, whose TLS provider is the Windows OS; the application's directly linked OpenSSL runtime is still included. The optional Qt OpenSSL plugin is not forced into the package. PE dependency checks and startup on current CI runners do not establish minimum-Windows-version compatibility.
 
 macOS deploys the GUI and `synergy-core`, fixes third-party load commands inside the app, removes build-machine RPATHs, and signs after dependency fixups and resource installation. The verifier copies the DMG's app into a temporary directory, audits all Mach-O files and plugins, starts GUI `QApplication`/Cocoa through `--help`, and connects a real core client to a private TLS loopback server with a disposable identity and trust store. It requires a TLS handshake, client certificate and the core's peer-fingerprint acceptance before stopping without a Synergy greeting. Actual loaded images must remain inside the package or system directories. This is package TLS/startup evidence, not main-window, TCC permission or input-sharing acceptance. Translation catalogues live only in `Contents/Resources/translations`.
 
@@ -536,7 +541,7 @@ brew install cmake ninja
 ./scripts/build.sh release
 ```
 
-`./scripts/build.sh` 选择预设 `macos-release`（Ninja，triplet `arm64-osx`），这是 Apple Silicon。Intel x86_64 是 Actions 作业 `macos-x64`（`macos-15-intel` 上 `CMAKE_OSX_ARCHITECTURES=x86_64`），单独产出 `mac_x64` 的 DMG，不是一个通用二进制。部署目标是 macOS 12，只写在 `cmake/Synergy.cmake`，不要传 `-DCMAKE_OSX_DEPLOYMENT_TARGET`。
+`./scripts/build.sh` 选择预设 `macos-release`（Ninja，triplet `arm64-osx`），这是 Apple Silicon。Intel x86_64 是 Actions 作业 `macos-x64`（`macos-15-intel` 上 `CMAKE_OSX_ARCHITECTURES=x86_64`），单独产出 `mac_x64` 的 DMG，不是一个通用二进制。本地构建默认请求 macOS 12 部署目标，这不是兼容性验收承诺。若选定依赖需要较新系统，可用 `-DCMAKE_OSX_DEPLOYMENT_TARGET=<版本>` 显式调整。两种 CI 产物因提供方归档的要求而明确以 macOS 15 为目标。配置阶段检查选定 Qt/OpenSSL 架构及静态归档成员；打包验证检查每个 Mach-O 架构和 app 的 `LSMinimumSystemVersion`。依赖要求高于请求目标时会拒绝构建，不能将其重新标注为兼容。
 
 产物：`build/bin/TuPig Synergy.app` 与 `build/bin/synergy-core`。
 
@@ -706,7 +711,7 @@ encoding FAIL count=1 checked=669 allowed=utf-8 mode=fail
 
 所有交付的 MSI/便携包、app/DMG 和 Linux 原生包均须携带应用运行依赖及其许可声明。部署依据实际链接的依赖关系，包括 GUI/core 辅助程序和动态加载的 Qt 插件。缺库、加载路径无法解析、架构错误或许可来源缺失都应阻止打包或验证通过。静态 Qt 构建只保留实际需要的动态依赖，同时携带静态链接库的许可。
 
-Windows 包把应用 DLL 和必需的 VC 可再分发运行库放在可执行文件旁，通过包内 `qt.conf` 定位 Qt 插件。便携包省略服务 daemon，MSI 保留。交付完整软件包，不把 GUI 可执行文件与运行依赖拆开分发。
+Windows 包把应用 DLL 和必需的 VC 可再分发运行库放在可执行文件旁，通过包内 `qt.conf` 定位 Qt 插件。便携包省略服务 daemon，MSI 保留。交付完整软件包，不把 GUI 可执行文件与运行依赖拆开分发。 当前 Windows CI 的 Qt 部署选择 Schannel TLS 插件，其 TLS 提供方属于 Windows 系统；应用直接链接的 OpenSSL 运行库仍随包携带。不强行加入可选的 Qt OpenSSL 插件。PE 依赖检查及当前 CI 系统启动通过，不能证明最低 Windows 版本兼容性。
 
 macOS 同时部署 GUI 与 `synergy-core`，将第三方加载路径改为 app 内部位置，去除构建机 RPATH，并在依赖修复及资源安装后签名。验证器把 DMG 中的 app 复制到临时目录，检查所有 Mach-O 文件和插件，通过 `--help` 启动 GUI 的 `QApplication`/Cocoa，并让真实 core 客户端使用一次性身份和信任库连接私有 TLS 回环服务。必须完成 TLS 握手、客户端证书检查以及 core 对服务端指纹的接受，随后停止且不发送 Synergy 问候消息。实际加载的库必须位于包内或系统目录。这是包 TLS/启动证据，不是主窗口、TCC 权限或输入共享功能验收。翻译文件只放在 `Contents/Resources/translations`。
 

@@ -43,10 +43,18 @@ def macho(path):
         )
 
 
+def version(value):
+    if not re.fullmatch(r'[0-9]+(?:\.[0-9]+){0,2}', str(value)):
+        raise ValueError('Invalid macOS deployment version: ' + str(value))
+    parts = tuple(int(part) for part in str(value).split('.'))
+    return parts + (0,) * (3 - len(parts))
+
+
 def audit(app):
     app = app.resolve()
     with (app / 'Contents/Info.plist').open('rb') as stream:
         info = plistlib.load(stream)
+    declared_floor = version(info['LSMinimumSystemVersion'])
     name = info['CFBundleExecutable']
     if Path(name).name != name:
         raise ValueError('CFBundleExecutable must be a filename')
@@ -71,17 +79,27 @@ def audit(app):
         key = (image, arch)
         if key not in cache:
             output = run(['/usr/bin/otool', '-arch', arch, '-l', str(image)])
-            dependencies, rpaths = [], []
+            dependencies, rpaths, minima = [], [], []
             command = ''
             for line in output.splitlines():
                 line = line.strip()
                 if line.startswith('cmd '):
                     command = line[4:]
+                elif command == 'LC_BUILD_VERSION' and line.startswith('minos '):
+                    minima.append(version(line.split()[1]))
+                elif command == 'LC_VERSION_MIN_MACOSX' and line.startswith('version '):
+                    minima.append(version(line.split()[1]))
                 elif command == 'LC_RPATH' and line.startswith('path '):
                     rpaths.append(line[5:].rsplit(' (offset ', 1)[0])
                 elif command in ('LC_LOAD_DYLIB', 'LC_LOAD_WEAK_DYLIB', 'LC_REEXPORT_DYLIB',
                                  'LC_LOAD_UPWARD_DYLIB', 'LC_LAZY_LOAD_DYLIB') and line.startswith('name '):
                     dependencies.append(line[5:].rsplit(' (offset ', 1)[0])
+            if len(minima) != 1:
+                raise ValueError('Missing or ambiguous macOS deployment metadata: ' + str(image))
+            if minima[0] > declared_floor:
+                raise ValueError('Bundled image requires a newer macOS than declared: ' + str(image))
+            if image in (gui.resolve(), core.resolve()) and minima[0] != declared_floor:
+                raise ValueError('GUI/core deployment metadata differs from bundle declaration: ' + str(image))
             cache[key] = dependencies, rpaths
         return cache[key]
 
