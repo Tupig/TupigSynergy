@@ -492,7 +492,7 @@ jobs:
         target:
           - name: "macos-arm64"
             runs-on: macos-15
-            timeout: 10
+            timeout: 20
             qt-version: 6.11.1
             # These CI artifacts use providers built for macOS 15. The local
             # manifest build retains its separately checked requested floor.
