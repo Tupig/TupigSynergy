@@ -24,12 +24,18 @@ if("@QT_IS_SHARED@")
   endif()
   # Deploy every executable, including core/daemon, and do not prune Qt's
   # graphics, ICU or plugin runtime dependencies. CRT is handled app-locally.
-  execute_process(COMMAND "@DEPLOYQT@" --no-compiler-runtime --no-quick-import
-    --dir "${_root}" --plugindir "${_root}/plugins" "${_root}"
-    RESULT_VARIABLE _deployed)
-  if(NOT _deployed EQUAL 0)
-    message(FATAL_ERROR "windeployqt could not complete the package")
+  file(GLOB_RECURSE _executables "${_root}/*.exe")
+  if(NOT _executables)
+    message(FATAL_ERROR "Shared Qt packaging requires staged executables")
   endif()
+  foreach(_executable IN LISTS _executables)
+    execute_process(COMMAND "@DEPLOYQT@" --no-compiler-runtime --no-quick-import
+      --dir "${_root}" --plugindir "${_root}/plugins" "${_executable}"
+      RESULT_VARIABLE _deployed)
+    if(NOT _deployed EQUAL 0)
+      message(FATAL_ERROR "windeployqt could not deploy ${_executable}")
+    endif()
+  endforeach()
   file(WRITE "${_root}/qt.conf" "[Paths]\nPrefix=.\nPlugins=plugins\nTranslations=translations\n")
 endif()
 
