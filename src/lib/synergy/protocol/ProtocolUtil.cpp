@@ -12,7 +12,6 @@
 #include "base/Log.h"
 #include "io/IStream.h"
 #include <array>
-#include <iterator>
 #include <memory>
 
 #include <cstring>
@@ -62,7 +61,7 @@ void writeString(const std::string *StringData, std::vector<uint8_t> &Buffer)
   const uint32_t len = (StringData != nullptr) ? (uint32_t)StringData->size() : 0;
   writeInt(len, sizeof(len), Buffer);
   if (len != 0) {
-    std::copy(StringData->begin(), StringData->end(), std::back_inserter(Buffer));
+    Buffer.insert(Buffer.end(), StringData->begin(), StringData->end());
   }
 }
 
@@ -378,7 +377,7 @@ void ProtocolUtil::writef(std::vector<uint8_t> &buffer, const char *fmt, va_list
         const uint32_t strLen = va_arg(args, uint32_t);
         const uint8_t *src = va_arg(args, uint8_t *);
         writeInt(strLen, sizeof(strLen), buffer);
-        std::copy(src, src + strLen, std::back_inserter(buffer));
+        buffer.insert(buffer.end(), src, src + strLen);
         break;
       }
 
