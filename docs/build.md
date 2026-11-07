@@ -30,6 +30,31 @@ Build artifacts are **64-bit only**. `vcpkg.json` sets `"supports": "x64 | arm64
 
 x86_64 and x64 name the same 64-bit Intel/AMD architecture. They are not 32-bit.
 
+A push to `main` and a pull request compile and test Windows, macOS, and the free Linux subset in the same run; automatic validation skips Flatpak. Push builds use a snapshot version and pull requests use a development version. The Windows GUI filename remains `synergy_<X.Y.Z>.exe`, using the base version from `Version.cmake`. These runs upload unsigned Actions artifacts without signing, notarization, release publication, or external notifications. Manual snapshots support every platform, including Windows, and do not sign or publish. The GitHub Release is still published by the daily 08:23 schedule, a manual `package-type=release` run, or a published Release.
+
+The macOS and Linux vcpkg overlays use their platform system runtime (`VCPKG_CRT_LINKAGE=dynamic`) while retaining static Qt/OpenSSL libraries (`VCPKG_LIBRARY_LINKAGE=static`). This differs from the Windows release triplet, which uses `/MT`, and from CI's shared Qt distribution.
+
+Those builds run on GitHub-hosted runners. Qt and OpenSSL are downloaded there, not onto the machine that cloned the repository. A clone does not fetch them. `vendor/` stays untracked.
+
+### Source responsibilities
+
+The entry points remain `setup.bat` and `scripts/build.{bat,sh}`. Runtime code stays under
+`src/lib`, applications and packaging assets under `src/apps` and `deploy`, and tests mirror
+the owning library under `src/unittests`.
+
+- `server/config/` owns configuration parsing, action syntax, link cells, serialization and read context;
+  `server/Config.h` remains the public model interface.
+- `ServerInput.cpp`, `ServerSwitching.cpp` and `ServerClipboard.cpp` separate server input dispatch,
+  screen transitions and clipboard/file transfer from client lifecycle management.
+- `gui/mainwindow/` owns connection and configuration actions; `gui/config/` types use `synergy::gui`.
+- Platform screen implementations are split into event, input and display/session responsibilities
+  within their existing `platform/<os>/` directory. Key lookup tables remain separate from dispatch code.
+- `synergy/protocol/ProtocolTypes.h` remains the include entry point; control, input and data message
+  declarations live in domain headers. Their wire names, versions and serialized field order are unchanged.
+
+CMake lists every translation unit explicitly. A source split must preserve platform guards and compile
+on Windows, macOS and Linux; a local build alone does not establish cross-platform acceptance.
+
 ### Default Build Options
 
 The following components are enabled by default:
@@ -362,6 +387,28 @@ A clean run is one line: `encoding OK checked=669 violations=0 allowed=utf-8 mod
 | macOS | 本地 arm64（`arm64-osx`）；CI 另有 Intel x86_64 |
 
 x86_64 与 x64 都是 64 位 Intel/AMD，不是 32 位。
+
+推送到 `main` 和 Pull Request 会在同一次运行里编译并测试 Windows、macOS 和精简 Linux 矩阵；自动验证跳过 Flatpak。推送使用 snapshot 版本，PR 使用开发版本；Windows GUI 文件名仍取 `Version.cmake` 的基础版本，保持 `synergy_<X.Y.Z>.exe`。这些运行上传未签名 Actions 产物，不执行签名、公证、正式发布或外部通知。手动 snapshot 支持包括 Windows 在内的所有平台，同样不签名、不发布。GitHub Release 仍由每天 08:23 的定时任务、手动的 `package-type=release`，或一次已发布的 Release 来发布。
+
+macOS 与 Linux 的 vcpkg overlay 使用平台系统运行库（`VCPKG_CRT_LINKAGE=dynamic`），Qt/OpenSSL 仍保持静态库（`VCPKG_LIBRARY_LINKAGE=static`）。这与 Windows 发布 triplet 的 `/MT`、以及 CI 的共享 Qt 分发分别不同。
+
+这些构建跑在 GitHub 托管的运行器上。Qt 和 OpenSSL 下载到运行器，不会下载到克隆仓库的那台机器。只克隆仓库不会去取它们。`vendor/` 不入库。
+
+### 源码职责划分
+
+入口保持为 `setup.bat` 和 `scripts/build.{bat,sh}`。运行时代码放在 `src/lib`，应用与打包资源分别放在
+`src/apps` 和 `deploy`，测试在 `src/unittests` 按所属库分组。
+
+- `server/config/` 分别负责配置解析、动作语法、连接单元、序列化与读取上下文；`server/Config.h` 仍是公开模型接口。
+- `ServerInput.cpp`、`ServerSwitching.cpp` 和 `ServerClipboard.cpp` 将输入派发、屏幕切换、剪贴板与文件传输
+  从客户端生命周期管理中分离。
+- `gui/mainwindow/` 负责连接与配置操作；`gui/config/` 的类型统一放在 `synergy::gui` 命名空间。
+- 平台屏幕实现仍位于 `platform/<os>/`，按事件、输入、显示或会话职责拆分；按键查找表与事件派发代码分离。
+- `synergy/protocol/ProtocolTypes.h` 保持为包含入口，控制、输入与数据消息的声明按领域拆分。
+  协议名称、版本和序列化字段顺序保持不变。
+
+CMake 显式列出每个编译单元。拆分源码时必须保留平台条件并验证 Windows、macOS 与 Linux 构建；
+本机编译通过不能代替跨平台验收。
 
 ### 默认启用组件
 
