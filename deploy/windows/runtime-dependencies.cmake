@@ -2,7 +2,7 @@
 # Windows OS APIs only. VC runtime, Qt, OpenSSL, ICU and D3D compiler DLLs
 # deliberately are not system exemptions, even when installed on the runner.
 set(SYNERGY_WINDOWS_SYSTEM_DLLS
-  advapi32.dll avrt.dll bcrypt.dll bcryptprimitives.dll cfgmgr32.dll clbcatq.dll
+  advapi32.dll authz.dll avrt.dll bcrypt.dll bcryptprimitives.dll cfgmgr32.dll clbcatq.dll
   comctl32.dll comdlg32.dll crypt32.dll cryptbase.dll cryptsp.dll d2d1.dll
   d3d9.dll d3d11.dll d3d12.dll dbghelp.dll dhcpcsvc.dll dnsapi.dll dwmapi.dll
   dwrite.dll dxcore.dll dxgi.dll gdi32.dll glu32.dll hid.dll imm32.dll iphlpapi.dll
