@@ -70,8 +70,9 @@ struct Ssl
  */
 static int verifyCertificateCallback(X509_STORE_CTX *store_ctx, void * /* arg */)
 {
-  // Get the certificate being verified
-  X509 *cert = X509_STORE_CTX_get_current_cert(store_ctx);
+  // This callback replaces the chain verifier. current_cert is an error-walk
+  // cursor and can be null here; get0_cert is the peer being verified.
+  X509 *cert = X509_STORE_CTX_get0_cert(store_ctx);
   if (cert == nullptr) {
     LOG_ERR("tls verification failed: no certificate in context");
     X509_STORE_CTX_set_error(store_ctx, X509_V_ERR_CERT_NOT_YET_VALID);
@@ -473,6 +474,7 @@ void SecureSocket::freeSSL()
   std::scoped_lock ssl_lock{ssl_mutex_};
 
   isFatal(true);
+  m_secureReady = false;
   // take socket from multiplexer ASAP otherwise the race condition
   // could cause events to get called on a dead object. TCPSocket
   // will do this, too, but the double-call is harmless
@@ -588,8 +590,8 @@ int SecureSocket::secureConnect(int socket)
   }
 
   retry = 0;
-  // No error, set ready, process and return ok
-  m_secureReady = true;
+  // TLS completion alone is not admission: verify the peer before exposing
+  // a ready socket to callers.
   if (verifyCertFingerprint(QString::fromStdString(m_tlsConfig.trustedServersDbPath))) {
     LOG_INFO("connected to secure socket");
     if (!showCertificate()) {
@@ -601,6 +603,7 @@ int SecureSocket::secureConnect(int socket)
     disconnect();
     return -1; // Fingerprint failed, error
   }
+  m_secureReady = true;
   LOG_VERBOSE("connected secure socket");
   SslLogger::logSecureCipherInfo(m_ssl->m_ssl);
   SslLogger::logSecureConnectInfo(m_ssl->m_ssl);
@@ -705,6 +708,7 @@ void SecureSocket::checkResult(int status, int &retry)
 
 void SecureSocket::disconnect()
 {
+  m_secureReady = false;
   using enum EventTypes;
   sendEvent(SocketDisconnected);
   sendEvent(StreamInputShutdown);
