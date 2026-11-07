@@ -23,7 +23,7 @@ endif()
 # Set it before project() initializes the Apple compiler. Explicit cache values
 # (including CI artifact floors) win; provider metadata is checked below.
 if(CMAKE_HOST_APPLE)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "12" CACHE STRING "Requested minimum macOS deployment version")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "14" CACHE STRING "Requested minimum macOS deployment version")
 endif()
 
 # C++20

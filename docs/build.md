@@ -171,12 +171,17 @@ are set and `signtool verify` fails after SignPath returns the files, the job fa
 
 ### 🍎 macOS (Apple Silicon locally, Intel in CI)
 
-Host tools are Xcode Command Line Tools, CMake 3.25+, and Ninja. Qt and OpenSSL come from
-the repository vcpkg. Do not point CMake at a Homebrew Qt.
+Host tools are a full Xcode installation selected as the active developer directory,
+CMake 3.25+, Ninja, pkgconf, Autoconf with autoconf-archive, Automake, and GNU Libtool.
+Qt submodule builds require Xcode's version tools, which Command Line Tools alone
+do not provide. Select the installed Xcode in its Locations settings and confirm
+`xcodebuild -version` succeeds before building. Qt, OpenSSL, and their library
+dependencies come from the repository vcpkg. Homebrew supplies these host build
+tools; do not point CMake at a Homebrew Qt.
 
 ```bash
-xcode-select --install
-brew install cmake ninja
+xcodebuild -version
+brew install cmake ninja pkgconf autoconf autoconf-archive automake libtool
 ./scripts/build.sh release
 ```
 
@@ -184,12 +189,17 @@ brew install cmake ninja
 preset is Apple Silicon. Intel x86_64 is the Actions job `macos-x64`
 (`CMAKE_OSX_ARCHITECTURES=x86_64` on `macos-15-intel`), which produces a separate DMG
 (`mac_x64`), not a universal binary. Local builds default to a requested deployment
-target of macOS 12; this is not a compatibility acceptance claim. Override it with
+target of macOS 14, matching the macOS overlay triplets' dependency build target;
+this is not a compatibility acceptance claim. Override the application target with
 `-DCMAKE_OSX_DEPLOYMENT_TARGET=<version>` when the selected dependencies need a newer
 OS. Both CI artifacts explicitly target macOS 15 because their provider archives
 require it. Configure checks selected Qt/OpenSSL slices and static archive members;
 packaging checks every bundled Mach-O slice and the app's `LSMinimumSystemVersion`.
 Providers newer than the requested floor are rejected, never relabeled as compatible.
+An existing build cache retains an explicitly selected older target. To move that
+cache to the current default, run `cmake --preset macos-release -DCMAKE_OSX_DEPLOYMENT_TARGET=14`
+before using the build entry point again. Older dependency caches are rebuilt when
+the triplet deployment target changes; keep the download and binary caches.
 
 Output: `build/bin/TuPig Synergy.app` and `build/bin/synergy-core`.
 
@@ -537,15 +547,15 @@ Release CI 通过 [SignPath Foundation](https://signpath.org/) 签名 `synergy_<
 
 ### 🍎 macOS（本地 Apple Silicon，Intel 由 CI 构建）
 
-宿主工具是 Xcode Command Line Tools、CMake 3.25+ 和 Ninja。Qt 与 OpenSSL 来自仓库内 vcpkg，不要把 CMake 指到 Homebrew 的 Qt。
+宿主工具是已选为活动开发者目录的完整 Xcode、CMake 3.25+、Ninja、pkgconf、Autoconf 及 autoconf-archive、Automake 和 GNU Libtool。Qt 子模块构建需要 Xcode 版本工具，只有 Command Line Tools 并不足够。先在 Xcode 的 Locations 设置中选择已安装的 Xcode，并确认 `xcodebuild -version` 成功。Qt、OpenSSL 及其库依赖来自仓库内 vcpkg；Homebrew 只提供这些宿主构建工具，不要把 CMake 指到 Homebrew 的 Qt。
 
 ```bash
-xcode-select --install
-brew install cmake ninja
+xcodebuild -version
+brew install cmake ninja pkgconf autoconf autoconf-archive automake libtool
 ./scripts/build.sh release
 ```
 
-`./scripts/build.sh` 选择预设 `macos-release`（Ninja，triplet `arm64-osx`），这是 Apple Silicon。Intel x86_64 是 Actions 作业 `macos-x64`（`macos-15-intel` 上 `CMAKE_OSX_ARCHITECTURES=x86_64`），单独产出 `mac_x64` 的 DMG，不是一个通用二进制。本地构建默认请求 macOS 12 部署目标，这不是兼容性验收承诺。若选定依赖需要较新系统，可用 `-DCMAKE_OSX_DEPLOYMENT_TARGET=<版本>` 显式调整。两种 CI 产物因提供方归档的要求而明确以 macOS 15 为目标。配置阶段检查选定 Qt/OpenSSL 架构及静态归档成员；打包验证检查每个 Mach-O 架构和 app 的 `LSMinimumSystemVersion`。依赖要求高于请求目标时会拒绝构建，不能将其重新标注为兼容。
+`./scripts/build.sh` 选择预设 `macos-release`（Ninja，triplet `arm64-osx`），这是 Apple Silicon。Intel x86_64 是 Actions 作业 `macos-x64`（`macos-15-intel` 上 `CMAKE_OSX_ARCHITECTURES=x86_64`），单独产出 `mac_x64` 的 DMG，不是一个通用二进制。本地构建默认请求 macOS 14，与 macOS overlay triplet 的依赖构建目标一致；这不是兼容性验收承诺。若选定依赖需要较新系统，可用 `-DCMAKE_OSX_DEPLOYMENT_TARGET=<版本>` 显式调整应用目标。两种 CI 产物因提供方归档的要求而明确以 macOS 15 为目标。配置阶段检查选定 Qt/OpenSSL 架构及静态归档成员；打包验证检查每个 Mach-O 架构和 app 的 `LSMinimumSystemVersion`。依赖要求高于请求目标时会拒绝构建，不能将其重新标注为兼容。已有构建缓存会保留显式选定的旧目标；若要转为当前默认，先运行 `cmake --preset macos-release -DCMAKE_OSX_DEPLOYMENT_TARGET=14`，再使用构建入口。triplet 部署目标变化后会重建旧依赖缓存；请保留下载及二进制缓存。
 
 产物：`build/bin/TuPig Synergy.app` 与 `build/bin/synergy-core`。
 
