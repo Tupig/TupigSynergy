@@ -83,7 +83,7 @@ runs:
               zypper install -y --force-resolution \
                 cmake make ninja gcc-c++ rpm-build libopenssl-devel patchelf binutils python3 \
                 glib2-devel libXtst-devel libxkbfile-devel qt6-base-devel qt6-tools-devel \
-                qt6-linguist-devel qt6-translations qt6-svg \
+                qt6-linguist-devel qt6-translations libQt6Svg6 \
                 gtk3-devel doxygen \
                 libei-devel libportal-devel help2man
             elif [ ${{ inputs.like }} == "arch" ]; then

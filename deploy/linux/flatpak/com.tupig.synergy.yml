@@ -62,7 +62,7 @@ modules:
         license_dir=/app/share/licenses/libei
         install -d "$license_dir"
         count=0
-        for license in COPYING* LICENSE*; do
+        for license in "$FLATPAK_BUILDER_BUILDDIR"/COPYING* "$FLATPAK_BUILDER_BUILDDIR"/LICENSE*; do
           if test -f "$license"; then
             install -m644 "$license" "$license_dir/"
             count=$((count + 1))
@@ -88,7 +88,7 @@ modules:
         license_dir=/app/share/licenses/libportal
         install -d "$license_dir"
         count=0
-        for license in COPYING* LICENSE*; do
+        for license in "$FLATPAK_BUILDER_BUILDDIR"/COPYING* "$FLATPAK_BUILDER_BUILDDIR"/LICENSE*; do
           if test -f "$license"; then
             install -m644 "$license" "$license_dir/"
             count=$((count + 1))

@@ -14,7 +14,7 @@ import sys
 
 
 def output(command):
-    result = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    result = subprocess.run(command, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
