@@ -91,6 +91,16 @@ runs:
                   "libglvnd-$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}' libglvnd)"
               fi
               test -s /usr/share/doc/libglvnd/README.md
+              # Compat carries libz.so.1, while the same-source base package owns its notice.
+              zlib_compat_id=$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}' zlib-ng-compat)
+              dnf install -y --setopt=tsflags= "zlib-ng-$zlib_compat_id"
+              test "$(rpm -q --qf '%{SOURCERPM}' zlib-ng)" = \
+                "$(rpm -q --qf '%{SOURCERPM}' zlib-ng-compat)"
+              if [ ! -s /usr/share/licenses/zlib-ng/LICENSE.md ]; then
+                dnf reinstall -y --setopt=tsflags= "zlib-ng-$zlib_compat_id"
+              fi
+              test -s /usr/share/licenses/zlib-ng/LICENSE.md
+              test "$(rpm -qf --qf '%{NAME}' /usr/share/licenses/zlib-ng/LICENSE.md)" = zlib-ng
             elif [ ${{inputs.like}} == "suse" ]; then
               # Override the image vendor drop-in before dependency install.
               mkdir -p /etc/zypp/zypp.conf.d
