@@ -13,7 +13,7 @@ set(SYNERGY_WINDOWS_SYSTEM_DLLS
   secur32.dll setupapi.dll shcore.dll shell32.dll shlwapi.dll user32.dll
   userenv.dll usp10.dll uxtheme.dll version.dll win32u.dll winhttp.dll wininet.dll
   winmm.dll winscard.dll winspool.drv wintrust.dll wldap32.dll ws2_32.dll
-  wtsapi32.dll ucrtbase.dll xinput1_4.dll)
+  wtsapi32.dll ucrtbase.dll uiautomationcore.dll xinput1_4.dll)
 
 function(synergy_windows_is_system name result)
   string(TOLOWER "${name}" _name)
