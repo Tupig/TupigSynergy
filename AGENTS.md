@@ -139,7 +139,7 @@ This section is the authoritative list. The following are deliberate, not defect
 ### Modification workflow
 
 1. Propose the approach before changing code; prefer the smallest correct change.
-2. One logical change per commit, on `feature/<topic>` or `fix/<topic>`. Open a pull request into `main`. Do not push to `main`.
+2. Keep `main` as the sole retained, long-lived branch. Use temporary `feature/<topic>` or `fix/<topic>` branches only to satisfy pull request and branch protection requirements, with one logical change per commit and Chinese Conventional Commit messages (R10). Open a pull request into `main`, merge after validation, and delete the temporary branch after integration. Do not push directly to protected `main`.
 3. Verify with evidence (build log, command output, real run). Never report success on reasoning alone.
 4. Keep the issue tracker in step with code changes.
 
@@ -271,7 +271,7 @@ manifest 仍是发布构建与所有本地构建的唯一真源。该例外附�
 ### 改动流程
 
 1. 动手改代码前先给出方案，优先选择最小且正确的改动。
-2. 一个提交只做一件逻辑独立的事，放在 `feature/<主题>` 或 `fix/<主题>` 上。向 `main` 开 Pull Request。不要直接推送到 `main`。
+2. `main` 是唯一长期保留的分支。仅为满足 Pull Request 和分支保护要求使用临时 `feature/<主题>` 或 `fix/<主题>` 分支；一个提交只做一件逻辑独立的事，提交信息遵循中文 Conventional Commits（R10）。向 `main` 开 Pull Request，验证通过后合并，整合完成后删除临时分支。不要直接推送到受保护的 `main`。
 3. 必须有证据验证（构建日志、命令输出、真实运行）。严禁仅凭推理声称通过。
 4. 代码变更须同步更新 GitHub Issues（问题追踪；关联 issue 验证通过后关闭并附证据）。
 

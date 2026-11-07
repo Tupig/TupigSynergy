@@ -45,7 +45,6 @@ create_test(
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/net"
 )
 
-
 create_test(
   NAME SecureSocketTests
   DEPENDS net
