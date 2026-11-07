@@ -13,6 +13,7 @@
 #include "io/IStream.h"
 #include <array>
 #include <iterator>
+#include <memory>
 
 #include <cstring>
 #include <vector>
@@ -564,10 +565,12 @@ void ProtocolUtil::readBytes(synergy::IStream *stream, uint32_t len, std::string
   const bool useFixed = (len <= sizeof(buffer));
 
   // allocate a buffer to read the data
+  std::unique_ptr<uint8_t[]> heapBuffer;
   uint8_t *sBuffer = buffer;
   if (!useFixed) {
     try {
-      sBuffer = new uint8_t[len];
+      heapBuffer.reset(new uint8_t[len]);
+      sBuffer = heapBuffer.get();
     } catch (std::bad_alloc &exception) {
       // Added try catch due to GHSA-chfm-333q-gfpp
       LOG_ERR("bad alloc, unable to allocate memory %d bytes", len);
@@ -577,14 +580,7 @@ void ProtocolUtil::readBytes(synergy::IStream *stream, uint32_t len, std::string
   }
 
   // read the data
-  try {
-    read(stream, sBuffer, len);
-  } catch (...) {
-    if (!useFixed) {
-      delete[] sBuffer;
-    }
-    throw;
-  }
+  read(stream, sBuffer, len);
 
   LOG_VERBOSE("readf: read %d byte string", len);
 
@@ -592,11 +588,6 @@ void ProtocolUtil::readBytes(synergy::IStream *stream, uint32_t len, std::string
 
   if (destination) {
     destination->assign((const char *)sBuffer, len);
-  }
-
-  // release the buffer
-  if (!useFixed) {
-    delete[] sBuffer;
   }
 }
 
