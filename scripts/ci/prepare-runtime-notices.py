@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
 # SPDX-License-Identifier: MIT
-"""Prepare exact-source notices for four CI runtime providers, never at app runtime."""
+"""Prepare exact-source notices for six CI runtime providers, never at app runtime."""
 
 import argparse
 import hashlib
@@ -57,8 +57,18 @@ SOURCES = {
         "url": "https://download.gnome.org/sources/glib/2.90/glib-2.90.1.tar.xz",
         "authority": "https://download.gnome.org/sources/glib/2.90/glib-2.90.1.sha256sum",
     },
+    ("libX11", "1.8.14"): {
+        "sha256": "bbc78c46217174655c2b32b138ad119f3ac15f50808b4d0b3a2677a4b1afc950",
+        "url": "https://xorg.freedesktop.org/archive/individual/lib/libX11-1.8.14.tar.xz",
+        "authority": "https://www.mail-archive.com/xorg%40lists.x.org/msg08359.html",
+    },
+    ("libgudev", "238"): {
+        "sha256": "61266ab1afc9d73dbc60a8b2af73e99d2fdff47d99544d085760e4fa667b5dd1",
+        "url": "https://download.gnome.org/sources/libgudev/238/libgudev-238.tar.xz",
+        "authority": "https://download.gnome.org/sources/libgudev/238/libgudev-238.sha256sum",
+    },
 }
-# Names/ABI majors are declared by the authenticated libdrm meson sources.
+# Authenticated source build declarations bind these finite names and ABI majors.
 SONAMES = {
     "libdrm": {"libdrm.so.2", "libdrm_amdgpu.so.1", "libdrm_intel.so.1", "libdrm_nouveau.so.2",
                "libdrm_radeon.so.1", "libdrm_freedreno.so.1", "libdrm_tegra.so.0", "libdrm_omap.so.1",
@@ -67,6 +77,8 @@ SONAMES = {
     "xcb-util-keysyms": {"libxcb-keysyms.so.1"},
     "glib": {"libglib-2.0.so.0", "libgobject-2.0.so.0", "libgmodule-2.0.so.0",
              "libgthread-2.0.so.0", "libgio-2.0.so.0", "libgirepository-2.0.so.0"},
+    "libX11": {"libX11.so.6", "libX11-xcb.so.1"},
+    "libgudev": {"libgudev-1.0.so.0"},
 }
 
 
@@ -88,22 +100,28 @@ def discover(provider):
         "e2fsprogs": r"libcom_err\.so\.[0-9.]+",
         "xcb-util-keysyms": r"libxcb-keysyms\.so\.[0-9.]+",
         "glib": r"lib(?:glib|gobject|gmodule|gthread|gio|girepository)-2\.0\.so\.[0-9.]+",
+        "libX11": r"libX11(?:-xcb)?\.so\.[0-9.]+",
+        "libgudev": r"libgudev-1\.0\.so\.[0-9.]+",
     }
     if provider not in patterns:
         raise RuntimeError("Unsupported runtime notice provider")
     pattern = patterns[provider]
-    if provider in {"libdrm", "xcb-util-keysyms"}:
+    if provider in {"libdrm", "xcb-util-keysyms", "libX11"}:
         query = ["--qf", "%{NAME}\t%{VERSION}\t%{SOURCERPM}"]
-        capability = "libdrm.so.2()(64bit)" if provider == "libdrm" else "libxcb-keysyms.so.1()(64bit)"
-        primary_names = {"libdrm", "libdrm2"} if provider == "libdrm" else {"xcb-util-keysyms"}
+        capability = {"libdrm": "libdrm.so.2()(64bit)", "xcb-util-keysyms": "libxcb-keysyms.so.1()(64bit)",
+                      "libX11": "libX11.so.6()(64bit)"}[provider]
+        primary_names = {"libdrm": {"libdrm", "libdrm2"}, "xcb-util-keysyms": {"xcb-util-keysyms"},
+                         "libX11": {"libX11-6"}}[provider]
         record = command(["rpm", "-q", "--whatprovides"] + query + [capability])
         fields = record.split("\t")
         if (len(fields) != 3 or fields[0] not in primary_names
                 or not fields[2].startswith(provider + "-" + fields[1] + "-") or not fields[2].endswith(".src.rpm")):
             raise RuntimeError("Unknown installed runtime source identity")
         version = fields[1]
-        runtime_names = ({"libdrm"} | {name.replace(".so.", "") for name in SONAMES[provider]}
-                         if provider == "libdrm" else {"xcb-util-keysyms"})
+        if provider == "libdrm":
+            runtime_names = {"libdrm"} | {name.replace(".so.", "") for name in SONAMES[provider]}
+        else:
+            runtime_names = {"libX11-6", "libX11-xcb1"} if provider == "libX11" else {"xcb-util-keysyms"}
         owners = {fields[0]: record}
         for entry in command(["rpm", "-qa", "--qf", "%{NAME}\t%{VERSION}\t%{SOURCERPM}\n"]).splitlines():
             sibling = entry.split("\t")
@@ -123,8 +141,9 @@ def discover(provider):
                     raise RuntimeError("Ambiguous installed runtime file owner")
                 expected_owners[path] = owner_record
                 listing.append(path)
-    elif provider in {"e2fsprogs", "glib"}:
-        package, expected_version = ("e2fsprogs", "1.47.4-1") if provider == "e2fsprogs" else ("glib2", "2.90.1-1")
+    elif provider in {"e2fsprogs", "glib", "libgudev"}:
+        package, expected_version = {"e2fsprogs": ("e2fsprogs", "1.47.4-1"), "glib": ("glib2", "2.90.1-1"),
+                                     "libgudev": ("libgudev", "238-4")}[provider]
         identity = command(["pacman", "-Q", package])
         fields = identity.split()
         if len(fields) != 2 or fields[0] != package or fields[1] != expected_version:
@@ -141,7 +160,7 @@ def discover(provider):
             continue
         if not path.is_absolute() or not path.is_file():
             raise RuntimeError("Missing installed runtime provider file")
-        if provider in {"libdrm", "xcb-util-keysyms"}:
+        if provider in {"libdrm", "xcb-util-keysyms", "libX11"}:
             owner = command(["rpm", "-qf"] + query + [str(path)])
             if owner != expected_owners[listed]:
                 raise RuntimeError("Installed runtime file has a different package owner")
@@ -223,6 +242,8 @@ def prepare(provider, version, archive_bytes, sonames, destination, package_iden
         "xcb-util-keysyms": ["keysyms/keysyms.c"],
         "glib": ["glib/glib.h", "gobject/gobject.h", "gmodule/gmodule.h", "gthread/gthread-impl.c",
                  "gio/gio.h", "girepository/girepository.h"],
+        "libX11": ["src/XlibInt.c", "src/x11_xcb.c"],
+        "libgudev": ["gudev/gudevclient.c", "gudev/gudev.h"],
     }
     if any(root + "/" + name not in files for name in foundations[provider]):
         raise RuntimeError("Missing foundational runtime source notice")
@@ -236,17 +257,19 @@ def prepare(provider, version, archive_bytes, sonames, destination, package_iden
         raise RuntimeError("Missing or empty complete GLib license text")
     notices = []
     comment_roots = {"e2fsprogs": ["lib/et/"], "xcb-util-keysyms": ["keysyms/"],
-                     "glib": ["glib/", "gobject/", "gmodule/", "gthread/", "gio/", "girepository/"]}
+                     "glib": ["glib/", "gobject/", "gmodule/", "gthread/", "gio/", "girepository/"],
+                     "libX11": ["src/", "include/"], "libgudev": ["gudev/"]}
     for name in sorted(files):
         if (not name.endswith((".c", ".h")) or provider in comment_roots and
                 not any(name.startswith(root + "/" + prefix) for prefix in comment_roots[provider])):
             continue
-        comments = (source_comments(files[name]) if provider in {"xcb-util-keysyms", "glib"} else
+        comments = (source_comments(files[name]) if provider in {"xcb-util-keysyms", "glib", "libX11", "libgudev"} else
                     re.findall(rb"/\*.*?\*/(?:\r?\n)?|(?m:^[ \t]*//[^\n]*(?:\n|$))", files[name], re.S))
         if comments:
             notices.append(b"\nSOURCE " + name.encode("utf-8") + b"\n" + b"\n".join(comments))
     content = b"\n".join(notices)
-    license_marker = b"spdx-license-identifier: lgpl-2.1" if provider == "glib" else b"permission"
+    license_marker = {"glib": b"spdx-license-identifier: lgpl-2.1",
+                      "libgudev": b"spdx-license-identifier: lgpl-2.1"}.get(provider, b"permission")
     if not content or b"copyright" not in content.lower() or license_marker not in content.lower():
         raise RuntimeError("Missing complete source copyright and permission notice")
     directory = Path(destination).resolve() / root

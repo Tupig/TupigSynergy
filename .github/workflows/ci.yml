@@ -731,8 +731,9 @@ jobs:
           providers=()
           case "$TARGET_NAME" in
             fedora-*) providers=(libdrm xcb-util-keysyms) ;;
-            rocky-*|opensuse-*) providers=(libdrm) ;;
-            archlinux-*) providers=(e2fsprogs glib) ;;
+            rocky-*) providers=(libdrm) ;;
+            opensuse-*) providers=(libdrm libX11) ;;
+            archlinux-*) providers=(e2fsprogs glib libgudev) ;;
           esac
           for provider in "${providers[@]}"; do
             provider_map=$(python3 scripts/ci/prepare-runtime-notices.py \
