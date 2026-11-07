@@ -40,7 +40,7 @@ if(EXISTS "${qt_ssl_plugin}")
       file(MAKE_DIRECTORY "${app}/Contents/Frameworks")
       # Resolve provider symlinks, leaving only real files inside the bundle.
       get_filename_component(source "${source}" REALPATH)
-      file(COPY_FILE "${source}" "${app}/Contents/Frameworks/${name}" ONLY_IF_DIFFERENT)
+      configure_file("${source}" "${app}/Contents/Frameworks/${name}" COPYONLY)
       list(APPEND qt_ssl_runtime "${app}/Contents/Frameworks/${name}")
     endforeach()
   endif()
