@@ -88,6 +88,7 @@ def main():
         shutil.copytree(source, target)
 
     manifest = []
+    missing = []
     rpm_sources = None
     rpm_notices = {}
     for source in Path(source_list).read_text().splitlines():
@@ -155,8 +156,11 @@ def main():
                 listing = output(["pacman", "-Qlq", package]).splitlines()
                 files = [file for file in listing if "/licenses/" in file]
         if not package or not copy_files(files, destination / manager / package):
-            raise RuntimeError(f"Missing license provenance for bundled runtime {path.name}")
+            missing.append(path.name)
+            continue
         manifest.append(f"{path.name}\t{manager}/{package}")
+    if missing:
+        raise RuntimeError("Missing license provenance for bundled runtime " + ", ".join(sorted(set(missing))))
     (destination / "runtime-license-index.tsv").write_text("\n".join(sorted(set(manifest))) + "\n")
 
 

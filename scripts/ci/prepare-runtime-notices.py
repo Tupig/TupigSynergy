@@ -39,6 +39,7 @@ SOURCES = {
         "sha256": "ac5e74d157830eb8bee44c6a6bf3ad49774ef0dd2a72bdad74a8f20308b52a95",
         "url": "https://dri.freedesktop.org/libdrm/libdrm-2.4.134.tar.xz",
         "authority": "https://raw.githubusercontent.com/buildroot/buildroot/a2602d10a16e1d32d619fa8dfb696df81265a2c9/package/libdrm/libdrm.hash",
+        "mirror": "https://sources.buildroot.net/libdrm/libdrm-2.4.134.tar.xz",
     },
     ("e2fsprogs", "1.47.4"): {
         "sha256": "fd5bf388cbdbe006a3d3b318d983b2948382440acc85a87f1e7d108653e8db0b",
@@ -49,6 +50,7 @@ SOURCES = {
         "sha256": "7c260a5294412aed429df1da2f8afd3bd07b7cba3fec772fba15a613a6d5c638",
         "url": "https://www.x.org/releases/individual/xcb/xcb-util-keysyms-0.4.1.tar.xz",
         "authority": "https://lists.x.org/archives/xorg-announce/2022-October/003233.html",
+        "mirror": "https://sources.buildroot.net/xcb-util-keysyms/xcb-util-keysyms-0.4.1.tar.xz",
     },
     ("glib", "2.90.1"): {
         "sha256": "93c941aa17d5eb1d53fe838365f29a8b4e539c222a256d974ec8f30fc413e396",
@@ -281,14 +283,28 @@ def download_source(url):
             time.sleep(attempt + 1)
 
 
+def download_runtime_source(provider, version):
+    pin = SOURCES[(provider, version)]
+    print("Fetching runtime source provider={} version={} url={}".format(provider, version, pin["url"]),
+          file=sys.stderr)
+    try:
+        return download_source(pin["url"])
+    except (urllib.error.URLError, ConnectionResetError, TimeoutError, socket.timeout) as error:
+        reason = error.reason if isinstance(error, urllib.error.URLError) else error
+        if "mirror" not in pin or not isinstance(reason, (ConnectionResetError, TimeoutError, socket.timeout)):
+            raise
+    print("Fetching runtime source mirror provider={} version={} url={}".format(provider, version, pin["mirror"]),
+          file=sys.stderr)
+    return download_source(pin["mirror"])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--provider", required=True, choices=sorted(SONAMES))
     parser.add_argument("--destination", required=True)
     args = parser.parse_args()
     version, identity, names = discover(args.provider)
-    pin = SOURCES[(args.provider, version)]
-    data = download_source(pin["url"])
+    data = download_runtime_source(args.provider, version)
     mapping = prepare(args.provider, version, data, names, args.destination, identity)
     print(";".join(name + "=" + directory for name, directory in sorted(mapping.items())))
 
