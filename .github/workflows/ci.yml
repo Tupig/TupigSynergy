@@ -325,7 +325,7 @@ jobs:
 
       # Stage: compile. GUI must be synergy_<X.Y.Z>.exe; core and daemon stay unversioned.
       - name: Configure
-        run: ${{ env.CMAKE_CONFIGURE }} -G Ninja ${{ steps.get-deps.outputs.vcpkg-cmake-config }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }}
+        run: ${{ env.CMAKE_CONFIGURE }} -G Ninja ${{ steps.get-deps.outputs.vcpkg-cmake-config }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
 
       - name: Build
         shell: bash
@@ -513,12 +513,13 @@ jobs:
 
       # Stage: toolchain, then compile. Qt comes from the CI Qt build.
       - name: Install dependencies
+        id: get-deps
         uses: ./.github/actions/install-dependencies
         with:
           qt-version: ${{ matrix.target.qt-version }}
 
       - name: Configure
-        run: ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ env.MAC_CODESIGN_ID }}"
+        run: ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ env.MAC_CODESIGN_ID }}" -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
 
       - name: Build
         shell: bash

@@ -371,6 +371,8 @@ A clean run is one line: `encoding OK checked=669 violations=0 allowed=utf-8 mod
 
 All shipped MSI/portable, app/DMG and native Linux packages include application runtime dependencies and their license notices. Deployment follows the actual linked dependency graph, including GUI/core helpers and dynamically loaded Qt plugins. Missing libraries, unresolved loader paths, wrong architectures or missing license sources stop packaging or verification. Static Qt builds retain only their actual dynamic dependencies and include licenses for statically linked libraries as well.
 
+The prebuilt Windows/macOS CI Qt provider carries an exact-version source-notice supplement for `qtbase` and `qtsvg`. The collector checks official Qt source archive SHA256 values and records selected SDK provider hashes, complete license texts, attribution files and provenance. CI records the original manifest digest before configuration; configuration and packaging reject later metadata or notice changes. Source archives stay in the CI cache. Local manifest builds continue using vcpkg notice material.
+
 Windows packages keep application DLLs and required VC redistributables beside the executables, with Qt plugins selected through package-local `qt.conf`. The portable archive omits the service daemon; the MSI keeps it. Distribute complete packages rather than a GUI executable detached from its runtime files. The current Windows CI Qt deployment selects its Schannel TLS plugin, whose TLS provider is the Windows OS; the application's directly linked OpenSSL runtime is still included. The optional Qt OpenSSL plugin is not forced into the package. PE dependency checks and startup on current CI runners do not establish minimum-Windows-version compatibility.
 
 macOS deploys the GUI and `synergy-core`, fixes third-party load commands inside the app, removes build-machine RPATHs, and signs after dependency fixups and resource installation. The verifier copies the DMG's app into a temporary directory, audits all Mach-O files and plugins, starts GUI `QApplication`/Cocoa through `--help`, and connects a real core client to a private TLS loopback server with a disposable identity and trust store. It requires a TLS handshake, client certificate and the core's peer-fingerprint acceptance before stopping without a Synergy greeting. Actual loaded images must remain inside the package or system directories. This is package TLS/startup evidence, not main-window, TCC permission or input-sharing acceptance. Translation catalogues live only in `Contents/Resources/translations`.
@@ -710,6 +712,8 @@ encoding FAIL count=1 checked=669 allowed=utf-8 mode=fail
 ### 完整打包运行依赖
 
 所有交付的 MSI/便携包、app/DMG 和 Linux 原生包均须携带应用运行依赖及其许可声明。部署依据实际链接的依赖关系，包括 GUI/core 辅助程序和动态加载的 Qt 插件。缺库、加载路径无法解析、架构错误或许可来源缺失都应阻止打包或验证通过。静态 Qt 构建只保留实际需要的动态依赖，同时携带静态链接库的许可。
+
+Windows/macOS CI 的预编译 Qt 提供方另附 `qtbase`、`qtsvg` 对应精确版本的源码许可材料。收集器核对 Qt 官方源码归档 SHA256，并记录选定 SDK 提供方哈希、完整许可文本、归属声明及来源记录。CI 在配置前记录原始清单摘要；配置和打包阶段都拒绝之后的清单或许可内容改动。源码归档留在 CI 缓存，本地 manifest 构建继续使用 vcpkg 的许可材料。
 
 Windows 包把应用 DLL 和必需的 VC 可再分发运行库放在可执行文件旁，通过包内 `qt.conf` 定位 Qt 插件。便携包省略服务 daemon，MSI 保留。交付完整软件包，不把 GUI 可执行文件与运行依赖拆开分发。 当前 Windows CI 的 Qt 部署选择 Schannel TLS 插件，其 TLS 提供方属于 Windows 系统；应用直接链接的 OpenSSL 运行库仍随包携带。不强行加入可选的 Qt OpenSSL 插件。PE 依赖检查及当前 CI 系统启动通过，不能证明最低 Windows 版本兼容性。
 

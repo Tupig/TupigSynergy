@@ -44,6 +44,8 @@ if (OSX_BUNDLE)
   if(QT_IS_SHARED)
     find_program(DEPLOYQT NAMES macdeployqt HINTS "${MAC_QT_ROOT}/bin")
   endif()
+  include("${PROJECT_SOURCE_DIR}/cmake/CiQtNotices.cmake")
+  synergy_configure_ci_qt_notices("${MAC_QT_ROOT}" "${Qt${QT_VERSION_MAJOR}_VERSION}")
   # Qt's prebuilt Qt 6 OpenSSL plugin resolves ABI 3 with QLibrary, so this
   # dependency is invisible to otool/fixup_bundle when Qt is not openssl-linked.
   # A provider is used only while packaging; installed apps load their own copy.
