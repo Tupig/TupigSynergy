@@ -45,3 +45,9 @@ create_test(
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/server"
 )
 
+
+# Each real-Screen fixture owns its Windows portable settings marker.
+foreach(test ServerTests ClientProxyTests)
+  set_target_properties(${test} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${test}-runtime")
+endforeach()

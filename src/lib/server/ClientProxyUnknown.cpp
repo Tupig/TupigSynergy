@@ -104,10 +104,11 @@ void ClientProxyUnknown::sendSuccess()
 
 void ClientProxyUnknown::sendFailure()
 {
+  // Remove handlers while their proxy/stream targets are still available.
+  removeHandlers();
   delete m_proxy;
   m_proxy = nullptr;
   m_ready = false;
-  removeHandlers();
   removeTimer();
   m_events->addEvent(Event(EventTypes::ClientProxyUnknownFailure, this));
 }

@@ -15,6 +15,13 @@ class ServerProxyTests : public QObject
   Q_OBJECT
 private Q_SLOTS:
   void initTestCase();
+  void keyMessagesPreserveArguments();
+  void mouseButtonsAndSignedDeltas();
+  void optionsAreForwarded();
+  void truncatedInputDoesNotDispatch_data();
+  void truncatedInputDoesNotDispatch();
+  void handshakeRefusals_data();
+  void handshakeRefusals();
 
   void unknownMessageReturnsUnknown();
   void serverNoopReturnsOkay();

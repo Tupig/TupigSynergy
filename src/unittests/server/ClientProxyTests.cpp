@@ -7,95 +7,29 @@
 #include "ClientProxyTests.h"
 
 #include "../synergy/MockEventQueue.h"
+#include "ServerTestFixture.h"
+#include "ipc/CoreIpcServer.h"
+#include "server/ClientProxy1_1.h"
+#include "server/ClientProxy1_2.h"
+#include "server/ClientProxy1_3.h"
+#include "server/ClientProxy1_4.h"
+#include "server/ClientProxy1_5.h"
+#include "server/ClientProxy1_6.h"
+#include "server/ClientProxy1_7.h"
+#include "server/ClientProxy1_8.h"
+#include "server/ClientProxyUnknown.h"
 
 #include "ProtocolTypes.h"
 #include "io/IStream.h"
 #include "server/ClientProxy1_0.h"
 
-#include <algorithm>
 #include <cstring>
-#include <deque>
-#include <initializer_list>
 #include <string>
+#include <typeinfo>
 
 namespace {
 
-//! In-memory stream whose input queue is independent from written bytes.
-class FakeStream : public synergy::IStream
-{
-public:
-  void push(const std::string &bytes)
-  {
-    m_queue.push_back(bytes);
-  }
-
-  void close() override
-  {
-    m_inputShutdown = true;
-  }
-
-  uint32_t read(void *buffer, uint32_t n) override
-  {
-    if (m_inputShutdown || m_queue.empty() || n == 0) {
-      return 0;
-    }
-
-    auto &front = m_queue.front();
-    const size_t take = std::min(static_cast<size_t>(n), front.size());
-    if (buffer != nullptr) {
-      std::memcpy(buffer, front.data(), take);
-    }
-
-    front.erase(0, take);
-    if (front.empty()) {
-      m_queue.pop_front();
-    }
-
-    return static_cast<uint32_t>(take);
-  }
-
-  void write(const void *buffer, uint32_t n) override
-  {
-    m_written.append(static_cast<const char *>(buffer), n);
-  }
-
-  void flush() override
-  {
-  }
-
-  void shutdownInput() override
-  {
-    close();
-  }
-
-  void shutdownOutput() override
-  {
-  }
-
-  void *getEventTarget() const override
-  {
-    return const_cast<FakeStream *>(this);
-  }
-
-  bool isReady() const override
-  {
-    return !m_inputShutdown && !m_queue.empty();
-  }
-
-  uint32_t getSize() const override
-  {
-    size_t total = 0;
-    for (const auto &chunk : m_queue) {
-      total += chunk.size();
-    }
-    return static_cast<uint32_t>(std::min<size_t>(total, UINT32_MAX));
-  }
-
-private:
-  std::deque<std::string> m_queue;
-  std::string m_written;
-  bool m_inputShutdown = false;
-};
+using FakeStream = protocol_test::Stream;
 
 //! Exposes the protected message parsers so tests can drive them directly.
 class TestableClientProxy1_0 : public ClientProxy1_0
@@ -111,22 +45,16 @@ void copyCode(const char *code, uint8_t out[4])
   std::memcpy(out, code, 4);
 }
 
-//! The DINF payload (without the message code): seven 2-byte big-endian ints.
-std::string infoPayload(std::initializer_list<int> values)
-{
-  std::string bytes;
-  for (const int value : values) {
-    bytes += static_cast<char>((value >> 8) & 0xff);
-    bytes += static_cast<char>(value & 0xff);
-  }
-  return bytes;
-}
-
 } // namespace
 
 void ClientProxyTests::initTestCase()
 {
   m_log.setFilter(LogLevel::Level::Error);
+#ifdef Q_OS_WIN
+  m_arch.init();
+#endif
+  static synergy::core::ipc::CoreIpcServer ipc(nullptr);
+  static protocol_test::App app;
 }
 
 void ClientProxyTests::handshakeNoopReturnsTrue()
@@ -158,7 +86,7 @@ void ClientProxyTests::handshakeInfoCompletesHandshake()
   TestableClientProxy1_0 proxy("test-client", stream, &events);
 
   // the payload parsed by recvInfo (format without the leading code)
-  stream->push(infoPayload({10, 20, 800, 600, 0, 5, 6}));
+  stream->push(protocol_test::integers16({10, 20, 800, 600, 0, 5, 6}));
 
   uint8_t code[4];
   copyCode(kMsgDInfo, code);
@@ -192,7 +120,7 @@ void ClientProxyTests::parseMessageInfoUpdatesShape()
   auto *stream = new FakeStream();
   TestableClientProxy1_0 proxy("test-client", stream, &events);
 
-  stream->push(infoPayload({10, 20, 800, 600, 0, 5, 6}));
+  stream->push(protocol_test::integers16({10, 20, 800, 600, 0, 5, 6}));
 
   uint8_t code[4];
   copyCode(kMsgDInfo, code);
@@ -219,6 +147,143 @@ void ClientProxyTests::parseMessageTruncatedInfoReturnsFalse()
   uint8_t code[4];
   copyCode(kMsgDInfo, code);
   QVERIFY(!proxy.parseMessage(code));
+}
+
+void ClientProxyTests::negotiatesSupportedVersions_data()
+{
+  QTest::addColumn<int>("minor");
+  for (int minor = 0; minor <= 8; ++minor)
+    QTest::newRow(qPrintable(QString("1.%1").arg(minor))) << minor;
+}
+
+void ClientProxyTests::negotiatesSupportedVersions()
+{
+  QFETCH(int, minor);
+  protocol_test::ServerFixture fixture(false);
+  const auto destroyed = std::make_shared<int>(0);
+  auto *stream = new FakeStream(destroyed);
+  ClientProxyUnknown unknown(stream, 5.0, fixture.server.get(), &fixture.events);
+  QCOMPARE(
+      stream->written,
+      std::string("Synergy") + protocol_test::integers16({kProtocolMajorVersion, kProtocolMinorVersion})
+  );
+  stream->written.clear();
+  const std::string name = "synthetic-client";
+  stream->push("Synergy" + protocol_test::integers16({1, minor}) + protocol_test::integer32(name.size()) + name);
+  QVERIFY(fixture.events.dispatchEvent(Event(EventTypes::StreamInputReady, stream)));
+  QVERIFY(unknown.getStream() == nullptr);
+  QVERIFY(unknown.orphanClientProxy() == nullptr);
+  QVERIFY(stream->written.starts_with("QINF"));
+  QCOMPARE(fixture.events.count(EventTypes::ClientProxyUnknownSuccess), 0);
+
+  stream->push("DINF" + protocol_test::integers16({0, 0, 800, 600, 0, 10, 20}));
+  QVERIFY(fixture.events.dispatchEvent(Event(EventTypes::StreamInputReady, stream)));
+  fixture.events.drain();
+  QCOMPARE(fixture.events.count(EventTypes::ClientProxyUnknownSuccess), 1);
+  QCOMPARE(fixture.events.count(EventTypes::ClientProxyUnknownFailure), 0);
+  std::unique_ptr<ClientProxy> proxy(unknown.orphanClientProxy());
+  QVERIFY(proxy != nullptr);
+  QCOMPARE(proxy->getName(), name);
+  const std::type_info *versions[] = {&typeid(ClientProxy1_0), &typeid(ClientProxy1_1), &typeid(ClientProxy1_2),
+                                      &typeid(ClientProxy1_3), &typeid(ClientProxy1_4), &typeid(ClientProxy1_5),
+                                      &typeid(ClientProxy1_6), &typeid(ClientProxy1_7), &typeid(ClientProxy1_8)};
+  QVERIFY(typeid(*proxy) == *versions[minor]);
+  QVERIFY(!fixture.events.hasHandler(EventTypes::Timer, &unknown));
+  proxy.reset();
+  QCOMPARE(*destroyed, 1);
+  QVERIFY(!fixture.events.hasHandler(EventTypes::StreamInputReady, stream));
+}
+
+void ClientProxyTests::rejectsUnsupportedVersions_data()
+{
+  QTest::addColumn<int>("major");
+  QTest::addColumn<int>("minor");
+  QTest::newRow("zero-major") << 0 << 0;
+  QTest::newRow("future-major") << 2 << 0;
+  QTest::newRow("future-minor") << 1 << 9;
+  QTest::newRow("negative-major") << -1 << 0;
+  QTest::newRow("negative-minor") << 1 << -1;
+}
+
+void ClientProxyTests::rejectsUnsupportedVersions()
+{
+  QFETCH(int, major);
+  QFETCH(int, minor);
+  protocol_test::ServerFixture fixture(false);
+  auto *stream = new FakeStream;
+  ClientProxyUnknown unknown(stream, 5.0, fixture.server.get(), &fixture.events);
+  stream->written.clear();
+  stream->push("Synergy" + protocol_test::integers16({major, minor}) + protocol_test::integer32(4) + "test");
+  fixture.events.dispatchEvent(Event(EventTypes::StreamInputReady, stream));
+  QCOMPARE(
+      stream->written, std::string("EICV") + protocol_test::integers16({kProtocolMajorVersion, kProtocolMinorVersion})
+  );
+  QCOMPARE(fixture.events.count(EventTypes::ClientProxyUnknownFailure), 1);
+  QVERIFY(unknown.orphanClientProxy() == nullptr);
+  QVERIFY(!fixture.events.hasHandler(EventTypes::StreamInputReady, stream));
+  QVERIFY(!fixture.events.hasHandler(EventTypes::Timer, &unknown));
+}
+
+void ClientProxyTests::rejectsMalformedHello_data()
+{
+  QTest::addColumn<QByteArray>("hello");
+  QTest::newRow("empty") << QByteArray();
+  QTest::newRow("truncated-version") << QByteArray("Synergy\0", 8);
+  QTest::newRow("truncated-name") << QByteArray::fromStdString(
+      "Synergy" + protocol_test::integers16({1, 0}) + protocol_test::integer32(10) + "short"
+  );
+  QTest::newRow("oversized") << QByteArray(kMaxHelloLength + 1, 'x');
+}
+
+void ClientProxyTests::rejectsMalformedHello()
+{
+  QFETCH(QByteArray, hello);
+  protocol_test::ServerFixture fixture(false);
+  auto *stream = new FakeStream;
+  ClientProxyUnknown unknown(stream, 5.0, fixture.server.get(), &fixture.events);
+  stream->written.clear();
+  if (!hello.isEmpty())
+    stream->push(hello.toStdString());
+  fixture.events.dispatchEvent(Event(EventTypes::StreamInputReady, stream));
+  QCOMPARE(stream->written, std::string("EBAD"));
+  QCOMPARE(fixture.events.count(EventTypes::ClientProxyUnknownFailure), 1);
+  QVERIFY(unknown.orphanClientProxy() == nullptr);
+}
+
+void ClientProxyTests::failedHandshakeCleansUp_data()
+{
+  QTest::addColumn<int>("eventType");
+  QTest::addColumn<bool>("afterHello");
+  QTest::newRow("hello-timeout") << static_cast<int>(EventTypes::Timer) << false;
+  QTest::newRow("info-timeout") << static_cast<int>(EventTypes::Timer) << true;
+  QTest::newRow("output-error") << static_cast<int>(EventTypes::StreamOutputError) << false;
+  QTest::newRow("input-shutdown") << static_cast<int>(EventTypes::StreamInputShutdown) << false;
+}
+
+void ClientProxyTests::failedHandshakeCleansUp()
+{
+  QFETCH(int, eventType);
+  QFETCH(bool, afterHello);
+  protocol_test::ServerFixture fixture(false);
+  const auto initialHandlers = fixture.events.handlerCount();
+  const auto destroyed = std::make_shared<int>(0);
+  auto *stream = new FakeStream(destroyed);
+  {
+    ClientProxyUnknown unknown(stream, 5.0, fixture.server.get(), &fixture.events);
+    if (afterHello) {
+      stream->push("Synergy" + protocol_test::integers16({1, 0}) + protocol_test::integer32(4) + "test");
+      fixture.events.dispatchEvent(Event(EventTypes::StreamInputReady, stream));
+    }
+    const auto type = static_cast<EventTypes>(eventType);
+    void *target = type == EventTypes::Timer ? static_cast<void *>(&unknown) : static_cast<void *>(stream);
+    QVERIFY(fixture.events.dispatchEvent(Event(type, target)));
+    QCOMPARE(fixture.events.count(EventTypes::ClientProxyUnknownFailure), 1);
+    QVERIFY(unknown.orphanClientProxy() == nullptr);
+    QVERIFY(!fixture.events.hasHandler(EventTypes::Timer, &unknown));
+    QVERIFY(!fixture.events.hasHandler(EventTypes::StreamInputReady, stream));
+  }
+  QCOMPARE(*destroyed, 1);
+  QCOMPARE(fixture.events.handlerCount(), initialHandlers);
 }
 
 QTEST_MAIN(ClientProxyTests)

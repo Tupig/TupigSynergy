@@ -5,6 +5,7 @@
  */
 
 #include "ServerProxyTests.h"
+#include "ProtocolTestSupport.h"
 
 #include "../synergy/MockEventQueue.h"
 #include "../synergy/TestStreams.h"
@@ -25,6 +26,16 @@ class FakeServerProxyClient : public IServerProxyClient
 {
 public:
   int disconnectCalls = 0;
+  int keyDownCalls = 0, keyUpCalls = 0, keyRepeatCalls = 0;
+  int mouseDownCalls = 0, mouseUpCalls = 0, relativeCalls = 0, wheelCalls = 0;
+  int resetCalls = 0, optionsCalls = 0, refusalCalls = 0;
+  KeyID lastKey = 0;
+  KeyModifierMask lastMask = 0;
+  KeyButton lastButton = 0;
+  int32_t lastRepeat = 0;
+  ButtonID lastMouseButton = 0;
+  OptionsList lastOptions;
+  synergy::core::ConnectionRefusal lastRefusal{};
   int enterCalls = 0;
   int leaveCalls = 0;
   int mouseMoveCalls = 0;
@@ -36,8 +47,10 @@ public:
     ++disconnectCalls;
   }
 
-  void refuseConnection(synergy::core::ConnectionRefusal, const char *) override
+  void refuseConnection(synergy::core::ConnectionRefusal reason, const char *) override
   {
+    ++refusalCalls;
+    lastRefusal = reason;
   }
 
   void handshakeComplete() override
@@ -86,24 +99,41 @@ public:
   {
   }
 
-  void keyDown(KeyID, KeyModifierMask, KeyButton, const std::string &) override
+  void keyDown(KeyID id, KeyModifierMask mask, KeyButton button, const std::string &) override
   {
+    ++keyDownCalls;
+    lastKey = id;
+    lastMask = mask;
+    lastButton = button;
   }
 
-  void keyRepeat(KeyID, KeyModifierMask, int32_t, KeyButton, const std::string &) override
+  void keyRepeat(KeyID id, KeyModifierMask mask, int32_t count, KeyButton button, const std::string &) override
   {
+    ++keyRepeatCalls;
+    lastKey = id;
+    lastMask = mask;
+    lastButton = button;
+    lastRepeat = count;
   }
 
-  void keyUp(KeyID, KeyModifierMask, KeyButton) override
+  void keyUp(KeyID id, KeyModifierMask mask, KeyButton button) override
   {
+    ++keyUpCalls;
+    lastKey = id;
+    lastMask = mask;
+    lastButton = button;
   }
 
-  void mouseDown(ButtonID) override
+  void mouseDown(ButtonID button) override
   {
+    ++mouseDownCalls;
+    lastMouseButton = button;
   }
 
-  void mouseUp(ButtonID) override
+  void mouseUp(ButtonID button) override
   {
+    ++mouseUpCalls;
+    lastMouseButton = button;
   }
 
   void mouseMove(int32_t xAbs, int32_t yAbs) override
@@ -113,12 +143,18 @@ public:
     lastY = yAbs;
   }
 
-  void mouseRelativeMove(int32_t, int32_t) override
+  void mouseRelativeMove(int32_t x, int32_t y) override
   {
+    ++relativeCalls;
+    lastX = x;
+    lastY = y;
   }
 
-  void mouseWheel(int32_t, int32_t) override
+  void mouseWheel(int32_t x, int32_t y) override
   {
+    ++wheelCalls;
+    lastX = x;
+    lastY = y;
   }
 
   void screensaver(bool) override
@@ -127,10 +163,13 @@ public:
 
   void resetOptions() override
   {
+    ++resetCalls;
   }
 
-  void setOptions(const OptionsList &) override
+  void setOptions(const OptionsList &options) override
   {
+    ++optionsCalls;
+    lastOptions = options;
   }
 
   std::string getName() const override
@@ -145,6 +184,7 @@ class TestableServerProxy : public ServerProxy
 public:
   using ServerProxy::ServerProxy;
   using ConnectionResult = ServerProxy::ConnectionResult;
+  using ServerProxy::parseHandshakeMessage;
   using ServerProxy::parseMessage;
 };
 
@@ -252,6 +292,134 @@ void ServerProxyTests::enterAndLeaveForwardToClient()
   copyCode(kMsgCLeave, code);
   QCOMPARE(proxy.parseMessage(code), TestableServerProxy::ConnectionResult::Okay);
   QCOMPARE(client.leaveCalls, 1);
+}
+
+void ServerProxyTests::keyMessagesPreserveArguments()
+{
+  MockEventQueue events;
+  FakeServerProxyClient client;
+  MemoryStream stream;
+  TestableServerProxy proxy(&client, &stream, &events, ServerProxyConfig{});
+  uint8_t code[4];
+  stream.push(protocol_test::integers16({65, KeyModifierShift, 42}));
+  copyCode(kMsgDKeyDown, code);
+  QCOMPARE(proxy.parseMessage(code), TestableServerProxy::ConnectionResult::Okay);
+  QCOMPARE(client.keyDownCalls, 1);
+  QCOMPARE(client.lastKey, KeyID(65));
+  QCOMPARE(client.lastMask, KeyModifierMask(KeyModifierShift));
+  QCOMPARE(client.lastButton, KeyButton(42));
+  stream.push(protocol_test::integers16({65, KeyModifierShift, 3, 42}) + protocol_test::integer32(0));
+  copyCode(kMsgDKeyRepeat, code);
+  proxy.parseMessage(code);
+  QCOMPARE(client.keyRepeatCalls, 1);
+  QCOMPARE(client.lastRepeat, 3);
+  stream.push(protocol_test::integers16({65, 0, 42}));
+  copyCode(kMsgDKeyUp, code);
+  proxy.parseMessage(code);
+  QCOMPARE(client.keyUpCalls, 1);
+  QCOMPARE(client.lastMask, KeyModifierMask(0));
+  QCOMPARE(client.lastButton, KeyButton(42));
+}
+
+void ServerProxyTests::mouseButtonsAndSignedDeltas()
+{
+  MockEventQueue events;
+  FakeServerProxyClient client;
+  MemoryStream stream;
+  TestableServerProxy proxy(&client, &stream, &events, ServerProxyConfig{});
+  uint8_t code[4];
+  stream.push(std::string(1, '\x03'));
+  copyCode(kMsgDMouseDown, code);
+  proxy.parseMessage(code);
+  QCOMPARE(client.mouseDownCalls, 1);
+  QCOMPARE(client.lastMouseButton, ButtonID(3));
+  stream.push(std::string(1, '\x03'));
+  copyCode(kMsgDMouseUp, code);
+  proxy.parseMessage(code);
+  QCOMPARE(client.mouseUpCalls, 1);
+  stream.push(protocol_test::integers16({-12, 34}));
+  copyCode(kMsgDMouseRelMove, code);
+  proxy.parseMessage(code);
+  QCOMPARE(client.relativeCalls, 1);
+  QCOMPARE(client.lastX, -12);
+  QCOMPARE(client.lastY, 34);
+  stream.push(protocol_test::integers16({120, -120}));
+  copyCode(kMsgDMouseWheel, code);
+  proxy.parseMessage(code);
+  QCOMPARE(client.wheelCalls, 1);
+  QCOMPARE(client.lastX, 120);
+  QCOMPARE(client.lastY, -120);
+}
+
+void ServerProxyTests::optionsAreForwarded()
+{
+  MockEventQueue events;
+  FakeServerProxyClient client;
+  MemoryStream stream;
+  TestableServerProxy proxy(&client, &stream, &events, ServerProxyConfig{});
+  uint8_t code[4];
+  copyCode(kMsgCResetOptions, code);
+  proxy.parseMessage(code);
+  QCOMPARE(client.resetCalls, 1);
+  stream.push(
+      protocol_test::integer32(2) + protocol_test::integer32(kOptionClipboardSharing) + protocol_test::integer32(0)
+  );
+  copyCode(kMsgDSetOptions, code);
+  proxy.parseMessage(code);
+  QCOMPARE(client.optionsCalls, 1);
+  QCOMPARE(client.lastOptions, OptionsList({kOptionClipboardSharing, 0}));
+}
+
+void ServerProxyTests::truncatedInputDoesNotDispatch_data()
+{
+  QTest::addColumn<QByteArray>("code");
+  for (const auto *code : {"DKDN", "DKUP", "DKRP", "DMDN", "DMUP", "DMMV", "DMRM", "DMWM", "CINN"})
+    QTest::newRow(code) << QByteArray(code);
+}
+
+void ServerProxyTests::truncatedInputDoesNotDispatch()
+{
+  QFETCH(QByteArray, code);
+  MockEventQueue events;
+  FakeServerProxyClient client;
+  MemoryStream stream;
+  TestableServerProxy proxy(&client, &stream, &events, ServerProxyConfig{});
+  proxy.parseMessage(reinterpret_cast<const uint8_t *>(code.constData()));
+  QCOMPARE(client.disconnectCalls, 1);
+  QCOMPARE(client.keyDownCalls + client.keyUpCalls + client.keyRepeatCalls, 0);
+  QCOMPARE(
+      client.mouseDownCalls + client.mouseUpCalls + client.mouseMoveCalls + client.relativeCalls + client.wheelCalls, 0
+  );
+  QCOMPARE(client.enterCalls, 0);
+}
+
+void ServerProxyTests::handshakeRefusals_data()
+{
+  QTest::addColumn<QByteArray>("code");
+  QTest::addColumn<int>("reason");
+  using enum synergy::core::ConnectionRefusal;
+  QTest::newRow("busy") << QByteArray("EBSY") << static_cast<int>(AlreadyConnected);
+  QTest::newRow("unknown") << QByteArray("EUNK") << static_cast<int>(UnknownClient);
+  QTest::newRow("protocol") << QByteArray("EBAD") << static_cast<int>(ProtocolError);
+  QTest::newRow("version") << QByteArray("EICV") << static_cast<int>(IncompatibleVersion);
+}
+
+void ServerProxyTests::handshakeRefusals()
+{
+  QFETCH(QByteArray, code);
+  QFETCH(int, reason);
+  MockEventQueue events;
+  FakeServerProxyClient client;
+  MemoryStream stream;
+  if (code == "EICV")
+    stream.push(protocol_test::integers16({2, 0}));
+  TestableServerProxy proxy(&client, &stream, &events, ServerProxyConfig{});
+  QCOMPARE(
+      proxy.parseHandshakeMessage(reinterpret_cast<const uint8_t *>(code.constData())),
+      TestableServerProxy::ConnectionResult::Disconnect
+  );
+  QCOMPARE(client.refusalCalls, 1);
+  QCOMPARE(static_cast<int>(client.lastRefusal), reason);
 }
 
 QTEST_MAIN(ServerProxyTests)
