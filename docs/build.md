@@ -362,6 +362,22 @@ A clean run is one line: `encoding OK checked=669 violations=0 allowed=utf-8 mod
 
 ---
 
+### Complete package dependencies
+
+All shipped MSI/portable, app/DMG and native Linux packages include application runtime dependencies and their license notices. Deployment follows the actual linked dependency graph, including GUI/core helpers and dynamically loaded Qt plugins. Missing libraries, unresolved loader paths, wrong architectures or missing license sources stop packaging or verification. Static Qt builds retain only their actual dynamic dependencies and include licenses for statically linked libraries as well.
+
+Windows packages keep application DLLs and required VC redistributables beside the executables, with Qt plugins selected through package-local `qt.conf`. The portable archive omits the service daemon; the MSI keeps it. Distribute complete packages rather than a GUI executable detached from its runtime files.
+
+macOS deploys the GUI and `synergy-core`, fixes third-party load commands inside the app, removes build-machine RPATHs, and signs after dependency fixups and resource installation. The verifier copies the DMG's app into a temporary directory, audits all Mach-O files and plugins, starts GUI `QApplication`/Cocoa through `--help`, and connects a real core client to a private loopback listener without completing an input-sharing handshake. This is package startup evidence, not main-window, TCC permission or input-sharing acceptance.
+
+Linux packages keep application executables, libraries and plugins under an app-private `libexec/synergy` tree and provide launch wrappers. The verifier extracts native packages without installing them or fetching dependencies, checks ELF closure, and exercises the bundled Qt platform plugin with build search paths removed.
+
+The host boundary is the supported OS kernel/ABI and system APIs; on macOS this includes `/usr/lib` and `/System/Library`, and on Linux glibc/loader plus POSIX shell/coreutils. Display services, fonts and GPU drivers remain on the host. Qt, OpenSSL and application plugins are included rather than delegated to those host boundaries. Native DEB/RPM/Arch metadata may name the minimal OS runtime prerequisites.
+
+Run package checks with `scripts\ci\verify-package-windows.bat build`, `bash scripts/ci/verify-package-macos.sh build`, or `bash scripts/ci/verify-package-linux.sh build <distribution-family>`. Report each result against its exact build commit. A green CI run with prebuilt/shared dependencies does not prove the local vcpkg static release path. The Flatpak delivery target is an offline OSTree repository `.tar.zst` containing the app, runtime and extensions for each supported architecture, with hashes and bilingual offline instructions. This requires separate exact-commit verification; a standalone app file or an unfinished offline pipeline must not be reported as a complete delivery.
+
+---
+
 ## 中文
 
 ### 编译环境要求
@@ -681,6 +697,22 @@ encoding FAIL count=1 checked=669 allowed=utf-8 mode=fail
 | `encoding FAIL ... detected=` | 该文件不在白名单里。另存为不带 BOM 的 UTF-8，或把检测到的编码加进 `allowed`。`utf-8` 已经接受 `ascii`。`detected=binary` 表示文件里有 NUL，需要另存为文本。 |
 | `_FORTIFY_SOURCE` 被重复定义 | 工具链已经定义过（Flatpak 用的是 3）。构建保留那一个定义，不再加第二个。 |
 | 找不到 MSVC CRT 合并模块 | 动态 CRT 的发布构建在没有合并模块时，把 `vcruntime140.dll` 和 `msvcp140.dll` 装到可执行文件旁边。 |
+
+---
+
+### 完整打包运行依赖
+
+所有交付的 MSI/便携包、app/DMG 和 Linux 原生包均须携带应用运行依赖及其许可声明。部署依据实际链接的依赖关系，包括 GUI/core 辅助程序和动态加载的 Qt 插件。缺库、加载路径无法解析、架构错误或许可来源缺失都应阻止打包或验证通过。静态 Qt 构建只保留实际需要的动态依赖，同时携带静态链接库的许可。
+
+Windows 包把应用 DLL 和必需的 VC 可再分发运行库放在可执行文件旁，通过包内 `qt.conf` 定位 Qt 插件。便携包省略服务 daemon，MSI 保留。交付完整软件包，不把 GUI 可执行文件与运行依赖拆开分发。
+
+macOS 同时部署 GUI 与 `synergy-core`，将第三方加载路径改为 app 内部位置，去除构建机 RPATH，并在依赖修复及资源安装后签名。验证器把 DMG 中的 app 复制到临时目录，检查所有 Mach-O 文件和插件，通过 `--help` 启动 GUI 的 `QApplication`/Cocoa，并让真实 core 客户端连接私有回环监听器，但不完成输入共享握手。这是包启动证据，不是主窗口、TCC 权限或输入共享功能验收。
+
+Linux 包将应用可执行文件、库和插件放在应用私有的 `libexec/synergy` 目录，提供启动包装脚本。验证器只解包原生软件包，不安装它们或联网下载依赖，检查 ELF 依赖闭包，并在移除构建搜索路径后加载包内 Qt 平台插件。
+
+宿主边界是受支持的操作系统内核/ABI 和系统 API；macOS 包括 `/usr/lib` 与 `/System/Library`，Linux 包括 glibc/加载器及 POSIX shell/coreutils。显示服务、字体及 GPU 驱动由宿主提供。Qt、OpenSSL 和应用插件应随包携带，不能算作这些宿主边界。DEB/RPM/Arch 元数据可以声明最小操作系统运行前提。
+
+检查入口为 `scripts\ci\verify-package-windows.bat build`、`bash scripts/ci/verify-package-macos.sh build` 或 `bash scripts/ci/verify-package-linux.sh build <发行版类型>`。每项结果都应关联准确的构建提交。使用预编译/共享依赖的 CI 绿灯不证明本机 vcpkg 静态发布路径已通过。Flatpak 的交付目标是为每种受支持架构提供包含应用、runtime 和 extensions 的离线 OSTree 仓库 `.tar.zst`，附带哈希及双语离线说明。它须按准确提交独立验证，单个应用文件或尚未验收的离线流水线不能宣称交付完整。
 
 ---
 

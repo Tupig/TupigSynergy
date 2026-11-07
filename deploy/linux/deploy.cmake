@@ -5,6 +5,10 @@
 # calling CMAKE_CURRENT_LIST_DIR after include would return the wrong scope var
 set(MY_DIR ${CMAKE_CURRENT_LIST_DIR})
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  include("${MY_DIR}/runtime.cmake")
+endif()
+
 # Install our desktop file
 install(
   FILES ${CMAKE_SOURCE_DIR}/deploy/linux/${CMAKE_PROJECT_REV_FQDN}.desktop
@@ -39,10 +43,12 @@ configure_file(
 )
 
 set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
-set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "qt6-svg-plugins")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6, coreutils, dash | bash")
 set(CPACK_RPM_PACKAGE_LICENSE "GPLv2")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/System")
+set(CPACK_RPM_PACKAGE_AUTOREQPROV OFF)
+set(CPACK_RPM_PACKAGE_REQUIRES "glibc, /bin/sh, coreutils")
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   # Get Distro name information

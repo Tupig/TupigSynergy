@@ -54,39 +54,20 @@ macro(configure_libs)
     endforeach()
   endif()
 
-  # Qt 部署工具（windeployqt / macdeployqt）的用途是把 Qt 共享运行时拷贝到可执行文件旁，
-  # 因此只在 Qt 为共享链接时才需要。本项目用 vcpkg 静态 triplet（目标是单产物独立运行），
-  # 不存在可拷贝的共享运行时；且 vcpkg 的 qtbase 端口不安装该工具 —— 实测动态与静态
-  # triplet 下都只有 qmake 的 windeployqt.prf，没有 windeployqt.exe。故按 Qt 链接形态判断：
-  # 共享时缺失仍报错（保留原有保护），静态时跳过。
-  #
-  # 判据来自 Qt6::Core 导入目标：共享构建在 Windows 上带 IMPORTED_IMPLIB（.lib 导入库），
-  # 静态构建不带；类 Unix 平台上共享构建的 IMPORTED_LOCATION 以 .so/.dylib 结尾。
+  # Target TYPE is configuration-independent, unlike IMPORTED_LOCATION or
+  # IMPORTED_IMPLIB: official SDKs may define only their Release variants.
+  # Keep this as the shared/static truth for every platform's deployment.
   set(QT_IS_SHARED FALSE)
   if(TARGET Qt${QT_VERSION_MAJOR}::Core)
-    get_target_property(_qt_imported_implib Qt${QT_VERSION_MAJOR}::Core IMPORTED_IMPLIB)
-    if(_qt_imported_implib)
+    get_target_property(_qt_core_type Qt${QT_VERSION_MAJOR}::Core TYPE)
+    if(_qt_core_type STREQUAL "SHARED_LIBRARY")
       set(QT_IS_SHARED TRUE)
-    else()
-      get_target_property(_qt_imported_location Qt${QT_VERSION_MAJOR}::Core IMPORTED_LOCATION)
-      # Framework-style Qt (macOS installers / CI) resolves to
-      # .../QtCore.framework/Versions/A/QtCore — no .so/.dylib suffix.
-      if(_qt_imported_location MATCHES "\\.(so|dylib)(\\.|$)|\\.framework/")
-        set(QT_IS_SHARED TRUE)
-      endif()
     endif()
   endif()
 
-  # Qt 部署工具（windeployqt / macdeployqt）的用途是把 Qt 共享运行时拷贝到可执行文件旁，
-  # 因此只在 Qt 为共享链接时才相关。
-  #
-  # 重要：vcpkg 的 qtbase 端口**不提供该工具的二进制** —— 实测动态与静态 triplet 下都只有
-  # qmake 的 windeployqt.prf，没有 windeployqt.exe。因此这里不能把它当作配置阶段的硬性条件，
-  # 否则动态 triplet（如 ASan 构建所用的 x64-windows）会直接配置失败。
-  #
-  # 缺失时记一条状态：共享构建仍可编译运行（运行时需能找到 Qt DLL，例如把
-  # vcpkg_installed/<triplet>/bin 加入 PATH）；仅当确实要“打包”共享版产物时才需要该工具，
-  # 届时自行提供（如使用官方 Qt 安装包中的 windeployqt）。
+  # A shared build can compile without a deployment tool. Packaging is the
+  # point at which windeployqt/macdeployqt becomes mandatory. Static builds
+  # have no shared Qt runtime to copy and do not need either tool.
   set(DEPLOY_TOOL "")
   if(WIN32)
     set(DEPLOY_TOOL windeployqt)

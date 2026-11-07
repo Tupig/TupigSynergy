@@ -1,0 +1,116 @@
+# SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
+# SPDX-License-Identifier: MIT
+
+set(_prefix "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
+set(_private "${_prefix}/@SYNERGY_PRIVATE_DIR@")
+set(_licenses "${_prefix}/@CMAKE_INSTALL_LICENSE_DIR@/third-party")
+set(_executables "@SYNERGY_RUNTIME_FILES@")
+set(_plugins "")
+set(_plugin_root "@SYNERGY_QT_PLUGIN_DIR@")
+file(MAKE_DIRECTORY "${_private}/lib" "${_licenses}")
+
+if(_plugin_root)
+  # Include all installed plugins in runtime categories used by a Widgets app.
+  # Every plugin is a dependency-scan root, including dynamically loaded ones.
+  foreach(category platforms imageformats iconengines platforminputcontexts
+      xcbglintegrations wayland-decoration-client
+      wayland-graphics-integration-client wayland-shell-integration tls networkinformation)
+    file(GLOB modules "${_plugin_root}/${category}/*.so")
+    foreach(module IN LISTS modules)
+      list(APPEND _plugins "${module}")
+      file(INSTALL "${module}" DESTINATION "${_private}/plugins/${category}")
+    endforeach()
+  endforeach()
+  if(NOT EXISTS "${_private}/plugins/platforms/libqxcb.so" OR
+      NOT EXISTS "${_private}/plugins/platforms/libqoffscreen.so" OR
+      NOT EXISTS "${_private}/plugins/imageformats/libqsvg.so")
+    message(FATAL_ERROR "The shared Qt package must contain XCB, offscreen and SVG plugins")
+  endif()
+endif()
+
+# OpenSSL 3 providers are dlopen modules, not DT_NEEDED entries.
+set(_providers "")
+foreach(ssl_file IN ITEMS "@OPENSSL_SSL_LIBRARY@" "@OPENSSL_CRYPTO_LIBRARY@")
+  if(EXISTS "${ssl_file}" AND ssl_file MATCHES "\\.so(\\.|$)")
+    get_filename_component(ssl_dir "${ssl_file}" DIRECTORY)
+    file(GLOB modules "${ssl_dir}/ossl-modules/*.so")
+    foreach(module IN LISTS modules)
+      list(APPEND _providers "${module}")
+      file(INSTALL "${module}" DESTINATION "${_private}/ossl-modules")
+    endforeach()
+  endif()
+endforeach()
+
+# This is the explicit Linux ABI boundary. Everything else is application-owned.
+set(_os_regex "^(ld-linux[^/]*|ld64[^/]*|lib(c|m|dl|pthread|rt|resolv|util|anl|nss_[^.]+)\\.so\\.[0-9]+)$")
+file(GET_RUNTIME_DEPENDENCIES
+  EXECUTABLES ${_executables}
+  MODULES ${_plugins} ${_providers}
+  RESOLVED_DEPENDENCIES_VAR _resolved
+  UNRESOLVED_DEPENDENCIES_VAR _unresolved
+  CONFLICTING_DEPENDENCIES_PREFIX _conflicts
+  PRE_EXCLUDE_REGEXES "${_os_regex}")
+if(_unresolved OR _conflicts_FILENAMES)
+  message(FATAL_ERROR "Incomplete Linux runtime closure: ${_unresolved}; conflicts: ${_conflicts_FILENAMES}")
+endif()
+foreach(library IN LISTS _resolved)
+  file(INSTALL "${library}" DESTINATION "${_private}/lib" FOLLOW_SYMLINK_CHAIN)
+endforeach()
+
+# libxkbcommon consumes layout data at runtime. Carry it alongside the library.
+find_path(_xkb_root rules/evdev PATHS /usr/share/X11/xkb /usr/local/share/X11/xkb
+  "@VCPKG_INSTALLED_DIR@/@VCPKG_TARGET_TRIPLET@/share/X11/xkb" NO_DEFAULT_PATH)
+if(NOT _xkb_root)
+  message(FATAL_ERROR "Linux packaging requires xkeyboard-config runtime data")
+endif()
+file(COPY "${_xkb_root}/" DESTINATION "${_private}/share/X11/xkb")
+if(EXISTS "${_prefix}/@CMAKE_INSTALL_I18N_DIR@")
+  file(COPY "${_prefix}/@CMAKE_INSTALL_I18N_DIR@/" DESTINATION "${_private}/translations")
+endif()
+file(WRITE "${_private}/qt.conf" "[Paths]\nPrefix=.\nPlugins=plugins\nTranslations=translations\n")
+
+set(_license_sources ${_resolved} ${_plugins} ${_providers} "${_xkb_root}/rules/evdev")
+list(JOIN _license_sources "\n" _license_sources_text)
+set(_license_list "@CMAKE_CURRENT_BINARY_DIR@/linux-license-inputs.txt")
+file(WRITE "${_license_list}" "${_license_sources_text}\n")
+execute_process(COMMAND "@Python3_EXECUTABLE@" "@MY_DIR@/collect-licenses.py"
+  "${_license_list}" "${_licenses}" "@VCPKG_INSTALLED_DIR@/@VCPKG_TARGET_TRIPLET@"
+  "@SYNERGY_EXTRA_LICENSE_DIRS@" "@SYNERGY_SOURCE_LICENSE_MAP@" RESULT_VARIABLE _license_result)
+if(NOT _license_result EQUAL 0)
+  message(FATAL_ERROR "Linux third-party license collection failed")
+endif()
+
+file(RELATIVE_PATH SYNERGY_LAUNCHER_RELATIVE
+  "${_prefix}/@CMAKE_INSTALL_BINDIR@" "${_private}")
+foreach(executable IN LISTS _executables)
+  get_filename_component(SYNERGY_LAUNCHER_NAME "${executable}" NAME)
+  set(installed "${_prefix}/@CMAKE_INSTALL_BINDIR@/${SYNERGY_LAUNCHER_NAME}")
+  file(RENAME "${installed}" "${_private}/${SYNERGY_LAUNCHER_NAME}")
+  configure_file("@MY_DIR@/launcher.in" "${installed}" @ONLY)
+  file(CHMOD "${installed}" PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+    GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+endforeach()
+
+file(GLOB_RECURSE _payload LIST_DIRECTORIES FALSE "${_private}/*")
+foreach(elf IN LISTS _payload)
+  if(IS_SYMLINK "${elf}")
+    continue()
+  endif()
+  file(READ "${elf}" magic LIMIT 4 HEX)
+  if(NOT magic STREQUAL "7f454c46")
+    continue()
+  endif()
+  get_filename_component(elf_dir "${elf}" DIRECTORY)
+  file(RELATIVE_PATH lib_relative "${elf_dir}" "${_private}/lib")
+  if(lib_relative STREQUAL "")
+    set(runpath "$ORIGIN")
+  else()
+    set(runpath "$ORIGIN/${lib_relative}")
+  endif()
+  execute_process(COMMAND "@SYNERGY_PATCHELF@" --set-rpath "${runpath}" "${elf}"
+    RESULT_VARIABLE _patch_result)
+  if(NOT _patch_result EQUAL 0)
+    message(FATAL_ERROR "Cannot make packaged ELF relocatable: ${elf}")
+  endif()
+endforeach()
+file(INSTALL "@MY_DIR@/runtime-boundary.md" DESTINATION "${_private}")

@@ -26,11 +26,6 @@
   </CPackWiXFragment>
 
   <CPackWiXFragment Id="#PRODUCT">
-    <!-- Bundle the MSVC C++ runtime (CRT) so end users don't have to install the
-         Visual C++ redistributable themselves. Expands to nothing if the merge
-         module wasn't found at configure time (see deploy.cmake). -->
-    @WIX_REDIST_MERGE@
-
     <UI>
        <Publish Dialog="ExitDialog"
            Control="Finish"
@@ -50,7 +45,4 @@
       Return="asyncNoWait" />
   </CPackWiXFragment>
 
-  <CPackWiXFragment Id="#PRODUCTFEATURE">
-    @WIX_REDIST_MERGE_REF@
-  </CPackWiXFragment>
 </CPackWiXPatch>

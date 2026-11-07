@@ -5,25 +5,75 @@
 # calling CMAKE_CURRENT_LIST_DIR after include would return the wrong scope var
 set(MY_DIR ${CMAKE_CURRENT_LIST_DIR})
 
+# App-local official VC redistributable files give MSI and portable archives the
+# same dependency closure. Every flavor, including development, must be usable.
 set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
-set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
-# Only a dynamically linked CRT needs the VC++ redistributable copied next to
-# the binaries. This build uses the static CRT (/MT) via the vcpkg
-# x64-windows-static triplet, and the produced executables have no dependency on
-# msvcp140/vcruntime140/concrt140 at all (verified with dumpbin /DEPENDENTS).
-# Installing them anyway only bloats the portable package with unused files and
-# contradicts the "no external runtime required" goal, so skip it for /MT.
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${CMAKE_INSTALL_BINDIR}")
+set(_crt_dlls "")
 if(CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
   include(InstallRequiredSystemLibraries)
+  set(_crt_dlls "${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}")
+  if(NOT _crt_dlls)
+    string(TOLOWER "${BUILD_ARCHITECTURE}" _crt_arch)
+    if(_crt_arch MATCHES "^(x86_64|amd64)$")
+      set(_crt_arch x64)
+    elseif(_crt_arch STREQUAL "aarch64")
+      set(_crt_arch arm64)
+    endif()
+    set(_crt_dirs "")
+    foreach(_redist_root IN ITEMS "$ENV{VCToolsRedistDir}" "$ENV{VCINSTALLDIR}/Redist/MSVC")
+      if(_redist_root AND IS_DIRECTORY "${_redist_root}")
+        file(GLOB_RECURSE _redist_files "${_redist_root}/*.dll")
+        foreach(_file IN LISTS _redist_files)
+          string(TOLOWER "${_file}" _lower)
+          if(_lower MATCHES "/${_crt_arch}/microsoft\\.vc[0-9]+\\.crt/[^/]+\\.dll$" AND
+              NOT _lower MATCHES "(debug|spectre|onecore)")
+            get_filename_component(_directory "${_file}" DIRECTORY)
+            list(APPEND _crt_dirs "${_directory}")
+          endif()
+        endforeach()
+      endif()
+    endforeach()
+    if(_crt_dirs)
+      list(REMOVE_DUPLICATES _crt_dirs)
+      list(SORT _crt_dirs COMPARE NATURAL ORDER DESCENDING)
+      list(GET _crt_dirs 0 _crt_directory)
+      file(GLOB _crt_dlls "${_crt_directory}/*.dll")
+    endif()
+  endif()
+  if(NOT _crt_dlls)
+    message(FATAL_ERROR "Dynamic CRT packaging requires official VC redistributable DLLs for this architecture")
+  endif()
+  install(FILES ${_crt_dlls} DESTINATION "${CMAKE_INSTALL_BINDIR}")
 else()
-  set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS "")
-  message(STATUS "Static CRT in use; not bundling the VC++ redistributable")
+  message(STATUS "Static CRT: no VC redistributable payload is needed")
 endif()
 
+# Paths used only at packaging time. They never enter installed configuration.
+set(WINDOWS_PACKAGE_SEARCH_DIRS "${OPENSSL_EXE_DIR};${OPENSSL_ROOT_DIR}/bin")
+foreach(_crt_dll IN LISTS _crt_dlls)
+  get_filename_component(_crt_dir "${_crt_dll}" DIRECTORY)
+  list(APPEND WINDOWS_PACKAGE_SEARCH_DIRS "${_crt_dir}")
+endforeach()
+set(WINDOWS_QT_PREFIX "")
+foreach(_location_property IN ITEMS IMPORTED_LOCATION_RELEASE IMPORTED_LOCATION_RELWITHDEBINFO IMPORTED_LOCATION)
+  get_target_property(_qt_core Qt${QT_VERSION_MAJOR}::Core "${_location_property}")
+  if(_qt_core AND EXISTS "${_qt_core}")
+    get_filename_component(_qt_bin "${_qt_core}" DIRECTORY)
+    get_filename_component(WINDOWS_QT_PREFIX "${_qt_bin}/.." ABSOLUTE)
+    list(APPEND WINDOWS_PACKAGE_SEARCH_DIRS "${_qt_bin}")
+    break()
+  endif()
+endforeach()
+if(QT_IS_SHARED)
+  find_program(DEPLOYQT NAMES windeployqt HINTS "${WINDOWS_QT_PREFIX}/bin")
+endif()
+set(WINDOWS_VCPKG_SHARE "")
+if(VCPKG_INSTALLED_DIR AND VCPKG_TARGET_TRIPLET)
+  set(WINDOWS_VCPKG_SHARE "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share")
+endif()
 configure_file(${MY_DIR}/pre-cpack.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/pre-cpack.cmake @ONLY)
 set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_CURRENT_BINARY_DIR}/pre-cpack.cmake)
-
 configure_file(${MY_DIR}/cpack-options.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/cpack-options.cmake @ONLY)
 set(CPACK_PROJECT_CONFIG_FILE ${CMAKE_CURRENT_BINARY_DIR}/cpack-options.cmake)
 
@@ -35,7 +85,7 @@ list(APPEND CPACK_GENERATOR "7Z")
 # schema; CI installs wix 5.0.2 which still accepts v4 documents. Keep this
 # in step with .github/actions/install-dependencies/action.yml (A-23 (#47)).
 find_program(WIX_APP wix)
-if (NOT "${WIX_APP}" STREQUAL "")
+if(WIX_APP)
   set(CPACK_WIX_VERSION 4)
   set(CPACK_WIX_ARCHITECTURE ${BUILD_ARCHITECTURE})
   list(APPEND CPACK_GENERATOR "WIX")
@@ -61,109 +111,11 @@ list(APPEND CPACK_WIX_EXTENSIONS "WixToolset.Util.wixext" "WixToolset.Firewall.w
 # Make sure to also put the xmlns for the ext into the wix block on generated files
 list(APPEND CPACK_WIX_CUSTOM_XMLNS "util=http://wixtoolset.org/schemas/v4/wxs/util" "firewall=http://wixtoolset.org/schemas/v4/wxs/firewall")
 
-# Bundle the MSVC C++ runtime (CRT) as a merge module inside the MSI so that end
-# users don't have to download and install the Visual C++ redistributable
-# themselves. The merge module ships with the Visual Studio build environment.
-# Docs: https://learn.microsoft.com/en-us/cpp/windows/redistributing-components-by-using-merge-modules
-# VS 2022 names the file Microsoft_VC143_CRT_<arch>.msm and keeps it under
-# Redist/MSVC/v143/MergeModules. VS 2026 uses VC145 and may use a different
-# case for the architecture (ARM64 vs arm64). Search both the VS redist root
-# and VCToolsRedistDir, then match the filename case-insensitively.
-set(_crt_msm_arch "${BUILD_ARCHITECTURE}")
-if(_crt_msm_arch STREQUAL "x86_64" OR _crt_msm_arch STREQUAL "amd64")
-  set(_crt_msm_arch "x64")
-elseif(_crt_msm_arch STREQUAL "aarch64")
-  set(_crt_msm_arch "arm64")
-endif()
-string(TOLOWER "${_crt_msm_arch}" _crt_msm_arch)
-
-set(_crt_msm_roots "")
-if(NOT "$ENV{VCINSTALLDIR}" STREQUAL "")
-  list(APPEND _crt_msm_roots "$ENV{VCINSTALLDIR}Redist/MSVC")
-endif()
-if(NOT "$ENV{VCToolsRedistDir}" STREQUAL "")
-  list(APPEND _crt_msm_roots "$ENV{VCToolsRedistDir}")
-endif()
-
-set(_crt_msm_candidates "")
-foreach(_crt_msm_root IN LISTS _crt_msm_roots)
-  file(GLOB_RECURSE _crt_msm_here "${_crt_msm_root}/*.msm")
-  list(APPEND _crt_msm_candidates ${_crt_msm_here})
-endforeach()
-
-set(REDIST_MERGE_MODULE_PATHS "")
-foreach(_crt_msm IN LISTS _crt_msm_candidates)
-  cmake_path(GET _crt_msm FILENAME _crt_msm_name)
-  string(TOLOWER "${_crt_msm_name}" _crt_msm_name)
-  if(_crt_msm_name MATCHES "^microsoft_vc.+_crt_${_crt_msm_arch}\\.msm$")
-    list(APPEND REDIST_MERGE_MODULE_PATHS "${_crt_msm}")
-  endif()
-endforeach()
-if(REDIST_MERGE_MODULE_PATHS)
-  list(REMOVE_DUPLICATES REDIST_MERGE_MODULE_PATHS)
-endif()
-
-if (REDIST_MERGE_MODULE_PATHS)
-  # Multiple toolset versions may be installed; pick the newest.
-  list(SORT REDIST_MERGE_MODULE_PATHS)
-  list(GET REDIST_MERGE_MODULE_PATHS -1 REDIST_MERGE_MODULE_PATH)
-  message(STATUS "MSVC CRT merge module: ${REDIST_MERGE_MODULE_PATH}")
-  # XML snippets injected into wix-patch.xml.in to merge the CRT into the MSI.
-  set(WIX_REDIST_MERGE
-    "<DirectoryRef Id=\"TARGETDIR\"><Merge Id=\"VC_Redist\" SourceFile=\"${REDIST_MERGE_MODULE_PATH}\" DiskId=\"1\" Language=\"0\"/></DirectoryRef>")
-  set(WIX_REDIST_MERGE_REF "<MergeRef Id=\"VC_Redist\"/>")
-elseif(NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
-  # /MT already links the runtime into the executables. A missing merge module
-  # is not a defect, and the build must not warn about it.
-  message(STATUS "Static CRT in use; the installer does not merge the VC++ redistributable")
-elseif(SYNERGY_VERSION_RELEASE OR SYNERGY_VERSION_SNAPSHOT)
-  # The Windows ARM image ships the VC++ DLLs without the merge module. Put
-  # those DLLs next to the binaries so the MSI and the portable archive still
-  # run. Prefer the desktop redist over the Spectre and debug copies.
-  set(_crt_dlls "")
-  if(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS)
-    set(_crt_dlls "${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}")
-  else()
-    set(_crt_dll_found "")
-    foreach(_crt_msm_root IN LISTS _crt_msm_roots)
-      file(GLOB_RECURSE _crt_dll_here "${_crt_msm_root}/*.dll")
-      list(APPEND _crt_dll_found ${_crt_dll_here})
-    endforeach()
-    foreach(_crt_dll IN LISTS _crt_dll_found)
-      cmake_path(GET _crt_dll FILENAME _crt_dll_name)
-      string(TOLOWER "${_crt_dll_name}" _crt_dll_name)
-      string(TOLOWER "${_crt_dll}" _crt_dll_path)
-      if(_crt_dll_name MATCHES "^(vcruntime140.*|msvcp140.*|concrt140.*)\\.dll$"
-          AND NOT _crt_dll_path MATCHES "debug"
-          AND NOT _crt_dll_path MATCHES "spectre"
-          AND _crt_dll_path MATCHES "[/\\\\]${_crt_msm_arch}[/\\\\]")
-        list(APPEND _crt_dlls "${_crt_dll}")
-      endif()
-    endforeach()
-    if(_crt_dlls)
-      list(REMOVE_DUPLICATES _crt_dlls)
-    endif()
-  endif()
-  if(_crt_dlls)
-    install(FILES ${_crt_dlls} DESTINATION ${CMAKE_INSTALL_BINDIR})
-    message(STATUS "MSVC CRT merge module not found; installing the VC++ runtime DLLs beside the binaries")
-  else()
-    message(FATAL_ERROR
-      "MSVC CRT merge module and runtime DLLs were not found under VCINSTALLDIR or VCToolsRedistDir; "
-      "the installer will NOT bundle the Visual C++ runtime")
-  endif()
-else()
-  # Dev builds routinely lack the redist merge module; not bundling it is expected.
-  message(STATUS
-    "MSVC CRT merge module not found; installer will not bundle the Visual C++ "
-    "runtime (expected for dev builds)")
-endif()
-
-# The patch needs the full path of the CRT merge module (see above).
+# Preserve MSI service and firewall registration.
 configure_file(
   ${MY_DIR}/wix-patch.xml.in
   ${CMAKE_CURRENT_BINARY_DIR}/wix-patch.xml @ONLY
 )
 
-# This patch sets up firewall rules, the service and the CRT merge module.
+# This patch sets up firewall rules and the service.
 set(CPACK_WIX_PATCH_FILE "${CMAKE_CURRENT_BINARY_DIR}/wix-patch.xml")

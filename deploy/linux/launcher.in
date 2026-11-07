@@ -1,0 +1,20 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
+# SPDX-License-Identifier: MIT
+set -eu
+launcher=$(readlink -f -- "$0")
+base=$(CDPATH= cd -- "$(dirname -- "$launcher")/@SYNERGY_LAUNCHER_RELATIVE@" && pwd)
+LD_LIBRARY_PATH="$base/lib"
+QT_PLUGIN_PATH="$base/plugins"
+QT_QPA_PLATFORM_PLUGIN_PATH="$base/plugins/platforms"
+XKB_CONFIG_ROOT="$base/share/X11/xkb"
+OPENSSL_MODULES="$base/ossl-modules"
+export LD_LIBRARY_PATH QT_PLUGIN_PATH QT_QPA_PLATFORM_PLUGIN_PATH XKB_CONFIG_ROOT OPENSSL_MODULES
+unset LD_PRELOAD QML_IMPORT_PATH QML2_IMPORT_PATH QT_QPA_PLATFORMTHEME
+if [ "${SYNERGY_TRACE_RUNTIME:-0}" = 1 ]; then
+  LD_DEBUG=libs
+  QT_DEBUG_PLUGINS=1
+  export LD_DEBUG QT_DEBUG_PLUGINS
+fi
+unset SYNERGY_TRACE_RUNTIME
+exec "$base/@SYNERGY_LAUNCHER_NAME@" "$@"

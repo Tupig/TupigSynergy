@@ -112,6 +112,14 @@ release builds and for every local build. The exception carries three requiremen
    `scripts/build.bat release` (the runtime block in `CMakeLists.txt` derives the CRT from the
    triplet).
 
+### Package runtime completeness (RPACKAGE)
+
+Every distributed MSI, portable archive, macOS app/DMG and native Linux package must contain the third-party libraries and plugins its applications need, including transitive dependencies and license notices. A build runner's Qt, OpenSSL, package manager or search path must not supply missing application dependencies at runtime. Static builds copy only dependencies that remain dynamically linked; static dependency license notices still ship.
+
+The host supplies the supported OS kernel and ABI, Windows system APIs, macOS `/usr/lib` and `/System/Library`, or Linux glibc/loader and POSIX shell/coreutils. Display services, installed fonts and GPU drivers remain host components. These boundaries do not exempt Qt, OpenSSL, compiler redistributables or application plugins.
+
+Package verification extracts a disposable payload without installing dependencies or services, checks every PE/Mach-O/ELF dependency and target architecture, and launches with isolated settings and dependency search paths. Report GUI platform-plugin startup, core loader startup, actual core connections and hardware permission acceptance separately. Prebuilt CI dependency checks do not establish that the local static release build passed. Flatpak delivery must use an offline OSTree repository archive containing the app, runtime and extensions, with hashes and bilingual installation instructions. A single app bundle is insufficient; complete offline delivery requires separate evidence for all components.
+
 ### Delivery constraints — do not "fix" these
 
 This section is the authoritative list. The following are deliberate, not defects:
@@ -246,6 +254,14 @@ manifest 仍是发布构建与所有本地构建的唯一真源。该例外附�
 4. Windows 上 CI 使用**动态 CRT（`/MD`）**，而 manifest 的 Windows triplet 使用**静态 CRT（`/MT`）**；
    CI 的 Windows 腿从不覆盖 `/MT`。该路径请用本地 `scripts\build.bat release` 验证
    （运行库由 `CMakeLists.txt` 的运行库块依据 triplet 推导）。
+
+### 打包运行依赖完整性（RPACKAGE）
+
+所有交付的 MSI、便携归档、macOS app/DMG 和 Linux 原生包都必须包含应用所需的第三方库及插件，包括传递依赖和许可声明。不能让构建机的 Qt、OpenSSL、包管理器或搜索路径补齐运行时缺失的应用依赖。静态构建只复制仍需动态链接的依赖；静态依赖的许可声明仍须随包交付。
+
+宿主提供受支持的操作系统内核及 ABI、Windows 系统 API、macOS 的 `/usr/lib` 和 `/System/Library`，或 Linux 的 glibc/加载器及 POSIX shell/coreutils。显示服务、已安装字体和 GPU 驱动属于宿主组件。这些边界不能用于排除 Qt、OpenSSL、编译器可再分发运行库或应用插件。
+
+包验证须解包到一次性目录，不安装依赖或服务；检查每个 PE/Mach-O/ELF 的依赖及目标架构，并在隔离设置与依赖搜索路径后启动。GUI 平台插件启动、core 加载启动、core 实际连接和硬件权限验收应分开报告。CI 预编译依赖检查不代表本机静态发布构建已通过。Flatpak 必须交付包含应用、runtime 和 extensions 的离线 OSTree 仓库归档，附带哈希及双语安装说明。单个应用包不足以交付，完整离线验收必须另有所有组件的证据。
 
 ### 交付约束 —— 不要把这些当缺陷「修复」
 

@@ -34,7 +34,6 @@ set(WIN32_PRE_EXCLUDE_REGEXES
   "api-ms-win-.*"
   "ext-ms-.*"
   "^hvsifiletrust\\.dll$"
-  "^icu.*\\.dll$"
 )
 
 set(WIN32_POST_EXCLUDE_REGEXES ".*system32.*")

@@ -404,14 +404,7 @@ jobs:
         shell: cmd
         run: scripts\ci\ci-windows-signing.bat restore
 
-      - name: Upload synergy_<version>.exe
-        uses: actions/upload-artifact@v7
-        with:
-          name: synergy_${{ needs.get-version.outputs.base }}-${{ matrix.target.name }}.exe
-          path: ${{ steps.gui-exe.outputs.path }}
-          if-no-files-found: error
 
-      # Stage: package, then sign the MSI itself when signing is enabled.
       - name: Package
         shell: bash
         run: cmake --build build --config Release -j8 --target package
@@ -708,12 +701,31 @@ jobs:
             -Dbackend-gtk3=disabled -Dbackend-gtk4=disabled -Dbackend-qt5=disabled -Dbackend-qt6=disabled \
             -Ddocs=false -Dintrospection=false -Dvapi=false -Dtests=false
           meson install -C /tmp/libportal/_build
+          license_dir=/usr/share/licenses/tupig-build/libportal
+          mkdir -p "$license_dir"
+          license_count=0
+          for license in /tmp/libportal/COPYING*; do
+            if [ -f "$license" ]; then
+              cp "$license" "$license_dir/"
+              license_count=$((license_count + 1))
+            fi
+          done
+          test "$license_count" -gt 0
           rm -f "/usr/lib/$(gcc -dumpmachine)"/libportal.so*
           ldconfig
 
       # Stage: compile and package. Arch uses makepkg; every other distro uses CPack.
       - name: Configure
-        run: ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }}
+        shell: bash
+        env:
+          TARGET_NAME: ${{ matrix.target.name }}
+        run: |
+          license_args=()
+          if [[ "$TARGET_NAME" == ubuntu-24.04* ]]; then
+            license_args=(-DSYNERGY_EXTRA_LICENSE_DIRS=/usr/share/licenses/tupig-build
+              -DSYNERGY_SOURCE_LICENSE_MAP=libportal.so.1=/usr/share/licenses/tupig-build/libportal)
+          fi
+          ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} "${license_args[@]}"
 
       - name: Build
         shell: bash
