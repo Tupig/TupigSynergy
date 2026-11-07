@@ -154,9 +154,6 @@ def main():
             if package:
                 listing = output(["pacman", "-Qlq", package]).splitlines()
                 files = [file for file in listing if "/licenses/" in file]
-                # Arch puts standard licenses in a common package.
-                if not files:
-                    files = glob.glob("/usr/share/licenses/common/*/*")
         if not package or not copy_files(files, destination / manager / package):
             raise RuntimeError(f"Missing license provenance for bundled runtime {path.name}")
         manifest.append(f"{path.name}\t{manager}/{package}")

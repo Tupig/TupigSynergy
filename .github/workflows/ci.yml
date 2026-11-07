@@ -725,9 +725,26 @@ jobs:
           TARGET_NAME: ${{ matrix.target.name }}
         run: |
           license_args=()
+          source_license_map=""
+          notice_root="$PWD/build/ci-runtime-notices"
+          case "$TARGET_NAME" in
+            fedora-*|rocky-*|opensuse-*)
+              source_license_map=$(python3 scripts/ci/prepare-runtime-notices.py \
+                --provider libdrm --destination "$notice_root")
+              test -n "$source_license_map"
+              ;;
+            archlinux-*)
+              source_license_map=$(python3 scripts/ci/prepare-runtime-notices.py \
+                --provider e2fsprogs --destination "$notice_root")
+              test -n "$source_license_map"
+              ;;
+          esac
           if [[ "$TARGET_NAME" == ubuntu-24.04* ]]; then
-            license_args=(-DSYNERGY_EXTRA_LICENSE_DIRS=/usr/share/licenses/tupig-build
-              -DSYNERGY_SOURCE_LICENSE_MAP=libportal.so.1=/usr/share/licenses/tupig-build/libportal)
+            license_args=(-DSYNERGY_EXTRA_LICENSE_DIRS=/usr/share/licenses/tupig-build)
+            source_license_map=libportal.so.1=/usr/share/licenses/tupig-build/libportal
+          fi
+          if [[ -n "$source_license_map" ]]; then
+            license_args+=("-DSYNERGY_SOURCE_LICENSE_MAP=$source_license_map")
           fi
           ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} "${license_args[@]}"
 
