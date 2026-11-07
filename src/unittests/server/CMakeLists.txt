@@ -44,6 +44,7 @@ create_test(
   SOURCE ClientProxyTests.cpp
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/server"
 )
+set_tests_properties(ClientProxyTests PROPERTIES TIMEOUT 30)
 
 # Each real-Screen fixture owns its Windows portable settings marker.
 foreach(test ServerTests ClientProxyTests)

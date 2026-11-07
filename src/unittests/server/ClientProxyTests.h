@@ -32,6 +32,16 @@ private Q_SLOTS:
   void parseMessageUnknownReturnsFalse();
   void parseMessageInfoUpdatesShape();
   void parseMessageTruncatedInfoReturnsFalse();
+  void clipboardLifetime_data();
+  void clipboardLifetime();
+  void clipboardPendingAddressReuse_data();
+  void clipboardPendingAddressReuse();
+  void liveClipboardBytes_data();
+  void liveClipboardBytes();
+  void foreignClipboardIdentity_data();
+  void foreignClipboardIdentity();
+  void chunkIdentityOwnership_data();
+  void chunkIdentityOwnership();
 
 private:
   Arch m_arch;

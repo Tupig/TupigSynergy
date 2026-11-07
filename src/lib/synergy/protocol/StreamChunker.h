@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "ClipboardChunk.h"
 #include "ClipboardTypes.h"
 
 #include <string_view>
@@ -17,7 +18,7 @@ class StreamChunker
 public:
   static void sendClipboard(
       const std::string_view &data, size_t size, ClipboardID id, uint32_t sequence, IEventQueue *events,
-      void *eventTarget
+      void *eventTarget, const std::shared_ptr<const ClipboardChunk::Lifetime> &lifetime = {}
   );
 
   //! Payload bytes carried by one clipboard chunk.

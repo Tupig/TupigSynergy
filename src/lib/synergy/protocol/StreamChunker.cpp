@@ -36,12 +36,13 @@ size_t StreamChunker::chunkSize()
 }
 
 void StreamChunker::sendClipboard(
-    const std::string_view &data, size_t size, ClipboardID id, uint32_t sequence, IEventQueue *events, void *eventTarget
+    const std::string_view &data, size_t size, ClipboardID id, uint32_t sequence, IEventQueue *events,
+    void *eventTarget, const std::shared_ptr<const ClipboardChunk::Lifetime> &lifetime
 )
 {
   // send first message (data size)
   std::string dataSize = QString::number(size).toStdString();
-  ClipboardChunk *sizeMessage = ClipboardChunk::start(id, sequence, dataSize);
+  ClipboardChunk *sizeMessage = ClipboardChunk::start(id, sequence, dataSize, lifetime);
 
   events->addEvent(Event(EventTypes::ClipboardSending, eventTarget, sizeMessage));
 
@@ -56,7 +57,7 @@ void StreamChunker::sendClipboard(
     }
 
     std::string chunk(data.substr(sentLength, chunkSize).data(), chunkSize);
-    ClipboardChunk *dataChunk = ClipboardChunk::data(id, sequence, chunk);
+    ClipboardChunk *dataChunk = ClipboardChunk::data(id, sequence, chunk, lifetime);
 
     events->addEvent(Event(EventTypes::ClipboardSending, eventTarget, dataChunk));
 
@@ -67,7 +68,7 @@ void StreamChunker::sendClipboard(
   }
 
   // send last message
-  ClipboardChunk *end = ClipboardChunk::end(id, sequence);
+  ClipboardChunk *end = ClipboardChunk::end(id, sequence, lifetime);
 
   events->addEvent(Event(EventTypes::ClipboardSending, eventTarget, end));
 
