@@ -36,7 +36,7 @@ runs:
 
     - name: Upload to GitHub
       id: upload
-      if: steps.changes.outputs.diff
+      if: ${{ steps.changes.outputs.diff && env.SYNERGY_VERSION_RELEASE == 'true' }}
       uses: actions/upload-artifact@v7
       with:
         name: clang-format-diff
@@ -49,9 +49,9 @@ runs:
         code_block="\`\`\`"
         clang_version=$(clang-format --version | sed -n 's/^.*version //p')
         cat <<EOF >> $GITHUB_STEP_SUMMARY
-        ❌ \`clang-format\` \`v${clang_version}\`: changes don't match the code style.
+        $(printf '\342\235\214') \`clang-format\` \`v${clang_version}\`: changes don't match the code style.
 
-        Run \`clang-format -i\` on the changed files, or download the \`clang-format-diff\` artifact and \`git apply\` it.
+        Run \`clang-format -i\` on the changed files, or copy the diff below and apply it with \`git apply\`.
         $code_block diff
         ${{ steps.changes.outputs.diff }}
         $code_block

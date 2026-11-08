@@ -17,11 +17,6 @@
 #   workflow_dispatch     manual. package-type=release ignores platform and publishes.
 #                         package-type=snapshot honors platform and does not publish.
 #                         analyze is independent of package-type.
-#   schedule              every day at 08:23 Asia/Shanghai (cron is UTC: 23 0 * * *).
-#                         Same build as package-type=release. If tag v<X.Y.Z> already
-#                         records this commit (Built-From, or the tag itself), the
-#                         run stops before compile and publish. GitHub still starts
-#                         the workflow; the jobs are skipped.
 # Push/PR and a manual run use different concurrency groups, so a free Linux
 # check cannot cancel a release build that is already going.
 
@@ -36,18 +31,18 @@ on:
       package-type:
         description: "release: all platforms, clean version, publish the GitHub Release. snapshot: no publish; platform applies."
         required: false
-        default: "release"
+        default: "snapshot"
         type: choice
         options:
           - release
           - snapshot
       platform:
-        description: "snapshot only. blank = all platforms. Ignored when package-type is release."
+        description: "snapshot only. all = all platforms. Ignored when package-type is release."
         required: false
-        default: ""
+        default: "all"
         type: choice
         options:
-          - ""
+          - "all"
           - windows
           - macos
           - linux
@@ -66,9 +61,6 @@ on:
     branches: [main]
   release:
     types: [published]
-  schedule:
-    # 08:23 Asia/Shanghai (UTC+8). Actions cron is UTC and may start late.
-    - cron: "23 0 * * *"
 
 # Automatic runs cancel only their own older run. Manual and release runs
 # never cancel, and a push cannot cancel them (separate group).
@@ -83,7 +75,7 @@ env:
   NODE_OPTIONS: --no-deprecation
 
   # Release shape, propagated to cmake (Synergy.cmake reads these as options).
-  # Release events, the daily schedule, and package-type=release → clean X.Y.Z.
+  # Release events and explicit package-type=release → clean X.Y.Z.
   # Push to main + package-type=snapshot → snapshot build.
   # Pull requests fall through to the cmake dev default.
   SYNERGY_VERSION_RELEASE: ${{ github.event_name == 'release' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'release') }}
@@ -124,9 +116,8 @@ jobs:
 
       # One place decides what this event builds. Job `if`s only read these
       # outputs, so a platform is not accidentally both required and skipped.
-      # push/PR: free Linux. release, the daily schedule, and package-type=release:
-      # every platform and a GitHub Release. The schedule skips that when this
-      # commit is already on the tag. snapshot: honor platform; blank means all.
+      # push/PR: free Linux. release and explicit package-type=release:
+      # every platform and a GitHub Release. snapshot: honor platform; all or legacy blank means all.
       - name: Plan builds for this event
         id: plan
         env:
@@ -156,37 +147,6 @@ jobs:
               build_flatpak=true
               publish_release=true
               ;;
-            schedule)
-              linux_key=full
-              source_sha=$(git rev-parse HEAD)
-              tag="v${VERSION_BASE}"
-              published=""
-              if body=$(gh release view "$tag" --json body -q .body 2>/dev/null); then
-                published=$(printf '%s\n' "$body" | tr -d '\r' | sed -n 's/^Built-From: //p' | head -1 | tr -d '[:space:]')
-              fi
-              if [ -z "$published" ] && git rev-parse -q --verify "refs/tags/${tag}^{commit}" >/dev/null; then
-                published=$(git rev-parse "refs/tags/${tag}^{commit}")
-              fi
-              if [ -n "$published" ] && [ "$published" = "$source_sha" ]; then
-                skip_unchanged=true
-                echo "schedule: ${tag} already built from ${source_sha}; not compiling"
-                {
-                  echo "### Schedule skipped"
-                  echo "\`${tag}\` already records \`${source_sha}\`. No compile and no publish."
-                } >> "$GITHUB_STEP_SUMMARY"
-              else
-                build_windows=true
-                build_macos=true
-                build_linux=true
-                build_flatpak=true
-                publish_release=true
-                echo "schedule: ${tag} Built-From ${published:-<none>} differs from ${source_sha}; building release"
-                {
-                  echo "### Schedule release"
-                  echo "\`${tag}\` does not yet record \`${source_sha}\`."
-                } >> "$GITHUB_STEP_SUMMARY"
-              fi
-              ;;
             workflow_dispatch)
               linux_key=full
               if [ "$PACKAGE_TYPE" = "release" ]; then
@@ -196,13 +156,13 @@ jobs:
                 build_flatpak=true
                 publish_release=true
               else
-                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "windows" ]; then
+                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "all" ] || [ "$PLATFORM" = "windows" ]; then
                   build_windows=true
                 fi
-                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "macos" ]; then
+                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "all" ] || [ "$PLATFORM" = "macos" ]; then
                   build_macos=true
                 fi
-                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "linux" ]; then
+                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "all" ] || [ "$PLATFORM" = "linux" ]; then
                   build_linux=true
                   build_flatpak=true
                 fi
@@ -324,6 +284,41 @@ jobs:
         shell: bash
         run: cmake --build build --config Release -j8
 
+      - name: GUI configuration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cache=build/CMakeCache.txt
+          test -f "$cache" || { echo 'Missing configured CMake cache'; exit 1; }
+          value() { sed -n "s/^$1:[^=]*=//p" "$cache"; }
+          build_tests=$(value BUILD_TESTS)
+          skip_build_tests=$(value SKIP_BUILD_TESTS)
+          qt_dir=$(value QT_DIR)
+          case "$build_tests:$skip_build_tests" in
+            ON:ON|ON:OFF|OFF:ON|OFF:OFF) ;;
+            *) echo 'Unknown or conflicting test configuration'; exit 1 ;;
+          esac
+          qt_major=unknown
+          if [ -f "$qt_dir/Qt5Config.cmake" ] && [ ! -f "$qt_dir/Qt6Config.cmake" ]; then
+            qt_major=5
+          elif [ -f "$qt_dir/Qt6Config.cmake" ] && [ ! -f "$qt_dir/Qt5Config.cmake" ]; then
+            qt_major=6
+          else
+            echo 'Unknown or conflicting selected Qt configuration'; exit 1
+          fi
+          printf 'GUI configuration: BUILD_TESTS=%s SKIP_BUILD_TESTS=%s QT_DIR=%s QT_VERSION_MAJOR=%s\n' "$build_tests" "$skip_build_tests" "$qt_dir" "$qt_major"
+          if [ "$RUNNER_OS" = Linux ] && { [ "$build_tests" = OFF ] || [ "$qt_major" = 5 ]; }; then
+            echo 'Not Run: GUI configuration tests disabled by recorded CMake/Qt configuration'
+            exit 0
+          fi
+          if [ "$build_tests" != ON ] || [ "$qt_major" != 6 ]; then
+            echo 'Required native GUI configuration tests are unavailable'; exit 1
+          fi
+          test -d build/src/unittests || { echo 'Missing required Qt6 test directory'; exit 1; }
+          for suite in ScreenTests ScreenSetupModelTests ValidatorTests; do
+            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error -R "^${suite}$"
+          done
+
       # Iron rule: the GUI file is synergy_<X.Y.Z>.exe. X.Y.Z is get-version's
       # base, which SaveVersion.cmake reads from Version.cmake. core and daemon
       # stay unversioned so the GUI can still launch them.
@@ -402,6 +397,7 @@ jobs:
         run: scripts\ci\ci-windows-signing.bat restore
 
       - name: Upload synergy_<version>.exe
+        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: synergy_${{ needs.get-version.outputs.base }}.exe
@@ -469,6 +465,7 @@ jobs:
         uses: ./.github/actions/test-package
 
       - name: Upload package
+        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
@@ -483,7 +480,7 @@ jobs:
     timeout-minutes: ${{ matrix.target.timeout }}
 
     env:
-      MAC_SIGNING: ${{ secrets.APPLE_CODESIGN_ID != '' }}
+      MAC_SIGNING: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID != '' }}
 
     strategy:
       fail-fast: false
@@ -517,11 +514,46 @@ jobs:
           qt-version: ${{ matrix.target.qt-version }}
 
       - name: Configure
-        run: ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ secrets.APPLE_CODESIGN_ID }}"
+        run: ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}"
 
       - name: Build
         shell: bash
         run: cmake --build build --config Release -j8
+
+      - name: GUI configuration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cache=build/CMakeCache.txt
+          test -f "$cache" || { echo 'Missing configured CMake cache'; exit 1; }
+          value() { sed -n "s/^$1:[^=]*=//p" "$cache"; }
+          build_tests=$(value BUILD_TESTS)
+          skip_build_tests=$(value SKIP_BUILD_TESTS)
+          qt_dir=$(value QT_DIR)
+          case "$build_tests:$skip_build_tests" in
+            ON:ON|ON:OFF|OFF:ON|OFF:OFF) ;;
+            *) echo 'Unknown or conflicting test configuration'; exit 1 ;;
+          esac
+          qt_major=unknown
+          if [ -f "$qt_dir/Qt5Config.cmake" ] && [ ! -f "$qt_dir/Qt6Config.cmake" ]; then
+            qt_major=5
+          elif [ -f "$qt_dir/Qt6Config.cmake" ] && [ ! -f "$qt_dir/Qt5Config.cmake" ]; then
+            qt_major=6
+          else
+            echo 'Unknown or conflicting selected Qt configuration'; exit 1
+          fi
+          printf 'GUI configuration: BUILD_TESTS=%s SKIP_BUILD_TESTS=%s QT_DIR=%s QT_VERSION_MAJOR=%s\n' "$build_tests" "$skip_build_tests" "$qt_dir" "$qt_major"
+          if [ "$RUNNER_OS" = Linux ] && { [ "$build_tests" = OFF ] || [ "$qt_major" = 5 ]; }; then
+            echo 'Not Run: GUI configuration tests disabled by recorded CMake/Qt configuration'
+            exit 0
+          fi
+          if [ "$build_tests" != ON ] || [ "$qt_major" != 6 ]; then
+            echo 'Required native GUI configuration tests are unavailable'; exit 1
+          fi
+          test -d build/src/unittests || { echo 'Missing required Qt6 test directory'; exit 1; }
+          for suite in ScreenTests ScreenSetupModelTests ValidatorTests; do
+            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error -R "^${suite}$"
+          done
 
       # Stage: sign and notarize, only when APPLE_CODESIGN_ID is set.
       # Create an ephemeral keychain just for this run and import the Developer
@@ -626,6 +658,7 @@ jobs:
         uses: ./.github/actions/test-package
 
       - name: Upload package
+        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
@@ -711,6 +744,41 @@ jobs:
         shell: bash
         run: cmake --build build --config Release -j8
 
+      - name: GUI configuration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cache=build/CMakeCache.txt
+          test -f "$cache" || { echo 'Missing configured CMake cache'; exit 1; }
+          value() { sed -n "s/^$1:[^=]*=//p" "$cache"; }
+          build_tests=$(value BUILD_TESTS)
+          skip_build_tests=$(value SKIP_BUILD_TESTS)
+          qt_dir=$(value QT_DIR)
+          case "$build_tests:$skip_build_tests" in
+            ON:ON|ON:OFF|OFF:ON|OFF:OFF) ;;
+            *) echo 'Unknown or conflicting test configuration'; exit 1 ;;
+          esac
+          qt_major=unknown
+          if [ -f "$qt_dir/Qt5Config.cmake" ] && [ ! -f "$qt_dir/Qt6Config.cmake" ]; then
+            qt_major=5
+          elif [ -f "$qt_dir/Qt6Config.cmake" ] && [ ! -f "$qt_dir/Qt5Config.cmake" ]; then
+            qt_major=6
+          else
+            echo 'Unknown or conflicting selected Qt configuration'; exit 1
+          fi
+          printf 'GUI configuration: BUILD_TESTS=%s SKIP_BUILD_TESTS=%s QT_DIR=%s QT_VERSION_MAJOR=%s\n' "$build_tests" "$skip_build_tests" "$qt_dir" "$qt_major"
+          if [ "$RUNNER_OS" = Linux ] && { [ "$build_tests" = OFF ] || [ "$qt_major" = 5 ]; }; then
+            echo 'Not Run: GUI configuration tests disabled by recorded CMake/Qt configuration'
+            exit 0
+          fi
+          if [ "$build_tests" != ON ] || [ "$qt_major" != 6 ]; then
+            echo 'Required native GUI configuration tests are unavailable'; exit 1
+          fi
+          test -d build/src/unittests || { echo 'Missing required Qt6 test directory'; exit 1; }
+          for suite in ScreenTests ScreenSetupModelTests ValidatorTests; do
+            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error -R "^${suite}$"
+          done
+
       - name: Package
         shell: bash
         run: |
@@ -740,6 +808,7 @@ jobs:
           like: ${{ matrix.target.like }}
 
       - name: Upload package
+        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
@@ -794,11 +863,14 @@ jobs:
           cache-key: flatpak-builder-${{matrix.flatpak.arch}}-2.0
           arch: ${{matrix.flatpak.arch}}
           upload-artifact: false
+          restore-cache: true
+          save-cache: false
 
       - name: Validate build
         run: flatpak-builder-lint --exceptions --user-exceptions deploy/linux/flatpak/ci-build-lint-exceptions.json repo repo
 
       - name: Upload package
+        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-flatpak-${{matrix.flatpak.arch}}
@@ -894,8 +966,8 @@ jobs:
   # job still runs but every upload step is skipped - job stays green (A-30 (#54)).
   s3-upload:
     needs: [get-version, build-windows, build-macos, build-linux, build-flatpak]
-    # Free tier: no push auto-upload; snapshot S3 only via release / manual dispatch.
-    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.skip_unchanged != 'true' && (github.event_name == 'workflow_dispatch' || github.event_name == 'release' || github.event_name == 'schedule') }}
+    # Publication only: push, pull request and snapshot runs never upload to S3.
+    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.skip_unchanged != 'true' && needs.get-version.outputs.publish_release == 'true' && (github.event_name == 'workflow_dispatch' || github.event_name == 'release') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -953,7 +1025,7 @@ jobs:
 
   report:
     needs: [get-version, build-windows, build-macos, build-linux, build-flatpak, s3-upload]
-    if: ${{ !cancelled() && github.event_name != 'pull_request' && contains(needs.*.result, 'failure') }}
+    if: ${{ !cancelled() && needs.get-version.outputs.publish_release == 'true' && github.event_name != 'pull_request' && contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
 
@@ -966,12 +1038,12 @@ jobs:
           {
             echo "text<<EOF"
             echo "<!channel>"
-            echo "❌ Synergy CI failed"
-            [ "${{ needs.build-windows.result }}" = "failure" ] && echo "• Windows build failed"
-            [ "${{ needs.build-macos.result }}" = "failure" ] && echo "• macOS build failed"
-            [ "${{ needs.build-linux.result }}" = "failure" ] && echo "• Linux build failed"
-            [ "${{ needs.build-flatpak.result }}" = "failure" ] && echo "• Flatpak build failed"
-            [ "${{ needs.s3-upload.result }}" = "failure" ] && echo "• S3 upload failed"
+            printf '\342\235\214 Synergy CI failed\n'
+            [ "${{ needs.build-windows.result }}" = "failure" ] && printf '\342\200\242 Windows build failed\n'
+            [ "${{ needs.build-macos.result }}" = "failure" ] && printf '\342\200\242 macOS build failed\n'
+            [ "${{ needs.build-linux.result }}" = "failure" ] && printf '\342\200\242 Linux build failed\n'
+            [ "${{ needs.build-flatpak.result }}" = "failure" ] && printf '\342\200\242 Flatpak build failed\n'
+            [ "${{ needs.s3-upload.result }}" = "failure" ] && printf '\342\200\242 S3 upload failed\n'
             echo "<$link|View workflow>"
             echo "EOF"
           } >> $GITHUB_OUTPUT
@@ -1023,7 +1095,7 @@ jobs:
         uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4
         with:
           version: "6.9.3"
-          cache: true
+          cache: false
       - name: Generate compile commands
         run: |
           cmake -B build -G Ninja \
@@ -1039,7 +1111,7 @@ jobs:
               --warnings-as-errors='*' \
             2>&1 | tee clang-tidy-output.txt
       - name: Upload results
-        if: always()
+        if: ${{ always() && env.SYNERGY_VERSION_RELEASE == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: clang-tidy-results
@@ -1070,7 +1142,7 @@ jobs:
             src/
           cat cppcheck-results.txt
       - name: Upload results
-        if: always()
+        if: ${{ always() && env.SYNERGY_VERSION_RELEASE == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: cppcheck-results
@@ -1235,8 +1307,7 @@ jobs:
     steps:
       # 'skipped' is treated as passing because the plan step skips platforms
       # on purpose (push/PR skip Windows, macOS and Flatpak; snapshot honors
-      # platform; the daily schedule skips everything when the commit is already
-      # published). package-type=release and a published Release do not skip a
+      # platform). package-type=release and a published Release do not skip a
       # platform. A failed job is still a failure. get-version never filters
       # out, so requiring it catches a build skipped by its failure.
       # lint-clang and lint-encoding have no platform filter: a failed lint used
@@ -1260,7 +1331,7 @@ jobs:
              && ok "${{needs.codeql.result}}" \
              && ok "${{needs.sonar.result}}" \
              && ok "${{needs.valgrind.result}}"; then
-            echo "✅ CI passed" > $GITHUB_STEP_SUMMARY
+            printf '\342\234\205 CI passed\n' > "$GITHUB_STEP_SUMMARY"
           else
             exit 1
           fi
