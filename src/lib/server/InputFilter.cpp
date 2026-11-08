@@ -232,10 +232,10 @@ void InputFilter::LockCursorToScreenAction::perform(const Event &event)
   };
 
   // send event
-  auto *info = new Server::LockCursorToScreenInfo(s_state[m_mode]);
-  m_events->addEvent(
-      Event(EventTypes::ServerLockCursorToScreen, event.getTarget(), info, Event::EventFlags::DeliverImmediately)
-  );
+  auto info = std::make_unique<Server::LockCursorToScreenInfo>(s_state[m_mode]);
+  m_events->addEvent(Event(
+      EventTypes::ServerLockCursorToScreen, event.getTarget(), std::move(info), Event::EventFlags::DeliverImmediately
+  ));
 }
 
 InputFilter::RestartServer::RestartServer(Mode mode) : m_mode(mode)
@@ -299,9 +299,9 @@ void InputFilter::SwitchToScreenAction::perform(const Event &event)
   }
 
   // send event
-  auto *info = new Server::SwitchToScreenInfo(screen);
+  auto info = std::make_unique<Server::SwitchToScreenInfo>(screen);
   m_events->addEvent(
-      Event(EventTypes::ServerSwitchToScreen, event.getTarget(), info, Event::EventFlags::DeliverImmediately)
+      Event(EventTypes::ServerSwitchToScreen, event.getTarget(), std::move(info), Event::EventFlags::DeliverImmediately)
   );
 }
 
@@ -331,10 +331,10 @@ std::string InputFilter::SwitchInDirectionAction::format() const
 
 void InputFilter::SwitchInDirectionAction::perform(const Event &event)
 {
-  auto *info = new Server::SwitchInDirectionInfo(m_direction);
-  m_events->addEvent(
-      Event(EventTypes::ServerSwitchInDirection, event.getTarget(), info, Event::EventFlags::DeliverImmediately)
-  );
+  auto info = std::make_unique<Server::SwitchInDirectionInfo>(m_direction);
+  m_events->addEvent(Event(
+      EventTypes::ServerSwitchInDirection, event.getTarget(), std::move(info), Event::EventFlags::DeliverImmediately
+  ));
 }
 
 InputFilter::SwitchToNextScreenAction::SwitchToNextScreenAction(IEventQueue *events) : m_events(events)
@@ -415,10 +415,10 @@ void InputFilter::KeyboardBroadcastAction::perform(const Event &event)
   };
 
   // send event
-  auto *info = new Server::KeyboardBroadcastInfo(s_state[m_mode], m_screens);
-  m_events->addEvent(
-      Event(EventTypes::ServerKeyboardBroadcast, event.getTarget(), info, Event::EventFlags::DeliverImmediately)
-  );
+  auto info = std::make_unique<Server::KeyboardBroadcastInfo>(s_state[m_mode], m_screens);
+  m_events->addEvent(Event(
+      EventTypes::ServerKeyboardBroadcast, event.getTarget(), std::move(info), Event::EventFlags::DeliverImmediately
+  ));
 }
 
 InputFilter::KeystrokeAction::KeystrokeAction(IEventQueue *events, IPlatformScreen::KeyInfo *info, bool press)

@@ -60,3 +60,14 @@ foreach(test ServerTests ClientProxyTests KeyInfoOwnershipTests)
   set_target_properties(${test} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${test}-runtime")
 endforeach()
+
+create_test(
+  NAME EventPayloadOwnershipTests
+  DEPENDS server
+  LIBS base arch mt ${extra_libs}
+  SOURCE EventPayloadOwnershipTests.cpp
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/server"
+)
+set_tests_properties(EventPayloadOwnershipTests PROPERTIES TIMEOUT 15)
+set_target_properties(EventPayloadOwnershipTests PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/EventPayloadOwnershipTests-runtime")
