@@ -44,7 +44,14 @@ function(_capture _name)
   _print_bounded("COMMAND_STDOUT ${_name}" "${_stdout}" 32768)
   _print_bounded("COMMAND_STDERR ${_name}" "${_stderr}" 32768)
   file(WRITE "${_out}/${_name}.log" "${_stdout}${_stderr}")
-  if(NOT _rc EQUAL 0)
+  # WiX 5.0.2 HelpCommand.ExecuteAsync returns -1 after normal help output.
+  # Reserve that exact status for these complete help command tuples only.
+  set(_expected_rc "0")
+  if((_name STREQUAL "wix-build-help" AND "${ARGN}" STREQUAL "${_wix};build;--help") OR
+      (_name STREQUAL "wix-decompile-help" AND "${ARGN}" STREQUAL "${_wix};msi;decompile;--help"))
+    set(_expected_rc "-1")
+  endif()
+  if(NOT "${_rc}" STREQUAL "${_expected_rc}")
     message(FATAL_ERROR "Native fixture command failed (${_name}, ${_rc}); preserve ${_out}")
   endif()
   set(_last_stdout "${_stdout}" PARENT_SCOPE)
