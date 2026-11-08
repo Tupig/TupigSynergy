@@ -122,7 +122,7 @@ if("@QT_IS_SHARED@" AND NOT EXISTS "@WINDOWS_VCPKG_SHARE@/qtbase/copyright")
 endif()
 
 execute_process(COMMAND "@CMAKE_COMMAND@" "-DPACKAGE_ROOT=${_root}"
-  "-DPACKAGE_KIND=${_kind}" "-DDUMPBIN=${_dumpbin}"
+  "-DPACKAGE_KIND=${_kind}" "-DDUMPBIN=${_dumpbin}" "-DEXPECTED_ARCH=@BUILD_ARCHITECTURE@"
   -P "@CMAKE_SOURCE_DIR@/scripts/ci/verify-package-windows.cmake"
   RESULT_VARIABLE _verified)
 if(NOT _verified EQUAL 0)

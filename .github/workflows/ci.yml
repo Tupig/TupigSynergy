@@ -220,7 +220,7 @@ jobs:
               exit 1
               ;;
           esac
-          targets=$(jq -c --arg k "$linux_key" '.[$k]' .github/matrices/linux-targets.json)
+          targets=$(jq -c --arg k "$linux_key" '.[$k] | map(. + {"expected-arch": (if (.name | endswith("-arm64")) then "arm64" elif (.name | endswith("-x86_64")) then "x64" else error("unsupported declared Linux target") end)})' .github/matrices/linux-targets.json)
           {
             echo "targets=$targets"
             echo "build_windows=$build_windows"
@@ -467,6 +467,8 @@ jobs:
 
       - name: Test packaged build
         uses: ./.github/actions/test-package
+        with:
+          expected-arch: ${{ matrix.target.arch }}
 
       - name: Upload package
         if: ${{ needs.get-version.outputs.publish_release == 'true' }}
@@ -492,6 +494,7 @@ jobs:
       matrix:
         target:
           - name: "macos-arm64"
+            expected-arch: arm64
             runs-on: macos-15
             timeout: 20
             qt-version: 6.11.1
@@ -500,6 +503,7 @@ jobs:
             config-args: '-DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0'
 
           - name: "macos-x64"
+            expected-arch: x64
             runs-on: macos-15-intel
             timeout: 20
             qt-version: 6.9.3
@@ -631,6 +635,8 @@ jobs:
 
       - name: Test packaged build
         uses: ./.github/actions/test-package
+        with:
+          expected-arch: ${{ matrix.target.expected-arch }}
 
       - name: Upload package
         if: ${{ needs.get-version.outputs.publish_release == 'true' }}
@@ -797,6 +803,7 @@ jobs:
       - name: Test packaged build
         uses: ./.github/actions/test-package
         with:
+          expected-arch: ${{ matrix.target.expected-arch }}
           like: ${{ matrix.target.like }}
 
       - name: Upload package

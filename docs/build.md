@@ -400,7 +400,7 @@ Linux CI retains packaged license documentation and restores missing notices fro
 
 The host boundary is the supported OS kernel/ABI and system APIs; on macOS this includes `/usr/lib` and `/System/Library`, and on Linux glibc/loader plus POSIX shell/coreutils. Display services, fonts and GPU drivers remain on the host. Qt, OpenSSL and application plugins are included rather than delegated to those host boundaries. Native DEB/RPM/Arch metadata may name the minimal OS runtime prerequisites.
 
-Run package checks with `scripts\ci\verify-package-windows.bat build`, `bash scripts/ci/verify-package-macos.sh build`, or `bash scripts/ci/verify-package-linux.sh build <distribution-family>`. Report each result against its exact build commit. A green CI run with prebuilt/shared dependencies does not prove the local vcpkg static release path. The Flatpak delivery target is an offline OSTree repository `.tar.zst` containing the app, runtime and extensions for each supported architecture, with hashes and bilingual offline instructions. This requires separate exact-commit verification; a standalone app file or an unfinished offline pipeline must not be reported as a complete delivery.
+Run package checks with `scripts\ci\verify-package-windows.bat build <x64-or-arm64>`, `bash scripts/ci/verify-package-macos.sh --expected-arch <x64-or-arm64> build`, or `bash scripts/ci/verify-package-linux.sh --expected-arch <x64-or-arm64> build <distribution-family>`. Declare the approved build target explicitly; aliases x86_64/amd64 and aarch64 are accepted. macOS universal apps declare `x64,arm64`; GUI/core must match, while additional supported dependency slices retain per-slice closure checks. Whole extracted payload bytes, archive members and native slices are audited before launch; `V64_NATIVE_*` records retain actual traversal hashes and counts. Report each result against its exact build commit. A green CI run with prebuilt/shared dependencies does not prove the local vcpkg static release path. The Flatpak delivery target is an offline OSTree repository `.tar.zst` containing the app, runtime and extensions for each supported architecture, with hashes and bilingual offline instructions. This requires separate exact-commit verification; a standalone app file or an unfinished offline pipeline must not be reported as a complete delivery.
 
 ---
 
@@ -749,7 +749,7 @@ Linux CI 保留发行包的许可文档，必要时仅从已安装 RPM 的精确
 
 宿主边界是受支持的操作系统内核/ABI 和系统 API；macOS 包括 `/usr/lib` 与 `/System/Library`，Linux 包括 glibc/加载器及 POSIX shell/coreutils。显示服务、字体及 GPU 驱动由宿主提供。Qt、OpenSSL 和应用插件应随包携带，不能算作这些宿主边界。DEB/RPM/Arch 元数据可以声明最小操作系统运行前提。
 
-检查入口为 `scripts\ci\verify-package-windows.bat build`、`bash scripts/ci/verify-package-macos.sh build` 或 `bash scripts/ci/verify-package-linux.sh build <发行版类型>`。每项结果都应关联准确的构建提交。使用预编译/共享依赖的 CI 绿灯不证明本机 vcpkg 静态发布路径已通过。Flatpak 的交付目标是为每种受支持架构提供包含应用、runtime 和 extensions 的离线 OSTree 仓库 `.tar.zst`，附带哈希及双语离线说明。它须按准确提交独立验证，单个应用文件或尚未验收的离线流水线不能宣称交付完整。
+检查入口为 `scripts\ci\verify-package-windows.bat build <x64-or-arm64>`、`bash scripts/ci/verify-package-macos.sh --expected-arch <x64-or-arm64> build` 或 `bash scripts/ci/verify-package-linux.sh --expected-arch <x64-or-arm64> build <发行版类型>`。须显式声明已批准的构建目标，支持x86_64/amd64及aarch64别名。macOS通用app声明`x64,arm64`，GUI/core须精确匹配，依赖额外的受支持64位切片仍逐片检查闭包。启动前检查完整解包载荷字节、归档成员和原生切片，`V64_NATIVE_*`记录实际遍历摘要及计数。每项结果都应关联准确的构建提交。使用预编译/共享依赖的 CI 绿灯不证明本机 vcpkg 静态发布路径已通过。Flatpak 的交付目标是为每种受支持架构提供包含应用、runtime 和 extensions 的离线 OSTree 仓库 `.tar.zst`，附带哈希及双语离线说明。它须按准确提交独立验证，单个应用文件或尚未验收的离线流水线不能宣称交付完整。
 
 ---
 

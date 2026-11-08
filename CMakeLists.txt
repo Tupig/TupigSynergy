@@ -151,6 +151,16 @@ if(NOT BUILD_ARCHITECTURE MATCHES "^(x64|x86_64|arm64|aarch64)$")
   )
 endif()
 
+# An explicit Apple multi-architecture build must not hide a 32-bit slice
+# behind the host compiler's otherwise valid pointer size.
+if(APPLE AND CMAKE_OSX_ARCHITECTURES)
+  foreach(_synergy_osx_arch IN LISTS CMAKE_OSX_ARCHITECTURES)
+    if(NOT _synergy_osx_arch MATCHES "^(x86_64|arm64)$")
+      message(FATAL_ERROR "Unsupported macOS slice '${_synergy_osx_arch}'; expected x86_64 or arm64")
+    endif()
+  endforeach()
+endif()
+
 # AddressSanitizer. MSVC's ASan runtime (clang_rt.asan_dynamic-*.dll) cannot link
 # against a static CRT, so an ASan build needs a dynamic-CRT triplet - see the
 # runtime block below, which enforces that.

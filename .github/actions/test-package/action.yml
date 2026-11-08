@@ -2,6 +2,9 @@ name: "Test Package"
 description: "Audits extracted package dependencies and launches with isolated runtime settings"
 
 inputs:
+  expected-arch:
+    description: "Declared build target: x64 or arm64; macOS may declare both comma separated"
+    required: true
   like:
     description: "Linux distribution family used to select the package format"
     required: false
@@ -14,13 +17,17 @@ runs:
       if: ${{ runner.os == 'Windows' }}
       shell: cmd
       working-directory: .
-      run: call scripts\ci\verify-package-windows.bat build
+      env:
+        PACKAGE_EXPECTED_ARCH: ${{ inputs.expected-arch }}
+      run: call scripts\ci\verify-package-windows.bat build "%PACKAGE_EXPECTED_ARCH%"
 
     - name: Verify macOS DMG payload
       if: ${{ runner.os == 'macOS' }}
       shell: bash
       working-directory: .
-      run: bash scripts/ci/verify-package-macos.sh build
+      env:
+        PACKAGE_EXPECTED_ARCH: ${{ inputs.expected-arch }}
+      run: bash scripts/ci/verify-package-macos.sh --expected-arch "$PACKAGE_EXPECTED_ARCH" build
 
     - name: Verify Linux package payload
       if: ${{ runner.os == 'Linux' }}
@@ -28,4 +35,5 @@ runs:
       working-directory: .
       env:
         PACKAGE_LINUX_LIKE: ${{ inputs.like }}
-      run: bash scripts/ci/verify-package-linux.sh build "$PACKAGE_LINUX_LIKE"
+        PACKAGE_EXPECTED_ARCH: ${{ inputs.expected-arch }}
+      run: bash scripts/ci/verify-package-linux.sh --expected-arch "$PACKAGE_EXPECTED_ARCH" build "$PACKAGE_LINUX_LIKE"

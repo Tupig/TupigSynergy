@@ -10,6 +10,8 @@ fi
 python3 - "$@" <<'PY'
 import hashlib
 import os
+import json
+import struct
 import plistlib
 import re
 import socket
@@ -43,6 +45,231 @@ def macho(path):
         )
 
 
+# Audit every physical payload file before invoking a loader or application.
+# Archive members stay in memory: thin archives never resolve external files.
+def expected_target(value, multiple=False):
+    aliases = {'x64': 'x64', 'x86_64': 'x64', 'amd64': 'x64',
+               'arm64': 'arm64', 'aarch64': 'arm64'}
+    parts = str(value).lower().split(',') if value else []
+    if not parts or (not multiple and len(parts) != 1) or any(p not in aliases for p in parts):
+        raise ValueError('Missing or unsupported expected target architecture')
+    return set(aliases[p] for p in parts)
+
+
+def audit_native_tree(root, targets, family):
+    root = root.resolve()
+    counts = dict.fromkeys(('native_files', 'native_units', 'native_slices', 'malformed_native_units',
+                            'archive_files', 'archive_members', 'native_archive_members',
+                            'archive_metadata_members', 'neutral_archive_members',
+                            'unresolved_thin_external_members', 'symlinks_not_followed'), 0)
+    errors = []
+    expected = ','.join(sorted(targets))
+
+    def fail(relative, observed, member=None):
+        observed = observed.replace('_', '/')
+        detail = '\nfile={};observed={};expected={}'.format(relative, observed, expected)
+        if member is not None:
+            detail += ';member=' + member
+        errors.append(detail)
+
+    def native(data, relative, member=None, index=0, offset=0):
+        record = {'path': relative, 'member': member, 'index': index, 'offset': offset,
+                  'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest(), 'slices': []}
+        malformed = False
+        observed = None
+        if data.startswith(b'\x7fELF'):
+            record['format'] = 'ELF'
+            if len(data) < 20 or data[5] not in (1, 2):
+                malformed = True; observed = 'malformed_truncated_ELF'
+            else:
+                machine = struct.unpack_from('<H' if data[5] == 1 else '>H', data, 18)[0]
+                arch = {62: 'x64', 183: 'arm64', 3: 'i386', 40: 'arm'}.get(machine, 'unknown_'+str(machine))
+                bits = {1: 32, 2: 64}.get(data[4], 0)
+                record['slices'].append({'machine': arch, 'bits': bits, 'byte_order': data[5],
+                                         'sha256': record['sha256'], 'bytes': len(data)})
+                observed = 'ELF{}/{}{}'.format(bits, arch, '/bigendian' if data[5] != 1 else '')
+                if len(data) < (64 if bits == 64 else 52) or not bits:
+                    malformed = True; observed = 'malformed_truncated_ELF_header'
+                elif family == 'ELF' and bits == 64 and data[5] == 1 and arch in targets:
+                    observed = None
+        elif data[:4] in (b'\xce\xfa\xed\xfe', b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xce', b'\xfe\xed\xfa\xcf',
+                           b'\xca\xfe\xba\xbe', b'\xbe\xba\xfe\xca', b'\xca\xfe\xba\xbf', b'\xbf\xba\xfe\xca'):
+            record['format'] = 'Mach-O'
+            cpu_names = {0x1000007: 'x64', 0x100000c: 'arm64', 7: 'i386', 12: 'arm'}
+
+            def thin(body, advertised=None, position=0):
+                magic = body[:4]
+                if magic not in (b'\xce\xfa\xed\xfe', b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xce', b'\xfe\xed\xfa\xcf'):
+                    raise ValueError('malformed_Mach_thin_magic')
+                order = '<' if magic in (b'\xce\xfa\xed\xfe', b'\xcf\xfa\xed\xfe') else '>'
+                bits = 64 if magic in (b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf') else 32
+                if len(body) < (32 if bits == 64 else 28):
+                    raise ValueError('malformed_truncated_Mach')
+                cpu = struct.unpack_from(order+'I', body, 4)[0]
+                arch = cpu_names.get(cpu, 'unknown_'+hex(cpu))
+                part = {'machine': arch, 'bits': bits, 'index': position, 'bytes': len(body),
+                        'sha256': hashlib.sha256(body).hexdigest()}
+                if advertised is not None:
+                    part['advertised_cpu'] = hex(advertised)
+                record['slices'].append(part)
+                if advertised is not None and advertised != cpu:
+                    raise ValueError('malformed_Mach_fat_CPU_mismatch')
+
+            try:
+                if data[:4] in (b'\xca\xfe\xba\xbe', b'\xbe\xba\xfe\xca', b'\xca\xfe\xba\xbf', b'\xbf\xba\xfe\xca'):
+                    order = '>' if data[:4] in (b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf') else '<'
+                    fat64 = data[:4] in (b'\xca\xfe\xba\xbf', b'\xbf\xba\xfe\xca')
+                    width = 32 if fat64 else 20
+                    if len(data) < 8:
+                        raise ValueError('malformed_truncated_Mach_fat')
+                    total = struct.unpack_from(order+'I', data, 4)[0]
+                    if not total or total > (len(data)-8)//width:
+                        raise ValueError('malformed_empty_or_truncated_Mach_fat')
+                    spans = []
+                    for position in range(total):
+                        values = struct.unpack_from(order+('IIQQII' if fat64 else '5I'), data, 8+width*position)
+                        cpu, subtype, begin, size, align = values[:5]
+                        if not size or begin < 8+total*width or begin > len(data) or size > len(data)-begin:
+                            raise ValueError('malformed_out_of_bounds_Mach_fat')
+                        if any(begin < end and start < begin+size for start, end in spans):
+                            raise ValueError('malformed_overlapping_Mach_fat')
+                        spans.append((begin, begin+size))
+                        thin(data[begin:begin+size], cpu, position)
+                else:
+                    thin(data)
+                arches = {p['machine'] for p in record['slices']}
+                unsupported = [p for p in record['slices'] if p['bits'] != 64 or p['machine'] not in ('x64', 'arm64')]
+                if family == 'Mach-O' and not unsupported and targets.issubset(arches):
+                    observed = None
+                else:
+                    observed = 'Mach{}/{}'.format(','.join(str(p['bits']) for p in record['slices']), ','.join(sorted(arches)))
+            except (ValueError, struct.error) as error:
+                malformed = str(error) != 'malformed_Mach_fat_CPU_mismatch'
+                observed = str(error)
+        elif data.startswith(b'MZ') or (len(data) >= 2 and struct.unpack_from('<H', data)[0] in (0x8664, 0xaa64, 0x14c, 0x1c4)):
+            record['format'] = 'foreign_PE_COFF'; observed = 'unsupported_foreign_PE_COFF'
+            malformed = True
+        else:
+            return False
+        counts['native_units'] += 1
+        counts['native_slices'] += len(record['slices'])
+        counts['malformed_native_units'] += int(malformed)
+        print('V64_NATIVE_UNIT ' + json.dumps(record, separators=(',', ':')))
+        if observed:
+            fail(relative, observed, member)
+        return True
+
+    def archive(data, relative):
+        counts['archive_files'] += 1
+        cursor = 8; table = b''; index = 0; found = False
+        thin_archive = data[:8] == b'!<thin>\n'
+        while cursor < len(data):
+            raw = data[cursor:cursor+60]
+            if len(raw) != 60 or raw[58:] != b'`\n':
+                fail(relative, 'malformed_truncated_archive'); break
+            try:
+                stored = raw[:16].decode('ascii').rstrip(); size = int(raw[48:58])
+                if size < 0: raise ValueError('negative size')
+            except (ValueError, UnicodeError):
+                fail(relative, 'malformed_archive_header'); break
+            cursor += 60
+            metadata = stored in ('/', '//', '__.SYMDEF', '__.SYMDEF SORTED')
+            external = thin_archive and not metadata
+            name = stored; body = b''
+            if not external:
+                if size > len(data)-cursor:
+                    fail(relative, 'malformed_truncated_archive'); break
+                body = data[cursor:cursor+size]
+            body_offset = cursor
+            try:
+                if stored == '//':
+                    table = body
+                elif stored.startswith('#1/'):
+                    length = int(stored[3:])
+                    if length > len(body): raise ValueError('name outside member')
+                    name = body[:length].decode('utf-8'); body = body[length:]; body_offset += length
+                elif stored.startswith('/') and stored[1:].isdigit():
+                    start = int(stored[1:]); end = table.index(b'/\n', start); name = table[start:end].decode('utf-8')
+                elif stored.endswith('/') and not metadata:
+                    name = stored[:-1]
+            except (ValueError, UnicodeError):
+                fail(relative, 'malformed_archive_name'); break
+            item = {'path': relative, 'name': name, 'index': index, 'offset': body_offset,
+                    'classification': 'metadata' if metadata else ('external_unresolved' if external else 'neutral')}
+            if external:
+                counts['archive_members'] += 1; counts['unresolved_thin_external_members'] += 1
+                fail(relative, 'thin_archive', name)
+            else:
+                item.update(bytes=len(body), sha256=hashlib.sha256(body).hexdigest())
+                if metadata:
+                    counts['archive_metadata_members'] += 1
+                else:
+                    counts['archive_members'] += 1
+                    if native(body, relative, name, index, body_offset):
+                        found = True; counts['native_archive_members'] += 1; item['classification'] = 'native'
+                    else:
+                        counts['neutral_archive_members'] += 1
+                cursor += size + size % 2
+            print('V64_NATIVE_MEMBER ' + json.dumps(item, separators=(',', ':')))
+            index += 1
+        return found
+
+    def contained_link(path):
+        pending = list(path.relative_to(root).parts)
+        base = root
+        followed = 0
+        while pending:
+            part = pending.pop(0)
+            if part == '..':
+                base = base.parent
+                if base != root and root not in base.parents:
+                    return False
+                continue
+            if part == '.':
+                continue
+            candidate = base / part
+            if candidate.is_symlink():
+                followed += 1
+                if followed > 40:
+                    return False
+                target = Path(os.readlink(candidate))
+                if target.is_absolute():
+                    if target != root and root not in target.parents:
+                        return False
+                    base = root
+                    pending = list(target.relative_to(root).parts) + pending
+                else:
+                    pending = list(target.parts) + pending
+            else:
+                base = candidate
+        return base.exists()
+
+    for directory, dirs, files in os.walk(root, followlinks=False):
+        for name in sorted(dirs+files):
+            path = Path(directory)/name
+            relative = str(path.relative_to(root))
+            if path.is_symlink():
+                target = os.readlink(path); counts['symlinks_not_followed'] += 1
+                print('V64_NATIVE_FILE ' + json.dumps({'path': relative, 'symlink': target}, separators=(',', ':')))
+                if relative == 'Applications' and target == '/Applications' and family == 'Mach-O':
+                    continue
+                if not contained_link(path):
+                    fail(relative, 'escaped_or_broken_symlink')
+                continue
+            if not path.is_file():
+                continue
+            data = path.read_bytes()
+            print('V64_NATIVE_FILE ' + json.dumps({'path': relative, 'sha256': hashlib.sha256(data).hexdigest()}, separators=(',', ':')))
+            if data[:8] in (b'!<arch>\n', b'!<thin>\n'):
+                found = archive(data, relative)
+            else:
+                found = native(data, relative)
+            counts['native_files'] += int(found)
+    print('V64_NATIVE_COUNTS ' + json.dumps(dict(counts, complete=True), separators=(',', ':')))
+    if errors:
+        raise ValueError(errors[0])
+
+
 def version(value):
     if not re.fullmatch(r'[0-9]+(?:\.[0-9]+){0,2}', str(value)):
         raise ValueError('Invalid macOS deployment version: ' + str(value))
@@ -50,7 +277,7 @@ def version(value):
     return parts + (0,) * (3 - len(parts))
 
 
-def audit(app):
+def audit(app, expected):
     app = app.resolve()
     with (app / 'Contents/Info.plist').open('rb') as stream:
         info = plistlib.load(stream)
@@ -150,9 +377,11 @@ def audit(app):
                 raise ValueError('Dependency lacks architecture ' + arch + ': ' + dependency)
             visit(target, arch, executable, rpaths)
 
-    required_arches = set(arches(gui.resolve()))
+    required_arches = {"x86_64" if arch == "x64" else arch for arch in expected}
+    if set(arches(gui.resolve())) != required_arches:
+        raise ValueError("file=Contents/MacOS/" + name + ";observed=" + ",".join(arches(gui.resolve())) + ";expected=" + ",".join(sorted(expected)))
     if set(arches(core.resolve())) != required_arches:
-        raise ValueError('GUI and core must support the same architectures')
+        raise ValueError('file=Contents/MacOS/synergy-core;observed=' + ','.join(arches(core.resolve())) + ';expected=' + ','.join(sorted(expected)))
     for image in sorted(images):
         if not required_arches.issubset(arches(image)):
             raise ValueError('Bundled Mach-O lacks a target architecture: ' + str(image.relative_to(app)))
@@ -289,8 +518,10 @@ def main():
     audit_only = bool(args and args[0] == '--audit-only')
     if audit_only:
         args.pop(0)
-    if len(args) != 1:
-        raise ValueError('Usage: verify-package-macos.sh [--audit-only] <build-directory-or-app-or-dmg>')
+    if len(args) != 3 or args[0] != '--expected-arch':
+        raise ValueError('Usage: verify-package-macos.sh [--audit-only] --expected-arch <x64|arm64|x64,arm64> <build-directory-or-app-or-dmg>; expected target required')
+    expected = expected_target(args[1], multiple=True)
+    args = args[2:]
     source = Path(args[0]).resolve(strict=True)
     if not audit_only and source.is_dir() and source.suffix != '.app':
         packages = list(source.glob('*.dmg'))
@@ -300,8 +531,11 @@ def main():
     if audit_only:
         if source.suffix != '.app':
             raise ValueError('--audit-only requires an app bundle')
-        audit(source)
+        audit_native_tree(source, expected, 'Mach-O')
+        audit(source, expected)
         return
+    if source.is_file():
+        print('V64_PACKAGE_SHA256 ' + hashlib.sha256(source.read_bytes()).hexdigest())
     with tempfile.TemporaryDirectory(prefix='synergy-package-') as temporary:
         root = Path(temporary)
         mounted = False
@@ -312,18 +546,21 @@ def main():
                 run(['/usr/bin/hdiutil', 'attach', str(source), '-readonly', '-nobrowse',
                      '-mountpoint', str(mount)], input='Y\n')
                 mounted = True
+                audit_native_tree(mount, expected, 'Mach-O')
                 apps = list(mount.glob('*.app'))
                 if len(apps) != 1:
                     raise ValueError('Expected exactly one app in the DMG')
                 source = apps[0]
             if source.suffix != '.app' or not source.is_dir():
                 raise ValueError('Expected an app bundle or DMG')
+            if not mounted:
+                audit_native_tree(source, expected, 'Mach-O')
             app = root / source.name
             run(['/usr/bin/ditto', str(source), str(app)])
         finally:
             if mounted:
                 run(['/usr/bin/hdiutil', 'detach', str(mount)])
-        gui, core = audit(app)
+        gui, core = audit(app, expected)
         launch(gui, core, root)
 
 
