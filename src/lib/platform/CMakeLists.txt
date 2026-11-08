@@ -40,6 +40,7 @@ if(WIN32)
     win32/MSWindowsDebugOutputter.cpp
     win32/MSWindowsDebugOutputter.h
     win32/MSWindowsDesks.cpp
+    win32/MSWindowsDeskThread.cpp
     win32/MSWindowsDesks.h
     win32/MSWindowsEventQueueBuffer.cpp
     win32/MSWindowsEventQueueBuffer.h
@@ -47,12 +48,17 @@ if(WIN32)
     win32/MSWindowsHook.cpp
     win32/MSWindowsHook.h
     win32/MSWindowsKeyState.cpp
+    win32/MSWindowsKeyMap.cpp
+    win32/MSWindowsKeyTables.cpp
     win32/MSWindowsKeyState.h
     win32/MSWindowsPowerManager.cpp
     win32/MSWindowsPowerManager.h
     win32/MSWindowsProcess.cpp
     win32/MSWindowsProcess.h
     win32/MSWindowsScreen.cpp
+    win32/MSWindowsScreenEvents.cpp
+    win32/MSWindowsScreenInput.cpp
+    win32/MSWindowsScreenWindow.cpp
     win32/MSWindowsScreen.h
     win32/MSWindowsScreenSaver.cpp
     win32/MSWindowsScreenSaver.h
@@ -93,6 +99,7 @@ elseif(APPLE)
     macos/OSXEventQueueBuffer.cpp
     macos/OSXEventQueueBuffer.h
     macos/OSXKeyState.cpp
+    macos/OSXKeyMap.cpp
     macos/OSXKeyState.h
     macos/OSXMediaKeySupport.h
     macos/OSXMediaKeySupport.m
@@ -102,6 +109,9 @@ elseif(APPLE)
     macos/OSXPowerManager.h
     macos/OSXScreen.h
     macos/OSXScreen.mm
+    macos/OSXScreenEvents.mm
+    macos/OSXScreenInput.mm
+    macos/OSXScreenSession.mm
     macos/OSXScreenSaver.cpp
     macos/OSXScreenSaver.h
     macos/OSXScreenSaverControl.h
@@ -117,11 +127,17 @@ elseif(UNIX)
     linux/XDGPowerManager.h
     linux/XDGKeyUtil.h
     linux/XDGKeyUtil.cpp
+    linux/XDGKeyTables.cpp
+    linux/XDGKeyUnicodeLegacy.inc
+    linux/XDGKeyUnicodeScripts.inc
   )
   if (BUILD_X11_SUPPORT)
     configure_file(linux/XWindowsConfig.h.in ${CMAKE_CURRENT_BINARY_DIR}/XWindowsConfig.h @ONLY)
     list(APPEND PLATFORM_SOURCES
       linux/XWindowsClipboard.cpp
+      linux/XWindowsClipboardMotif.cpp
+      linux/XWindowsClipboardReplies.cpp
+      linux/XWindowsClipboardSelection.cpp
       linux/XWindowsClipboard.h
       linux/XWindowsClipboardAnyBitmapConverter.cpp
       linux/XWindowsClipboardAnyBitmapConverter.h
@@ -140,6 +156,9 @@ elseif(UNIX)
       linux/XWindowsKeyState.cpp
       linux/XWindowsKeyState.h
       linux/XWindowsScreen.cpp
+      linux/XWindowsScreenDisplay.cpp
+      linux/XWindowsScreenEvents.cpp
+      linux/XWindowsScreenInput.cpp
       linux/XWindowsScreen.h
       linux/XWindowsScreenSaver.cpp
       linux/XWindowsScreenSaver.h
@@ -158,6 +177,7 @@ elseif(UNIX)
       linux/EiKeyState.cpp
       linux/EiKeyState.h
       linux/EiScreen.cpp
+      linux/EiScreenEvents.cpp
       linux/EiScreen.h
     )
     # The Portal sources also require EI.
