@@ -149,6 +149,8 @@ are set and `signtool verify` fails after SignPath returns the files, the job fa
 Host tools are Xcode Command Line Tools, CMake 3.25+, and Ninja. Qt and OpenSSL come from
 the repository vcpkg. Do not point CMake at a Homebrew Qt.
 
+CI uses the maintained Homebrew `openssl@3` line and passes its self-discovered prefix as `OPENSSL_ROOT_DIR`. This is the same major version as the release manifest, but the minor version and link model can differ; local release dependencies remain governed by `vcpkg.json`. OpenSSL 4 source compatibility remains tracked in [#307](https://github.com/Tupig/TupigSynergy/issues/307).
+
 ```bash
 xcode-select --install
 brew install cmake ninja
@@ -464,6 +466,8 @@ Release CI 通过 [SignPath Foundation](https://signpath.org/) 签名 `synergy_<
 ### 🍎 macOS（本地 Apple Silicon，Intel 由 CI 构建）
 
 宿主工具是 Xcode Command Line Tools、CMake 3.25+ 和 Ninja。Qt 与 OpenSSL 来自仓库内 vcpkg，不要把 CMake 指到 Homebrew 的 Qt。
+
+CI 使用仍受维护的 Homebrew `openssl@3` 主线，并将自动发现的前缀作为 `OPENSSL_ROOT_DIR`。它与发布清单同为主版本 3，但小版本和链接模型可能不同；本地发布依赖仍以 `vcpkg.json` 为准。OpenSSL 4 源码兼容性继续由 [#307](https://github.com/Tupig/TupigSynergy/issues/307) 跟踪。
 
 ```bash
 xcode-select --install

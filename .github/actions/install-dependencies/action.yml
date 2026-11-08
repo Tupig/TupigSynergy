@@ -30,7 +30,7 @@ runs:
       if: ${{ runner.os != 'Windows' }}
       run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            brew install openssl doxygen --quiet
+            brew install openssl@3 doxygen --quiet
           elif [ "$RUNNER_OS" == "Linux" ]; then
             if [ ${{inputs.like}} == "debian" ]; then
               apt-get update -qqq > /dev/null

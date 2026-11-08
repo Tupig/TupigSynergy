@@ -285,6 +285,8 @@ jobs:
         run: cmake --build build --config Release -j8
 
       - name: GUI configuration tests
+        env:
+          QT_QPA_PLATFORM: offscreen
         shell: bash
         run: |
           set -euo pipefail
@@ -514,13 +516,19 @@ jobs:
           qt-version: ${{ matrix.target.qt-version }}
 
       - name: Configure
-        run: ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl_root=$(brew --prefix openssl@3)
+          ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}" -DOPENSSL_ROOT_DIR="$openssl_root"
 
       - name: Build
         shell: bash
         run: cmake --build build --config Release -j8
 
       - name: GUI configuration tests
+        env:
+          QT_QPA_PLATFORM: offscreen
         shell: bash
         run: |
           set -euo pipefail
@@ -745,6 +753,8 @@ jobs:
         run: cmake --build build --config Release -j8
 
       - name: GUI configuration tests
+        env:
+          QT_QPA_PLATFORM: offscreen
         shell: bash
         run: |
           set -euo pipefail
