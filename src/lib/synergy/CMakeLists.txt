@@ -49,9 +49,12 @@ add_library(${lib_name} STATIC ${PLATFORM_CODE}
   clipboard/IClipboard.h
   # Input
   input/KeyMap.cpp
+  input/KeyMapKeystrokes.cpp
+  input/KeyMapNames.cpp
   input/KeyMap.h
   input/KeyMapDetail.h
   input/KeyState.cpp
+  input/KeyStateMapping.cpp
   input/KeyState.h
   input/KeyTypes.cpp
   input/KeyTypes.h

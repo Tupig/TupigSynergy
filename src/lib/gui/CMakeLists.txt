@@ -28,6 +28,9 @@ add_library(${target} STATIC
   Logger.cpp
   Logger.h
   MainWindow.cpp
+  mainwindow/MainWindowConfiguration.cpp
+  mainwindow/MainWindowConnection.cpp
+  mainwindow/MainWindowWindow.cpp
   MainWindow.h
   MainWindow.ui
   Messages.cpp
@@ -134,3 +137,5 @@ if(WIN32)
     net
   )
 endif()
+
+set_property(TARGET ${target} PROPERTY AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}")
