@@ -427,7 +427,6 @@ void OSXScreen::constructMouseButtonEventMap()
 void OSXScreen::postMouseEvent(CGPoint &pos) const
 {
   // check if cursor position is valid on the client display configuration
-  // stkamp@users.sourceforge.net
   CGDisplayCount displayCount = 0;
   CGGetDisplaysWithPoint(pos, 0, nullptr, &displayCount);
   if (displayCount == 0) {
@@ -1848,7 +1847,6 @@ void setZeroSuppressionInterval()
 void avoidSupression()
 {
   // avoid suppression of local hardware events
-  // stkamp@users.sourceforge.net
   CGSetLocalEventsFilterDuringSupressionState(
       kCGEventFilterMaskPermitAllEvents, kCGEventSupressionStateSupressionInterval
   );
