@@ -556,6 +556,38 @@ private Q_SLOTS:
     QCOMPARE(nativeReady(original.listener, true, 0), 1);
     QCOMPARE(nativeReady(idle.accepted, true, 0), 0);
   }
+
+  void windowsRepeatedPollRetainsPeerClose()
+  {
+    SocketMultiplexer multiplexer;
+    ConnectedLoopback socket(multiplexer);
+    QCOMPARE(nativeReady(socket.accepted, true, 0), 0);
+    const auto idle = readPoll(socket.accepted);
+    QCOMPARE(idle.status, 0);
+    QCOMPARE(idle.events, static_cast<unsigned short>(0));
+
+    ARCH->closeSocketForWrite(socket.owner.peer);
+    QCOMPARE(nativeReady(socket.accepted, true, 5000), 1);
+    const auto before = nativeReady(socket.accepted, true, 0);
+    const auto first = readPoll(socket.accepted);
+    const auto second = readPoll(socket.accepted);
+    const auto after = nativeReady(socket.accepted, true, 0);
+    reportPolls("C6 original peer close", before, first, second, after);
+
+    // Observe both polls before recv; graceful EOF remains readable.
+    char received = 0;
+    const auto eof = recv(socket.accepted->m_socket, &received, 1, 0);
+    const auto eofError = eof == SOCKET_ERROR ? WSAGetLastError() : 0;
+    qInfo("C6 peer close recv=%d error=%d", eof, eofError);
+    QCOMPARE(eof, 0);
+    QCOMPARE(eofError, 0);
+    QCOMPARE(before, 1);
+    QCOMPARE(after, 1);
+    QCOMPARE(first.status, 1);
+    QCOMPARE(first.events, static_cast<unsigned short>(IArchNetwork::PollEventMask::In));
+    QCOMPARE(second.status, 1);
+    QCOMPARE(second.events, static_cast<unsigned short>(IArchNetwork::PollEventMask::In));
+  }
 #endif
 
   void listenerDestructionWaitsForErrorCallback()
