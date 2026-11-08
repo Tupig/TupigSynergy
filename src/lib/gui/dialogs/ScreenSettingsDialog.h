@@ -12,8 +12,12 @@
 class QWidget;
 class QString;
 
+namespace synergy::gui {
 class Screen;
+}
+namespace synergy::gui {
 class ScreenList;
+}
 
 namespace Ui {
 class ScreenSettingsDialog;
@@ -24,7 +28,9 @@ class ScreenSettingsDialog : public QDialog
   Q_OBJECT
 
 public:
-  explicit ScreenSettingsDialog(QWidget *parent, Screen *screen = nullptr, const ScreenList *screens = nullptr);
+  explicit ScreenSettingsDialog(
+      QWidget *parent, synergy::gui::Screen *screen = nullptr, const synergy::gui::ScreenList *screens = nullptr
+  );
   ~ScreenSettingsDialog() override;
 
 public Q_SLOTS:
@@ -38,5 +44,5 @@ private Q_SLOTS:
 
 private:
   std::unique_ptr<Ui::ScreenSettingsDialog> ui;
-  Screen *m_screen;
+  synergy::gui::Screen *m_screen;
 };

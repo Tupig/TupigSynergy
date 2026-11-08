@@ -8,7 +8,9 @@
 
 #include "LineEditValidator.h"
 
+namespace synergy::gui {
 class ScreenList;
+}
 
 namespace validators {
 class ValidationError;
@@ -18,7 +20,8 @@ class ScreenNameValidator : public LineEditValidator
   Q_OBJECT
 public:
   explicit ScreenNameValidator(
-      QLineEdit *lineEdit = nullptr, ValidationError *error = nullptr, const ScreenList *pScreens = nullptr
+      QLineEdit *lineEdit = nullptr, ValidationError *error = nullptr,
+      const synergy::gui::ScreenList *pScreens = nullptr
   );
 };
 

@@ -16,7 +16,7 @@
 
 #include <QTimer>
 
-ActionDialog::ActionDialog(QWidget *parent, const ServerConfig &config, Hotkey &hotkey, Action &action)
+ActionDialog::ActionDialog(QWidget *parent, const synergy::gui::ServerConfig &config, Hotkey &hotkey, Action &action)
     : QDialog(parent, Qt::WindowTitleHint | Qt::WindowSystemMenuHint),
       ui{std::make_unique<Ui::ActionDialog>()},
       m_hotkey(hotkey),
@@ -40,7 +40,7 @@ ActionDialog::ActionDialog(QWidget *parent, const ServerConfig &config, Hotkey &
   ui->comboActionType->setCurrentIndex(m_action.type());
   ui->comboTriggerOn->setCurrentIndex(m_action.activeOnRelease());
 
-  for (const Screen &screen : config.screens()) {
+  for (const synergy::gui::Screen &screen : config.screens()) {
     if (screen.isNull())
       continue;
     auto *newListItem = new QListWidgetItem(screen.name());

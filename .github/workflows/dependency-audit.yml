@@ -98,15 +98,11 @@ jobs:
       - name: Generate CycloneDX SBOM
         run: python3 scripts/ci/generate-vcpkg-sbom.py vcpkg-plan.txt synergy-deps.cdx.json
 
-      - name: Upload SBOM
-        uses: actions/upload-artifact@v7
-        with:
-          name: dependency-sbom
-          path: synergy-deps.cdx.json
-          if-no-files-found: error
+      - name: Show SBOM
+        run: cat synergy-deps.cdx.json
 
       - name: Cache cve-bin-tool data
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         with:
           path: ~/.cache/cve-bin-tool
           key: cve-bin-tool-data-${{ github.run_id }}
@@ -138,13 +134,15 @@ jobs:
             --format json2 --output-file cve-report.json
           test -s cve-report.json
 
-      - name: Upload CVE report
+      - name: Show CVE report
         if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: cve-report
-          path: cve-report.json
-          if-no-files-found: warn
+        shell: bash
+        run: |
+          if [ -f cve-report.json ]; then
+            cat cve-report.json
+          else
+            echo "No current CVE report"
+          fi
 
       - name: Gate on critical findings
         if: always()

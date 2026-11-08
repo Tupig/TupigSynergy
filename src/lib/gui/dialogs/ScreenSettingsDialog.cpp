@@ -15,13 +15,15 @@
 
 #include <QMessageBox>
 
-using enum ScreenConfig::Modifier;
-using enum ScreenConfig::SwitchCorner;
-using enum ScreenConfig::Fix;
+using enum synergy::gui::ScreenConfig::Modifier;
+using enum synergy::gui::ScreenConfig::SwitchCorner;
+using enum synergy::gui::ScreenConfig::Fix;
 
 ScreenSettingsDialog::~ScreenSettingsDialog() = default;
 
-ScreenSettingsDialog::ScreenSettingsDialog(QWidget *parent, Screen *screen, const ScreenList *screens)
+ScreenSettingsDialog::ScreenSettingsDialog(
+    QWidget *parent, synergy::gui::Screen *screen, const synergy::gui::ScreenList *screens
+)
     : QDialog(parent, Qt::WindowTitleHint | Qt::WindowSystemMenuHint),
       ui{std::make_unique<Ui::ScreenSettingsDialog>()},
       m_screen(screen)

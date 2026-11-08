@@ -9,6 +9,19 @@
 
 #include "common/Settings.h"
 #include "gui/config/Screen.h"
+#include "gui/config/ScreenList.h"
+#include "gui/config/ServerConfig.h"
+
+#include <type_traits>
+
+namespace synergy {
+class Screen;
+}
+
+static_assert(std::is_base_of_v<synergy::gui::ScreenConfig, synergy::gui::Screen>);
+static_assert(std::is_base_of_v<synergy::gui::ScreenConfig, synergy::gui::ServerConfig>);
+static_assert(std::is_base_of_v<QList<synergy::gui::Screen>, synergy::gui::ScreenList>);
+static_assert(!std::is_same_v<synergy::Screen, synergy::gui::Screen>);
 
 void ScreenTests::initTestCase()
 {
@@ -25,7 +38,7 @@ void ScreenTests::initTestCase()
 
 void ScreenTests::basicFunctionality()
 {
-  Screen screen;
+  synergy::gui::Screen screen;
   QVERIFY(screen.isNull());
 
   screen.setName("stub");
@@ -34,6 +47,68 @@ void ScreenTests::basicFunctionality()
   screen.saveSettings(Settings::proxy());
   screen.loadSettings(Settings::proxy());
   QCOMPARE("stub", screen.name());
+}
+
+void ScreenTests::binaryStreamPreservesLegacyLayout_data()
+{
+  QTest::addColumn<QString>("name");
+  QTest::addColumn<bool>("primary");
+  QTest::newRow("primary") << QStringLiteral("primary-test") << true;
+  QTest::newRow("secondary") << QStringLiteral("secondary-test") << false;
+  QTest::newRow("empty") << QString() << false;
+}
+
+void ScreenTests::binaryStreamPreservesLegacyLayout()
+{
+  QFETCH(QString, name);
+  QFETCH(bool, primary);
+  const QStringList aliases{QStringLiteral("alias-test")};
+  const QList<int> modifiers{0, 2, 1, 3, 4, 5, 6};
+  const QList<bool> corners{true, false, true, false};
+  const QList<bool> fixes{false, true, false, true};
+
+  // This is the existing drag/drop payload layout, independent of class names.
+  QByteArray legacy;
+  QDataStream legacyWriter(&legacy, QIODevice::WriteOnly);
+  legacyWriter.setVersion(QDataStream::Qt_DefaultCompiledVersion);
+  legacyWriter << name << 17 << aliases << modifiers << corners << fixes << primary;
+  QCOMPARE(legacyWriter.status(), QDataStream::Ok);
+
+  synergy::gui::Screen screen;
+  QDataStream reader(legacy);
+  reader.setVersion(QDataStream::Qt_DefaultCompiledVersion);
+  reader >> screen;
+  QCOMPARE(reader.status(), QDataStream::Ok);
+  QVERIFY(reader.atEnd());
+  QCOMPARE(screen.name(), name);
+  QCOMPARE(screen.switchCornerSize(), 17);
+  const synergy::gui::Screen &readOnlyScreen = screen;
+  QCOMPARE(readOnlyScreen.aliases(), aliases);
+  QCOMPARE(readOnlyScreen.modifiers(), modifiers);
+  QCOMPARE(readOnlyScreen.switchCorners(), corners);
+  QCOMPARE(readOnlyScreen.fixes(), fixes);
+  QCOMPARE(screen.isPrimary(), primary);
+
+  QByteArray encoded;
+  QDataStream writer(&encoded, QIODevice::WriteOnly);
+  writer.setVersion(QDataStream::Qt_DefaultCompiledVersion);
+  writer << screen;
+  QCOMPARE(writer.status(), QDataStream::Ok);
+  QCOMPARE(encoded, legacy);
+}
+
+void ScreenTests::truncatedBinaryStreamReportsError()
+{
+  QByteArray truncated;
+  QDataStream writer(&truncated, QIODevice::WriteOnly);
+  writer.setVersion(QDataStream::Qt_DefaultCompiledVersion);
+  writer << QStringLiteral("incomplete-test");
+
+  synergy::gui::Screen screen;
+  QDataStream reader(truncated);
+  reader.setVersion(QDataStream::Qt_DefaultCompiledVersion);
+  reader >> screen;
+  QCOMPARE(reader.status(), QDataStream::ReadPastEnd);
 }
 
 QTEST_MAIN(ScreenTests)

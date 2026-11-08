@@ -24,7 +24,7 @@ class ServerConfigDialog : public QDialog
   Q_OBJECT
 
 public:
-  ServerConfigDialog(QWidget *parent, ServerConfig &config);
+  ServerConfigDialog(QWidget *parent, synergy::gui::ServerConfig &config);
   ~ServerConfigDialog() override;
   bool addClient(const QString &clientName);
 
@@ -81,11 +81,11 @@ protected:
   void toggleExternalConfig(bool enable = false);
   bool browseConfigFile();
 
-  ServerConfig &serverConfig()
+  synergy::gui::ServerConfig &serverConfig()
   {
     return m_serverConfig;
   }
-  void setOriginalServerConfig(const ServerConfig &s)
+  void setOriginalServerConfig(const synergy::gui::ServerConfig &s)
   {
     m_originalServerConfig = s;
   }
@@ -97,11 +97,11 @@ protected:
 private:
   std::unique_ptr<Ui::ServerConfigDialog> ui;
   QString m_message = "";
-  ServerConfig &m_originalServerConfig;
+  synergy::gui::ServerConfig &m_originalServerConfig;
   NetworkProtocol m_originalProtocol;
   bool m_originalServerConfigIsExternal;
   QString m_originalServerConfigUsesExternalFile;
-  ServerConfig m_serverConfig;
+  synergy::gui::ServerConfig m_serverConfig;
   ScreenSetupModel m_screenSetupModel;
 
 private Q_SLOTS:

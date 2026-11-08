@@ -101,13 +101,13 @@ void ValidatorTests::ipAddressValidator()
 
 void ValidatorTests::screenDuplicationsValidator()
 {
-  ScreenList screens;
-  screens.append(Screen(QStringLiteral("beta")));
-  screens.append(Screen(QStringLiteral("gamma")));
-  screens.append(Screen());
+  synergy::gui::ScreenList screens;
+  screens.append(synergy::gui::Screen(QStringLiteral("beta")));
+  screens.append(synergy::gui::Screen(QStringLiteral("gamma")));
+  screens.append(synergy::gui::Screen());
 
-  Screen server(QStringLiteral("delta"));
-  server.markAsServer();
+  synergy::gui::Screen server(QStringLiteral("delta"));
+  server.markAsPrimary();
   screens.append(server);
 
   validators::ScreenDuplicationsValidator validator(QStringLiteral("duplicate"), QStringLiteral("alpha"), &screens);

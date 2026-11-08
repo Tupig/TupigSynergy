@@ -30,7 +30,7 @@ runs:
       if: ${{ runner.os != 'Windows' }}
       run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            brew install openssl doxygen --quiet
+            brew install openssl@3 doxygen --quiet
           elif [ "$RUNNER_OS" == "Linux" ]; then
             if [ ${{inputs.like}} == "debian" ]; then
               apt-get update -qqq > /dev/null
@@ -128,7 +128,7 @@ runs:
         AQT_CONFIG: ${{ github.workspace }}/.github/actions/install-dependencies/aqt.ini
       with:
         version: ${{inputs.qt-version}}
-        cache: true
+        cache: false
         cache-key-prefix: ${{matrix.target.name}}-${{inputs.qt-version}}
 
     - name: Build and cache vcpkg
@@ -137,6 +137,8 @@ runs:
       uses: johnwason/vcpkg-action@04c68c847bf5196ecaa72331ecf51208583916ef # v8
       with:
         pkgs: openssl
+        disable-cache: true
+        collect-logs: never
         extra-args: --classic --host-triplet=${{inputs.vcpkg-triplet}}
         triplet: ${{inputs.vcpkg-triplet}}
         token: ${{ github.token }}
@@ -148,7 +150,7 @@ runs:
     - name: Cache Chocolatey
       id: cache-choco
       if: (runner.os == 'Windows')
-      uses: actions/cache@v5
+      uses: actions/cache/restore@v5
       with:
         path: |
             C:/ProgramData/chocolatey/bin/

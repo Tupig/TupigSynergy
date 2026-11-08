@@ -8,6 +8,7 @@
 #include "ScreenList.h"
 
 #include <array>
+namespace synergy::gui {
 
 namespace {
 
@@ -56,7 +57,7 @@ int getServerIndex(const ScreenList &screens)
   int serverIndex = -1;
 
   for (int i = 0; i < screens.size(); ++i) {
-    if (screens[i].isServer()) {
+    if (screens[i].isPrimary()) {
       serverIndex = i;
       break;
     }
@@ -108,3 +109,5 @@ bool ScreenList::operator==(const ScreenList &sc) const
 {
   return m_width == sc.m_width && QList::operator==(sc);
 }
+
+} // namespace synergy::gui

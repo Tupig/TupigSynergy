@@ -21,7 +21,7 @@ class SettingsDialog : public QDialog
 
 public:
   void extracted();
-  SettingsDialog(QWidget *parent, const ServerConfig &serverConfig);
+  SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig &serverConfig);
   ~SettingsDialog() override;
 
 Q_SIGNALS:
@@ -84,5 +84,5 @@ private:
 
   bool m_interfaceSetOnLoad = false;
   std::unique_ptr<Ui::SettingsDialog> ui;
-  const ServerConfig &m_serverConfig;
+  const synergy::gui::ServerConfig &m_serverConfig;
 };

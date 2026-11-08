@@ -21,23 +21,27 @@
 class QSettings;
 class QTextStream;
 class ScreenSettingsDialog;
+class ScreenSetupModel;
+class ScreenSetupView;
+
+namespace synergy::gui {
 
 class Screen : public ScreenConfig
 {
-  friend class ScreenSettingsDialog;
-  friend class ScreenSetupModel;
-  friend class ScreenSetupView;
+  friend class ::ScreenSettingsDialog;
+  friend class ::ScreenSetupModel;
+  friend class ::ScreenSetupView;
 
   friend QDataStream &operator<<(QDataStream &outStream, const Screen &screen)
   {
     return outStream << screen.name() << screen.switchCornerSize() << screen.aliases() << screen.modifiers()
-                     << screen.switchCorners() << screen.fixes() << screen.isServer();
+                     << screen.switchCorners() << screen.fixes() << screen.isPrimary();
   }
 
   friend QDataStream &operator>>(QDataStream &inStream, Screen &screen)
   {
-    return inStream >> screen.m_Name >> screen.m_SwitchCornerSize >> screen.m_Aliases >> screen.m_Modifiers >>
-           screen.m_SwitchCorners >> screen.m_Fixes >> screen.m_isServer;
+    return inStream >> screen.m_name >> screen.m_switchCornerSize >> screen.m_aliases >> screen.m_modifiers >>
+           screen.m_switchCorners >> screen.m_fixes >> screen.m_isPrimary;
   }
 
 public:
@@ -45,48 +49,48 @@ public:
 
   [[nodiscard]] const QPixmap &pixmap() const
   {
-    return m_Pixmap;
+    return m_pixmap;
   }
   [[nodiscard]] const QString &name() const
   {
-    return m_Name;
+    return m_name;
   }
   [[nodiscard]] const QStringList &aliases() const
   {
-    return m_Aliases;
+    return m_aliases;
   }
 
   [[nodiscard]] bool isNull() const
   {
-    return m_Name.isEmpty();
+    return m_name.isEmpty();
   }
   [[nodiscard]] int modifier(int m) const
   {
-    return m_Modifiers[m] == static_cast<int>(ScreenConfig::Modifier::DefaultMod) ? m : m_Modifiers[m];
+    return m_modifiers[m] == static_cast<int>(ScreenConfig::Modifier::DefaultMod) ? m : m_modifiers[m];
   }
   [[nodiscard]] const QList<int> &modifiers() const
   {
-    return m_Modifiers;
+    return m_modifiers;
   }
   [[nodiscard]] bool switchCorner(int c) const
   {
-    return m_SwitchCorners[c];
+    return m_switchCorners[c];
   }
   [[nodiscard]] const QList<bool> &switchCorners() const
   {
-    return m_SwitchCorners;
+    return m_switchCorners;
   }
   [[nodiscard]] int switchCornerSize() const
   {
-    return m_SwitchCornerSize;
+    return m_switchCornerSize;
   }
   [[nodiscard]] bool fix(const Fix f) const
   {
-    return m_Fixes[static_cast<int8_t>(f)];
+    return m_fixes[static_cast<int8_t>(f)];
   }
   [[nodiscard]] const QList<bool> &fixes() const
   {
-    return m_Fixes;
+    return m_fixes;
   }
 
   void loadSettings(QSettingsProxy &settings);
@@ -96,20 +100,20 @@ public:
 
   [[nodiscard]] bool swapped() const
   {
-    return m_Swapped;
+    return m_swapped;
   }
 
   void setName(const QString &name)
   {
-    m_Name = name;
+    m_name = name;
   }
-  [[nodiscard]] bool isServer() const
+  [[nodiscard]] bool isPrimary() const
   {
-    return m_isServer;
+    return m_isPrimary;
   }
-  void markAsServer()
+  void markAsPrimary()
   {
-    m_isServer = true;
+    m_isPrimary = true;
   }
 
   bool operator==(const Screen &screen) const;
@@ -117,53 +121,55 @@ public:
 protected:
   QStringList &aliases()
   {
-    return m_Aliases;
+    return m_aliases;
   }
   void setModifier(const Modifier m, const int n)
   {
-    m_Modifiers[static_cast<int8_t>(m)] = n;
+    m_modifiers[static_cast<int8_t>(m)] = n;
   }
   QList<int> &modifiers()
   {
-    return m_Modifiers;
+    return m_modifiers;
   }
   void addAlias(const QString &alias)
   {
-    m_Aliases.append(alias);
+    m_aliases.append(alias);
   }
   void setSwitchCorner(const SwitchCorner c, const bool on)
   {
-    m_SwitchCorners[static_cast<int8_t>(c)] = on;
+    m_switchCorners[static_cast<int8_t>(c)] = on;
   }
   QList<bool> &switchCorners()
   {
-    return m_SwitchCorners;
+    return m_switchCorners;
   }
   void setSwitchCornerSize(const int val)
   {
-    m_SwitchCornerSize = val;
+    m_switchCornerSize = val;
   }
   void setFix(const Fix f, const bool on)
   {
-    m_Fixes[static_cast<int8_t>(f)] = on;
+    m_fixes[static_cast<int8_t>(f)] = on;
   }
   QList<bool> &fixes()
   {
-    return m_Fixes;
+    return m_fixes;
   }
   void setSwapped(const bool on)
   {
-    m_Swapped = on;
+    m_swapped = on;
   }
 
 private:
-  QPixmap m_Pixmap = QIcon::fromTheme("video-display").pixmap(QSize(96, 96));
-  QString m_Name = {};
-  QStringList m_Aliases = {};
-  QList<int> m_Modifiers = {0, 1, 2, 3, 4, 5, 6};
-  QList<bool> m_SwitchCorners = {false, false, false, false};
-  int m_SwitchCornerSize = 0;
-  QList<bool> m_Fixes{false, false, false, false};
-  bool m_Swapped = false;
-  bool m_isServer = false;
+  QPixmap m_pixmap = QIcon::fromTheme("video-display").pixmap(QSize(96, 96));
+  QString m_name = {};
+  QStringList m_aliases = {};
+  QList<int> m_modifiers = {0, 1, 2, 3, 4, 5, 6};
+  QList<bool> m_switchCorners = {false, false, false, false};
+  int m_switchCornerSize = 0;
+  QList<bool> m_fixes{false, false, false, false};
+  bool m_swapped = false;
+  bool m_isPrimary = false;
 };
+
+} // namespace synergy::gui

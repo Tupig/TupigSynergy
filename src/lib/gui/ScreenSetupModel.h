@@ -25,7 +25,7 @@ class ScreenSetupModel : public QAbstractTableModel
   friend class ServerConfigDialog;
 
 public:
-  ScreenSetupModel(ScreenList &screens, int numColumns, int numRows);
+  ScreenSetupModel(synergy::gui::ScreenList &screens, int numColumns, int numRows);
 
   static const QString &mimeType()
   {
@@ -60,26 +60,26 @@ Q_SIGNALS:
 protected:
   bool
   dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
-  const Screen &screen(const QModelIndex &index) const
+  const synergy::gui::Screen &screen(const QModelIndex &index) const
   {
     return screen(index.column(), index.row());
   }
-  Screen &screen(const QModelIndex &index)
+  synergy::gui::Screen &screen(const QModelIndex &index)
   {
     return screen(index.column(), index.row());
   }
-  const Screen &screen(int column, int row) const
+  const synergy::gui::Screen &screen(int column, int row) const
   {
     return m_Screens[row * m_NumColumns + column];
   }
-  Screen &screen(int column, int row)
+  synergy::gui::Screen &screen(int column, int row)
   {
     return m_Screens[row * m_NumColumns + column];
   }
-  void addScreen(const Screen &newScreen);
+  void addScreen(const synergy::gui::Screen &newScreen);
 
 private:
-  ScreenList &m_Screens;
+  synergy::gui::ScreenList &m_Screens;
   int m_NumColumns;
   int m_NumRows;
 
