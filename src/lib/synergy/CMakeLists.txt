@@ -83,6 +83,9 @@ add_library(${lib_name} STATIC ${PLATFORM_CODE}
   protocol/PacketStreamFilter.h
   protocol/ProtocolTypes.cpp
   protocol/ProtocolTypes.h
+  protocol/ProtocolControlMessages.h
+  protocol/ProtocolInputMessages.h
+  protocol/ProtocolDataMessages.h
   protocol/ProtocolUtil.cpp
   protocol/ProtocolUtil.h
   protocol/StreamChunker.cpp
