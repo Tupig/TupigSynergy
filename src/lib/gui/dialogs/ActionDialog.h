@@ -13,7 +13,9 @@
 
 class Hotkey;
 class Action;
+namespace synergy::gui {
 class ServerConfig;
+}
 class KeySequenceWidget;
 
 namespace Ui {
@@ -37,7 +39,7 @@ public:
     inline static const auto RestartServer = 7;
   };
 
-  ActionDialog(QWidget *parent, const ServerConfig &config, Hotkey &hotkey, Action &action);
+  ActionDialog(QWidget *parent, const synergy::gui::ServerConfig &config, Hotkey &hotkey, Action &action);
   ~ActionDialog() override;
 
 protected Q_SLOTS:

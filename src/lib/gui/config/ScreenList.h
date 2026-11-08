@@ -8,6 +8,8 @@
 
 #include "Screen.h"
 
+namespace synergy::gui {
+
 class ScreenList : public QList<Screen>
 {
   int m_width = 5;
@@ -40,3 +42,5 @@ public:
    */
   bool operator==(const ScreenList &sc) const;
 };
+
+} // namespace synergy::gui

@@ -12,11 +12,11 @@
 
 void ScreenSetupModelTests::clampsRowsToScreenList()
 {
-  ScreenList screens;
-  screens.append(Screen(QStringLiteral("a")));
-  screens.append(Screen(QStringLiteral("b")));
-  screens.append(Screen(QStringLiteral("c")));
-  screens.append(Screen(QStringLiteral("d")));
+  synergy::gui::ScreenList screens;
+  screens.append(synergy::gui::Screen(QStringLiteral("a")));
+  screens.append(synergy::gui::Screen(QStringLiteral("b")));
+  screens.append(synergy::gui::Screen(QStringLiteral("c")));
+  screens.append(synergy::gui::Screen(QStringLiteral("d")));
 
   // a 3x9 grid cannot hold only 4 screens; rows clamp instead of aborting
   ScreenSetupModel model(screens, 3, 9);
@@ -28,8 +28,8 @@ void ScreenSetupModelTests::clampsRowsToScreenList()
 
 void ScreenSetupModelTests::clampsGridSize()
 {
-  ScreenList screens;
-  screens.append(Screen(QStringLiteral("a")));
+  synergy::gui::ScreenList screens;
+  screens.append(synergy::gui::Screen(QStringLiteral("a")));
 
   ScreenSetupModel model(screens, 200, 200);
 
@@ -39,9 +39,9 @@ void ScreenSetupModelTests::clampsGridSize()
 
 void ScreenSetupModelTests::outOfRangeIndexesAreInvalid()
 {
-  ScreenList screens;
+  synergy::gui::ScreenList screens;
   for (int i = 0; i < 9; ++i) {
-    screens.append(Screen(QStringLiteral("screen%1").arg(i)));
+    screens.append(synergy::gui::Screen(QStringLiteral("screen%1").arg(i)));
   }
 
   ScreenSetupModel model(screens, 3, 3);
@@ -53,9 +53,9 @@ void ScreenSetupModelTests::outOfRangeIndexesAreInvalid()
 
 void ScreenSetupModelTests::inRangeIndexesHaveNames()
 {
-  ScreenList screens;
+  synergy::gui::ScreenList screens;
   for (int i = 0; i < 9; ++i) {
-    screens.append(Screen(QStringLiteral("screen%1").arg(i)));
+    screens.append(synergy::gui::Screen(QStringLiteral("screen%1").arg(i)));
   }
 
   ScreenSetupModel model(screens, 3, 3);

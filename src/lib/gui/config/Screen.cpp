@@ -8,6 +8,7 @@
 
 #include "Screen.h"
 #include "config/ScreenConfig.h"
+namespace synergy::gui {
 
 using enum ScreenConfig::Modifier;
 using enum ScreenConfig::SwitchCorner;
@@ -87,7 +88,9 @@ QString Screen::aliasesSection() const
 
 bool Screen::operator==(const Screen &screen) const
 {
-  return m_Name == screen.m_Name && m_Aliases == screen.m_Aliases && m_Modifiers == screen.m_Modifiers &&
-         m_SwitchCorners == screen.m_SwitchCorners && m_SwitchCornerSize == screen.m_SwitchCornerSize &&
-         m_Fixes == screen.m_Fixes && m_Swapped == screen.m_Swapped && m_isServer == screen.m_isServer;
+  return m_name == screen.m_name && m_aliases == screen.m_aliases && m_modifiers == screen.m_modifiers &&
+         m_switchCorners == screen.m_switchCorners && m_switchCornerSize == screen.m_switchCornerSize &&
+         m_fixes == screen.m_fixes && m_swapped == screen.m_swapped && m_isPrimary == screen.m_isPrimary;
 }
+
+} // namespace synergy::gui

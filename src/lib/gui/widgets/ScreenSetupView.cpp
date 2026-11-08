@@ -141,7 +141,7 @@ void ScreenSetupView::startDrag(Qt::DropActions)
     // make sure to only delete the drag source if screens weren't swapped
     // see ScreenSetupModel::dropMimeData
     if (!model()->screen(indexes[0]).swapped())
-      model()->screen(indexes[0]) = Screen();
+      model()->screen(indexes[0]) = synergy::gui::Screen();
     else
       model()->screen(indexes[0]).setSwapped(false);
 

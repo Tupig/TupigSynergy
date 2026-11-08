@@ -66,7 +66,7 @@ public:
     return m_coreProcess.mode();
   }
   void open();
-  ServerConfig &serverConfig()
+  synergy::gui::ServerConfig &serverConfig()
   {
     return m_serverConfig;
   }
@@ -177,7 +177,7 @@ private:
   bool m_secureSocket = false;
   bool m_saveOnExit = true;
   bool m_clientErrorVisible = false;
-  ServerConfig m_serverConfig;
+  synergy::gui::ServerConfig m_serverConfig;
   synergy::gui::CoreProcess m_coreProcess;
   QSet<QString> m_ignoredClients;
   bool m_newClientPromptShowing = false;
