@@ -368,7 +368,7 @@ public:
 class DispatchProxy final : public ServerProxy
 {
 public:
-  using ServerProxy::ConnectionResult;
+  using ConnectionResult = ServerProxy::ConnectionResult;
   using ServerProxy::parseHandshakeMessage;
   using ServerProxy::parseMessage;
   using ServerProxy::ServerProxy;

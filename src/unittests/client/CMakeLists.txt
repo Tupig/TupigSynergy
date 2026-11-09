@@ -26,4 +26,7 @@ foreach(client_test_target IN ITEMS ClientTests ServerProxyTests)
   target_compile_definitions(${client_test_target} PRIVATE
     CLIENT_TEST_EXECUTABLE_DIRECTORY="$<TARGET_FILE_DIR:${client_test_target}>"
   )
+  if(WIN32)
+    target_compile_definitions(${client_test_target} PRIVATE NOMINMAX)
+  endif()
 endforeach()

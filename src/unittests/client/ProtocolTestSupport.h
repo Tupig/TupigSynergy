@@ -32,6 +32,7 @@
 #include <QTest>
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <deque>
 #include <map>
@@ -46,11 +47,12 @@
 
 namespace client_test {
 
-inline std::string integer(uint32_t value, size_t bytes)
+inline std::string integer(int64_t value, size_t bytes)
 {
+  const auto encoded = static_cast<uint32_t>(value);
   std::string out(bytes, '\0');
   for (size_t i = 0; i < bytes; ++i)
-    out[bytes - 1 - i] = static_cast<char>((value >> (8 * i)) & 255U);
+    out[bytes - 1 - i] = static_cast<char>((encoded >> (8 * i)) & 255U);
   return out;
 }
 inline std::string text(const std::string &value)
