@@ -6,6 +6,26 @@
 
 ## English
 
+### Ubuntu CI APT bootstrap
+
+The Linux CI job keeps its existing container images. On Ubuntu only, its pre-checkout Git bootstrap
+changes active official archive/security `/ubuntu` and ports `/ubuntu-ports` source URIs from HTTP to
+HTTPS, preserving hosts, package selection, signing keys, disabled stanzas and other source text.
+A single public CA bundle from the Ubuntu runner is mounted read-only at
+`/run/synergy-ci/host-ca-certificates.crt`; it is not a private key or a custom trust root. The bootstrap
+requires a readable, nonempty regular CA file before changing sources, and passes it temporarily to
+APT with `Acquire::https::CAInfo`. Peer, hostname and repository-signature verification stay enabled.
+It installs `ca-certificates` alongside Git tools; later dependency installation uses the container's
+normal system CA and the persisted HTTPS sources. Debian and other distribution commands are unchanged.
+
+APT bootstrap phases and errors remain visible, and failures stop checkout. The 20-minute job limit
+is unchanged; no retry loop or HTTP fallback is added. Offline fixtures establish rewrite and command
+behavior only: runner CA availability, TLS acquisition, actual package installation and any ARM
+provisioning timeout need separate native CI evidence. A reviewed rollback of this CI/docs change
+restores the earlier transport and its possible HTTP failures. Local manifest release builds and
+the documented CI dependency exception retain their existing dependency policy.
+
+
 ### Prerequisites
 
 | Component | Minimum Version | Notes |
@@ -340,6 +360,22 @@ A clean run is one line: `encoding OK checked=669 violations=0 allowed=utf-8 mod
 ---
 
 ## 中文
+
+### Ubuntu CI 的 APT 引导
+
+Linux CI 保留现有容器镜像。仅 Ubuntu 的 checkout 前 Git 引导将活跃的官方 archive/security
+`/ubuntu` 与 ports `/ubuntu-ports` 源 URI 从 HTTP 改为 HTTPS，保持主机、包选择、签名密钥、
+禁用段落及其他源文本。Ubuntu runner 的单个公共 CA 文件只读挂载到
+`/run/synergy-ci/host-ca-certificates.crt`，不包含私钥，也不新增自定义信任根。引导在改源之前
+要求 CA 为可读、非空的普通文件，每次 APT 调用临时传入 `Acquire::https::CAInfo`，保持服务器、
+主机名和仓库签名校验。安装 Git 工具时明确安装 `ca-certificates`；后续依赖安装使用容器正常
+系统 CA 和已保留的 HTTPS 源。Debian 及其他发行版的命令保持不变。
+
+APT 引导阶段与错误保持可见，失败即停止 checkout。任务仍为 20 分钟，不新增重试循环或 HTTP
+回退。离线夹具只证明改写和命令行为；runner CA 可用性、TLS 下载、实际包安装及 ARM 引导超时
+仍需独立原生 CI 证据。经审核回滚本次 CI/文档改动会恢复此前传输及其潜在 HTTP 故障。本地
+manifest 发布构建和已记录的 CI 依赖例外仍遵循原有依赖政策。
+
 
 ### 编译环境要求
 
