@@ -678,7 +678,10 @@ jobs:
     if: ${{ needs.get-version.outputs.build_linux == 'true' }}
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs-on }}
-    container: ${{ matrix.target.container }}
+    container:
+      image: ${{ matrix.target.container }}
+      volumes:
+        - /etc/ssl/certs/ca-certificates.crt:/run/synergy-ci/host-ca-certificates.crt:ro
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -693,8 +696,145 @@ jobs:
       - name: Install Git on Container
         shell: bash
         run: |
+          # BEGIN SYNERGY_CI_APT_BOOTSTRAP
+          synergy_ci_bootstrap_debian() {
+            local apt_root="$1" ca_path="$2" os_release_path="$3"
+            local os_id source_file source_format newline_count temporary
+            os_id=$(awk -F '=' '
+              $1 == "ID" {
+                value = substr($0, 4)
+                quote = substr(value, 1, 1)
+                if ((quote == "\"" || quote == sprintf("%c", 39)) &&
+                    substr(value, length(value), 1) == quote)
+                  value = substr(value, 2, length(value) - 2)
+                print value
+                exit
+              }
+            ' "$os_release_path") || return $?
+            if [ "$os_id" != "ubuntu" ]; then
+              apt-get update -qqq > /dev/null && apt-get install -qqq git devscripts > /dev/null
+              return $?
+            fi
+            if [ ! -f "$ca_path" ] || [ ! -r "$ca_path" ] || [ ! -s "$ca_path" ]; then
+              printf '%s\n' 'Ubuntu APT bootstrap requires a readable, nonempty public CA file.' >&2
+              return 1
+            fi
+            for source_file in "$apt_root/sources.list" "$apt_root"/sources.list.d/*.list "$apt_root"/sources.list.d/*.sources; do
+              [ -f "$source_file" ] || continue
+              if [ -L "$source_file" ]; then
+                printf '%s\n' 'Ubuntu APT bootstrap refuses a linked source file.' >&2
+                return 1
+              fi
+              case "$source_file" in
+                *.sources) source_format=deb822 ;;
+                *) source_format=list ;;
+              esac
+              newline_count=$(wc -l < "$source_file") || return $?
+              temporary=$(mktemp) || return $?
+              if ! awk -v format="$source_format" -v newlines="$newline_count" '
+                function uri(value) {
+                  if (value ~ /^http:\/\/(archive\.ubuntu\.com|security\.ubuntu\.com)\/ubuntu\/?$/ ||
+                      value ~ /^http:\/\/ports\.ubuntu\.com\/ubuntu-ports\/?$/)
+                    return "https" substr(value, 5)
+                  return value
+                }
+                function values(text, result, token) {
+                  result = ""
+                  while (length(text)) {
+                    if (match(text, /^[ \t]+/)) {
+                      result = result substr(text, 1, RLENGTH)
+                    } else {
+                      if (substr(text, 1, 1) == "#")
+                        return result text
+                      match(text, /^[^ \t]+/)
+                      token = substr(text, 1, RLENGTH)
+                      result = result uri(token)
+                    }
+                    text = substr(text, RLENGTH + 1)
+                  }
+                  return result
+                }
+                function legacy(text, position, rest, token) {
+                  if (!match(text, /^[ \t]*(deb|deb-src)[ \t]+/))
+                    return text
+                  position = RLENGTH + 1
+                  rest = substr(text, position)
+                  if (substr(rest, 1, 1) == "[") {
+                    if (!match(rest, /^\[[^]]*\][ \t]+/))
+                      return text
+                    position += RLENGTH
+                  }
+                  if (!match(substr(text, position), /^[^ \t]+/))
+                    return text
+                  token = substr(text, position, RLENGTH)
+                  return substr(text, 1, position - 1) uri(token) substr(text, position + length(token))
+                }
+                function stanza(first, last, i, text, colon, field, value, active) {
+                  for (i = first; i <= last; i++) {
+                    text = lines[i]
+                    if (tolower(substr(text, 1, 8)) == "enabled:") {
+                      value = substr(text, 9)
+                      gsub(/^[ \t]+|[ \t]+$/, "", value)
+                      if (tolower(value) == "no")
+                        return
+                    }
+                  }
+                  active = 0
+                  for (i = first; i <= last; i++) {
+                    text = lines[i]
+                    if (text ~ /^[ \t]*#/)
+                      continue
+                    if (text ~ /^[^ \t:]+:/) {
+                      colon = index(text, ":")
+                      field = tolower(substr(text, 1, colon - 1))
+                      active = field == "uris"
+                      if (active)
+                        lines[i] = substr(text, 1, colon) values(substr(text, colon + 1))
+                    } else if (text ~ /^[ \t]/ && active) {
+                      lines[i] = values(text)
+                    } else {
+                      active = 0
+                    }
+                  }
+                }
+                { lines[NR] = $0 }
+                END {
+                  if (format == "deb822") {
+                    first = 1
+                    for (last = 1; last <= NR + 1; last++) {
+                      if (last > NR || lines[last] ~ /^[ \t]*$/) {
+                        stanza(first, last - 1)
+                        first = last + 1
+                      }
+                    }
+                  } else {
+                    for (i = 1; i <= NR; i++)
+                      lines[i] = legacy(lines[i])
+                  }
+                  for (i = 1; i <= NR; i++) {
+                    printf "%s", lines[i]
+                    if (i <= newlines)
+                      printf "\n"
+                  }
+                }
+              ' "$source_file" > "$temporary"; then
+                rm -f "$temporary"
+                return 1
+              fi
+              if ! cat "$temporary" > "$source_file"; then
+                rm -f "$temporary"
+                return 1
+              fi
+              rm -f "$temporary" || return $?
+            done
+            printf '%s\n' 'Ubuntu APT bootstrap: update using verified HTTPS.'
+            apt-get update -o "Acquire::https::CAInfo=$ca_path" || return $?
+            printf '%s\n' 'Ubuntu APT bootstrap: install system CA certificates and Git tools.'
+            apt-get install -y -o "Acquire::https::CAInfo=$ca_path" ca-certificates git devscripts || return $?
+          }
+          # END SYNERGY_CI_APT_BOOTSTRAP
           if [ "${{ matrix.target.like }}" == "debian" ]; then
-            apt-get update -qqq > /dev/null && apt-get install -qqq git devscripts > /dev/null
+            synergy_ci_bootstrap_debian /etc/apt /run/synergy-ci/host-ca-certificates.crt /etc/os-release
           elif [ "${{ matrix.target.like }}" == "fedora" ]; then
             dnf install -y git
           elif [ "${{ matrix.target.like }}" == "suse" ]; then

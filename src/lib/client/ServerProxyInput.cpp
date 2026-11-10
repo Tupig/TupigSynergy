@@ -176,7 +176,7 @@ void ServerProxy::keyDown(uint16_t id, uint16_t mask, uint16_t button, const std
   m_client->keyDown(id2, mask2, button, lang);
 }
 
-void ServerProxy::keyRepeat()
+bool ServerProxy::keyRepeat()
 {
   // get mouse up to date
   flushCompressedMouse();
@@ -188,7 +188,7 @@ void ServerProxy::keyRepeat()
   uint16_t button = 0;
   std::string lang;
   if (!readOrDisconnect(kMsgDKeyRepeat + 4, &id, &mask, &count, &button, &lang)) {
-    return;
+    return false;
   }
   LOG(
       (CLOG_VERBOSE "recv key repeat id=0x%08x, mask=0x%04x, count=%d, "
@@ -203,14 +203,14 @@ void ServerProxy::keyRepeat()
   }
 
   if (m_inputValidator.isRateLimited(static_cast<KeyID>(id), std::chrono::steady_clock::now())) {
-    return;
+    return true;
   }
 
   // Blocked repeats are dropped for the same reason as blocked presses: the key
   // never reached the local machine, so repeating it would be inconsistent.
   if (m_inputValidator.isBlockedCombination(static_cast<KeyID>(id), static_cast<KeyModifierMask>(cleanMask))) {
     LOG_INFO("key repeat id=0x%04x mask=0x%04x blocked by configuration", id, cleanMask);
-    return;
+    return true;
   }
 
   // translate
@@ -221,9 +221,10 @@ void ServerProxy::keyRepeat()
 
   // forward
   m_client->keyRepeat(id2, mask2, count, button, lang);
+  return true;
 }
 
-void ServerProxy::keyUp()
+bool ServerProxy::keyUp()
 {
   // get mouse up to date
   flushCompressedMouse();
@@ -233,7 +234,7 @@ void ServerProxy::keyUp()
   uint16_t mask = 0;
   uint16_t button = 0;
   if (!readOrDisconnect(kMsgDKeyUp + 4, &id, &mask, &button)) {
-    return;
+    return false;
   }
   LOG_VERBOSE("recv key up id=0x%08x, mask=0x%04x, button=0x%04x", id, mask, button);
 
@@ -252,9 +253,10 @@ void ServerProxy::keyUp()
 
   // forward
   m_client->keyUp(id2, mask2, button);
+  return true;
 }
 
-void ServerProxy::mouseDown()
+bool ServerProxy::mouseDown()
 {
   // get mouse up to date
   flushCompressedMouse();
@@ -262,7 +264,7 @@ void ServerProxy::mouseDown()
   // parse
   int8_t id = 0;
   if (!readOrDisconnect(kMsgDMouseDown + 4, &id)) {
-    return;
+    return false;
   }
   LOG_VERBOSE("recv mouse down id=%d", id);
 
@@ -276,9 +278,10 @@ void ServerProxy::mouseDown()
 
   // forward
   m_client->mouseDown(button);
+  return true;
 }
 
-void ServerProxy::mouseUp()
+bool ServerProxy::mouseUp()
 {
   // get mouse up to date
   flushCompressedMouse();
@@ -286,7 +289,7 @@ void ServerProxy::mouseUp()
   // parse
   int8_t id = 0;
   if (!readOrDisconnect(kMsgDMouseUp + 4, &id)) {
-    return;
+    return false;
   }
   LOG_VERBOSE("recv mouse up id=%d", id);
 
@@ -298,16 +301,17 @@ void ServerProxy::mouseUp()
 
   // forward
   m_client->mouseUp(button);
+  return true;
 }
 
-void ServerProxy::mouseMove()
+bool ServerProxy::mouseMove()
 {
   // parse
   bool ignore;
   int16_t x = 0;
   int16_t y = 0;
   if (!readOrDisconnect(kMsgDMouseMove + 4, &x, &y)) {
-    return;
+    return false;
   }
 
   // note if we should ignore the move
@@ -333,16 +337,17 @@ void ServerProxy::mouseMove()
   if (!ignore) {
     m_client->mouseMove(x, y);
   }
+  return true;
 }
 
-void ServerProxy::mouseRelativeMove()
+bool ServerProxy::mouseRelativeMove()
 {
   // parse
   bool ignore;
   int16_t dx = 0;
   int16_t dy = 0;
   if (!readOrDisconnect(kMsgDMouseRelMove + 4, &dx, &dy)) {
-    return;
+    return false;
   }
 
   // note if we should ignore the move
@@ -365,9 +370,10 @@ void ServerProxy::mouseRelativeMove()
   if (!ignore) {
     m_client->mouseRelativeMove(dx, dy);
   }
+  return true;
 }
 
-void ServerProxy::mouseWheel()
+bool ServerProxy::mouseWheel()
 {
   // get mouse up to date
   flushCompressedMouse();
@@ -376,10 +382,11 @@ void ServerProxy::mouseWheel()
   int16_t xDelta = 0;
   int16_t yDelta = 0;
   if (!readOrDisconnect(kMsgDMouseWheel + 4, &xDelta, &yDelta)) {
-    return;
+    return false;
   }
   LOG_VERBOSE("recv mouse wheel %+d,%+d", xDelta, yDelta);
 
   // forward
   m_client->mouseWheel(xDelta, yDelta);
+  return true;
 }

@@ -93,6 +93,7 @@ ServerProxy::~ServerProxy()
 {
   setKeepAliveRate(-1.0);
   m_events->removeHandler(EventTypes::StreamInputReady, m_stream->getEventTarget());
+  m_events->removeHandler(EventTypes::ClipboardSending, this);
 }
 
 synergy::KeyboardLayoutManager &ServerProxy::layoutManager()
@@ -193,7 +194,9 @@ ServerProxy::ConnectionResult ServerProxy::parseHandshakeMessage(const uint8_t *
   }
 
   else if (memcmp(code, kMsgDSetOptions, 4) == 0) {
-    setOptions();
+    if (!setOptions()) {
+      return Disconnect;
+    }
 
     // handshake is complete
     m_parser = &ServerProxy::parseMessage;
@@ -255,7 +258,9 @@ ServerProxy::ConnectionResult ServerProxy::parseHandshakeMessage(const uint8_t *
     m_client->refuseConnection(ProtocolError, "server reported a protocol error");
     return Disconnect;
   } else if (memcmp(code, kMsgDLanguageSynchronisation, 4) == 0) {
-    setServerLanguages();
+    if (!setServerLanguages()) {
+      return Disconnect;
+    }
   } else {
     return Unknown;
   }
@@ -268,7 +273,9 @@ ServerProxy::ConnectionResult ServerProxy::parseMessage(const uint8_t *code)
   using enum ConnectionResult;
 
   if (memcmp(code, kMsgDMouseMove, 4) == 0) {
-    mouseMove();
+    if (!mouseMove()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgDDragInfo, 4) == 0) {
@@ -280,11 +287,15 @@ ServerProxy::ConnectionResult ServerProxy::parseMessage(const uint8_t *code)
   }
 
   else if (memcmp(code, kMsgDMouseRelMove, 4) == 0) {
-    mouseRelativeMove();
+    if (!mouseRelativeMove()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgDMouseWheel, 4) == 0) {
-    mouseWheel();
+    if (!mouseWheel()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgDKeyDown, 4) == 0) {
@@ -314,19 +325,27 @@ ServerProxy::ConnectionResult ServerProxy::parseMessage(const uint8_t *code)
   }
 
   else if (memcmp(code, kMsgDKeyUp, 4) == 0) {
-    keyUp();
+    if (!keyUp()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgDMouseDown, 4) == 0) {
-    mouseDown();
+    if (!mouseDown()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgDMouseUp, 4) == 0) {
-    mouseUp();
+    if (!mouseUp()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgDKeyRepeat, 4) == 0) {
-    keyRepeat();
+    if (!keyRepeat()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgCKeepAlive, 4) == 0) {
@@ -340,7 +359,9 @@ ServerProxy::ConnectionResult ServerProxy::parseMessage(const uint8_t *code)
   }
 
   else if (memcmp(code, kMsgCEnter, 4) == 0) {
-    enter();
+    if (!enter()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgCLeave, 4) == 0) {
@@ -348,11 +369,15 @@ ServerProxy::ConnectionResult ServerProxy::parseMessage(const uint8_t *code)
   }
 
   else if (memcmp(code, kMsgCClipboard, 4) == 0) {
-    grabClipboard();
+    if (!grabClipboard()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgCScreenSaver, 4) == 0) {
-    screensaver();
+    if (!screensaver()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgQInfo, 4) == 0) {
@@ -364,7 +389,9 @@ ServerProxy::ConnectionResult ServerProxy::parseMessage(const uint8_t *code)
   }
 
   else if (memcmp(code, kMsgDClipboard, 4) == 0) {
-    setClipboard();
+    if (!setClipboard()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgCResetOptions, 4) == 0) {
@@ -372,11 +399,15 @@ ServerProxy::ConnectionResult ServerProxy::parseMessage(const uint8_t *code)
   }
 
   else if (memcmp(code, kMsgDSetOptions, 4) == 0) {
-    setOptions();
+    if (!setOptions()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgDSecureInputNotification, 4) == 0) {
-    secureInputNotification();
+    if (!secureInputNotification()) {
+      return Disconnect;
+    }
   }
 
   else if (memcmp(code, kMsgCClose, 4) == 0) {
@@ -450,7 +481,7 @@ void ServerProxy::sendInfo(const ClientInfo &info)
   ProtocolUtil::writef(m_stream, kMsgDInfo, info.m_x, info.m_y, info.m_w, info.m_h, 0, info.m_mx, info.m_my);
 }
 
-void ServerProxy::enter()
+bool ServerProxy::enter()
 {
   // parse
   int16_t x = 0;
@@ -458,7 +489,7 @@ void ServerProxy::enter()
   uint16_t mask = 0;
   uint32_t seqNum = 0;
   if (!readOrDisconnect(kMsgCEnter + 4, &x, &y, &seqNum, &mask)) {
-    return;
+    return false;
   }
   LOG_VERBOSE("recv enter, %d,%d %d %04x", x, y, seqNum, mask);
 
@@ -473,6 +504,7 @@ void ServerProxy::enter()
 
   // forward
   m_client->enter(x, y, seqNum, static_cast<KeyModifierMask>(mask), false);
+  return true;
 }
 
 void ServerProxy::leave()
@@ -487,7 +519,7 @@ void ServerProxy::leave()
   m_client->leave();
 }
 
-void ServerProxy::setClipboard()
+bool ServerProxy::setClipboard()
 {
   // parse
   ClipboardID id;
@@ -513,39 +545,43 @@ void ServerProxy::setClipboard()
     LOG_INFO("clipboard was updated");
   } else if (r == TransferState::Error) {
     m_client->disconnect("invalid clipboard data from server");
+    return false;
   }
+  return true;
 }
 
-void ServerProxy::grabClipboard()
+bool ServerProxy::grabClipboard()
 {
   // parse
   ClipboardID id = 0;
   uint32_t seqNum = 0;
   if (!readOrDisconnect(kMsgCClipboard + 4, &id, &seqNum)) {
-    return;
+    return false;
   }
   LOG_DEBUG("recv grab clipboard %d", id);
 
   // validate
   if (id >= kClipboardEnd) {
-    return;
+    return true;
   }
 
   // forward
   m_client->grabClipboard(id);
+  return true;
 }
 
-void ServerProxy::screensaver()
+bool ServerProxy::screensaver()
 {
   // parse
   int8_t on = 0;
   if (!readOrDisconnect(kMsgCScreenSaver + 4, &on)) {
-    return;
+    return false;
   }
   LOG_VERBOSE("recv screen saver on=%d", on);
 
   // forward
   m_client->screensaver(on != 0);
+  return true;
 }
 
 void ServerProxy::resetOptions()
@@ -565,18 +601,18 @@ void ServerProxy::resetOptions()
   }
 }
 
-void ServerProxy::setOptions()
+bool ServerProxy::setOptions()
 {
   // parse
   OptionsList options;
   if (!readOrDisconnect(kMsgDSetOptions + 4, &options)) {
-    return;
+    return false;
   }
   LOG_VERBOSE("recv set options size=%d", options.size());
 
   if (options.size() % 2 != 0) {
     LOG_ERR("options are the incorrect size, can not process them");
-    return;
+    return true;
   }
 
   // forward
@@ -607,6 +643,7 @@ void ServerProxy::setOptions()
       LOG_VERBOSE("modifier %d mapped to %d", id, m_modifierTranslationTable[id]);
     }
   }
+  return true;
 }
 
 void ServerProxy::queryInfo()
@@ -623,13 +660,14 @@ void ServerProxy::infoAcknowledgment()
   m_ignoreMouse = false;
 }
 
-void ServerProxy::secureInputNotification()
+bool ServerProxy::secureInputNotification()
 {
   std::string app;
   if (!readOrDisconnect(kMsgDSecureInputNotification + 4, &app)) {
-    return;
+    return false;
   }
   LOG_INFO("application \"%s\" is blocking the keyboard", app.c_str());
+  return true;
 }
 
 void ServerProxy::dragInfo()
@@ -665,13 +703,14 @@ void ServerProxy::fileChunk()
   }
 }
 
-void ServerProxy::setServerLanguages()
+bool ServerProxy::setServerLanguages()
 {
   std::string serverLayout;
   if (!readOrDisconnect(kMsgDLanguageSynchronisation + 4, &serverLayout)) {
-    return;
+    return false;
   }
   layoutManager().setRemoteLayouts(serverLayout);
+  return true;
 }
 
 void ServerProxy::setActiveServerLanguage(const std::string_view &language)
