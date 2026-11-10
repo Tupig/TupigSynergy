@@ -26,6 +26,42 @@ restores the earlier transport and its possible HTTP failures. Local manifest re
 the documented CI dependency exception retain their existing dependency policy.
 
 
+### Debian-family CI dependency diagnostics
+
+The shared Debian-family dependency step emits `CI-DEPS` start/end markers for each existing APT
+operation and package-availability probe. End markers include elapsed seconds and the actual exit
+status; normal `apt-get` progress and errors stay visible. Probe metadata stays suppressed, while
+its phase and result remain visible. Required failures stop the step; the existing optional OpenGL
+install and unavailable-package paths retain their nonfatal behavior.
+
+The 20-minute Linux job budget, package requests, sources, CA/TLS/signature checks and other
+platform commands remain unchanged. An external timeout can leave a start marker without an end;
+this identifies the active phase without inventing an exit status. These diagnostics establish
+operation visibility, not a remedy or proof of a network/latency cause. Local manifest build policy
+is unchanged.
+
+### Ubuntu 24.04 CI Qt5 dependency selection
+
+The selection below is the sole package-request exception to the diagnostic baseline above.
+Ubuntu 24.04 CI already selects Qt5 5.15.13 because its Qt6 6.4.2 is below the project's
+6.7.0 floor. Only literal `ID=ubuntu` and `VERSION_ID=24.04` in `/etc/os-release` select
+the smaller dependency set; standard unquoted, single-quoted and double-quoted values are
+accepted. Missing, unreadable, malformed or duplicate relevant metadata retains the full set,
+as do other systems and versions. Metadata is read as data and never executed.
+
+Before APT, one `CI-DEPS selection=ubuntu24-qt5` or `CI-DEPS selection=full` marker records
+the choice. The exact Ubuntu 24.04 branch omits only the four direct Qt6 development/tool
+requests and both Qt6 translation-package probe/install pairs. Qt5's default Recommends and
+plugins, common dependencies, doxygen/help2man, Mesa/OpenGL/GTK/X11, libei/libportal probes
+and optional OpenGL behavior remain intact. No new translation, test or man-page skip is added;
+their existing Qt5 policy remains visible as Not Run where applicable.
+
+The 20-minute budget, APT diagnostics, sources and trust checks remain intact. The observed
+71.2 MB Qt6/LLVM15 download pool is not a net download-size or elapsed-time saving guarantee.
+DEB package testing may pull Qt6 back through `qt6-svg-plugins` Recommends; packaging policy is
+unchanged. Actual Qt selection, download volume, timing, build and package acceptance still
+require native CI evidence; this dependency reduction alone establishes none of them.
+
 ### Prerequisites
 
 | Component | Minimum Version | Notes |
@@ -376,6 +412,36 @@ APT 引导阶段与错误保持可见，失败即停止 checkout。任务仍为 
 仍需独立原生 CI 证据。经审核回滚本次 CI/文档改动会恢复此前传输及其潜在 HTTP 故障。本地
 manifest 发布构建和已记录的 CI 依赖例外仍遵循原有依赖政策。
 
+
+### Debian 系 CI 依赖诊断
+
+公共 Debian 系依赖步骤为现有每个 APT 操作和包可用性探测输出 `CI-DEPS` 开始/结束标记。
+结束标记包含耗时秒数和真实退出状态，保留 `apt-get` 的正常进度与错误；探测元数据仍被抑制，
+但阶段及结果可见。必需操作失败即终止步骤；原可选 OpenGL 安装失败及包不可用路径继续保持
+非致命语义。
+
+Linux 作业的 20 分钟预算、包请求、源、CA/TLS/签名检查及其他平台命令保持不变。外部超时可能
+只留下开始而没有结束标记，这能定位活跃阶段，不伪造退出状态。诊断仅建立操作可见性，
+不代表已修复或证实网络/耗时根因；本地 manifest 构建政策不变。
+
+### Ubuntu 24.04 CI 的 Qt5 依赖选择
+
+以下选择是上文诊断基线中“包请求不变”的唯一例外。
+Ubuntu 24.04 CI 原本就选择 Qt5 5.15.13，因为系统 Qt6 6.4.2 低于项目的 6.7.0 下限。
+仅当 `/etc/os-release` 中字面值精确为 `ID=ubuntu`、`VERSION_ID=24.04` 时选择较小依赖集合，
+支持标准无引号、单引号和双引号值。相关元数据缺失、不可读、格式错误或重复，以及其他系统
+和版本，均保留完整集合。元数据只作为数据读取，绝不执行。
+
+APT 前仅输出一次 `CI-DEPS selection=ubuntu24-qt5` 或 `CI-DEPS selection=full` 标记。
+精确 Ubuntu 24.04 分支只省去四个直接 Qt6 开发/工具包请求及两个 Qt6 翻译包的完整探测/安装对；
+保留 Qt5 默认 Recommends 和插件、公共依赖、doxygen/help2man、Mesa/OpenGL/GTK/X11、
+libei/libportal 探测及可选 OpenGL 行为。不新增翻译、测试或 man 页面跳过；原 Qt5 策略中
+适用的项目仍须如实报告为 Not Run。
+
+20 分钟预算、APT 诊断、软件源和信任检查保持不变。已观察到的 71.2 MB Qt6/LLVM15 下载池
+不代表净下载量或耗时节省保证。DEB 包测试可能经 `qt6-svg-plugins` 的 Recommends 再拉入
+Qt6，打包策略不变。真实 Qt 选择、下载量、耗时、构建及包验收仍需原生 CI 证据，不能仅凭
+这次依赖缩减宣称通过。
 
 ### 编译环境要求
 
