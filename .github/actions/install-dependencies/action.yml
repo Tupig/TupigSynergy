@@ -60,14 +60,50 @@ runs:
                 return "$status"
               }
               synergy_ci_install_debian_dependencies() {
+                local os_release_path="${1-}" line id_seen=no version_seen=no metadata_valid=yes
+                local selection=full
+                local id_value="^(ubuntu|'ubuntu'|\"ubuntu\")([[:blank:]]+#.*)?[[:blank:]]*$"
+                local version_value="^(24[.]04|'24[.]04'|\"24[.]04\")([[:blank:]]+#.*)?[[:blank:]]*$"
+                local -a qt6_packages=(qt6-base-dev qt6-tools-dev qt6-l10n-tools qt6-tools-dev-tools)
+                # Reject NUL bytes before line reads, which otherwise discard them.
+                # Ambiguous or repeated relevant keys retain the full set.
+                if [[ -f "$os_release_path" && -r "$os_release_path" ]] &&
+                    ! IFS= read -r -d '' line < "$os_release_path"; then
+                  if while IFS= read -r line || [[ -n "$line" ]]; do
+                    case "$line" in
+                      ID=*)
+                        if [[ "$id_seen" == yes || ! ${line#ID=} =~ $id_value ]]; then
+                          metadata_valid=no
+                        fi
+                        id_seen=yes
+                        ;;
+                      VERSION_ID=*)
+                        if [[ "$version_seen" == yes || ! ${line#VERSION_ID=} =~ $version_value ]]; then
+                          metadata_valid=no
+                        fi
+                        version_seen=yes
+                        ;;
+                      *)
+                        if [[ "$line" =~ ^[[:blank:]]*([^=\#[:blank:]]+[[:blank:]]+)?(ID|VERSION_ID)([^[:alnum:]_]|$) ]]; then
+                          metadata_valid=no
+                        fi
+                        ;;
+                    esac
+                  done < "$os_release_path"; then
+                    if [[ "$metadata_valid" == yes && "$id_seen" == yes && "$version_seen" == yes ]]; then
+                      selection=ubuntu24-qt5
+                      qt6_packages=()
+                    fi
+                  fi
+                fi
+                printf 'CI-DEPS selection=%s\n' "$selection"
                 synergy_ci_apt_get apt-update update
                 # qt6-l10n-tools + qt6-tools-dev-tools provide lconvert/lupdate/lrelease that
                 # qt6-tools-dev's LinguistTools cmake references but doesn't always pull in.
                 synergy_ci_apt_get apt-main install cmake build-essential ninja-build \
                   xorg-dev libx11-dev libxtst-dev libssl-dev \
                   libgl-dev libglx-dev libopengl-dev \
-                  libglib2.0-dev libxkbfile-dev qt6-base-dev qt6-tools-dev \
-                  qt6-l10n-tools qt6-tools-dev-tools \
+                  libglib2.0-dev libxkbfile-dev "${qt6_packages[@]}" \
                   libgtk-3-dev \
                   help2man doxygen -y
                 # Qt5 fallback for distros whose Qt6 is below REQUIRED_QT_VERSION
@@ -83,11 +119,13 @@ runs:
                 synergy_ci_apt_get apt-libgl install libgl-dev -y || true
                 # qtbase_en.qm (Qt's own catalogue, required by translations/CMakeLists.txt)
                 # ships in a separate package on Debian/Ubuntu; install whichever exists.
-                for pkg in qt6-translations qt6-l10n; do
-                  if synergy_ci_apt_probe "$pkg"; then
-                    synergy_ci_apt_get "apt-$pkg" install "$pkg" -y
-                  fi
-                done
+                if [[ "$selection" == full ]]; then
+                  for pkg in qt6-translations qt6-l10n; do
+                    if synergy_ci_apt_probe "$pkg"; then
+                      synergy_ci_apt_get "apt-$pkg" install "$pkg" -y
+                    fi
+                  done
+                fi
                 # libei/libportal aren't packaged on older releases (e.g. Debian 12); install
                 # where present, else the build falls back to X11-only.
                 for pkg in libei-dev libportal-dev; do
@@ -97,7 +135,7 @@ runs:
                 done
               }
               # END CI_DEPENDENCY_DIAGNOSTICS
-              synergy_ci_install_debian_dependencies
+              synergy_ci_install_debian_dependencies /etc/os-release
             elif [ ${{inputs.like}} == "fedora" ]; then
               dnf install -y cmake make ninja-build gcc-c++ rpm-build openssl-devel \
                 glib2-devel libXtst-devel libxkbfile-devel qt6-qtbase-devel qt6-qttools-devel \
