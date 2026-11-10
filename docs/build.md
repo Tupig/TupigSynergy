@@ -26,6 +26,20 @@ restores the earlier transport and its possible HTTP failures. Local manifest re
 the documented CI dependency exception retain their existing dependency policy.
 
 
+### Debian-family CI dependency diagnostics
+
+The shared Debian-family dependency step emits `CI-DEPS` start/end markers for each existing APT
+operation and package-availability probe. End markers include elapsed seconds and the actual exit
+status; normal `apt-get` progress and errors stay visible. Probe metadata stays suppressed, while
+its phase and result remain visible. Required failures stop the step; the existing optional OpenGL
+install and unavailable-package paths retain their nonfatal behavior.
+
+The 20-minute Linux job budget, package requests, sources, CA/TLS/signature checks and other
+platform commands remain unchanged. An external timeout can leave a start marker without an end;
+this identifies the active phase without inventing an exit status. These diagnostics establish
+operation visibility, not a remedy or proof of a network/latency cause. Local manifest build policy
+is unchanged.
+
 ### Prerequisites
 
 | Component | Minimum Version | Notes |
@@ -376,6 +390,17 @@ APT 引导阶段与错误保持可见，失败即停止 checkout。任务仍为 
 仍需独立原生 CI 证据。经审核回滚本次 CI/文档改动会恢复此前传输及其潜在 HTTP 故障。本地
 manifest 发布构建和已记录的 CI 依赖例外仍遵循原有依赖政策。
 
+
+### Debian 系 CI 依赖诊断
+
+公共 Debian 系依赖步骤为现有每个 APT 操作和包可用性探测输出 `CI-DEPS` 开始/结束标记。
+结束标记包含耗时秒数和真实退出状态，保留 `apt-get` 的正常进度与错误；探测元数据仍被抑制，
+但阶段及结果可见。必需操作失败即终止步骤；原可选 OpenGL 安装失败及包不可用路径继续保持
+非致命语义。
+
+Linux 作业的 20 分钟预算、包请求、源、CA/TLS/签名检查及其他平台命令保持不变。外部超时可能
+只留下开始而没有结束标记，这能定位活跃阶段，不伪造退出状态。诊断仅建立操作可见性，
+不代表已修复或证实网络/耗时根因；本地 manifest 构建政策不变。
 
 ### 编译环境要求
 
