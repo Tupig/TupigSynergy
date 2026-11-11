@@ -27,6 +27,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <stdexcept>
 #include <unistd.h>
 #include <vector>
 
@@ -621,7 +622,8 @@ IKeyState *EiScreen::getKeyState() const
 
 std::string EiScreen::getSecureInputApp() const
 {
-  throw std::runtime_error("get security input app not implemented");
+  // Secure input is a macOS-only concept; like X11 and Windows, report none.
+  return "";
 }
 
 EiScreen::HotKeyItem::HotKeyItem(std::uint32_t mask, std::uint32_t id) : mask(mask), id(id)
