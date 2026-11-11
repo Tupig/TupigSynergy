@@ -181,9 +181,8 @@ private:
   void init();
 
 private:
-  // not implemented
-  MSWindowsKeyState(const MSWindowsKeyState &);
-  MSWindowsKeyState &operator=(const MSWindowsKeyState &);
+  MSWindowsKeyState(const MSWindowsKeyState &) = delete;
+  MSWindowsKeyState &operator=(const MSWindowsKeyState &) = delete;
 
 private:
   using GroupMap = std::map<HKL, int32_t>;
