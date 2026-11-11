@@ -30,6 +30,23 @@ create_test(
 )
 
 create_test(
+  NAME ProtocolUtilAllocationTests
+  DEPENDS app
+  LIBS arch base io ${extra_libs}
+  SOURCE ProtocolUtilAllocationTests.cpp
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/synergy"
+)
+set_tests_properties(ProtocolUtilAllocationTests PROPERTIES TIMEOUT 10)
+
+# Manual Release measurement only: never gate CTest on noisy wall-clock timings.
+add_executable(ProtocolUtilBenchmark EXCLUDE_FROM_ALL ProtocolUtilBenchmark.cpp)
+target_link_libraries(ProtocolUtilBenchmark PRIVATE app arch base io ${extra_libs} Qt6::Core)
+target_compile_definitions(ProtocolUtilBenchmark PRIVATE
+  SYNERGY_BENCHMARK_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
+  SYNERGY_BENCHMARK_FLAGS="${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}"
+)
+
+create_test(
   NAME PacketStreamFilterTests
   DEPENDS app
   LIBS arch base io mt ${extra_libs}

@@ -99,6 +99,9 @@ void SocketMultiplexer::removeSocket(ISocket *socket)
   // break thread out of poll
   m_thread->unblockPollSocket();
 
+  // Pair with the per-callback gate: no callback may touch the owner after
+  // removal returns, including a job retained in an earlier poll snapshot.
+  std::scoped_lock executionLock(m_executionMutex);
   Lock lock(m_mutex.get());
 
   // mark for deferred removal — do NOT delete the job here as serviceThread
@@ -254,7 +257,7 @@ void SocketMultiplexer::updateJobState(const std::vector<JobTransition> &transit
       status = 0;
     }
 
-    // execute jobs and collect state transitions (no lock held)
+    // Execute callbacks without the registry lock, retaining the owner barrier.
     std::vector<JobTransition> transitions;
     transitions.reserve(snapshot.size());
 
@@ -267,7 +270,29 @@ void SocketMultiplexer::updateJobState(const std::vector<JobTransition> &transit
         bool error =
             ((revents & (int(IArchNetwork::PollEventMask::Error) | int(IArchNetwork::PollEventMask::Invalid))) != 0);
 
-        // run job
+        std::scoped_lock executionLock(m_executionMutex);
+        {
+          Lock lock(m_mutex.get());
+          bool active = false;
+          for (const auto &current : m_jobs) {
+            if (current.socket == entry.socket && current.job == entry.job) {
+              active = true;
+              break;
+            }
+          }
+          for (const auto *pending : m_pendingRemovals) {
+            if (pending == entry.socket) {
+              active = false;
+              break;
+            }
+          }
+          if (!active) {
+            continue;
+          }
+        }
+
+        // The execution gate stays held until the callback has stopped using
+        // the owner; stale and concurrently replaced snapshots never run.
         ISocketMultiplexerJob *job = entry.job;
         ISocketMultiplexerJob *newJob = job;
         try {

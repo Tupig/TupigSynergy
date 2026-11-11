@@ -8,6 +8,7 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
 #include <vector>
 
 template <class T> class CondVar;
@@ -36,6 +37,8 @@ public:
 
   void addSocket(ISocket *, ISocketMultiplexerJob *);
 
+  // Wait for any active callback before returning. Callers must not hold
+  // socket-owned locks needed by their callback. Safe from a callback itself.
   void removeSocket(ISocket *);
 
   //@}
@@ -55,7 +58,7 @@ private:
     ISocketMultiplexerJob *job = nullptr;
   };
 
-  // Snapshot of job list for lock-free iteration in serviceThread.
+  // Snapshot of job list; job metadata stays alive through deferred deletion.
   using JobSnapshot = std::vector<SocketJobEntry>;
 
   // Result of executing one job during a poll iteration.  The next job may be
@@ -78,6 +81,9 @@ private:
   void updateJobState(const std::vector<JobTransition> &transitions);
 
 private:
+  // Lock order: execution, registry, then socket-owned locks after releasing
+  // the registry. Recursive so callbacks can unregister themselves.
+  std::recursive_mutex m_executionMutex;
   std::unique_ptr<Mutex> m_mutex;
   std::unique_ptr<Thread> m_thread;
 

@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
+# SPDX-License-Identifier: MIT
+
+function(synergy_copy_ci_qt_notices destination output)
+  set(${output} FALSE PARENT_SCOPE)
+  if("@CI_QT_NOTICES_ROOT@" STREQUAL "")
+    return()
+  endif()
+  # Keep the action's original digest, captured at configuration, rather than
+  # recomputing a new checkpoint from potentially modified metadata at install.
+  execute_process(COMMAND "@Python3_EXECUTABLE@" "@CI_QT_SOURCE_DIR@/scripts/ci/collect-qt-notices.py"
+    --sdk-root "@CI_QT_SDK@" --version "@CI_QT_VERSION@" --output "@CI_QT_NOTICES_ROOT@"
+    --verify --manifest-sha256 "@CI_QT_NOTICES_SHA256@"
+    RESULT_VARIABLE checked OUTPUT_VARIABLE result ERROR_VARIABLE error)
+  if(NOT checked EQUAL 0)
+    message(FATAL_ERROR "Selected CI Qt notice verification failed at install: ${result}${error}")
+  endif()
+  file(MAKE_DIRECTORY "${destination}")
+  file(COPY "@CI_QT_NOTICES_ROOT@/" DESTINATION "${destination}")
+  set(${output} TRUE PARENT_SCOPE)
+endfunction()

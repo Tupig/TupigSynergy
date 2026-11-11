@@ -1,0 +1,61 @@
+# Native tool/schema and caller intake only; not product MSI policy acceptance.
+name: MSI64 intake
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/msi64-intake.yml
+      - scripts/ci/test-msi64-intake.bat
+      - scripts/ci/testdata/msi64-intake/**
+
+permissions:
+  contents: read
+
+jobs:
+  intake:
+    name: MSI64 intake (${{ matrix.target.expected-arch }})
+    runs-on: ${{ matrix.target.runs-on }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - runs-on: windows-2022
+            msvc-arch: amd64
+            expected-arch: x64
+          - runs-on: windows-11-arm
+            msvc-arch: arm64
+            expected-arch: arm64
+
+    defaults:
+      run:
+        shell: cmd
+        working-directory: msi intake!
+
+    steps:
+      - name: Checkout frozen intake sources
+        uses: actions/checkout@v6
+        with:
+          path: msi intake!
+          persist-credentials: false
+
+      - name: Setup native VC++ environment
+        uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: ${{ matrix.target.msvc-arch }}
+
+      - name: Install exact WiX tool
+        run: dotnet tool install --global wix --version 5.0.2
+
+      - name: Intake through cmd
+        run: |
+          call ".\scripts\ci\test-msi64-intake.bat" "${{ matrix.target.expected-arch }}" run-cmd paired
+          exit /b %ERRORLEVEL%
+
+      # Invoke pwsh directly from cmd so no PowerShell script file is created.
+      # Native BAT failures retain their own exit code; startup faults fail too.
+      - name: Intake through PowerShell caller
+        run: |
+          pwsh -NoLogo -NoProfile -NonInteractive -Command "$ErrorActionPreference = 'Stop'; $PSNativeCommandUseErrorActionPreference = $false; try { & '.\scripts\ci\test-msi64-intake.bat' '${{ matrix.target.expected-arch }}' 'run-pwsh' 'paired'; $msiIntakeExit = $LASTEXITCODE; if ($null -eq $msiIntakeExit) { exit 2 }; exit $msiIntakeExit } catch { [Console]::Error.WriteLine([string]$_); exit 2 }"
+          exit /b %ERRORLEVEL%

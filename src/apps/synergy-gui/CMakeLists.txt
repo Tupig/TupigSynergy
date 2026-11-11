@@ -104,8 +104,6 @@ if(WIN32)
       TARGET ${target} POST_BUILD
       COMMAND ${DEPLOYQT}
         --no-compiler-runtime
-        --no-system-d3d-compiler
-        --no-opengl-sw
         --no-quick-import
         --dir "${QT_DEPENDS_DIR}"
         --plugindir "${QT_DEPENDS_DIR}/plugins"
@@ -118,8 +116,6 @@ if(WIN32)
     install(
       DIRECTORY ${QT_DEPENDS_DIR}/
       DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      PATTERN "dx*.dll" EXCLUDE
-      PATTERN "icu*.dll" EXCLUDE
     )
   endif()
 

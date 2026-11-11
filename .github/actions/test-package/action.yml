@@ -1,53 +1,39 @@
 name: "Test Package"
-description: "Installs the built package and verifies the installed binaries can run"
+description: "Audits extracted package dependencies and launches with isolated runtime settings"
 
 inputs:
+  expected-arch:
+    description: "Declared build target: x64 or arm64; macOS may declare both comma separated"
+    required: true
   like:
-    description: "Used only on linux distro type: debian, fedora, suse, arch"
+    description: "Linux distribution family used to select the package format"
     required: false
     default: ""
 
 runs:
   using: "composite"
-
   steps:
-    - name: Test package
-      shell: bash
-      # Paths below are relative to the project directory (the repository root).
+    - name: Verify Windows MSI and portable payloads
+      if: ${{ runner.os == 'Windows' }}
+      shell: cmd
       working-directory: .
-      run: |
-        if [ "$RUNNER_OS" == "macOS" ]; then
-          dmg=$(ls build/synergy[-_]*.dmg | head -1)
-          echo "Y" | hdiutil attach "$dmg" -nobrowse -mountpoint /tmp/synergy-dmg
-          # The bundle is named after CMAKE_PROJECT_PROPER_NAME ("TuPig Synergy"),
-          # so the older "Synergy.app" probe could never exist.
-          "/tmp/synergy-dmg/TuPig Synergy.app/Contents/MacOS/synergy-core" --version
-          hdiutil detach /tmp/synergy-dmg
+      env:
+        PACKAGE_EXPECTED_ARCH: ${{ inputs.expected-arch }}
+      run: call scripts\ci\verify-package-windows.bat build "%PACKAGE_EXPECTED_ARCH%"
 
-        elif [ "$RUNNER_OS" == "Windows" ]; then
-          7z x build/synergy[-_]*-portable.7z -otmp/synergy-pkg
-          exe=$(find tmp/synergy-pkg -name "synergy-core.exe" -type f | head -1)
-          exe_dir=$(dirname "$exe")
-          pkg_root=$(dirname "$exe_dir")
-          export PATH="$exe_dir:$pkg_root:$pkg_root/lib:$PATH"
-          "$exe" --version
+    - name: Verify macOS DMG payload
+      if: ${{ runner.os == 'macOS' }}
+      shell: bash
+      working-directory: .
+      env:
+        PACKAGE_EXPECTED_ARCH: ${{ inputs.expected-arch }}
+      run: bash scripts/ci/verify-package-macos.sh --expected-arch "$PACKAGE_EXPECTED_ARCH" build
 
-        elif [ "$RUNNER_OS" == "Linux" ]; then
-          if [ "${{inputs.like}}" == "debian" ]; then
-            apt-get install -y ./build/synergy[-_]*.deb
-          elif [ "${{inputs.like}}" == "fedora" ] || [ "${{inputs.like}}" == "rhel" ]; then
-            dnf install -y build/synergy[-_]*.rpm
-          elif [ "${{inputs.like}}" == "suse" ]; then
-            zypper install -y --allow-unsigned-rpm build/synergy[-_]*.rpm
-          elif [ "${{inputs.like}}" == "arch" ]; then
-            pacman -U --noconfirm build/synergy[-_]*.pkg.tar.zst
-          else
-            echo "Unknown like: ${{inputs.like}}"
-            exit 1
-          fi
-          synergy-core --version
-
-        else
-          echo "Unknown OS: $RUNNER_OS"
-          exit 1
-        fi
+    - name: Verify Linux package payload
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      working-directory: .
+      env:
+        PACKAGE_LINUX_LIKE: ${{ inputs.like }}
+        PACKAGE_EXPECTED_ARCH: ${{ inputs.expected-arch }}
+      run: bash scripts/ci/verify-package-linux.sh --expected-arch "$PACKAGE_EXPECTED_ARCH" build "$PACKAGE_LINUX_LIKE"

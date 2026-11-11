@@ -44,4 +44,30 @@ create_test(
   SOURCE ClientProxyTests.cpp
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/server"
 )
+set_tests_properties(ClientProxyTests PROPERTIES TIMEOUT 30)
 
+create_test(
+  NAME KeyInfoOwnershipTests
+  DEPENDS server
+  LIBS base arch mt ${extra_libs}
+  SOURCE KeyInfoOwnershipTests.cpp
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/server"
+)
+set_tests_properties(KeyInfoOwnershipTests PROPERTIES TIMEOUT 15)
+
+# Each real-Screen fixture owns its Windows portable settings marker.
+foreach(test ServerTests ClientProxyTests KeyInfoOwnershipTests)
+  set_target_properties(${test} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${test}-runtime")
+endforeach()
+
+create_test(
+  NAME EventPayloadOwnershipTests
+  DEPENDS server
+  LIBS base arch mt ${extra_libs}
+  SOURCE EventPayloadOwnershipTests.cpp
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/server"
+)
+set_tests_properties(EventPayloadOwnershipTests PROPERTIES TIMEOUT 15)
+set_target_properties(EventPayloadOwnershipTests PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/EventPayloadOwnershipTests-runtime")

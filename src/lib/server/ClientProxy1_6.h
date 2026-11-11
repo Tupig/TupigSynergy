@@ -19,13 +19,15 @@ class ClientProxy1_6 : public ClientProxy1_5
 {
 public:
   ClientProxy1_6(const std::string &name, synergy::IStream *adoptedStream, Server *server, IEventQueue *events);
-  ~ClientProxy1_6() override = default;
+  ~ClientProxy1_6() override;
 
   void setClipboard(ClipboardID id, const IClipboard *clipboard) override;
   bool recvClipboard() override;
 
 private:
   IEventQueue *m_events;
+  const std::shared_ptr<const ClipboardChunk::Lifetime> m_clipboardLifetime =
+      std::make_shared<const ClipboardChunk::Lifetime>();
   std::string m_clipboardDataCached;
   ClipboardChunkAssemblyState m_clipboardChunkState;
 };

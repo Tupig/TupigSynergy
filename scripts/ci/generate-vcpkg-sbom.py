@@ -62,6 +62,10 @@ def build_sbom(packages):
             "version": version,
             "purl": "pkg:generic/{}@{}".format(name, version),
         }
+        if name == "brotli":
+            # The pinned scanner expands generic purls to all same-named vendors.
+            del component["purl"]
+            component["cpe"] = "cpe:2.3:a:google:brotli:{}:*:*:*:*:-:*:*".format(version)
         if portversion:
             component["properties"] = [{"name": "vcpkg:port-version", "value": portversion}]
         components.append(component)

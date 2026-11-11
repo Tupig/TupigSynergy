@@ -5,6 +5,7 @@
  */
 
 #include "MSWindowsWatchdog.h"
+#include "MSWindowsPolicies.h"
 
 #include "App.h"
 #include "MSWindowsHandle.h"
@@ -188,9 +189,6 @@ void MSWindowsWatchdog::mainLoop(const void *)
 {
   using enum ProcessState;
 
-  // a process that stays up at least this long counts as a healthy start
-  constexpr double kStableUptimeSeconds = 10.0;
-
   // this can throw when the snapshot/enumeration fails; letting it escape the
   // thread entry point would call std::terminate and kill the whole daemon
   try {
@@ -267,7 +265,7 @@ void MSWindowsWatchdog::mainLoop(const void *)
         LOG_WARN("detected application not running, pid=%d", m_process->info().dwProcessId);
         // a process that stayed up counts as a healthy start; a quick crash
         // keeps accumulating failures so the retry delay can grow
-        if (Arch::time() - m_lastStartTime >= kStableUptimeSeconds) {
+        if (synergy::windows::hasStableUptime(Arch::time() - m_lastStartTime)) {
           m_startFailures = 0;
         }
         m_processState = handleStartError("process stopped unexpectedly");
@@ -513,8 +511,7 @@ MSWindowsWatchdog::ProcessState MSWindowsWatchdog::handleStartError(const std::s
   // After consecutive failures, slow down the retry rate exponentially:
   // 1s, 2s, 4s, ... capped at 60s.
   if (m_startFailures > 1) {
-    const auto exponent = std::min<unsigned>(static_cast<unsigned>(m_startFailures) - 2u, 6u);
-    const auto delaySeconds = std::min<unsigned>(1u << exponent, 60u);
+    const auto delaySeconds = synergy::windows::restartDelaySeconds(static_cast<unsigned>(m_startFailures));
     m_nextStartTime = Arch::time() + delaySeconds;
     LOG_WARN("start failed %d times, delaying start by %u second(s)", m_startFailures, delaySeconds);
     LOG_DEBUG("start delay, seconds=%u, time=%f", delaySeconds, m_nextStartTime.value());

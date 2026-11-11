@@ -57,8 +57,8 @@ fi
 if ! git -C "${VCPKG_DIR}" cat-file -e "${BASELINE}^{tree}" 2>/dev/null; then
     echo "Fetching pinned baseline commit ..."
     git -C "${VCPKG_DIR}" fetch --depth 1 origin "${BASELINE}"
-    git -C "${VCPKG_DIR}" checkout --quiet "${BASELINE}"
 fi
+git -C "${VCPKG_DIR}" checkout --quiet "${BASELINE}"
 
 # --- bootstrap the vcpkg tool ---------------------------------------------
 if [ ! -x "${VCPKG_DIR}/vcpkg" ]; then

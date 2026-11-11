@@ -12,7 +12,7 @@
 #include "base/Log.h"
 #include "io/IStream.h"
 #include <array>
-#include <iterator>
+#include <memory>
 
 #include <cstring>
 #include <vector>
@@ -61,7 +61,7 @@ void writeString(const std::string *StringData, std::vector<uint8_t> &Buffer)
   const uint32_t len = (StringData != nullptr) ? (uint32_t)StringData->size() : 0;
   writeInt(len, sizeof(len), Buffer);
   if (len != 0) {
-    std::copy(StringData->begin(), StringData->end(), std::back_inserter(Buffer));
+    Buffer.insert(Buffer.end(), StringData->begin(), StringData->end());
   }
 }
 
@@ -377,7 +377,7 @@ void ProtocolUtil::writef(std::vector<uint8_t> &buffer, const char *fmt, va_list
         const uint32_t strLen = va_arg(args, uint32_t);
         const uint8_t *src = va_arg(args, uint8_t *);
         writeInt(strLen, sizeof(strLen), buffer);
-        std::copy(src, src + strLen, std::back_inserter(buffer));
+        buffer.insert(buffer.end(), src, src + strLen);
         break;
       }
 
@@ -564,10 +564,12 @@ void ProtocolUtil::readBytes(synergy::IStream *stream, uint32_t len, std::string
   const bool useFixed = (len <= sizeof(buffer));
 
   // allocate a buffer to read the data
+  std::unique_ptr<uint8_t[]> heapBuffer;
   uint8_t *sBuffer = buffer;
   if (!useFixed) {
     try {
-      sBuffer = new uint8_t[len];
+      heapBuffer.reset(new uint8_t[len]);
+      sBuffer = heapBuffer.get();
     } catch (std::bad_alloc &exception) {
       // Added try catch due to GHSA-chfm-333q-gfpp
       LOG_ERR("bad alloc, unable to allocate memory %d bytes", len);
@@ -577,14 +579,7 @@ void ProtocolUtil::readBytes(synergy::IStream *stream, uint32_t len, std::string
   }
 
   // read the data
-  try {
-    read(stream, sBuffer, len);
-  } catch (...) {
-    if (!useFixed) {
-      delete[] sBuffer;
-    }
-    throw;
-  }
+  read(stream, sBuffer, len);
 
   LOG_VERBOSE("readf: read %d byte string", len);
 
@@ -592,11 +587,6 @@ void ProtocolUtil::readBytes(synergy::IStream *stream, uint32_t len, std::string
 
   if (destination) {
     destination->assign((const char *)sBuffer, len);
-  }
-
-  // release the buffer
-  if (!useFixed) {
-    delete[] sBuffer;
   }
 }
 
