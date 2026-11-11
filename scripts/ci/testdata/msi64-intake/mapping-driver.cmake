@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: MIT
+# Test-only metadata entry; production MSI input never accepts table overrides.
+cmake_minimum_required(VERSION 3.21)
+get_filename_component(_repo "${CMAKE_CURRENT_LIST_DIR}/../../../.." REALPATH)
+set(_helper "${_repo}/scripts/ci/msi64-audit.cmake")
+if(NOT EXISTS "${_helper}")
+  message(FATAL_ERROR "Paired metadata check missing production MSI helper API")
+endif()
+include("${_helper}")
+if(NOT MSI64_AUDIT_API_VERSION STREQUAL "1" OR NOT COMMAND _msi64_reconcile)
+  message(FATAL_ERROR "Paired metadata check missing production MSI helper API")
+endif()
+message(STATUS "MSI_AUDIT_API version=1")
+_msi64_reconcile("${SOURCE_XML}" "${DATA_XML}" "${SOURCE_EXPORTS}" "${DATA_EXPORTS}" "${EXPECTED_ARCH}")
+message(FATAL_ERROR "Controlled bad metadata was unexpectedly accepted")

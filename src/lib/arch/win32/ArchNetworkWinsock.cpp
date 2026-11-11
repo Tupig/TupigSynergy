@@ -373,6 +373,7 @@ int ArchNetworkWinsock::pollSocket(PollEntry pe[], int num, double timeout)
   DWORD n;
 
   // prepare sockets and wait list
+  bool canRead = false;
   bool canWrite = false;
   WSAEVENT *events = (WSAEVENT *)alloca((num + 1) * sizeof(WSAEVENT));
   for (i = 0, n = 0; i < num; ++i) {
@@ -410,6 +411,24 @@ int ArchNetworkWinsock::pollSocket(PollEntry pe[], int num, double timeout)
     // select socket for desired events
     WSAEventSelect_winsock(pe[i].m_socket->m_socket, pe[i].m_socket->m_event, socketEvents);
 
+    // Event records can be consumed by a snapshot whose job was replaced.
+    // Query current readability without consuming pending data or accepts.
+    if ((pe[i].m_events & PollEventMask::In) != 0) {
+      fd_set readSet;
+      FD_ZERO(&readSet);
+      FD_SET(pe[i].m_socket->m_socket, &readSet);
+      timeval immediate{0, 0};
+      const int readable = select_winsock(0, &readSet, nullptr, nullptr, &immediate);
+      if (readable == SOCKET_ERROR) {
+        const int error = getsockerror_winsock();
+        throwError(error);
+      }
+      if (readable > 0) {
+        canRead = true;
+        pe[i].m_revents |= PollEventMask::In;
+      }
+    }
+
     // add socket event to wait list
     events[n++] = pe[i].m_socket->m_event;
   }
@@ -434,8 +453,8 @@ int ArchNetworkWinsock::pollSocket(PollEntry pe[], int num, double timeout)
 
   // prepare timeout
   DWORD t = (timeout < 0.0) ? INFINITE : (DWORD)(1000.0 * timeout);
-  if (canWrite) {
-    // if we know we can write then don't block
+  if (canRead || canWrite) {
+    // if we know we can read or write then don't block
     t = 0;
   }
 
@@ -454,7 +473,7 @@ int ArchNetworkWinsock::pollSocket(PollEntry pe[], int num, double timeout)
     }
     throwError(getsockerror_winsock());
   }
-  if (result == WSA_WAIT_TIMEOUT && !canWrite) {
+  if (result == WSA_WAIT_TIMEOUT && !canRead && !canWrite) {
     return 0;
   }
   if (result == WSA_WAIT_EVENT_0 + n - 1) {

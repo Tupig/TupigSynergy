@@ -21,6 +21,12 @@ outputs:
   vcpkg-cmake-config:
     description: "windows vcpkg output for cmaket"
     value: ${{ steps.vcpkg.outputs.vcpkg-cmake-config }}
+  qt-notice-root:
+    description: "Verified selected prebuilt Qt source notices"
+    value: ${{ steps.qt-notices-windows.outputs.root || steps.qt-notices-macos.outputs.root }}
+  qt-notice-sha256:
+    description: "Original collection manifest SHA256"
+    value: ${{ steps.qt-notices-windows.outputs.sha256 || steps.qt-notices-macos.outputs.sha256 }}
 
 runs:
   using: "composite"
@@ -30,7 +36,7 @@ runs:
       if: ${{ runner.os != 'Windows' }}
       run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            brew install openssl@3 doxygen --quiet
+            brew install openssl openssl@3 doxygen --quiet
           elif [ "$RUNNER_OS" == "Linux" ]; then
             if [ ${{inputs.like}} == "debian" ]; then
               # BEGIN CI_DEPENDENCY_DIAGNOSTICS
@@ -100,17 +106,22 @@ runs:
                 synergy_ci_apt_get apt-update update
                 # qt6-l10n-tools + qt6-tools-dev-tools provide lconvert/lupdate/lrelease that
                 # qt6-tools-dev's LinguistTools cmake references but doesn't always pull in.
-                synergy_ci_apt_get apt-main install cmake build-essential ninja-build \
+                synergy_ci_apt_get apt-main install cmake build-essential ninja-build patchelf binutils python3 \
                   xorg-dev libx11-dev libxtst-dev libssl-dev \
                   libgl-dev libglx-dev libopengl-dev \
-                  libglib2.0-dev libxkbfile-dev "${qt6_packages[@]}" \
+                  libglib2.0-dev libxkbfile-dev libqt6svg6 "${qt6_packages[@]}" \
                   libgtk-3-dev \
                   help2man doxygen -y
+                # Bookworm/Noble ship SVG plugins in libqt6svg6; newer distros
+                # split them into qt6-svg-plugins. Packaging checks the actual .so.
+                if synergy_ci_apt_probe qt6-svg-plugins; then
+                  synergy_ci_apt_get apt-qt6-svg install qt6-svg-plugins -y
+                fi
                 # Qt5 fallback for distros whose Qt6 is below REQUIRED_QT_VERSION
                 # (debian-12 / ubuntu-24.04 ship 6.4.x < 6.7.0): find_qt_with_fallback
                 # probes Qt5 when system Qt6 is too old. Harmless when Qt6 qualifies.
                 # Installed after Qt6 so it never shadows a working Qt6 find.
-                synergy_ci_apt_get apt-qt5 install qtbase5-dev -y
+                synergy_ci_apt_get apt-qt5 install qtbase5-dev libqt5svg5 -y
                 # On slim images qt6-base-dev can fail its CMake component probe when
                 # OpenGL is absent (Qt6Gui -> OpenGL), silently selecting Qt5 and
                 # then colliding with the Qt6::* ALIAS targets (debian-13 Configure).
@@ -137,20 +148,45 @@ runs:
               # END CI_DEPENDENCY_DIAGNOSTICS
               synergy_ci_install_debian_dependencies /etc/os-release
             elif [ ${{inputs.like}} == "fedora" ]; then
-              dnf install -y cmake make ninja-build gcc-c++ rpm-build openssl-devel \
+              # The container excludes %doc by default; libglvnd embeds its
+              # runtime notices in its package-owned README.
+              dnf install -y --setopt=tsflags= cmake make ninja-build gcc-c++ rpm-build openssl-devel patchelf binutils python3 \
                 glib2-devel libXtst-devel libxkbfile-devel qt6-qtbase-devel qt6-qttools-devel \
-                qt6-qttranslations \
+                qt6-qttranslations qt6-qtsvg \
                 gtk3-devel libei-devel libportal-devel help2man doxygen
+              if [ ! -s /usr/share/doc/libglvnd/README.md ]; then
+                dnf reinstall -y --setopt=tsflags= \
+                  "libglvnd-$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}' libglvnd)"
+              fi
+              test -s /usr/share/doc/libglvnd/README.md
+              # Compat carries libz.so.1, while the same-source base package owns its notice.
+              zlib_compat_id=$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}' zlib-ng-compat)
+              dnf install -y --setopt=tsflags= "zlib-ng-$zlib_compat_id"
+              test "$(rpm -q --qf '%{SOURCERPM}' zlib-ng)" = \
+                "$(rpm -q --qf '%{SOURCERPM}' zlib-ng-compat)"
+              if [ ! -s /usr/share/licenses/zlib-ng/LICENSE.md ]; then
+                dnf reinstall -y --setopt=tsflags= "zlib-ng-$zlib_compat_id"
+              fi
+              test -s /usr/share/licenses/zlib-ng/LICENSE.md
+              test "$(rpm -qf --qf '%{NAME}' /usr/share/licenses/zlib-ng/LICENSE.md)" = zlib-ng
             elif [ ${{inputs.like}} == "suse" ]; then
+              # Override the image vendor drop-in before dependency install.
+              mkdir -p /etc/zypp/zypp.conf.d
+              printf '[main]\nrpm.install.excludedocs = no\n' > /etc/zypp/zypp.conf.d/excludedocs.conf
               zypper refresh
               zypper install -y --force-resolution \
-                cmake make ninja gcc-c++ rpm-build libopenssl-devel \
-                glib2-devel libXtst-devel libxkbfile-devel qt6-base-devel qt6-tools-devel \
-                qt6-linguist-devel qt6-translations \
+                cmake make ninja gcc-c++ rpm-build libopenssl-devel patchelf binutils python3 \
+                glib2-devel libXtst-devel libxkbfile-devel libSM-devel qt6-base-devel qt6-tools-devel \
+                qt6-linguist-devel qt6-translations libQt6Svg6 \
                 gtk3-devel doxygen \
                 libei-devel libportal-devel help2man
+              if [ ! -s /usr/share/doc/packages/libglvnd/README.md ]; then
+                zypper install -y --force \
+                  "libglvnd.$(rpm -q --qf '%{ARCH}' libglvnd)=$(rpm -q --qf '%{VERSION}-%{RELEASE}' libglvnd)"
+              fi
+              test -s /usr/share/doc/packages/libglvnd/README.md
             elif [ ${{ inputs.like }} == "arch" ]; then
-              pacman -Syu --noconfirm base-devel cmake ninja \
+              pacman -Syu --noconfirm base-devel cmake ninja patchelf binutils python \
                 gcc openssl glib2 libxtst libxkbfile libei libportal \
                 qt6-base qt6-tools qt6-svg qt6-translations qt6-declarative gtk3 help2man doxygen graphviz rsync
             elif [ ${{ inputs.like }} == "rhel" ]; then
@@ -161,13 +197,29 @@ runs:
               dnf install -y epel-release
               dnf config-manager --set-enabled powertools 2>/dev/null \
                 || dnf config-manager --set-enabled crb 2>/dev/null || true
-              dnf install -y \
-                cmake make ninja-build rpm-build help2man \
+              dnf install -y --setopt=tsflags= \
+                cmake make ninja-build rpm-build help2man patchelf binutils python3 \
                 gcc-toolset-13 \
                 openssl-devel glib2-devel \
                 libX11-devel libXext-devel libXtst-devel libXrandr-devel \
                 libXinerama-devel libXi-devel libxkbfile-devel \
-                qt5-qtbase-devel gtk3-devel
+                qt5-qtbase-devel qt5-qtsvg gtk3-devel
+              # The base image may already contain lz4-libs without its %doc.
+              if [ ! -s /usr/share/doc/lz4-libs/LICENSE ]; then
+                dnf reinstall -y --setopt=tsflags= \
+                  "lz4-libs-$(rpm -q --qf '%{VERSION}-%{RELEASE}.%{ARCH}' lz4-libs)"
+              fi
+              test -s /usr/share/doc/lz4-libs/LICENSE
+              # libxcb keeps its notices in the matching noarch documentation package.
+              libxcb_version_release=$(rpm -q --qf '%{VERSION}-%{RELEASE}' libxcb)
+              dnf install -y --enablerepo=devel --setopt=tsflags= "libxcb-doc-$libxcb_version_release.noarch"
+              test "$(rpm -q --qf '%{SOURCERPM}' libxcb-doc)" = \
+                "$(rpm -q --qf '%{SOURCERPM}' libxcb)"
+              if [ ! -s /usr/share/doc/libxcb/COPYING ]; then
+                dnf reinstall -y --enablerepo=devel --setopt=tsflags= "libxcb-doc-$libxcb_version_release.noarch"
+              fi
+              test -s /usr/share/doc/libxcb/COPYING
+              test "$(rpm -qf --qf '%{NAME}' /usr/share/doc/libxcb/COPYING)" = libxcb-doc
             else
               echo "Unknown like"
             fi
@@ -198,6 +250,18 @@ runs:
         version: ${{inputs.qt-version}}
         cache: false
         cache-key-prefix: ${{matrix.target.name}}-${{inputs.qt-version}}
+
+    - name: Prepare selected Qt notices on Windows
+      if: ${{ runner.os == 'Windows' }}
+      id: qt-notices-windows
+      shell: cmd
+      run: call scripts\ci\prepare-qt-notices.bat "%QT_ROOT_DIR%" "${{ inputs.qt-version }}" "${{ runner.temp }}\qt-source-cache" "${{ runner.temp }}\qt-notices" "%GITHUB_OUTPUT%"
+
+    - name: Prepare selected Qt notices on macOS
+      if: ${{ runner.os == 'macOS' }}
+      id: qt-notices-macos
+      shell: bash
+      run: python3 scripts/ci/collect-qt-notices.py --sdk-root "$QT_ROOT_DIR" --version "${{ inputs.qt-version }}" --cache "${{ runner.temp }}/qt-source-cache" --output "${{ runner.temp }}/qt-notices" --github-output "$GITHUB_OUTPUT"
 
     - name: Build and cache vcpkg
       if: ${{ runner.os == 'Windows' }}

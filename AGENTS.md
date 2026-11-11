@@ -69,9 +69,10 @@ The current tree is normative for new files:
   `scripts/build.sh` (per-platform build). Nothing else should be needed.
 - `scripts/bootstrap-vcpkg.{bat,sh}` clones and bootstraps the repository-local vcpkg into
   `vendor/vcpkg`, reads the pinned baseline from `vcpkg.json`, and is idempotent.
-- A C++ toolchain (MSVC / clang / gcc), CMake and Ninja are unavoidable host prerequisites and are
-  **not** vendored. Everything else — Qt, OpenSSL and their transitive dependencies — is fetched by
-  vcpkg.
+- A C++ toolchain (MSVC / clang / gcc), CMake and Ninja are host prerequisites and are **not**
+  vendored. Local macOS manifest builds additionally require a full, selected Xcode installation,
+  pkgconf, Autoconf with autoconf-archive, Automake and GNU Libtool for the pinned ports. These are
+  host build tools; Qt, OpenSSL and all application library dependencies are fetched by vcpkg.
 - Build artifacts are 64-bit only (`vcpkg.json` `supports`: `x64 | arm64`). Do not add an x86 / Win32 target.
 - On Windows, the MSVC environment must be activated (`vcvarsall.bat x64`) before CMake runs. vcpkg
   resolves its Visual Studio instance from the VC environment variables; without them it fails with
@@ -112,6 +113,20 @@ release builds and for every local build. The exception carries three requiremen
    `scripts/build.bat release` (the runtime block in `CMakeLists.txt` derives the CRT from the
    triplet).
 
+### Interactive test safety
+
+Review host side effects before registering new tests. Default CTest execution must not inject real input or replace the live system clipboard. `SYNERGY_ENABLE_INTERACTIVE_TESTS` defaults to `OFF`: keep `OSXKeyStateTests`, `OSXClipboardTests`, `MSWindowsClipboardTests`, and X11's `XWindowsClipboardTests` registered and built when available, but set their CTest `DISABLED` property. The first injects keys into the focused application; the clipboard targets clear/replace clipboard contents or change X11 selection ownership. Keep pure Windows conversion, DropData, key-state and policy tests enabled. Report disabled targets as `Disabled` / `Not Run`, separately from passes.
+
+Explicit `-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON` is reserved for a disposable test environment; native CI sets it in the common Configure command. Do not infer consent from CI environment variables, grant OS permissions, or treat opt-in as hardware/secure-desktop acceptance. Direct test-executable invocation bypasses this CTest safeguard.
+
+### Package runtime completeness (RPACKAGE)
+
+Every distributed MSI, portable archive, macOS app/DMG and native Linux package must contain the third-party libraries and plugins its applications need, including transitive dependencies and license notices. A build runner's Qt, OpenSSL, package manager or search path must not supply missing application dependencies at runtime. Static builds copy only dependencies that remain dynamically linked; static dependency license notices still ship.
+
+The host supplies the supported OS kernel and ABI, Windows system APIs, macOS `/usr/lib` and `/System/Library`, or Linux glibc/loader and POSIX shell/coreutils. Display services, installed fonts and GPU drivers remain host components. These boundaries do not exempt Qt, OpenSSL, compiler redistributables or application plugins.
+
+Package verification extracts a disposable payload without installing dependencies or services, checks every PE/Mach-O/ELF dependency and target architecture, and launches with isolated settings and dependency search paths. Report GUI platform-plugin startup, core loader startup, actual core connections and hardware permission acceptance separately. Prebuilt CI dependency checks do not establish that the local static release build passed. Flatpak delivery must use an offline OSTree repository archive containing the app, runtime and extensions, with hashes and bilingual installation instructions. A single app bundle is insufficient; complete offline delivery requires separate evidence for all components.
+
 ### Delivery constraints — do not "fix" these
 
 This section is the authoritative list. The following are deliberate, not defects:
@@ -139,7 +154,7 @@ This section is the authoritative list. The following are deliberate, not defect
 ### Modification workflow
 
 1. Propose the approach before changing code; prefer the smallest correct change.
-2. One logical change per commit, on `feature/<topic>` or `fix/<topic>`. Open a pull request into `main`. Do not push to `main`.
+2. Keep `main` as the sole retained, long-lived branch. Use temporary `feature/<topic>` or `fix/<topic>` branches only to satisfy pull request and branch protection requirements, with one logical change per commit and Chinese Conventional Commit messages (R10). Open a pull request into `main`, merge after validation, and delete the temporary branch after integration. Do not push directly to protected `main`.
 3. Verify with evidence (build log, command output, real run). Never report success on reasoning alone.
 4. Keep the issue tracker in step with code changes.
 
@@ -213,8 +228,9 @@ This section is the authoritative list. The following are deliberate, not defect
   （分平台构建）。不应再有其他前置步骤。
 - `scripts/bootstrap-vcpkg.{bat,sh}` 负责克隆引导仓库内的 vcpkg 到 `vendor/vcpkg`，从 `vcpkg.json`
   读取固定 baseline，且可重复执行。
-- C++ 工具链（MSVC / clang / gcc）、CMake、Ninja 是不可避免的宿主前置条件，**不纳入仓库**。除此之外的
-  一切依赖 —— Qt、OpenSSL 及其传递依赖 —— 均由 vcpkg 获取。
+- C++ 工具链（MSVC / clang / gcc）、CMake、Ninja 是宿主前置条件，**不纳入仓库**。本地 macOS manifest
+  构建还需要已选为活动开发者目录的完整 Xcode、pkgconf、Autoconf 及 autoconf-archive、Automake 和
+  GNU Libtool，供固定端口构建使用。这些属于宿主构建工具；Qt、OpenSSL 及所有应用库依赖仍由 vcpkg 获取。
 - 构建产物只有 64 位（`vcpkg.json` 的 `supports` 为 `x64 | arm64`）。不要增加 x86 / Win32 目标。
 - Windows 上必须在 CMake 之前激活 MSVC 环境（`vcvarsall.bat x64`）。vcpkg 依赖 VC 环境变量来定位
   Visual Studio 实例；若缺少这些变量，在实例元数据没有 `isComplete` 标记的 Build Tools 上会报
@@ -247,6 +263,20 @@ manifest 仍是发布构建与所有本地构建的唯一真源。该例外附�
    CI 的 Windows 腿从不覆盖 `/MT`。该路径请用本地 `scripts\build.bat release` 验证
    （运行库由 `CMakeLists.txt` 的运行库块依据 triplet 推导）。
 
+### 交互测试安全
+
+注册新测试前须审查宿主副作用。默认 CTest 不得注入真实输入或替换用户实时系统剪贴板。`SYNERGY_ENABLE_INTERACTIVE_TESTS` 默认 `OFF`：当前平台存在的 `OSXKeyStateTests`、`OSXClipboardTests`、`MSWindowsClipboardTests` 及 X11 的 `XWindowsClipboardTests` 仍注册并编译，但设置 CTest `DISABLED` 属性。第一个会向焦点应用注入按键；剪贴板目标会清空/替换内容或改变 X11 selection 所有权。纯 Windows 转换、DropData、键状态和策略测试保持启用。禁用目标按 `Disabled` / `Not Run` 单独报告，不计为通过。
+
+仅在一次性测试环境中显式设置 `-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON`；原生 CI 在公共 Configure 命令中设置。不得根据 CI 环境变量猜测同意、授予系统权限，或将开启选项当作硬件/安全桌面验收。直接运行测试程序会绕过这层 CTest 保护。
+
+### 打包运行依赖完整性（RPACKAGE）
+
+所有交付的 MSI、便携归档、macOS app/DMG 和 Linux 原生包都必须包含应用所需的第三方库及插件，包括传递依赖和许可声明。不能让构建机的 Qt、OpenSSL、包管理器或搜索路径补齐运行时缺失的应用依赖。静态构建只复制仍需动态链接的依赖；静态依赖的许可声明仍须随包交付。
+
+宿主提供受支持的操作系统内核及 ABI、Windows 系统 API、macOS 的 `/usr/lib` 和 `/System/Library`，或 Linux 的 glibc/加载器及 POSIX shell/coreutils。显示服务、已安装字体和 GPU 驱动属于宿主组件。这些边界不能用于排除 Qt、OpenSSL、编译器可再分发运行库或应用插件。
+
+包验证须解包到一次性目录，不安装依赖或服务；检查每个 PE/Mach-O/ELF 的依赖及目标架构，并在隔离设置与依赖搜索路径后启动。GUI 平台插件启动、core 加载启动、core 实际连接和硬件权限验收应分开报告。CI 预编译依赖检查不代表本机静态发布构建已通过。Flatpak 必须交付包含应用、runtime 和 extensions 的离线 OSTree 仓库归档，附带哈希及双语安装说明。单个应用包不足以交付，完整离线验收必须另有所有组件的证据。
+
 ### 交付约束 —— 不要把这些当缺陷「修复」
 
 本节即权威清单。以下均为**有意设计**，不是缺陷：
@@ -271,7 +301,7 @@ manifest 仍是发布构建与所有本地构建的唯一真源。该例外附�
 ### 改动流程
 
 1. 动手改代码前先给出方案，优先选择最小且正确的改动。
-2. 一个提交只做一件逻辑独立的事，放在 `feature/<主题>` 或 `fix/<主题>` 上。向 `main` 开 Pull Request。不要直接推送到 `main`。
+2. `main` 是唯一长期保留的分支。仅为满足 Pull Request 和分支保护要求使用临时 `feature/<主题>` 或 `fix/<主题>` 分支；一个提交只做一件逻辑独立的事，提交信息遵循中文 Conventional Commits（R10）。向 `main` 开 Pull Request，验证通过后合并，整合完成后删除临时分支。不要直接推送到受保护的 `main`。
 3. 必须有证据验证（构建日志、命令输出、真实运行）。严禁仅凭推理声称通过。
 4. 代码变更须同步更新 GitHub Issues（问题追踪；关联 issue 验证通过后关闭并附证据）。
 

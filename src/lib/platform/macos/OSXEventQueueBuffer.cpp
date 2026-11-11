@@ -17,7 +17,7 @@
 // OSXEventQueueBuffer
 //
 
-OSXEventQueueBuffer::OSXEventQueueBuffer(IEventQueue *events) : m_eventQueue(events)
+OSXEventQueueBuffer::OSXEventQueueBuffer(IEventQueue *)
 {
   // Initialization is now managed using modern constructs
 }

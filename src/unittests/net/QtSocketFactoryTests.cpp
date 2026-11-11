@@ -10,7 +10,6 @@
 #include "base/Event.h"
 #include "base/EventQueue.h"
 #include "base/EventTypes.h"
-#include "common/Settings.h"
 #include "net/FingerprintDatabase.h"
 #include "net/IDataSocket.h"
 #include "net/IListenSocket.h"
@@ -24,15 +23,14 @@
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileInfo>
 #include <QSslCertificate>
 #include <QTimer>
 
-// End-to-end coverage for the Qt network adapters that now back every
-// connection: real loopback sockets, the IEventQueue event contract, the TLS
-// handshake and the TOFU fingerprint database. The trust-store paths still
-// come from the settings directory helpers (redirected to a temporary
-// directory via portable mode), but the factory receives them by injection:
-// the network layer itself never reads the settings.
+// End-to-end coverage for the Qt network adapters: real loopback sockets,
+// the IEventQueue event contract, TLS and fingerprint trust. Certificate and
+// trust paths are injected from a private temporary directory, without reading
+// Settings or creating a portable-mode marker.
 
 namespace {
 
@@ -40,8 +38,8 @@ TlsConfig testTlsConfig(const QString &certPath)
 {
   TlsConfig tls;
   tls.certificatePath = certPath.toStdString();
-  tls.trustedClientsDbPath = Settings::tlsTrustedClientsDb().toStdString();
-  tls.trustedServersDbPath = Settings::tlsTrustedServersDb().toStdString();
+  tls.trustedClientsDbPath = (QFileInfo(certPath).absolutePath() + "/trusted-clients").toStdString();
+  tls.trustedServersDbPath = (QFileInfo(certPath).absolutePath() + "/trusted-servers").toStdString();
   return tls;
 }
 
@@ -63,31 +61,19 @@ void QtSocketFactoryTests::initTestCase()
   arch.init();
 #endif
 
-  // Per-process directory so two builds or ctest instances on the same
-  // machine do not share certificates and settings.
-  m_testDir = QDir::tempPath() + QString("/synergy-qt-transport-tests-%1").arg(QCoreApplication::applicationPid());
-  QDir().mkpath(m_testDir);
+  QVERIFY(m_directory.isValid());
+  m_testDir = m_directory.path();
   m_certPath = m_testDir + "/test-cert.pem";
   synergy::generatePemSelfSignedCert(m_certPath, kMinimumRsaBits);
   QVERIFY(QFile::exists(m_certPath));
-
-  // Force portable mode so tlsTrustedServersDb()/tlsTrustedClientsDb() resolve
-  // under our control instead of the real user profile.
-  m_markerFile = Settings::portableSettingsFile();
-  QDir().mkpath(QFileInfo(m_markerFile).absolutePath());
-  QFile marker(m_markerFile);
-  QVERIFY(marker.open(QIODevice::WriteOnly));
-  marker.close();
-
-  Settings::setSettingsFile(m_testDir + "/test-settings.conf");
-  Settings::setStateFile(m_testDir + "/test-state.conf");
 }
 
 void QtSocketFactoryTests::cleanupTestCase()
 {
-  QFile::remove(m_markerFile);
-  QDir(QFileInfo(m_markerFile).absolutePath()).rmdir(".");
-  QDir(m_testDir).removeRecursively();
+  if (m_hadLegacyNetwork)
+    qputenv("USE_LEGACY_NETWORK", m_legacyNetwork);
+  else
+    qunsetenv("USE_LEGACY_NETWORK");
 }
 
 void QtSocketFactoryTests::init()
@@ -202,7 +188,7 @@ void QtSocketFactoryTests::tlsRejectsUntrustedServer()
   QVERIFY(qtListener != nullptr);
 
   // No trusted-servers database: the client must reject the server.
-  QFile::remove(Settings::tlsTrustedServersDb());
+  QFile::remove(m_testDir + "/trusted-servers");
 
   std::unique_ptr<IDataSocket> serverSocket;
   bool serverAccepted = false;
@@ -257,7 +243,7 @@ void QtSocketFactoryTests::tlsRejectsWrongFingerprint()
   QByteArray bogus(32, '\0');
   bogus[0] = '\x01';
   db.addTrusted({QCryptographicHash::Sha256, bogus});
-  const QString dbPath = Settings::tlsTrustedServersDb();
+  const QString dbPath = m_testDir + "/trusted-servers";
   QDir().mkpath(QFileInfo(dbPath).absolutePath());
   QVERIFY(db.write(dbPath));
 
@@ -310,7 +296,7 @@ void QtSocketFactoryTests::tlsRejectsSmallRsaKey()
   QVERIFY(!smallCerts.isEmpty());
   FingerprintDatabase db;
   db.addTrusted({QCryptographicHash::Sha256, smallCerts.first().digest(QCryptographicHash::Sha256)});
-  const QString dbPath = Settings::tlsTrustedServersDb();
+  const QString dbPath = m_testDir + "/trusted-servers";
   QDir().mkpath(QFileInfo(dbPath).absolutePath());
   QVERIFY(db.write(dbPath));
 
@@ -370,7 +356,7 @@ void QtSocketFactoryTests::tlsTrustedServerRoundTrip()
   QVERIFY(!certs.isEmpty());
   FingerprintDatabase db;
   db.addTrusted({QCryptographicHash::Sha256, certs.first().digest(QCryptographicHash::Sha256)});
-  const QString dbPath = Settings::tlsTrustedServersDb();
+  const QString dbPath = m_testDir + "/trusted-servers";
   QDir().mkpath(QFileInfo(dbPath).absolutePath());
   QVERIFY(db.write(dbPath));
 

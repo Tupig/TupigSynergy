@@ -38,7 +38,13 @@ function(create_test)
   if (CMAKE_CXX_BYTE_ORDER STREQUAL "BIG_ENDIAN")
     target_compile_definitions(${m_NAME} PUBLIC WORDS_BIGENDIAN=1)
   endif()
-  add_test(NAME ${m_NAME} COMMAND $<TARGET_FILE:${m_NAME}> WORKING_DIRECTORY ${m_WORKING_DIRECTORY})
+  # Keep console diagnostics and a separate current result for each Qt target.
+  # CI prints the files on failure even when Windows stdout capture is silent.
+  set(_test_result_directory "${CMAKE_BINARY_DIR}/src/unittests/test-results")
+  file(MAKE_DIRECTORY "${_test_result_directory}")
+  add_test(NAME ${m_NAME} COMMAND $<TARGET_FILE:${m_NAME}>
+    -o -,txt -o "${_test_result_directory}/${m_NAME}.txt,txt"
+    WORKING_DIRECTORY "${m_WORKING_DIRECTORY}")
   set_tests_properties(${m_NAME} PROPERTIES DEPENDS ${m_DEPENDS})
 
   # GUI tests need the Qt platform plugin at run time. A statically linked Qt

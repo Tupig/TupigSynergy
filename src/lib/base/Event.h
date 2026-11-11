@@ -11,6 +11,8 @@
 
 #include <assert.h>
 #include <cstdlib>
+#include <memory>
+#include <utility>
 
 using synergy::EventTypes;
 
@@ -52,9 +54,23 @@ public:
 
   Event() = default;
   Event(const Event &) = delete;
-  Event(Event &&other) = default;
+  Event(Event &&other) noexcept
+  {
+    *this = std::move(other);
+  }
   Event &operator=(const Event &) = delete;
-  Event &operator=(Event &&) = default;
+  Event &operator=(Event &&other) noexcept
+  {
+    if (this != &other) {
+      m_type = std::exchange(other.m_type, EventTypes::Unknown);
+      m_target = std::exchange(other.m_target, nullptr);
+      m_data = std::exchange(other.m_data, nullptr);
+      m_flags = std::exchange(other.m_flags, EventFlags::NoFlags);
+      m_dataObject = std::exchange(other.m_dataObject, nullptr);
+      m_dataDeleter = std::exchange(other.m_dataDeleter, nullptr);
+    }
+    return *this;
+  }
 
   //! Create \c Event with data (POD)
   /*!
@@ -79,12 +95,23 @@ public:
     // do nothing
   }
 
+  //! Create an event owning a normal C++ object, still exposed by getData().
+  template <typename T>
+  Event(EventTypes type, void *target, std::unique_ptr<T> data, Flags flags = EventFlags::NoFlags)
+      : m_type(type),
+        m_target(target),
+        m_data(data.release()),
+        m_flags(flags),
+        m_dataDeleter([](void *pointer) { delete static_cast<T *>(pointer); })
+  {
+  }
+
   //! @name manipulators
   //@{
 
   //! Release event data
   /*!
-  Deletes event data for the given event (using free()).
+  Releases event data with its original allocation's matching deleter.
   */
   static void deleteData(const Event &event)
   {
@@ -97,7 +124,10 @@ public:
 
     default:
       if ((event.getFlags() & EventFlags::DontFreeData) == 0) {
-        free(event.getData());
+        if (event.m_dataDeleter)
+          event.m_dataDeleter(event.getData());
+        else
+          free(event.getData());
         delete event.getDataObject();
       }
       break;
@@ -137,9 +167,9 @@ public:
     return m_target;
   }
 
-  //! Get the event data (POD).
+  //! Get the raw or explicitly typed-owned event payload.
   /*!
-  Returns the event data (POD).
+  Returns the same payload pointer regardless of its allocation strategy.
   */
   void *getData() const
   {
@@ -174,4 +204,5 @@ private:
   void *m_data = nullptr;
   Flags m_flags = EventFlags::NoFlags;
   EventData *m_dataObject = nullptr;
+  void (*m_dataDeleter)(void *) = nullptr;
 };

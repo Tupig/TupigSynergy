@@ -6,8 +6,10 @@
 #   4. analysis (only workflow_dispatch with analyze=true)
 #   5. ci-passed, the branch-protection gate
 #
-# Triggers — one run does not start another:
-#   push to main          lint + free Linux. No publish. A newer push cancels the older one.
+# Triggers - one run does not start another:
+#   push to main          lint, then Windows, macOS, and the free Linux subset.
+#                         Unsigned snapshot artifacts. No publish or notifications.
+#                         A newer push cancels the older one.
 #   pull_request to main  same as push. A newer push to that PR cancels the older run.
 #   release published     all platforms, clean version, attach packages. This fires when a
 #                         person publishes a Release. The publish job uses the workflow
@@ -46,6 +48,7 @@ on:
           - windows
           - macos
           - linux
+          - flatpak
       analyze:
         description: "Also run clang-tidy, cppcheck, CodeQL, SonarCloud and Valgrind. Does not change which platforms build."
         required: false
@@ -70,7 +73,7 @@ concurrency:
 
 env:
   PACKAGE_PREFIX: ${{ vars.SYNERGY_PACKAGE_PREFIX || 'synergy' }}
-  CMAKE_CONFIGURE: "cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DSKIP_BUILD_TESTS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON"
+  CMAKE_CONFIGURE: "cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DSKIP_BUILD_TESTS=ON -DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON"
   # Third-party Node actions (vcpkg) print DeprecationWarning on Node 20. That is not a project defect.
   NODE_OPTIONS: --no-deprecation
 
@@ -137,6 +140,8 @@ jobs:
           case "$GITHUB_EVENT_NAME" in
             push|pull_request)
               linux_key=free
+              build_windows=true
+              build_macos=true
               build_linux=true
               ;;
             release)
@@ -166,6 +171,9 @@ jobs:
                   build_linux=true
                   build_flatpak=true
                 fi
+                if [ "$PLATFORM" = "flatpak" ]; then
+                  build_flatpak=true
+                fi
               fi
               ;;
             *)
@@ -173,7 +181,7 @@ jobs:
               exit 1
               ;;
           esac
-          targets=$(jq -c --arg k "$linux_key" '.[$k]' .github/matrices/linux-targets.json)
+          targets=$(jq -c --arg k "$linux_key" '.[$k] | map(. + {"expected-arch": (if (.name | endswith("-arm64")) then "arm64" elif (.name | endswith("-x86_64")) then "x64" else error("unsupported declared Linux target") end)})' .github/matrices/linux-targets.json)
           {
             echo "targets=$targets"
             echo "build_windows=$build_windows"
@@ -231,7 +239,7 @@ jobs:
       # SignPath Foundation holds the code-signing key. The API token is the only
       # secret. Organization id and project slug are Actions variables assigned
       # after the project is approved. Missing any of them leaves the package unsigned.
-      WINDOWS_SIGNING: ${{ secrets.SIGNPATH_API_TOKEN != '' && vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_PROJECT_SLUG != '' }}
+      WINDOWS_SIGNING: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.SIGNPATH_API_TOKEN != '' && vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_PROJECT_SLUG != '' }}
 
     strategy:
       fail-fast: false
@@ -278,7 +286,7 @@ jobs:
 
       # Stage: compile. GUI must be synergy_<X.Y.Z>.exe; core and daemon stay unversioned.
       - name: Configure
-        run: ${{ env.CMAKE_CONFIGURE }} -G Ninja ${{ steps.get-deps.outputs.vcpkg-cmake-config }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }}
+        run: ${{ env.CMAKE_CONFIGURE }} -G Ninja ${{ steps.get-deps.outputs.vcpkg-cmake-config }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
 
       - name: Build
         shell: bash
@@ -406,7 +414,6 @@ jobs:
           path: ${{ steps.gui-exe.outputs.path }}
           if-no-files-found: error
 
-      # Stage: package, then sign the MSI itself when signing is enabled.
       - name: Package
         shell: bash
         run: cmake --build build --config Release -j8 --target package
@@ -465,6 +472,8 @@ jobs:
 
       - name: Test packaged build
         uses: ./.github/actions/test-package
+        with:
+          expected-arch: ${{ matrix.target.arch }}
 
       - name: Upload package
         if: ${{ needs.get-version.outputs.publish_release == 'true' }}
@@ -483,24 +492,27 @@ jobs:
 
     env:
       MAC_SIGNING: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID != '' }}
+      MAC_CODESIGN_ID: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}
 
     strategy:
       fail-fast: false
       matrix:
         target:
           - name: "macos-arm64"
+            expected-arch: arm64
             runs-on: macos-15
-            timeout: 10
+            timeout: 20
             qt-version: 6.11.1
-            # Deployment target is set once in cmake/Synergy.cmake (single
-            # source of truth); don't pass -DCMAKE_OSX_DEPLOYMENT_TARGET here.
-            config-args: '-DCMAKE_OSX_ARCHITECTURES="arm64"'
+            # These CI artifacts use providers built for macOS 15. The local
+            # manifest build retains its separately checked requested floor.
+            config-args: '-DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0'
 
           - name: "macos-x64"
+            expected-arch: x64
             runs-on: macos-15-intel
-            timeout: 20
+            timeout: 30
             qt-version: 6.9.3
-            config-args: '-DCMAKE_OSX_ARCHITECTURES="x86_64"'
+            config-args: '-DCMAKE_OSX_ARCHITECTURES="x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0'
 
     steps:
       - name: Checkout
@@ -511,6 +523,7 @@ jobs:
 
       # Stage: toolchain, then compile. Qt comes from the CI Qt build.
       - name: Install dependencies
+        id: get-deps
         uses: ./.github/actions/install-dependencies
         with:
           qt-version: ${{ matrix.target.qt-version }}
@@ -520,7 +533,7 @@ jobs:
         run: |
           set -euo pipefail
           openssl_root=$(brew --prefix openssl@3)
-          ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}" -DOPENSSL_ROOT_DIR="$openssl_root"
+          ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}" -DOPENSSL_ROOT_DIR="$openssl_root" -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
 
       - name: Build
         shell: bash
@@ -582,7 +595,11 @@ jobs:
           security create-keychain -p "$keychain_pass" "$keychain"
           security set-keychain-settings -lut 3600 "$keychain"
           security unlock-keychain -p "$keychain_pass" "$keychain"
-          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d ' "')
+          keychains=()
+          while IFS= read -r existing; do
+            keychains+=("$existing")
+          done < <(security list-keychains -d user | sed 's/^[[:space:]]*"//; s/"[[:space:]]*$//')
+          security list-keychains -d user -s "$keychain" "${keychains[@]}"
           cert_file="$RUNNER_TEMP/cert.p12"
           echo "$APPLE_P12_CERTIFICATE" | base64 --decode > "$cert_file"
           security import "$cert_file" -k "$keychain" -P "$APPLE_P12_PASSWORD" -T /usr/bin/codesign
@@ -664,6 +681,8 @@ jobs:
 
       - name: Test packaged build
         uses: ./.github/actions/test-package
+        with:
+          expected-arch: ${{ matrix.target.expected-arch }}
 
       - name: Upload package
         if: ${{ needs.get-version.outputs.publish_release == 'true' }}
@@ -876,17 +895,69 @@ jobs:
         run: |
           apt-get install -y -qq meson pkg-config
           git clone --depth 1 --branch 0.9.1 https://github.com/flatpak/libportal.git /tmp/libportal
-          meson setup /tmp/libportal/_build /tmp/libportal --prefix=/usr --libdir=lib/$(gcc -dumpmachine) \
+          portal_commit=$(git -C /tmp/libportal rev-parse HEAD)
+          test "$portal_commit" = 8f5dc8d192f6e31dafe69e35219e3b707bde71ce
+          meson setup /tmp/libportal/_build /tmp/libportal --prefix=/usr --libdir="lib/$(gcc -dumpmachine)" \
             --default-library=static \
             -Dbackend-gtk3=disabled -Dbackend-gtk4=disabled -Dbackend-qt5=disabled -Dbackend-qt6=disabled \
             -Ddocs=false -Dintrospection=false -Dvapi=false -Dtests=false
           meson install -C /tmp/libportal/_build
-          rm -f /usr/lib/$(gcc -dumpmachine)/libportal.so*
+          license_dir=/usr/share/licenses/tupig-build/libportal
+          mkdir -p "$license_dir"
+          python3 - "$license_dir" "$portal_commit" <<'PY'
+          import importlib.util
+          import sys
+          spec = importlib.util.spec_from_file_location("runtime_notices", "scripts/ci/prepare-runtime-notices.py")
+          notices = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(notices)
+          payload = notices.download_runtime_source("libportal", "0.9.1")
+          notices.prepare("libportal", "0.9.1", payload, ["libportal.so.1"], sys.argv[1],
+                          "static source build libportal 0.9.1 gitcommit " + sys.argv[2])
+          PY
+          rm -f "/usr/lib/$(gcc -dumpmachine)"/libportal.so*
           ldconfig
 
       # Stage: compile and package. Arch uses makepkg; every other distro uses CPack.
       - name: Configure
-        run: ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }}
+        shell: bash
+        env:
+          TARGET_NAME: ${{ matrix.target.name }}
+        run: |
+          license_args=()
+          source_license_map=""
+          notice_root="$PWD/build/ci-runtime-notices"
+          providers=()
+          case "$TARGET_NAME" in
+            fedora-*) providers=(libdrm xcb-util-keysyms) ;;
+            rocky-*) providers=(libdrm xcb-util-keysyms) ;;
+            opensuse-*) providers=(libdrm libX11 libXext libXi libXinerama libXrandr libXrender libXtst
+                                   brotli e2fsprogs gcc graphite2 krb5 icu mtdev libproxy tslib libxcb
+                                   xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms
+                                   xcb-util-renderutil xcb-util) ;;
+            archlinux-*) providers=(e2fsprogs glib libgudev libidn2 keyutils libportal libproxy systemd tslib libunistring) ;;
+          esac
+          for provider in "${providers[@]}"; do
+            provider_map=$(python3 scripts/ci/prepare-runtime-notices.py \
+              --provider "$provider" --destination "$notice_root")
+            test -n "$provider_map"
+            IFS=';' read -r -a provider_entries <<< "$provider_map"
+            for entry in "${provider_entries[@]}"; do
+              soname=${entry%%=*}
+              if [[ ";$source_license_map;" == *";$soname="* ]]; then
+                echo "ERROR: Duplicate runtime notice SONAME: $soname" >&2
+                exit 1
+              fi
+            done
+            source_license_map+="${source_license_map:+;}$provider_map"
+          done
+          if [[ "$TARGET_NAME" == ubuntu-24.04* ]]; then
+            license_args=(-DSYNERGY_EXTRA_LICENSE_DIRS=/usr/share/licenses/tupig-build)
+            source_license_map=libportal.so.1=/usr/share/licenses/tupig-build/libportal
+          fi
+          if [[ -n "$source_license_map" ]]; then
+            license_args+=("-DSYNERGY_SOURCE_LICENSE_MAP=$source_license_map")
+          fi
+          ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} "${license_args[@]}"
 
       - name: Build
         shell: bash
@@ -937,10 +1008,10 @@ jobs:
             sudo chown -R build build
             cd build
             sudo -u build makepkg -s
-            export OSNAME=$(cat /etc/os-release | grep ^ID= | sed 's/ID=//g')
+            OSNAME=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"')
             [ "$OSNAME" = "arch" ] && OSNAME="arch-linux"
-            export ARCH=$(uname -m)
-            mv *.pkg.tar.zst ${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_${OSNAME}_${ARCH}.pkg.tar.zst
+            ARCH=$(uname -m)
+            mv ./*.pkg.tar.zst "${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_${OSNAME}_${ARCH}.pkg.tar.zst"
             cd ..
           else
             cmake --build build --config Release -j8 --target package
@@ -955,6 +1026,7 @@ jobs:
       - name: Test packaged build
         uses: ./.github/actions/test-package
         with:
+          expected-arch: ${{ matrix.target.expected-arch }}
           like: ${{ matrix.target.like }}
 
       - name: Upload package
@@ -970,7 +1042,7 @@ jobs:
     if: ${{ needs.get-version.outputs.build_flatpak == 'true' }}
     name: flatpak-${{matrix.flatpak.arch}}
     runs-on: ${{matrix.flatpak.runs-on}}
-    timeout-minutes: 60
+    timeout-minutes: 90
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
       options: --privileged
@@ -996,7 +1068,7 @@ jobs:
         run: flatpak-builder-lint appstream deploy/linux/com.tupig.synergy.metainfo.xml
 
       # appid-url-not-reachable: the linter probes https://tupig.com (app-id
-      # namespace), which fails TLS from CI — same class as A-39 (#63). Covered by
+      # namespace), which fails TLS from CI - same class as A-39 (#63). Covered by
       # ci-build-lint-exceptions.json; without --exceptions this step hard-fails.
       - name: Lint manifest
         run: flatpak-builder-lint --exceptions --user-exceptions deploy/linux/flatpak/ci-build-lint-exceptions.json manifest deploy/linux/flatpak/com.tupig.synergy.yml
@@ -1019,12 +1091,17 @@ jobs:
       - name: Validate build
         run: flatpak-builder-lint --exceptions --user-exceptions deploy/linux/flatpak/ci-build-lint-exceptions.json repo repo
 
+      - name: Export and verify complete offline repository
+        shell: bash
+        run: |
+          scripts/ci/package-flatpak-offline.sh repo "${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_linux_${{ matrix.flatpak.arch }}-flatpak-offline.tar.zst" "${{ matrix.flatpak.arch }}"
+
       - name: Upload package
         if: ${{ needs.get-version.outputs.publish_release == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-flatpak-${{matrix.flatpak.arch}}
-          path: ${{github.workspace}}/${{ env.PACKAGE_PREFIX }}[-_]*.flatpak
+          path: ${{github.workspace}}/${{ env.PACKAGE_PREFIX }}[-_]*-flatpak-offline.tar.zst
           retention-days: 14
 
   # Attach the CPack/Flatpak packages to the GitHub Release v<X.Y.Z>. Actions
@@ -1105,11 +1182,11 @@ jobs:
             gh release create "$tag" "${files[@]}" --title "$title" --notes "${notes}"$'\n\n'"${marker}" --latest
           fi
 
-  # Upload all packages that built to AWS S3 for distribution. Runs after the
-  # build jobs on push/dispatch/release events (PRs skipped, no secrets), and
-  # uploads whatever artifacts exist — one failed target must not block shipping
-  # the rest (a flaky distro shouldn't sink a whole nightly snapshot). Gated only
-  # on get-version, which supplies the path. Layout: <dir>/<dev|snapshot|release>/<version>/...
+  # Upload release packages to AWS S3 for distribution. Snapshot validation
+  # never enters this job or reads AWS credentials. Release publication
+  # uploads whatever artifacts exist - one failed target must not block shipping
+  # the rest (a flaky distro should not discard other release artifacts).
+  # The publication decision comes from get-version, which supplies the path. Layout: <dir>/<dev|snapshot|release>/<version>/...
   # No checkout (download-artifact only). Artifacts land at the workspace root under dist/.
   # Secrets cannot be referenced from a job-level `if` (context unavailable
   # there), so gate each AWS step individually: when secrets are unset the
@@ -1196,7 +1273,7 @@ jobs:
             [ "${{ needs.s3-upload.result }}" = "failure" ] && printf '\342\200\242 S3 upload failed\n'
             echo "<$link|View workflow>"
             echo "EOF"
-          } >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
 
       - name: Check Slack secrets
         id: slack
@@ -1255,8 +1332,8 @@ jobs:
       - name: Run clang-tidy (errors only)
         run: |
           set -euo pipefail
-          find src/ -regex '.*\.\(cpp\|cc\|cxx\)' \
-            | xargs clang-tidy -p build \
+          find src/ -regex '.*\.\(cpp\|cc\|cxx\)' -print0 \
+            | xargs -0 -r clang-tidy -p build \
               --checks='-*,bugprone-*,cert-*,cppcoreguidelines-*,clang-analyzer-*,-modernize-use-trailing-return-type' \
               --warnings-as-errors='*' \
             2>&1 | tee clang-tidy-output.txt
@@ -1363,25 +1440,30 @@ jobs:
             -DENABLE_COVERAGE=ON
       - name: Build
         run: |
-          build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build -j${CPU_CORE_COUNT}
+          build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build -j"${CPU_CORE_COUNT}"
       - name: Test coverage
         shell: bash
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          tests=(`cmake --build build  --target help | grep -o "^coverage-[^:]*"`)
+          targets=$(cmake --build build --target help)
+          mapfile -t tests < <(printf '%s\n' "$targets" | grep -o "^coverage-[^:]*")
+          if [ "${#tests[@]}" -eq 0 ]; then
+            echo "Error: No coverage targets found"
+            exit 1
+          fi
           for i in "${tests[@]}"; do
             cmake --build build --target "$i"
           done
       - name: Get coverage report paths
         id: coverage-paths
         run: |
-          paths=$(ls -w 0 -m build/coverage-*.xml | sed 's/ //g')
+          paths=$(find build -maxdepth 1 -name 'coverage-*.xml' -type f -printf '%p\n' | sort | paste -sd, -)
           if [ -z "$paths" ]; then
             echo "Error: No coverage files found"
             exit 1
           fi
-          echo "csv=$paths" >> $GITHUB_OUTPUT
+          echo "csv=$paths" >> "$GITHUB_OUTPUT"
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v8
         with:
@@ -1429,7 +1511,7 @@ jobs:
           $backticks
           EOF
           )
-          echo "$message" >> $GITHUB_STEP_SUMMARY
+          echo "$message" >> "$GITHUB_STEP_SUMMARY"
   # ---------------------------------------------------------------------------
   # 5. Gate. Branch protection watches this job. A skipped job counts as
   # success: platform filters and analyze=false skip work on purpose.

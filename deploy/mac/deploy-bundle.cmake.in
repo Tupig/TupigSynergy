@@ -1,0 +1,185 @@
+# SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
+# SPDX-License-Identifier: MIT
+
+# Evaluated after GUI/core installation, never during project configuration.
+set(app "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/@CMAKE_PROJECT_PROPER_NAME@.app")
+set(core "${app}/Contents/MacOS/synergy-core")
+if(NOT EXISTS "${core}")
+  message(FATAL_ERROR "The packaged app is missing synergy-core")
+endif()
+
+if("@QT_IS_SHARED@")
+  if(NOT EXISTS "@DEPLOYQT@")
+    message(FATAL_ERROR "Shared Qt packaging requires macdeployqt")
+  endif()
+  # -no-codesign is not available in older Qt deployment tools (e.g. 6.9).
+  # Probe capabilities; all versions still receive final explicit bundle signing.
+  execute_process(COMMAND "@DEPLOYQT@" --help
+    RESULT_VARIABLE help_result OUTPUT_VARIABLE deploy_help ERROR_VARIABLE deploy_help_error)
+  # Qt 6.9 prints valid usage and returns 1 for every help invocation.
+  set(deploy_usage "${deploy_help}${deploy_help_error}")
+  if((NOT help_result EQUAL 0 AND NOT help_result EQUAL 1) OR
+     NOT deploy_usage MATCHES "Usage: macdeployqt" OR NOT deploy_usage MATCHES "-executable=")
+    message(FATAL_ERROR "Could not query macdeployqt capabilities (${help_result})")
+  endif()
+  set(deploy_sign_options "")
+  if(deploy_usage MATCHES "-no-codesign")
+    list(APPEND deploy_sign_options -no-codesign)
+  endif()
+  execute_process(
+    COMMAND "@DEPLOYQT@" "${app}" "-executable=${core}" ${deploy_sign_options}
+    RESULT_VARIABLE deploy_result
+  )
+  if(NOT deploy_result EQUAL 0)
+    message(FATAL_ERROR "macdeployqt failed (${deploy_result})")
+  endif()
+endif()
+
+# QLibrary-loaded OpenSSL is not present in the plugin's import table. Stage
+# the matching ABI explicitly before closing the ordinary Mach-O dependencies.
+set(qt_ssl_runtime "")
+set(qt_ssl_plugin "${app}/Contents/PlugIns/tls/libqopensslbackend.dylib")
+if(EXISTS "${qt_ssl_plugin}")
+  execute_process(COMMAND /usr/bin/otool -L "${qt_ssl_plugin}"
+    RESULT_VARIABLE ssl_inspect_result OUTPUT_VARIABLE ssl_imports)
+  if(NOT ssl_inspect_result EQUAL 0)
+    message(FATAL_ERROR "Could not inspect the deployed Qt OpenSSL backend")
+  endif()
+  if(NOT ssl_imports MATCHES "libssl[^/ ]*\\.dylib")
+    foreach(name IN ITEMS libssl.3.dylib libcrypto.3.dylib)
+      set(source "@MAC_QT_SSL_ROOT@/lib/${name}")
+      if("@MAC_QT_SSL_ROOT@" STREQUAL "" OR NOT EXISTS "${source}")
+        message(FATAL_ERROR "Qt OpenSSL backend requires packaged ABI 3 runtime: ${name}")
+      endif()
+      file(MAKE_DIRECTORY "${app}/Contents/Frameworks")
+      # Resolve provider symlinks, leaving only real files inside the bundle.
+      get_filename_component(source "${source}" REALPATH)
+      configure_file("${source}" "${app}/Contents/Frameworks/${name}" COPYONLY)
+      list(APPEND qt_ssl_runtime "${app}/Contents/Frameworks/${name}")
+    endforeach()
+  endif()
+endif()
+
+include(BundleUtilities)
+set(BU_CHMOD_BUNDLE_ITEMS TRUE)
+file(GLOB_RECURSE plugins LIST_DIRECTORIES FALSE "${app}/Contents/PlugIns/*.dylib")
+set(search_dirs "${app}/Contents/Frameworks;${app}/Contents/Libraries;@MAC_DEPENDENCY_DIRS@")
+fixup_bundle("${app}" "${plugins};${qt_ssl_runtime}" "${search_dirs}")
+
+# The load commands are now app-relative. Remove unused build-machine RPATHs
+# so an installed package cannot accidentally fall back to Homebrew or a Qt SDK.
+file(GLOB_RECURSE contents LIST_DIRECTORIES FALSE "${app}/Contents/*")
+foreach(item IN LISTS contents)
+  if(IS_SYMLINK "${item}")
+    continue()
+  endif()
+  execute_process(COMMAND /usr/bin/otool -l "${item}"
+    RESULT_VARIABLE inspect_result OUTPUT_VARIABLE load_commands ERROR_QUIET)
+  if(NOT inspect_result EQUAL 0)
+    continue()
+  endif()
+  string(REGEX MATCHALL "cmd LC_RPATH\n[^\n]*\n[^\n]*" rpath_commands "${load_commands}")
+  set(removed "")
+  foreach(command IN LISTS rpath_commands)
+    string(REGEX REPLACE ".*\n[ \t]*path (.*) \\(offset [0-9]+\\).*" "\\1" rpath "${command}")
+    if(NOT rpath MATCHES "^@(loader_path|executable_path)(/|$)" AND
+       NOT rpath MATCHES "^(/usr/lib|/System/Library)(/|$)" AND NOT rpath IN_LIST removed)
+      execute_process(COMMAND /usr/bin/install_name_tool -delete_rpath "${rpath}" "${item}"
+        RESULT_VARIABLE remove_result)
+      if(NOT remove_result EQUAL 0)
+        message(FATAL_ERROR "Could not remove external bundle RPATH from ${item}")
+      endif()
+      list(APPEND removed "${rpath}")
+    endif()
+  endforeach()
+  # install_name_tool invalidates an existing signature. CPack re-signs the
+  # completed bundle after all resources have been installed.
+  # Signing the main executable signs its enclosing bundle. Defer that seal
+  # until the CPack pre-build step, after all nested code and resources exist.
+  if(item STREQUAL "${app}/Contents/MacOS/@CMAKE_PROJECT_PROPER_NAME@")
+    continue()
+  endif()
+  execute_process(COMMAND /usr/bin/codesign --force --sign - "${item}"
+    RESULT_VARIABLE sign_result)
+  if(NOT sign_result EQUAL 0)
+    message(FATAL_ERROR "Could not ad-hoc sign deployed Mach-O file ${item}")
+  endif()
+endforeach()
+verify_app("${app}")
+
+# Include the actual dependency provider's notices, also for static archives.
+# Never substitute a URL for the license texts shipped with that provider.
+set(notices "${app}/Contents/Resources/third-party-licenses")
+file(MAKE_DIRECTORY "${notices}")
+set(vcpkg_notices "")
+if(NOT "@MAC_VCPKG_SHARE@" STREQUAL "" AND IS_DIRECTORY "@MAC_VCPKG_SHARE@")
+  file(GLOB vcpkg_notices "@MAC_VCPKG_SHARE@/*/copyright")
+endif()
+set(have_qt FALSE)
+set(have_openssl FALSE)
+foreach(notice IN LISTS vcpkg_notices)
+  get_filename_component(port_dir "${notice}" DIRECTORY)
+  get_filename_component(port "${port_dir}" NAME)
+  file(MAKE_DIRECTORY "${notices}/vcpkg/${port}")
+  file(COPY "${notice}" DESTINATION "${notices}/vcpkg/${port}")
+  if(port STREQUAL "qtbase")
+    set(have_qt TRUE)
+  elseif(port STREQUAL "openssl")
+    set(have_openssl TRUE)
+  endif()
+endforeach()
+
+function(copy_provider_notices provider root output)
+  set(found FALSE)
+  if(IS_DIRECTORY "${root}")
+    file(GLOB candidates "${root}/LICENSE*" "${root}/COPYING*" "${root}/NOTICE*"
+      "${root}/licenses" "${root}/Licenses")
+    foreach(candidate IN LISTS candidates)
+      if(IS_DIRECTORY "${candidate}")
+        file(GLOB_RECURSE texts LIST_DIRECTORIES FALSE "${candidate}/*")
+        set(have_text FALSE)
+        foreach(text IN LISTS texts)
+          file(SIZE "${text}" length)
+          if(length GREATER 0)
+            set(have_text TRUE)
+          endif()
+        endforeach()
+        if(NOT have_text)
+          continue()
+        endif()
+      else()
+        file(SIZE "${candidate}" length)
+        if(length EQUAL 0)
+          continue()
+        endif()
+      endif()
+      file(COPY "${candidate}" DESTINATION "${notices}/${provider}")
+      set(found TRUE)
+    endforeach()
+  endif()
+  set(${output} ${found} PARENT_SCOPE)
+endfunction()
+
+include("@CMAKE_CURRENT_BINARY_DIR@/ci-qt-notices.cmake")
+if(NOT have_qt)
+  synergy_copy_ci_qt_notices("${notices}/Qt" have_qt)
+endif()
+if(NOT have_qt)
+  copy_provider_notices(Qt "@MAC_QT_ROOT@" have_qt)
+endif()
+if(NOT have_openssl)
+  copy_provider_notices(OpenSSL "@MAC_OPENSSL_ROOT@" have_openssl)
+endif()
+if(NOT have_qt)
+  message(FATAL_ERROR "Missing Qt license texts from selected SDK @MAC_QT_ROOT@ or vcpkg share directories")
+endif()
+if(NOT have_openssl)
+  message(FATAL_ERROR "Missing OpenSSL license texts from selected SDK @MAC_OPENSSL_ROOT@ or vcpkg share directories")
+endif()
+
+if(qt_ssl_runtime)
+  copy_provider_notices(Qt-OpenSSL-runtime "@MAC_QT_SSL_ROOT@" have_qt_ssl)
+  if(NOT have_qt_ssl)
+    message(FATAL_ERROR "Qt OpenSSL runtime provider license texts are required")
+  endif()
+endif()

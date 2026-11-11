@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "tupig-synergy",
   "version-string": "1.21.2",
-  "builtin-baseline": "5f96cd15fd745122cf27e0524606d6c1efc5fd07",
+  "builtin-baseline": "61d7eaeb094a6acbc23d9c2e54de9208175fda47",
   "description": "Cross-platform keyboard and mouse sharing utility",
   "homepage": "https://github.com/Tupig/Tupig_synergy",
   "license": "GPL-2.0-only WITH LicenseRef-OpenSSL-Exception",

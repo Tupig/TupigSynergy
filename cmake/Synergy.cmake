@@ -31,15 +31,6 @@ else()
 endif()
 add_compile_definitions(SYNERGY_DISPLAY_NAME="${SYNERGY_DISPLAY_NAME}")
 
-# Single source of truth for the minimum macOS version. Synergy is long-term
-# stable (unlike upstream, which tracks recent macOS), so we target the oldest
-# macOS the linked Qt 6.x supports, the same value for every architecture.
-# CMake uses this for the build; the packaged .app inherits it via the Xcode/
-# Ninja generators. CI must NOT pass -DCMAKE_OSX_DEPLOYMENT_TARGET.
-if(APPLE)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "12")
-endif()
-
 # Core flavor seeds headless-build defaults (no GUI, no tests, no installer).
 # No `FORCE` on the cache writes: the seed only fills empty slots, so a user
 # passing -DBUILD_GUI=ON alongside the flavor flag still wins.

@@ -57,7 +57,7 @@ case "$(uname -s)" in
         ;;
     *)
         echo "[ERROR] Unsupported platform: $(uname -s)"
-        echo "        Use scripts\\build.bat on Windows."
+        printf '%s\n' '        Use scripts\build.bat on Windows.'
         exit 1
         ;;
 esac

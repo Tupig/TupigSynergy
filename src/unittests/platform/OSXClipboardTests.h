@@ -15,6 +15,9 @@ private Q_SLOTS:
   void open();
   void singleFormat();
   void formatConvert_UTF8();
+  void textEncodingPreservesBytes_data();
+  void textEncodingPreservesBytes();
+  void htmlPreservesUnicodeAndNormalizesLinefeeds();
 
 private:
   Log m_log;

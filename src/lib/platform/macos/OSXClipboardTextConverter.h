@@ -23,7 +23,4 @@ protected:
   // OSXClipboardAnyTextConverter overrides
   std::string doFromIClipboard(const std::string &) const override;
   std::string doToIClipboard(const std::string &) const override;
-
-  // generic encoding converter
-  static std::string convertString(const std::string &data, CFStringEncoding fromEncoding, CFStringEncoding toEncoding);
 };

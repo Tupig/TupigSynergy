@@ -11,6 +11,7 @@
 #include "ProtocolTypes.h"
 
 #include <cstddef>
+#include <memory>
 #include <string>
 
 constexpr static auto s_clipboardChunkMetaSize = 7;
@@ -28,11 +29,25 @@ struct ClipboardChunkAssemblyState
 class ClipboardChunk : public Chunk
 {
 public:
-  explicit ClipboardChunk(size_t size);
+  // Internal event ownership only; this identity is never serialized.
+  struct Lifetime
+  {
+  };
 
-  static ClipboardChunk *start(ClipboardID id, uint32_t sequence, const std::string &size);
-  static ClipboardChunk *data(ClipboardID id, uint32_t sequence, const std::string &data);
-  static ClipboardChunk *end(ClipboardID id, uint32_t sequence);
+  explicit ClipboardChunk(size_t size, const std::shared_ptr<const Lifetime> &lifetime = {});
+
+  static ClipboardChunk *start(
+      ClipboardID id, uint32_t sequence, const std::string &size, const std::shared_ptr<const Lifetime> &lifetime = {}
+  );
+  static ClipboardChunk *data(
+      ClipboardID id, uint32_t sequence, const std::string &data, const std::shared_ptr<const Lifetime> &lifetime = {}
+  );
+  static ClipboardChunk *end(ClipboardID id, uint32_t sequence, const std::shared_ptr<const Lifetime> &lifetime = {});
+
+  bool belongsTo(const std::shared_ptr<const Lifetime> &lifetime) const
+  {
+    return lifetime && m_lifetime == lifetime;
+  }
 
   static TransferState assemble(
       synergy::IStream *stream, std::string &dataCached, ClipboardID &id, uint32_t &sequence,
@@ -45,4 +60,7 @@ public:
   {
     return state.expectedSize;
   }
+
+private:
+  std::shared_ptr<const Lifetime> m_lifetime;
 };

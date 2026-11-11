@@ -40,6 +40,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -279,8 +280,8 @@ void Server::adoptClient(BaseClientProxy *client)
   }
 
   // send notification
-  auto *info = new Server::ScreenConnectedInfo(getName(client));
-  m_events->addEvent(Event(EventTypes::ServerConnected, m_primaryClient->getEventTarget(), info));
+  auto info = std::make_unique<Server::ScreenConnectedInfo>(getName(client));
+  m_events->addEvent(Event(EventTypes::ServerConnected, m_primaryClient->getEventTarget(), std::move(info)));
 }
 
 void Server::disconnect()

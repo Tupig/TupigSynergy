@@ -6,6 +6,7 @@
  */
 
 #include "MSWindowsHook.h"
+#include "MSWindowsPolicies.h"
 #include "ScreenException.h"
 #include "base/DirectionTypes.h"
 #include "base/Log.h"
@@ -435,7 +436,7 @@ static LRESULT CALLBACK keyboardLLHook(int code, WPARAM wParam, LPARAM lParam)
     KBDLLHOOKSTRUCT *info = reinterpret_cast<KBDLLHOOKSTRUCT *>(lParam);
 
     bool const injected = info->flags & LLKHF_INJECTED;
-    if (!g_isPrimary && injected) {
+    if (synergy::windows::shouldIgnoreInjectedInput(g_isPrimary, injected)) {
       return CallNextHookEx(g_keyboardLL, code, wParam, lParam);
     }
 
@@ -582,7 +583,7 @@ static LRESULT CALLBACK mouseLLHook(int code, WPARAM wParam, LPARAM lParam)
     MSLLHOOKSTRUCT *info = reinterpret_cast<MSLLHOOKSTRUCT *>(lParam);
 
     bool const injected = info->flags & LLMHF_INJECTED;
-    if (!g_isPrimary && injected) {
+    if (synergy::windows::shouldIgnoreInjectedInput(g_isPrimary, injected)) {
       return CallNextHookEx(g_mouseLL, code, wParam, lParam);
     }
 

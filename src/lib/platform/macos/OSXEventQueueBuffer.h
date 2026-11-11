@@ -32,8 +32,6 @@ public:
   bool isEmpty() const override;
 
 private:
-  IEventQueue *m_eventQueue;
-
   mutable std::mutex m_mutex;
   std::condition_variable m_cond;
   std::queue<uint32_t> m_dataQueue;

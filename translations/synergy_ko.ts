@@ -521,6 +521,11 @@ A bound IP is now invalid, you may need to restart the server.</source>
         <translation>Ctrl+Q</translation>
     </message>
     <message>
+        <source>
+&lt;p&gt;%1 listens on all network interfaces because no IP is selected in the settings.&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Invalid Screen Name</source>
         <translation>잘못된 컴퓨터 이름</translation>
     </message>

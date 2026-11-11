@@ -38,9 +38,12 @@ TCPListenSocket::TCPListenSocket(
 TCPListenSocket::~TCPListenSocket()
 {
   try {
+    // A running error callback may close the listener while we wait here.
+    m_socketMultiplexer->removeSocket(this);
+    std::scoped_lock lock{m_mutex};
     if (m_socket != nullptr) {
-      m_socketMultiplexer->removeSocket(this);
       ARCH->closeSocket(m_socket);
+      m_socket = nullptr;
     }
   } catch (...) {
     // ignore
@@ -77,12 +80,13 @@ void TCPListenSocket::bind(const NetworkAddress &addr)
 
 void TCPListenSocket::close()
 {
+  // Do not hold the listener mutex while waiting for a callback that needs it.
+  m_socketMultiplexer->removeSocket(this);
   std::scoped_lock lock{m_mutex};
   if (m_socket == nullptr) {
     throw IOClosedException();
   }
   try {
-    m_socketMultiplexer->removeSocket(this);
     ARCH->closeSocket(m_socket);
     m_socket = nullptr;
   } catch (ArchNetworkException &e) {

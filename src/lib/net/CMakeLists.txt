@@ -13,6 +13,16 @@ endif()
 find_package(Qt${QT_VERSION_MAJOR} ${REQUIRED_QT_VERSION} REQUIRED COMPONENTS Network)
 find_package(OpenSSL ${REQUIRED_OPENSSL_VERSION} REQUIRED COMPONENTS SSL Crypto)
 
+if(APPLE)
+  # Inspect the same providers net links, after discovery in this target scope.
+  synergy_check_macos_target(OpenSSL::SSL REQUIRED _mac_ssl_provider)
+  synergy_check_macos_target(OpenSSL::Crypto REQUIRED _mac_crypto_provider)
+  # Imported targets and normal find variables are local to this directory.
+  # Packaging in a sibling must use the exact providers inspected above.
+  set_property(DIRECTORY PROPERTY SYNERGY_MAC_OPENSSL_PROVIDERS
+    "${_mac_ssl_provider};${_mac_crypto_provider}")
+endif()
+
 add_library(net STATIC
   Fingerprint.cpp
   Fingerprint.h

@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 
 // -----------------------------------------------------------------------------
 // Input Filter Condition Classes
@@ -36,7 +37,7 @@ InputFilter::KeystrokeCondition::KeystrokeCondition(IEventQueue *events, IPlatfo
       m_mask(info->m_mask),
       m_events(events)
 {
-  free(info);
+  delete info;
 }
 
 InputFilter::KeystrokeCondition::KeystrokeCondition(IEventQueue *events, KeyID key, KeyModifierMask mask)
@@ -231,10 +232,10 @@ void InputFilter::LockCursorToScreenAction::perform(const Event &event)
   };
 
   // send event
-  auto *info = new Server::LockCursorToScreenInfo(s_state[m_mode]);
-  m_events->addEvent(
-      Event(EventTypes::ServerLockCursorToScreen, event.getTarget(), info, Event::EventFlags::DeliverImmediately)
-  );
+  auto info = std::make_unique<Server::LockCursorToScreenInfo>(s_state[m_mode]);
+  m_events->addEvent(Event(
+      EventTypes::ServerLockCursorToScreen, event.getTarget(), std::move(info), Event::EventFlags::DeliverImmediately
+  ));
 }
 
 InputFilter::RestartServer::RestartServer(Mode mode) : m_mode(mode)
@@ -298,9 +299,9 @@ void InputFilter::SwitchToScreenAction::perform(const Event &event)
   }
 
   // send event
-  auto *info = new Server::SwitchToScreenInfo(screen);
+  auto info = std::make_unique<Server::SwitchToScreenInfo>(screen);
   m_events->addEvent(
-      Event(EventTypes::ServerSwitchToScreen, event.getTarget(), info, Event::EventFlags::DeliverImmediately)
+      Event(EventTypes::ServerSwitchToScreen, event.getTarget(), std::move(info), Event::EventFlags::DeliverImmediately)
   );
 }
 
@@ -330,10 +331,10 @@ std::string InputFilter::SwitchInDirectionAction::format() const
 
 void InputFilter::SwitchInDirectionAction::perform(const Event &event)
 {
-  auto *info = new Server::SwitchInDirectionInfo(m_direction);
-  m_events->addEvent(
-      Event(EventTypes::ServerSwitchInDirection, event.getTarget(), info, Event::EventFlags::DeliverImmediately)
-  );
+  auto info = std::make_unique<Server::SwitchInDirectionInfo>(m_direction);
+  m_events->addEvent(Event(
+      EventTypes::ServerSwitchInDirection, event.getTarget(), std::move(info), Event::EventFlags::DeliverImmediately
+  ));
 }
 
 InputFilter::SwitchToNextScreenAction::SwitchToNextScreenAction(IEventQueue *events) : m_events(events)
@@ -414,10 +415,10 @@ void InputFilter::KeyboardBroadcastAction::perform(const Event &event)
   };
 
   // send event
-  auto *info = new Server::KeyboardBroadcastInfo(s_state[m_mode], m_screens);
-  m_events->addEvent(
-      Event(EventTypes::ServerKeyboardBroadcast, event.getTarget(), info, Event::EventFlags::DeliverImmediately)
-  );
+  auto info = std::make_unique<Server::KeyboardBroadcastInfo>(s_state[m_mode], m_screens);
+  m_events->addEvent(Event(
+      EventTypes::ServerKeyboardBroadcast, event.getTarget(), std::move(info), Event::EventFlags::DeliverImmediately
+  ));
 }
 
 InputFilter::KeystrokeAction::KeystrokeAction(IEventQueue *events, IPlatformScreen::KeyInfo *info, bool press)
@@ -430,13 +431,15 @@ InputFilter::KeystrokeAction::KeystrokeAction(IEventQueue *events, IPlatformScre
 
 InputFilter::KeystrokeAction::~KeystrokeAction()
 {
-  free(m_keyInfo);
+  delete m_keyInfo;
 }
 
 void InputFilter::KeystrokeAction::adoptInfo(IPlatformScreen::KeyInfo *info)
 {
-  free(m_keyInfo);
-  m_keyInfo = info;
+  if (m_keyInfo != info) {
+    delete m_keyInfo;
+    m_keyInfo = info;
+  }
 }
 
 const IPlatformScreen::KeyInfo *InputFilter::KeystrokeAction::getInfo() const
@@ -530,11 +533,12 @@ void InputFilter::MouseButtonAction::perform(const Event &event)
 {
   // send modifiers
   using enum EventTypes;
-  IPlatformScreen::KeyInfo *modifierInfo = nullptr;
   if (m_buttonInfo.m_mask != 0) {
     KeyID key = m_press ? kKeySetModifiers : kKeyClearModifiers;
-    modifierInfo = IKeyState::KeyInfo::alloc(key, m_buttonInfo.m_mask, 0, 1);
-    m_events->addEvent(Event(KeyStateKeyDown, event.getTarget(), modifierInfo, Event::EventFlags::DeliverImmediately));
+    auto modifierInfo = std::unique_ptr<IKeyState::KeyInfo>(IKeyState::KeyInfo::alloc(key, m_buttonInfo.m_mask, 0, 1));
+    m_events->addEvent(
+        Event(KeyStateKeyDown, event.getTarget(), std::move(modifierInfo), Event::EventFlags::DeliverImmediately)
+    );
   }
 
   // send button

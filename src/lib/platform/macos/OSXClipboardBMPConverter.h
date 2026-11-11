@@ -23,8 +23,6 @@ public:
   std::string fromIClipboard(const std::string &) const override;
   std::string toIClipboard(const std::string &) const override;
 
-  static std::string convertString(const std::string &data, CFStringEncoding fromEncoding, CFStringEncoding toEncoding);
-
 private:
   static constexpr quint32 kBiBitfields = 3;
   static constexpr quint32 kBiAlphabitfields = 6;

@@ -1,18 +1,130 @@
-# SPDX-FileCopyrightText: (C) 2025 Chris Rizzitello <https://github.com/Tupig/Tupig_synergy/issues>
+# SPDX-FileCopyrightText: (C) 2025 Chris Rizzitello
 # SPDX-License-Identifier: MIT
+cmake_minimum_required(VERSION 3.21)
 
-if(CPACK_GENERATOR MATCHES 7Z|ZIP)
-  string(REPLACE " " "*" _TEMP_LIST "@CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS@")
-  foreach(ITEM ${_TEMP_LIST})
-    string(REPLACE "*" " " _ITEM ${ITEM})
-    file(COPY ${_ITEM} DESTINATION ${CPACK_TEMPORARY_INSTALL_DIRECTORY})
-  endforeach()
-  file(WRITE ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/settings/@CMAKE_PROJECT_PROPER_NAME@.conf " ")
-  file(REMOVE ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/@CMAKE_PROJECT_NAME@-daemon.exe)
-  file(WRITE ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/README.txt
-" Portable @CMAKE_PROJECT_PROPER_NAME@: @CMAKE_PROJECT_VERSION@
+set(_root "${CPACK_TEMPORARY_INSTALL_DIRECTORY}")
+if(CPACK_GENERATOR MATCHES "^(7Z|ZIP)$")
+  set(_kind portable)
+  file(MAKE_DIRECTORY "${_root}/settings")
+  file(WRITE "${_root}/settings/@CMAKE_PROJECT_PROPER_NAME@.conf" " ")
+  file(REMOVE "${_root}/@CMAKE_PROJECT_NAME@-daemon.exe")
+  file(WRITE "${_root}/README.txt"
+"Portable @CMAKE_PROJECT_PROPER_NAME@: @CMAKE_PROJECT_VERSION@
 
-  The portable version must have the settings/@CMAKE_PROJECT_PROPER_NAME@.conf file to save settings, or it will try to use the system settings location.
-  The portable version does not include the daemon, so the client will not work at UAC prompts or the login screen.
+Keep settings/@CMAKE_PROJECT_PROPER_NAME@.conf to save settings locally.
+The portable version omits the daemon and does not support UAC or login screens.
 ")
+else()
+  set(_kind msi)
+endif()
+
+if("@QT_IS_SHARED@")
+  if(NOT EXISTS "@DEPLOYQT@")
+    message(FATAL_ERROR "Shared Qt packaging requires windeployqt")
+  endif()
+  # Deploy every executable, including core/daemon, and do not prune Qt's
+  # graphics, ICU or plugin runtime dependencies. CRT is handled app-locally.
+  file(GLOB_RECURSE _executables "${_root}/*.exe")
+  if(NOT _executables)
+    message(FATAL_ERROR "Shared Qt packaging requires staged executables")
+  endif()
+  foreach(_executable IN LISTS _executables)
+    execute_process(COMMAND "@DEPLOYQT@" --no-compiler-runtime --no-quick-import
+      --dir "${_root}" --plugindir "${_root}/plugins" "${_executable}"
+      RESULT_VARIABLE _deployed)
+    if(NOT _deployed EQUAL 0)
+      message(FATAL_ERROR "windeployqt could not deploy ${_executable}")
+    endif()
+  endforeach()
+  file(WRITE "${_root}/qt.conf" "[Paths]\nPrefix=.\nPlugins=plugins\nTranslations=translations\n")
+endif()
+
+# Scan every executable and plugin, including delay-loaded imports. Search only
+# the package and selected dependency locations; the developer PATH is not a
+# deployment source. Use the same OS boundary as the final package auditor.
+include("@CMAKE_SOURCE_DIR@/deploy/windows/runtime-dependencies.cmake")
+set(_dumpbin "@CMAKE_DUMPBIN@")
+if(NOT EXISTS "${_dumpbin}")
+  unset(_dumpbin)
+  find_program(_dumpbin NAMES dumpbin REQUIRED)
+endif()
+set(_search_directories "@WINDOWS_PACKAGE_SEARCH_DIRS@")
+file(GLOB_RECURSE _queue "${_root}/*.exe" "${_root}/*.dll")
+set(_visited "")
+while(_queue)
+  list(POP_FRONT _queue _binary)
+  if(_binary IN_LIST _visited)
+    continue()
+  endif()
+  list(APPEND _visited "${_binary}")
+  synergy_windows_imports("${_binary}" "${_dumpbin}" _imports)
+  foreach(_name IN LISTS _imports)
+    synergy_windows_is_system("${_name}" _system)
+    if(_system)
+      continue()
+    endif()
+    if(EXISTS "${_root}/${_name}")
+      list(APPEND _queue "${_root}/${_name}")
+      continue()
+    endif()
+    get_filename_component(_origin "${_binary}" DIRECTORY)
+    find_file(_dependency NAMES "${_name}"
+      PATHS "${_origin}" ${_search_directories} NO_DEFAULT_PATH NO_CACHE)
+    if(NOT _dependency)
+      message(FATAL_ERROR "Unresolved Windows package dependency: ${_name}")
+    endif()
+    string(TOLOWER "${_dependency}" _lower)
+    if(_lower MATCHES "[/\\\\](debug|debug_nonredist)[/\\\\]" OR
+        _lower MATCHES "(vcruntime[0-9_]*d|msvcp[0-9_]*d|ucrtbased)\\.dll$")
+      message(FATAL_ERROR "Refusing to redistribute debug runtime: ${_name}")
+    endif()
+    file(COPY "${_dependency}" DESTINATION "${_root}")
+    list(APPEND _queue "${_root}/${_name}")
+    unset(_dependency)
+  endforeach()
+endwhile()
+
+# vcpkg carries per-port copyright/license material for direct and transitive
+# dependencies. Prebuilt Qt carries its own license collection separately.
+if("@WINDOWS_VCPKG_SHARE@" STREQUAL "")
+  message(FATAL_ERROR "Missing configured vcpkg license root")
+endif()
+file(GLOB _copyrights "@WINDOWS_VCPKG_SHARE@/*/copyright")
+if(NOT _copyrights)
+  message(FATAL_ERROR "Missing vcpkg dependency license metadata")
+endif()
+foreach(_copyright IN LISTS _copyrights)
+  file(SIZE "${_copyright}" _license_size)
+  if(_license_size EQUAL 0)
+    message(FATAL_ERROR "Empty vcpkg dependency license: ${_copyright}")
+  endif()
+  get_filename_component(_port_dir "${_copyright}" DIRECTORY)
+  get_filename_component(_port "${_port_dir}" NAME)
+  file(MAKE_DIRECTORY "${_root}/licenses/vcpkg/${_port}")
+  file(COPY "${_copyright}" DESTINATION "${_root}/licenses/vcpkg/${_port}")
+endforeach()
+if("@QT_IS_SHARED@" AND NOT EXISTS "@WINDOWS_VCPKG_SHARE@/qtbase/copyright")
+  include("@CMAKE_CURRENT_BINARY_DIR@/ci-qt-notices.cmake")
+  synergy_copy_ci_qt_notices("${_root}/licenses/qt" _qt_ci_notices)
+  if(NOT _qt_ci_notices)
+    set(_qt_licenses "")
+    foreach(_prefix IN ITEMS "@WINDOWS_QT_PREFIX@" "@WINDOWS_QT_PREFIX@/.." "@WINDOWS_QT_PREFIX@/../..")
+      file(GLOB _license_candidates "${_prefix}/LICENSE*" "${_prefix}/licenses" "${_prefix}/Licenses")
+      list(APPEND _qt_licenses ${_license_candidates})
+    endforeach()
+    if(NOT _qt_licenses)
+      message(FATAL_ERROR "Missing prebuilt Qt license metadata")
+    endif()
+    list(REMOVE_DUPLICATES _qt_licenses)
+    file(MAKE_DIRECTORY "${_root}/licenses/qt")
+    file(COPY ${_qt_licenses} DESTINATION "${_root}/licenses/qt")
+  endif()
+endif()
+
+execute_process(COMMAND "@CMAKE_COMMAND@" "-DPACKAGE_ROOT=${_root}"
+  "-DPACKAGE_KIND=${_kind}" "-DDUMPBIN=${_dumpbin}" "-DEXPECTED_ARCH=@BUILD_ARCHITECTURE@"
+  -P "@CMAKE_SOURCE_DIR@/scripts/ci/verify-package-windows.cmake"
+  RESULT_VARIABLE _verified)
+if(NOT _verified EQUAL 0)
+  message(FATAL_ERROR "Windows package dependency audit failed")
 endif()

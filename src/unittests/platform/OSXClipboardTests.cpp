@@ -9,6 +9,8 @@
 #include "OSXClipboardTests.h"
 
 #include "OSXClipboard.h"
+#include "OSXClipboardHTMLConverter.h"
+#include "OSXClipboardTextConverter.h"
 #include "OSXClipboardUTF8Converter.h"
 
 void OSXClipboardTests::open()
@@ -37,6 +39,44 @@ void OSXClipboardTests::formatConvert_UTF8()
   QCOMPARE(converter.getOSXFormat(), CFSTR("public.utf8-plain-text"));
   QCOMPARE(converter.fromIClipboard("test data\n"), "test data\r");
   QCOMPARE(converter.toIClipboard("test data\r"), "test data\n");
+}
+
+namespace {
+class EncodingConverter : public OSXClipboardTextConverter
+{
+public:
+  using OSXClipboardTextConverter::convertString;
+};
+} // namespace
+
+void OSXClipboardTests::textEncodingPreservesBytes_data()
+{
+  QTest::addColumn<QByteArray>("input");
+  QTest::addColumn<quint32>("encoding");
+  QTest::addColumn<QByteArray>("expected");
+  QTest::newRow("ascii") << QByteArray("plain") << quint32(kCFStringEncodingUTF8) << QByteArray("plain");
+  QTest::newRow("unicode") << QByteArray::fromHex("c3a9e4b8ad") << quint32(kCFStringEncodingUTF16LE)
+                           << QByteArray::fromHex("e9002d4e");
+  QTest::newRow("empty") << QByteArray() << quint32(kCFStringEncodingUTF8) << QByteArray();
+  QTest::newRow("invalid-utf8") << QByteArray::fromHex("ff") << quint32(kCFStringEncodingUTF8) << QByteArray();
+}
+
+void OSXClipboardTests::textEncodingPreservesBytes()
+{
+  QFETCH(QByteArray, input);
+  QFETCH(quint32, encoding);
+  QFETCH(QByteArray, expected);
+  const auto actual = EncodingConverter::convertString(input.toStdString(), kCFStringEncodingUTF8, encoding);
+  QCOMPARE(QByteArray::fromStdString(actual), expected);
+}
+
+void OSXClipboardTests::htmlPreservesUnicodeAndNormalizesLinefeeds()
+{
+  OSXClipboardHTMLConverter converter;
+  const std::string unicode = QByteArray::fromHex("c3a9e4b8ad").toStdString();
+  const auto html = std::string("<p>") + unicode + "</p>";
+  QCOMPARE(converter.fromIClipboard(html + "\n"), html + "\r");
+  QCOMPARE(converter.toIClipboard(html + "\r\n"), html + "\n");
 }
 
 QTEST_MAIN(OSXClipboardTests)

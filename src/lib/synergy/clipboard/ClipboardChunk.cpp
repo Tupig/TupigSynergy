@@ -29,15 +29,19 @@ bool wouldExceed(size_t currentSize, size_t extraSize, size_t limit)
 
 } // namespace
 
-ClipboardChunk::ClipboardChunk(size_t size) : Chunk(size)
+ClipboardChunk::ClipboardChunk(size_t size, const std::shared_ptr<const Lifetime> &lifetime)
+    : Chunk(size),
+      m_lifetime(lifetime)
 {
   m_dataSize = size - s_clipboardChunkMetaSize;
 }
 
-ClipboardChunk *ClipboardChunk::start(ClipboardID id, uint32_t sequence, const std::string &size)
+ClipboardChunk *ClipboardChunk::start(
+    ClipboardID id, uint32_t sequence, const std::string &size, const std::shared_ptr<const Lifetime> &lifetime
+)
 {
   size_t sizeLength = size.size();
-  auto *start = new ClipboardChunk(sizeLength + s_clipboardChunkMetaSize);
+  auto *start = new ClipboardChunk(sizeLength + s_clipboardChunkMetaSize, lifetime);
   char *chunk = start->m_chunk;
 
   chunk[0] = id;
@@ -49,10 +53,12 @@ ClipboardChunk *ClipboardChunk::start(ClipboardID id, uint32_t sequence, const s
   return start;
 }
 
-ClipboardChunk *ClipboardChunk::data(ClipboardID id, uint32_t sequence, const std::string &data)
+ClipboardChunk *ClipboardChunk::data(
+    ClipboardID id, uint32_t sequence, const std::string &data, const std::shared_ptr<const Lifetime> &lifetime
+)
 {
   size_t dataSize = data.size();
-  auto *chunk = new ClipboardChunk(dataSize + s_clipboardChunkMetaSize);
+  auto *chunk = new ClipboardChunk(dataSize + s_clipboardChunkMetaSize, lifetime);
   char *chunkData = chunk->m_chunk;
 
   chunkData[0] = id;
@@ -64,9 +70,9 @@ ClipboardChunk *ClipboardChunk::data(ClipboardID id, uint32_t sequence, const st
   return chunk;
 }
 
-ClipboardChunk *ClipboardChunk::end(ClipboardID id, uint32_t sequence)
+ClipboardChunk *ClipboardChunk::end(ClipboardID id, uint32_t sequence, const std::shared_ptr<const Lifetime> &lifetime)
 {
-  auto *end = new ClipboardChunk(s_clipboardChunkMetaSize);
+  auto *end = new ClipboardChunk(s_clipboardChunkMetaSize, lifetime);
   char *chunk = end->m_chunk;
 
   chunk[0] = id;

@@ -276,6 +276,7 @@ void QtNetworkTransport::close()
   }
   m_connected = false;
   m_readBuffer.clear();
+  m_readOffset = 0;
   m_writeBuffer.clear();
 }
 
@@ -293,7 +294,9 @@ uint32_t QtNetworkTransport::read(void *buffer, uint32_t size)
 
   const uint32_t toRead = (std::min)(size, static_cast<uint32_t>(available));
 
-  std::memcpy(buffer, m_readBuffer.constData() + m_readOffset, toRead);
+  if (buffer != nullptr) {
+    std::memcpy(buffer, m_readBuffer.constData() + m_readOffset, toRead);
+  }
   m_readOffset += static_cast<int>(toRead);
 
   // drop the consumed prefix only once it is at least half of the buffer, so

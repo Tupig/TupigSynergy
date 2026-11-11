@@ -9,9 +9,16 @@
 
 set(app "${CPACK_TEMPORARY_INSTALL_DIRECTORY}/@CMAKE_PROJECT_PROPER_NAME@.app")
 
+set(identity "@APPLE_CODESIGN_ID@")
+set(sign_options "")
+if(identity)
+  list(APPEND sign_options --options runtime --timestamp)
+else()
+  set(identity "-")
+endif()
 execute_process(
-  COMMAND /usr/bin/codesign --force --deep --options runtime --timestamp
-          --sign "@APPLE_CODESIGN_ID@" "${app}"
+  COMMAND /usr/bin/codesign --force --deep ${sign_options}
+          --sign "${identity}" "${app}"
   RESULT_VARIABLE result
 )
 if(NOT result EQUAL 0)

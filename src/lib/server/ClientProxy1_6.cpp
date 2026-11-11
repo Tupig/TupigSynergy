@@ -22,8 +22,15 @@ ClientProxy1_6::ClientProxy1_6(const std::string &name, synergy::IStream *stream
       m_events(events)
 {
   m_events->addHandler(EventTypes::ClipboardSending, this, [this](const auto &e) {
-    ClipboardChunk::send(getStream(), e.getDataObject());
+    const auto *chunk = dynamic_cast<const ClipboardChunk *>(e.getDataObject());
+    if (chunk && chunk->belongsTo(m_clipboardLifetime))
+      ClipboardChunk::send(getStream(), e.getDataObject());
   });
+}
+
+ClientProxy1_6::~ClientProxy1_6()
+{
+  m_events->removeHandler(EventTypes::ClipboardSending, this);
 }
 
 void ClientProxy1_6::setClipboard(ClipboardID id, const IClipboard *clipboard)
@@ -39,7 +46,7 @@ void ClientProxy1_6::setClipboard(ClipboardID id, const IClipboard *clipboard)
     size_t size = data.size();
     LOG_DEBUG("sending clipboard %d to \"%s\"", id, getName().c_str());
 
-    StreamChunker::sendClipboard(data, size, id, 0, m_events, this);
+    StreamChunker::sendClipboard(data, size, id, 0, m_events, this, m_clipboardLifetime);
   }
 }
 

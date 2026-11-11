@@ -86,6 +86,31 @@ Build artifacts are **64-bit only**. `vcpkg.json` sets `"supports": "x64 | arm64
 
 x86_64 and x64 name the same 64-bit Intel/AMD architecture. They are not 32-bit.
 
+A push to `main` and a pull request compile and test Windows, macOS, and the free Linux subset in the same run; automatic validation skips Flatpak. Push builds use a snapshot version and pull requests use a development version. The Windows GUI filename remains `synergy_<X.Y.Z>.exe`, using the base version from `Version.cmake`. These runs upload unsigned Actions artifacts without signing, notarization, release publication, or external notifications. Manual snapshots support every platform, including Windows, and do not sign or publish. The GitHub Release is still published by the daily 08:23 schedule, a manual `package-type=release` run, or a published Release.
+
+The macOS and Linux vcpkg overlays use their platform system runtime (`VCPKG_CRT_LINKAGE=dynamic`) while retaining static Qt/OpenSSL libraries (`VCPKG_LIBRARY_LINKAGE=static`). This differs from the Windows release triplet, which uses `/MT`, and from CI's shared Qt distribution.
+
+Those builds run on GitHub-hosted runners. Qt and OpenSSL are downloaded there, not onto the machine that cloned the repository. A clone does not fetch them. `vendor/` stays untracked.
+
+### Source responsibilities
+
+The entry points remain `setup.bat` and `scripts/build.{bat,sh}`. Runtime code stays under
+`src/lib`, applications and packaging assets under `src/apps` and `deploy`, and tests mirror
+the owning library under `src/unittests`.
+
+- `server/config/` owns configuration parsing, action syntax, link cells, serialization and read context;
+  `server/Config.h` remains the public model interface.
+- `ServerInput.cpp`, `ServerSwitching.cpp` and `ServerClipboard.cpp` separate server input dispatch,
+  screen transitions and clipboard/file transfer from client lifecycle management.
+- `gui/mainwindow/` owns connection and configuration actions; `gui/config/` types use `synergy::gui`.
+- Platform screen implementations are split into event, input and display/session responsibilities
+  within their existing `platform/<os>/` directory. Key lookup tables remain separate from dispatch code.
+- `synergy/protocol/ProtocolTypes.h` remains the include entry point; control, input and data message
+  declarations live in domain headers. Their wire names, versions and serialized field order are unchanged.
+
+CMake lists every translation unit explicitly. A source split must preserve platform guards and compile
+on Windows, macOS and Linux; a local build alone does not establish cross-platform acceptance.
+
 ### Default Build Options
 
 The following components are enabled by default:
@@ -105,6 +130,7 @@ The following components are enabled by default:
 | `BUILD_X11_SUPPORT` | Build X11 backend (Linux/BSD) | `ON` |
 | `BUILD_OSX_BUNDLE` | Build macOS `.app` bundle | `ON` |
 | `SKIP_BUILD_TESTS` | Skip tests during build | `ON` |
+| `SYNERGY_ENABLE_INTERACTIVE_TESTS` | Enable tests that inject input or change the system clipboard | `OFF` |
 | `ENABLE_COVERAGE` | Enable code coverage reports | `OFF` |
 | `CLEAN_TRS` | Remove obsolete translation strings | `OFF` |
 | `SYNERGY_CORE_FLAVOR` | Build as "TuPig Synergy Core"; seeds headless defaults (GUI/tests/installer off) | `OFF` |
@@ -202,22 +228,37 @@ are set and `signtool verify` fails after SignPath returns the files, the job fa
 
 ### 🍎 macOS (Apple Silicon locally, Intel in CI)
 
-Host tools are Xcode Command Line Tools, CMake 3.25+, and Ninja. Qt and OpenSSL come from
-the repository vcpkg. Do not point CMake at a Homebrew Qt.
+Host tools are a full Xcode installation selected as the active developer directory,
+CMake 3.25+, Ninja, pkgconf, Autoconf with autoconf-archive, Automake, and GNU Libtool.
+Qt submodule builds require Xcode's version tools, which Command Line Tools alone
+do not provide. Select the installed Xcode in its Locations settings and confirm
+`xcodebuild -version` succeeds before building. Qt, OpenSSL, and their library
+dependencies come from the repository vcpkg. Homebrew supplies these host build
+tools; do not point CMake at a Homebrew Qt.
 
 CI uses the maintained Homebrew `openssl@3` line and passes its self-discovered prefix as `OPENSSL_ROOT_DIR`. This is the same major version as the release manifest, but the minor version and link model can differ; local release dependencies remain governed by `vcpkg.json`. OpenSSL 4 source compatibility remains tracked in [#307](https://github.com/Tupig/TupigSynergy/issues/307).
 
 ```bash
-xcode-select --install
-brew install cmake ninja
+xcodebuild -version
+brew install cmake ninja pkgconf autoconf autoconf-archive automake libtool
 ./scripts/build.sh release
 ```
 
 `./scripts/build.sh` selects preset `macos-release` (Ninja, triplet `arm64-osx`). That
 preset is Apple Silicon. Intel x86_64 is the Actions job `macos-x64`
 (`CMAKE_OSX_ARCHITECTURES=x86_64` on `macos-15-intel`), which produces a separate DMG
-(`mac_x64`), not a universal binary. The deployment target is macOS 12 and is set only
-in `cmake/Synergy.cmake`. Do not pass `-DCMAKE_OSX_DEPLOYMENT_TARGET`.
+(`mac_x64`), not a universal binary. Local builds default to a requested deployment
+target of macOS 14, matching the macOS overlay triplets' dependency build target;
+this is not a compatibility acceptance claim. Override the application target with
+`-DCMAKE_OSX_DEPLOYMENT_TARGET=<version>` when the selected dependencies need a newer
+OS. Both CI artifacts explicitly target macOS 15 because their provider archives
+require it. Configure checks selected Qt/OpenSSL slices and static archive members;
+packaging checks every bundled Mach-O slice and the app's `LSMinimumSystemVersion`.
+Providers newer than the requested floor are rejected, never relabeled as compatible.
+An existing build cache retains an explicitly selected older target. To move that
+cache to the current default, run `cmake --preset macos-release -DCMAKE_OSX_DEPLOYMENT_TARGET=14`
+before using the build entry point again. Older dependency caches are rebuilt when
+the triplet deployment target changes; keep the download and binary caches.
 
 Output: `build/bin/TuPig Synergy.app` and `build/bin/synergy-core`.
 
@@ -338,6 +379,10 @@ cmake -S . -B build \
 
 Tests are registered under `src/unittests`, so `ctest --test-dir build` reports that no tests were found. `BUILD_TESTS` defaults to `ON` (the test binaries are compiled). `SKIP_BUILD_TESTS` defaults to `ON`, which only skips running them at the end of the build.
 
+`SYNERGY_ENABLE_INTERACTIVE_TESTS` defaults to `OFF`. CTest keeps the available interactive targets registered and built, but reports them as `Disabled` / `Not Run`; count them separately from passing tests. The exact targets are `OSXKeyStateTests` (real key injection into the focused application), `OSXClipboardTests` and `MSWindowsClipboardTests` (replace or clear the system clipboard), and `XWindowsClipboardTests` when X11 is enabled (changes X11 clipboard selection ownership). Pure Windows conversion, DropData, key-state and policy tests remain enabled. `SKIP_BUILD_TESTS` does not opt into interactive targets.
+
+Only a disposable test environment should explicitly configure `-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON`; the shared native CI Configure command does this. The option does not derive its value from `CI` or `GITHUB_ACTIONS`, and an explicit `OFF` remains off. Opting in permits these side effects; it does not grant macOS permissions or establish secure-desktop, hardware or multi-machine acceptance. Directly launching a test executable bypasses CTest's disabled property. Review new tests for host side effects before registering them.
+
 ```bash
 # Windows (Visual Studio preset)
 ctest --test-dir build/src/unittests -C Release --output-on-failure
@@ -392,6 +437,28 @@ A clean run is one line: `encoding OK checked=669 violations=0 allowed=utf-8 mod
 | `encoding FAIL ... detected=` | The file is not in the whitelist. Save it as UTF-8 without a BOM, or add that encoding to `allowed`. `ascii` already passes under `utf-8`. `detected=binary` means a NUL byte; resave the file as text. |
 | `_FORTIFY_SOURCE` redefined | The toolchain already defined it (Flatpak uses level 3). The build keeps that definition and does not add a second one. |
 | MSVC CRT merge module not found | A dynamic-CRT release installs `vcruntime140.dll` and `msvcp140.dll` beside the binaries when the merge module is absent. |
+
+---
+
+### Complete package dependencies
+
+All shipped MSI/portable, app/DMG and native Linux packages include application runtime dependencies and their license notices. Deployment follows the actual linked dependency graph, including GUI/core helpers and dynamically loaded Qt plugins. Missing libraries, unresolved loader paths, wrong architectures or missing license sources stop packaging or verification. Static Qt builds retain only their actual dynamic dependencies and include licenses for statically linked libraries as well.
+
+The prebuilt Windows/macOS CI Qt provider carries an exact-version source-notice supplement for `qtbase` and `qtsvg`. The collector checks official Qt source archive SHA256 values and records selected SDK provider hashes, complete license texts, attribution files and provenance. CI records the original manifest digest before configuration; configuration and packaging reject later metadata or notice changes. Source archives stay in the CI cache. Local manifest builds continue using vcpkg notice material.
+
+Windows packages keep application DLLs and required VC redistributables beside the executables, with Qt plugins selected through package-local `qt.conf`. The portable archive omits the service daemon; the MSI keeps it. Distribute complete packages rather than a GUI executable detached from its runtime files. The current Windows CI Qt deployment selects its Schannel TLS plugin, whose TLS provider is the Windows OS; the application's directly linked OpenSSL runtime is still included. The optional Qt OpenSSL plugin is not forced into the package. PE dependency checks and startup on current CI runners do not establish minimum-Windows-version compatibility.
+
+macOS deploys the GUI and `synergy-core`, fixes third-party load commands inside the app, removes build-machine RPATHs, and signs after dependency fixups and resource installation. The verifier copies the DMG's app into a temporary directory, audits all Mach-O files and plugins, starts GUI `QApplication`/Cocoa through `--help`, and connects a real core client to a private TLS loopback server with a disposable identity and trust store. It requires a TLS handshake, client certificate and the core's peer-fingerprint acceptance before stopping without a Synergy greeting. Actual loaded images must remain inside the package or system directories. This is package TLS/startup evidence, not main-window, TCC permission or input-sharing acceptance. Translation catalogues live only in `Contents/Resources/translations`.
+
+The prebuilt Qt 6 OpenSSL plugin resolves OpenSSL ABI 3 dynamically, so import-table scans alone cannot close its dependencies. macOS packaging explicitly copies that runtime and its provider notices into the app when needed; CI installs `openssl@3` for this purpose as part of its prebuilt-Qt dependency exception. Homebrew discovery is restricted to GitHub Actions; local manifest builds use their selected SDK and fail if it lacks a required runtime. The installed app does not depend on Homebrew. A separately statically linked core OpenSSL does not satisfy this plugin runtime. CI runner success also does not establish compatibility with the minimum macOS deployment target; current provider objects may require a newer OS.
+
+Linux packages keep application executables, libraries and plugins under an app-private `libexec/synergy` tree and provide launch wrappers. The verifier extracts native packages without installing them or fetching dependencies, checks ELF closure, and exercises the bundled Qt platform plugin with build search paths removed.
+
+Linux CI retains packaged license documentation and restores missing notices from the exact installed RPM when needed. Before configure, `scripts/ci/prepare-runtime-notices.py` verifies installed package owners, source versions, ELF64 architecture and actual SONAMEs against finite source profiles. Pinned SHA256 values use published upstream/distro evidence where available; libproxy and the exact official GCC revision are locally computed original-byte pins with recorded source identities, not signature verification. The exact keyutils pin downloads from its reviewed fixed Buildroot endpoint after the official kernel snapshot returned 403; HTTP errors do not trigger a generic mirror fallback. Complete authored notices and delegated license texts are retained, including libportal's incorporated GPLv3 and libxcb's exact protocol-input notices. GCC uses a bounded streaming profile (128 MiB download, 180,000 members, 1 GiB expanded, 2 MiB per notice, 32 MiB output and 180 seconds); other sources retain their smaller bounds. Unknown identities/layouts/hashes stop with bounded public package diagnostics. Maintainers review new finite pins and full regression checks before native revalidation. The unchanged final collector copies only notices used by the actual staged dependency closure; unused prepared maps grant no exemption. Ubuntu 24.04's static libportal build first verifies its fixed Git commit and reuses exact 0.9.1 source notices plus full GPLv3 in the existing extra-notice directory, without claiming an installed dynamic provider. This CI supplement does not change local vcpkg manifest dependency or notice sources.
+
+The host boundary is the supported OS kernel/ABI and system APIs; on macOS this includes `/usr/lib` and `/System/Library`, and on Linux glibc/loader plus POSIX shell/coreutils. Display services, fonts and GPU drivers remain on the host. Qt, OpenSSL and application plugins are included rather than delegated to those host boundaries. Native DEB/RPM/Arch metadata may name the minimal OS runtime prerequisites.
+
+Run package checks with `scripts\ci\verify-package-windows.bat build <x64-or-arm64>`, `bash scripts/ci/verify-package-macos.sh --expected-arch <x64-or-arm64> build`, or `bash scripts/ci/verify-package-linux.sh --expected-arch <x64-or-arm64> build <distribution-family>`. Declare the approved build target explicitly; aliases x86_64/amd64 and aarch64 are accepted. macOS universal apps declare `x64,arm64`; GUI/core must match, while additional supported dependency slices retain per-slice closure checks. Whole extracted payload bytes, archive members and native slices are audited before launch; `V64_NATIVE_*` records retain actual traversal hashes and counts. Report each result against its exact build commit. A green CI run with prebuilt/shared dependencies does not prove the local vcpkg static release path. The Flatpak delivery target is an offline OSTree repository `.tar.zst` containing the app, runtime and extensions for each supported architecture, with hashes and bilingual offline instructions. This requires separate exact-commit verification; a standalone app file or an unfinished offline pipeline must not be reported as a complete delivery.
 
 ---
 
@@ -467,6 +534,28 @@ Qt6，打包策略不变。真实 Qt 选择、下载量、耗时、构建及包�
 
 x86_64 与 x64 都是 64 位 Intel/AMD，不是 32 位。
 
+推送到 `main` 和 Pull Request 会在同一次运行里编译并测试 Windows、macOS 和精简 Linux 矩阵；自动验证跳过 Flatpak。推送使用 snapshot 版本，PR 使用开发版本；Windows GUI 文件名仍取 `Version.cmake` 的基础版本，保持 `synergy_<X.Y.Z>.exe`。这些运行上传未签名 Actions 产物，不执行签名、公证、正式发布或外部通知。手动 snapshot 支持包括 Windows 在内的所有平台，同样不签名、不发布。GitHub Release 仍由每天 08:23 的定时任务、手动的 `package-type=release`，或一次已发布的 Release 来发布。
+
+macOS 与 Linux 的 vcpkg overlay 使用平台系统运行库（`VCPKG_CRT_LINKAGE=dynamic`），Qt/OpenSSL 仍保持静态库（`VCPKG_LIBRARY_LINKAGE=static`）。这与 Windows 发布 triplet 的 `/MT`、以及 CI 的共享 Qt 分发分别不同。
+
+这些构建跑在 GitHub 托管的运行器上。Qt 和 OpenSSL 下载到运行器，不会下载到克隆仓库的那台机器。只克隆仓库不会去取它们。`vendor/` 不入库。
+
+### 源码职责划分
+
+入口保持为 `setup.bat` 和 `scripts/build.{bat,sh}`。运行时代码放在 `src/lib`，应用与打包资源分别放在
+`src/apps` 和 `deploy`，测试在 `src/unittests` 按所属库分组。
+
+- `server/config/` 分别负责配置解析、动作语法、连接单元、序列化与读取上下文；`server/Config.h` 仍是公开模型接口。
+- `ServerInput.cpp`、`ServerSwitching.cpp` 和 `ServerClipboard.cpp` 将输入派发、屏幕切换、剪贴板与文件传输
+  从客户端生命周期管理中分离。
+- `gui/mainwindow/` 负责连接与配置操作；`gui/config/` 的类型统一放在 `synergy::gui` 命名空间。
+- 平台屏幕实现仍位于 `platform/<os>/`，按事件、输入、显示或会话职责拆分；按键查找表与事件派发代码分离。
+- `synergy/protocol/ProtocolTypes.h` 保持为包含入口，控制、输入与数据消息的声明按领域拆分。
+  协议名称、版本和序列化字段顺序保持不变。
+
+CMake 显式列出每个编译单元。拆分源码时必须保留平台条件并验证 Windows、macOS 与 Linux 构建；
+本机编译通过不能代替跨平台验收。
+
 ### 默认启用组件
 
 - ✅ TuPig Synergy GUI（Windows 为 `synergy_<X.Y.Z>.exe`，Linux 为 `synergy`，macOS 为 `TuPig Synergy.app`）
@@ -484,6 +573,7 @@ x86_64 与 x64 都是 64 位 Intel/AMD，不是 32 位。
 | `BUILD_X11_SUPPORT` | 编译 X11 后端 (Linux/BSD) | `ON` |
 | `BUILD_OSX_BUNDLE` | 编译 macOS `.app` 包 | `ON` |
 | `SKIP_BUILD_TESTS` | 跳过编译时测试 | `ON` |
+| `SYNERGY_ENABLE_INTERACTIVE_TESTS` | 启用注入真实输入或改变系统剪贴板的测试 | `OFF` |
 | `ENABLE_COVERAGE` | 启用代码覆盖率报告 | `OFF` |
 | `CLEAN_TRS` | 清理翻译文件中过时字符串 | `OFF` |
 | `SYNERGY_CORE_FLAVOR` | 以 “TuPig Synergy Core” 构建；同时将 GUI/测试/安装包默认置为关闭（无界面构建） | `OFF` |
@@ -567,17 +657,17 @@ Release CI 通过 [SignPath Foundation](https://signpath.org/) 签名 `synergy_<
 
 ### 🍎 macOS（本地 Apple Silicon，Intel 由 CI 构建）
 
-宿主工具是 Xcode Command Line Tools、CMake 3.25+ 和 Ninja。Qt 与 OpenSSL 来自仓库内 vcpkg，不要把 CMake 指到 Homebrew 的 Qt。
+宿主工具是已选为活动开发者目录的完整 Xcode、CMake 3.25+、Ninja、pkgconf、Autoconf 及 autoconf-archive、Automake 和 GNU Libtool。Qt 子模块构建需要 Xcode 版本工具，只有 Command Line Tools 并不足够。先在 Xcode 的 Locations 设置中选择已安装的 Xcode，并确认 `xcodebuild -version` 成功。Qt、OpenSSL 及其库依赖来自仓库内 vcpkg；Homebrew 只提供这些宿主构建工具，不要把 CMake 指到 Homebrew 的 Qt。
 
 CI 使用仍受维护的 Homebrew `openssl@3` 主线，并将自动发现的前缀作为 `OPENSSL_ROOT_DIR`。它与发布清单同为主版本 3，但小版本和链接模型可能不同；本地发布依赖仍以 `vcpkg.json` 为准。OpenSSL 4 源码兼容性继续由 [#307](https://github.com/Tupig/TupigSynergy/issues/307) 跟踪。
 
 ```bash
-xcode-select --install
-brew install cmake ninja
+xcodebuild -version
+brew install cmake ninja pkgconf autoconf autoconf-archive automake libtool
 ./scripts/build.sh release
 ```
 
-`./scripts/build.sh` 选择预设 `macos-release`（Ninja，triplet `arm64-osx`），这是 Apple Silicon。Intel x86_64 是 Actions 作业 `macos-x64`（`macos-15-intel` 上 `CMAKE_OSX_ARCHITECTURES=x86_64`），单独产出 `mac_x64` 的 DMG，不是一个通用二进制。部署目标是 macOS 12，只写在 `cmake/Synergy.cmake`，不要传 `-DCMAKE_OSX_DEPLOYMENT_TARGET`。
+`./scripts/build.sh` 选择预设 `macos-release`（Ninja，triplet `arm64-osx`），这是 Apple Silicon。Intel x86_64 是 Actions 作业 `macos-x64`（`macos-15-intel` 上 `CMAKE_OSX_ARCHITECTURES=x86_64`），单独产出 `mac_x64` 的 DMG，不是一个通用二进制。本地构建默认请求 macOS 14，与 macOS overlay triplet 的依赖构建目标一致；这不是兼容性验收承诺。若选定依赖需要较新系统，可用 `-DCMAKE_OSX_DEPLOYMENT_TARGET=<版本>` 显式调整应用目标。两种 CI 产物因提供方归档的要求而明确以 macOS 15 为目标。配置阶段检查选定 Qt/OpenSSL 架构及静态归档成员；打包验证检查每个 Mach-O 架构和 app 的 `LSMinimumSystemVersion`。依赖要求高于请求目标时会拒绝构建，不能将其重新标注为兼容。已有构建缓存会保留显式选定的旧目标；若要转为当前默认，先运行 `cmake --preset macos-release -DCMAKE_OSX_DEPLOYMENT_TARGET=14`，再使用构建入口。triplet 部署目标变化后会重建旧依赖缓存；请保留下载及二进制缓存。
 
 产物：`build/bin/TuPig Synergy.app` 与 `build/bin/synergy-core`。
 
@@ -686,6 +776,10 @@ cmake -S . -B build \
 
 测试注册在 `src/unittests`，所以 `ctest --test-dir build` 会报找不到测试。`BUILD_TESTS` 默认 `ON`（会编译测试程序）。`SKIP_BUILD_TESTS` 默认 `ON`，只是不在构建结束时自动跑它们。
 
+`SYNERGY_ENABLE_INTERACTIVE_TESTS` 默认 `OFF`。CTest 仍注册并编译当前平台存在的交互目标，但将其报告为 `Disabled` / `Not Run`，须与通过的测试分开计数。精确范围为 `OSXKeyStateTests`（向当前焦点应用注入真实按键）、`OSXClipboardTests` 与 `MSWindowsClipboardTests`（替换或清空系统剪贴板），以及启用 X11 时的 `XWindowsClipboardTests`（改变 X11 剪贴板 selection 所有权）。纯 Windows 转换、DropData、键状态和策略测试保持启用。`SKIP_BUILD_TESTS` 不会启用交互目标。
+
+仅在一次性测试环境中显式配置 `-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON`；原生 CI 的公共 Configure 命令已这样处理。选项不会根据 `CI` 或 `GITHUB_ACTIONS` 自动开启，显式 `OFF` 保持关闭。开启即允许上述副作用，不会授予 macOS 权限，也不代表安全桌面、硬件或多机验收通过。直接启动测试程序会绕过 CTest 的禁用属性。注册新测试前须检查宿主副作用。
+
 ```bash
 # Windows（Visual Studio 预设）
 ctest --test-dir build/src/unittests -C Release --output-on-failure
@@ -740,6 +834,28 @@ encoding FAIL count=1 checked=669 allowed=utf-8 mode=fail
 | `encoding FAIL ... detected=` | 该文件不在白名单里。另存为不带 BOM 的 UTF-8，或把检测到的编码加进 `allowed`。`utf-8` 已经接受 `ascii`。`detected=binary` 表示文件里有 NUL，需要另存为文本。 |
 | `_FORTIFY_SOURCE` 被重复定义 | 工具链已经定义过（Flatpak 用的是 3）。构建保留那一个定义，不再加第二个。 |
 | 找不到 MSVC CRT 合并模块 | 动态 CRT 的发布构建在没有合并模块时，把 `vcruntime140.dll` 和 `msvcp140.dll` 装到可执行文件旁边。 |
+
+---
+
+### 完整打包运行依赖
+
+所有交付的 MSI/便携包、app/DMG 和 Linux 原生包均须携带应用运行依赖及其许可声明。部署依据实际链接的依赖关系，包括 GUI/core 辅助程序和动态加载的 Qt 插件。缺库、加载路径无法解析、架构错误或许可来源缺失都应阻止打包或验证通过。静态 Qt 构建只保留实际需要的动态依赖，同时携带静态链接库的许可。
+
+Windows/macOS CI 的预编译 Qt 提供方另附 `qtbase`、`qtsvg` 对应精确版本的源码许可材料。收集器核对 Qt 官方源码归档 SHA256，并记录选定 SDK 提供方哈希、完整许可文本、归属声明及来源记录。CI 在配置前记录原始清单摘要；配置和打包阶段都拒绝之后的清单或许可内容改动。源码归档留在 CI 缓存，本地 manifest 构建继续使用 vcpkg 的许可材料。
+
+Windows 包把应用 DLL 和必需的 VC 可再分发运行库放在可执行文件旁，通过包内 `qt.conf` 定位 Qt 插件。便携包省略服务 daemon，MSI 保留。交付完整软件包，不把 GUI 可执行文件与运行依赖拆开分发。 当前 Windows CI 的 Qt 部署选择 Schannel TLS 插件，其 TLS 提供方属于 Windows 系统；应用直接链接的 OpenSSL 运行库仍随包携带。不强行加入可选的 Qt OpenSSL 插件。PE 依赖检查及当前 CI 系统启动通过，不能证明最低 Windows 版本兼容性。
+
+macOS 同时部署 GUI 与 `synergy-core`，将第三方加载路径改为 app 内部位置，去除构建机 RPATH，并在依赖修复及资源安装后签名。验证器把 DMG 中的 app 复制到临时目录，检查所有 Mach-O 文件和插件，通过 `--help` 启动 GUI 的 `QApplication`/Cocoa，并让真实 core 客户端使用一次性身份和信任库连接私有 TLS 回环服务。必须完成 TLS 握手、客户端证书检查以及 core 对服务端指纹的接受，随后停止且不发送 Synergy 问候消息。实际加载的库必须位于包内或系统目录。这是包 TLS/启动证据，不是主窗口、TCC 权限或输入共享功能验收。翻译文件只放在 `Contents/Resources/translations`。
+
+预编译 Qt 6 的 OpenSSL 插件动态解析 OpenSSL ABI 3，因此仅扫描导入表无法覆盖全部依赖。macOS 打包会在需要时显式把该运行库及提供方许可文本复制进 app；CI 为此安装 `openssl@3`，这是预编译 Qt 依赖例外的一部分。Homebrew 查找仅限 GitHub Actions；本地 manifest 构建使用选定 SDK，缺少必需运行库时失败。安装后的 app 不依赖 Homebrew。core 另行静态链接的 OpenSSL 无法代替此插件运行库。CI runner 通过也不能证明最低 macOS 部署版本兼容性；当前提供方对象可能要求较新的系统。
+
+Linux 包将应用可执行文件、库和插件放在应用私有的 `libexec/synergy` 目录，提供启动包装脚本。验证器只解包原生软件包，不安装它们或联网下载依赖，检查 ELF 依赖闭包，并在移除构建搜索路径后加载包内 Qt 平台插件。
+
+Linux CI 保留发行包的许可文档，必要时仅从已安装 RPM 的精确版本恢复缺失声明。配置前，`scripts/ci/prepare-runtime-notices.py` 根据有限来源档案核对已安装包所有者、源版本、ELF64 架构与实际 SONAME。有发布证据时使用上游/发行版 SHA256；libproxy 和固定官方 GCC 修订使用精确原始字节的本地计算摘要并保留来源身份，不冒称验签。keyutils因官方kernel快照返回403，固定从已审查的Buildroot端点下载同一SHA256字节；不引入HTTP错误通用镜像回退。完整保留作者声明和被委托许可，包括 libportal 并入的 GPLv3 以及 libxcb 精确协议输入声明。GCC 使用有界流式档案（下载128 MiB、180000成员、展开1 GiB、单声明2 MiB、输出32 MiB、180秒）；其他来源保留较小上限。未知身份、布局或哈希失败时提供有界公开包元数据诊断，维护者须审查新固定值、完整回归后再做原生验证。最终收集器逻辑不变，只复制实际暂存依赖闭包使用的声明，未用准备映射不提供豁免。Ubuntu24.04 静态 libportal 先核对固定 Git commit，再把精确0.9.1源码声明及完整GPLv3放入原有额外声明目录，不虚构已安装动态提供方身份。本项CI补充不改变本地vcpkg manifest依赖或许可来源。
+
+宿主边界是受支持的操作系统内核/ABI 和系统 API；macOS 包括 `/usr/lib` 与 `/System/Library`，Linux 包括 glibc/加载器及 POSIX shell/coreutils。显示服务、字体及 GPU 驱动由宿主提供。Qt、OpenSSL 和应用插件应随包携带，不能算作这些宿主边界。DEB/RPM/Arch 元数据可以声明最小操作系统运行前提。
+
+检查入口为 `scripts\ci\verify-package-windows.bat build <x64-or-arm64>`、`bash scripts/ci/verify-package-macos.sh --expected-arch <x64-or-arm64> build` 或 `bash scripts/ci/verify-package-linux.sh --expected-arch <x64-or-arm64> build <发行版类型>`。须显式声明已批准的构建目标，支持x86_64/amd64及aarch64别名。macOS通用app声明`x64,arm64`，GUI/core须精确匹配，依赖额外的受支持64位切片仍逐片检查闭包。启动前检查完整解包载荷字节、归档成员和原生切片，`V64_NATIVE_*`记录实际遍历摘要及计数。每项结果都应关联准确的构建提交。使用预编译/共享依赖的 CI 绿灯不证明本机 vcpkg 静态发布路径已通过。Flatpak 的交付目标是为每种受支持架构提供包含应用、runtime 和 extensions 的离线 OSTree 仓库 `.tar.zst`，附带哈希及双语离线说明。它须按准确提交独立验证，单个应用文件或尚未验收的离线流水线不能宣称交付完整。
 
 ---
 

@@ -8,6 +8,7 @@
 
 #include "base/Log.h"
 
+#include <QTemporaryDir>
 #include <QTest>
 
 #include <functional>
@@ -40,6 +41,8 @@ private:
   Log m_log;
   EventQueue *m_events = nullptr;
   QString m_certPath;
-  QString m_markerFile;
+  QTemporaryDir m_directory;
+  const QByteArray m_legacyNetwork = qgetenv("USE_LEGACY_NETWORK");
+  const bool m_hadLegacyNetwork = qEnvironmentVariableIsSet("USE_LEGACY_NETWORK");
   QString m_testDir;
 };

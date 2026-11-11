@@ -19,6 +19,13 @@ if(POLICY CMP0156)
   cmake_policy(SET CMP0156 NEW)
 endif()
 
+# This is a requested local build floor, not a supported-OS acceptance claim.
+# Set it before project() initializes the Apple compiler. Explicit cache values
+# (including CI artifact floors) win; provider metadata is checked below.
+if(CMAKE_HOST_APPLE)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "14" CACHE STRING "Requested minimum macOS deployment version")
+endif()
+
 # C++20
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -142,6 +149,16 @@ if(NOT BUILD_ARCHITECTURE MATCHES "^(x64|x86_64|arm64|aarch64)$")
     "Unsupported architecture '${BUILD_ARCHITECTURE}'; this project builds 64-bit only "
     "(x64/x86_64 or arm64/aarch64)."
   )
+endif()
+
+# An explicit Apple multi-architecture build must not hide a 32-bit slice
+# behind the host compiler's otherwise valid pointer size.
+if(APPLE AND CMAKE_OSX_ARCHITECTURES)
+  foreach(_synergy_osx_arch IN LISTS CMAKE_OSX_ARCHITECTURES)
+    if(NOT _synergy_osx_arch MATCHES "^(x86_64|arm64)$")
+      message(FATAL_ERROR "Unsupported macOS slice '${_synergy_osx_arch}'; expected x86_64 or arm64")
+    endif()
+  endforeach()
 endif()
 
 # AddressSanitizer. MSVC's ASan runtime (clang_rt.asan_dynamic-*.dll) cannot link
@@ -371,6 +388,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 # Disable Qt keywords (conflict with glib)
 add_definitions(-DQT_NO_KEYWORDS)
 
+# Tests that inject input or change the system clipboard require explicit opt-in.
+option(SYNERGY_ENABLE_INTERACTIVE_TESTS
+  "Enable tests that inject input or change the system clipboard" OFF)
+
 # Platform options
 if(UNIX AND NOT APPLE)
   option(BUILD_X11_SUPPORT "Build with x11 support" ON)
@@ -381,6 +402,12 @@ endif()
 # Libraries (vcpkg handles find_package)
 include(cmake/Libraries.cmake)
 configure_libs()
+if(APPLE)
+  include(cmake/MacDeployment.cmake)
+  foreach(component IN ITEMS Core Gui Widgets Network Svg DBus)
+    synergy_check_macos_target(Qt${QT_VERSION_MAJOR}::${component})
+  endforeach()
+endif()
 
 if(BUILD_OSX_BUNDLE AND APPLE_CODESIGN_DEV)
   include(cmake/MacCodesign.cmake)
@@ -411,27 +438,25 @@ endif()
 
 add_subdirectory(src)
 
-# Deploy the generated translation catalogues next to the executables.
-#
-# I18N looks for them in <applicationDirPath>/translations first. That holds for
-# an installed tree (CMAKE_INSTALL_I18N_DIR puts them beside the binaries), but
-# not for a plain build tree, where the catalogues live in
-# <build>/translations while the binaries are in <build>/bin/<config>. Without
-# this copy a freshly built binary reports "initial language: en" even on a
-# Chinese system.
-#
-# Deliberately an always-run ALL target rather than a POST_BUILD step: POST_BUILD
-# only fires when its target relinks, so the catalogues would silently go stale
-# (or be missing entirely) on incremental builds.
+# Deploy catalogues on every build so incremental translation edits are copied.
+# Bundles keep data in Resources; MacOS is reserved for executable code and
+# codesign treats files there as nested code. I18N supports both layouts.
 if(BUILD_GUI AND TARGET synergy AND SYNERGY_TRANSLATION_FILES)
+  set(translation_destination "$<TARGET_FILE_DIR:synergy>/translations")
+  set(translation_cleanup "")
+  if(BUILD_OSX_BUNDLE)
+    set(translation_destination "$<TARGET_BUNDLE_CONTENT_DIR:synergy>/Resources/translations")
+    # Remove the obsolete generated duplicate when updating an existing build.
+    set(translation_cleanup COMMAND ${CMAKE_COMMAND} -E remove_directory
+      "$<TARGET_FILE_DIR:synergy>/translations")
+  endif()
   add_custom_target(deploy_translations ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-      "$<TARGET_FILE_DIR:synergy>/translations"
+    ${translation_cleanup}
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${translation_destination}"
     COMMAND ${CMAKE_COMMAND} -E copy
-      ${SYNERGY_TRANSLATION_FILES}
-      "$<TARGET_FILE_DIR:synergy>/translations"
+      ${SYNERGY_TRANSLATION_FILES} "${translation_destination}"
     DEPENDS synergy app_translations
-    COMMENT "Deploying translations next to the executables"
+    COMMENT "Deploying translation resources"
     VERBATIM
   )
 endif()
