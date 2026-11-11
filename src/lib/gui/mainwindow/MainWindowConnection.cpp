@@ -61,7 +61,7 @@
 #include <thread>
 
 #if defined(Q_OS_MACOS)
-#include <ApplicationServices/ApplicationServices.h>
+#include "platform/macos/OSXSDKHeaders.h"
 #endif
 
 using namespace synergy::gui;

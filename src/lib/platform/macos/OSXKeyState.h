@@ -10,7 +10,7 @@
 #include "KeyState.h"
 #include "OSXAutoTypes.h"
 
-#include <Carbon/Carbon.h>
+#include "OSXSDKHeaders.h"
 
 #include <map>
 #include <vector>

@@ -9,7 +9,7 @@
 
 #include "IScreenSaver.h"
 
-#include <Carbon/Carbon.h>
+#include "OSXSDKHeaders.h"
 
 class IEventQueue;
 

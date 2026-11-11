@@ -30,7 +30,7 @@
 #include <QTextStream>
 
 #if defined(Q_OS_MACOS)
-#include <Carbon/Carbon.h>
+#include "platform/macos/OSXSDKHeaders.h"
 #include <cstdlib>
 #endif
 

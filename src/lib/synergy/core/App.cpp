@@ -23,7 +23,7 @@
 #include <stdexcept>
 
 #if defined(Q_OS_MAC)
-#include <ApplicationServices/ApplicationServices.h>
+#include "platform/macos/OSXSDKHeaders.h"
 #endif
 
 #if defined(WINAPI_XWINDOWS) or defined(WINAPI_LIBEI)

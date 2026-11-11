@@ -14,7 +14,7 @@
 #include "unix/X11LayoutsParser.h"
 #include <X11/XKBlib.h>
 #elif defined(Q_OS_MAC)
-#include <Carbon/Carbon.h>
+#include "platform/macos/OSXSDKHeaders.h"
 // platform/macos is on the include path via platform's PUBLIC dirs;
 // "platform/OSXAutoTypes.h" would resolve to platform/platform/... (wrong).
 #include "OSXAutoTypes.h"

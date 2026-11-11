@@ -8,7 +8,7 @@
 
 #include "IOSXKeyResource.h"
 
-#include <Carbon/Carbon.h>
+#include "OSXSDKHeaders.h"
 
 using KeyLayout = TISInputSourceRef;
 
