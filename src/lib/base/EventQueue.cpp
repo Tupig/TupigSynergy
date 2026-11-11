@@ -195,12 +195,13 @@ bool EventQueue::getEvent(Event &event, double timeout)
 bool EventQueue::dispatchEvent(const Event &event)
 {
   void *target = event.getTarget();
-  if (const auto *type_handler = getHandler(event.getType(), target); type_handler) {
-    (*type_handler)(event);
+  EventHandler handler;
+  if (getHandler(event.getType(), target, handler)) {
+    handler(event);
     return true;
   }
-  if (const auto *any_handler = getHandler(EventTypes::Unknown, target); any_handler) {
-    (*any_handler)(event);
+  if (getHandler(EventTypes::Unknown, target, handler)) {
+    handler(event);
     return true;
   }
   return false;
@@ -327,17 +328,18 @@ void EventQueue::removeHandlers(void *target)
   }
 }
 
-const EventQueue::EventHandler *EventQueue::getHandler(EventTypes type, void *target) const
+bool EventQueue::getHandler(EventTypes type, void *target, EventHandler &handler) const
 {
   std::scoped_lock lock{m_mutex};
   if (HandlerTable::const_iterator index = m_handlers.find(target); index != m_handlers.end()) {
     const TypeHandlerTable &typeHandlers = index->second;
     TypeHandlerTable::const_iterator index2 = typeHandlers.find(type);
     if (index2 != typeHandlers.end()) {
-      return &index2->second;
+      handler = index2->second;
+      return true;
     }
   }
-  return nullptr;
+  return false;
 }
 
 uint32_t EventQueue::saveEvent(Event &&event)
