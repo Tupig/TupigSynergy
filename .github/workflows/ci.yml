@@ -7,19 +7,20 @@
 #   5. ci-passed, the branch-protection gate
 #
 # Triggers - one run does not start another:
-#   push to main          lint, then Windows, macOS, and the free Linux subset.
+#   pull_request to main  lint, then Windows, macOS, and the free Linux subset.
 #                         Unsigned snapshot artifacts. No publish or notifications.
-#                         A newer push cancels the older one.
-#   pull_request to main  same as push. A newer push to that PR cancels the older run.
-#   release published     all platforms, clean version, attach packages. This fires when a
-#                         person publishes a Release. The publish job uses the workflow
-#                         token, and that token does not start a new workflow, so it does
-#                         not loop. Do not publish the same commit from the UI and from
-#                         workflow_dispatch; those are different refs and both would build.
-#   workflow_dispatch     manual. package-type=release ignores platform and publishes.
-#                         package-type=snapshot honors platform and does not publish.
-#                         analyze is independent of package-type.
-# Push/PR and a manual run use different concurrency groups, so a free Linux
+#                         A newer push to that PR cancels the older run.
+#   release published     Windows and macOS, clean version, attach packages. This fires
+#                         when a person publishes a Release. The publish job uses the
+#                         workflow token, and that token does not start a new workflow,
+#                         so it does not loop. Do not publish the same commit from the
+#                         UI and from workflow_dispatch; those are different refs and
+#                         both would build.
+#   workflow_dispatch     manual. package-type=release builds Windows and macOS and
+#                         publishes. package-type=snapshot honors platform and does
+#                         not publish. analyze is independent of package-type.
+# Merging a PR does not start another validation run: the PR run already covered
+# the change. PR and manual runs use different concurrency groups, so a free Linux
 # check cannot cancel a release build that is already going.
 
 name: TuPig Synergy
@@ -58,18 +59,16 @@ on:
         description: "Optional S3 override for a manual or release run. Unused when AWS secrets are unset."
         required: false
         type: string
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
   release:
     types: [published]
 
-# Automatic runs cancel only their own older run. Manual and release runs
-# never cancel, and a push cannot cancel them (separate group).
+# Automatic PR runs cancel only their own older run. Manual and release runs
+# never cancel, and neither can cancel another run's group.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   PACKAGE_PREFIX: ${{ vars.SYNERGY_PACKAGE_PREFIX || 'synergy' }}
@@ -82,7 +81,7 @@ env:
   # Push to main + package-type=snapshot → snapshot build.
   # Pull requests fall through to the cmake dev default.
   SYNERGY_VERSION_RELEASE: ${{ github.event_name == 'release' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'release') }}
-  SYNERGY_VERSION_SNAPSHOT: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'snapshot') }}
+  SYNERGY_VERSION_SNAPSHOT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'snapshot' }}
   # A manual release must publish an incremented version; its patch is computed
   # from existing tags so a new GitHub Release is created for every build.
   SYNERGY_VERSION_AUTO_BUMP: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'release' }}
@@ -123,7 +122,7 @@ jobs:
 
       # One place decides what this event builds. Job `if`s only read these
       # outputs, so a platform is not accidentally both required and skipped.
-      # push/PR: free Linux. release and explicit package-type=release:
+      # pull_request: free Linux. release and explicit package-type=release:
       # Windows and macOS and a GitHub Release. snapshot: honor platform; all or legacy blank means all.
       - name: Plan builds for this event
         id: plan
@@ -142,7 +141,7 @@ jobs:
           publish_release=false
           skip_unchanged=false
           case "$GITHUB_EVENT_NAME" in
-            push|pull_request)
+            pull_request)
               linux_key=free
               build_windows=true
               build_macos=true
