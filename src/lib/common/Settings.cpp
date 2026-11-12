@@ -64,7 +64,7 @@ Settings::Settings(QObject *parent) : QObject(parent)
 #ifdef Q_OS_WIN
   const auto portableFile = portableSettingsFile();
   qDebug().noquote() << "checking for portable settings file at:" << portableFile;
-  if (QFile(portableFile).exists())
+  if (isPortableMode())
     fileToLoad = portableFile;
 #else
   if (const auto xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME"); !xdgConfigHome.isEmpty())
@@ -265,8 +265,13 @@ bool Settings::isWritable()
 
 bool Settings::isPortableMode()
 {
-  // Enable portable mode only if the portable settings file exists in the expected location.
-  return QFile(portableSettingsFile()).exists();
+  // The portable archive ships a marker instead of the settings file so that
+  // extracting an update over an existing folder cannot overwrite the user's
+  // configuration. Installs created before the marker keep working through the
+  // settings file check.
+  static const auto marker =
+      QStringLiteral("%1/settings/%2.portable").arg(QCoreApplication::applicationDirPath(), kAppId);
+  return QFile(portableSettingsFile()).exists() || QFile(marker).exists();
 }
 
 QString Settings::settingsFile()

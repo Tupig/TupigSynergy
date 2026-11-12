@@ -6,6 +6,9 @@
 
 #include "SettingsTests.h"
 
+#include "common/Constants.h"
+
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QSignalSpy>
@@ -173,6 +176,30 @@ void SettingsTests::wrongTypeValueIsReturnedAsStored()
   // conversion of the malformed value yields zero
   QCOMPARE(Settings::value(Settings::Core::Port).toString(), QStringLiteral("not-a-number"));
   QCOMPARE(Settings::value(Settings::Core::Port).toInt(), 0);
+}
+
+void SettingsTests::portableModeFollowsMarker()
+{
+  const auto dir = QStringLiteral("%1/settings").arg(QCoreApplication::applicationDirPath());
+  const auto settingsFile = QStringLiteral("%1/%2.conf").arg(dir, kAppName);
+  const auto marker = QStringLiteral("%1/%2.portable").arg(dir, kAppId);
+  if (QFile::exists(settingsFile) || QFile::exists(marker))
+    QSKIP("portable files already exist next to the test binary");
+
+  QVERIFY(!Settings::isPortableMode());
+
+  // The archive ships the marker, not the settings file: extracting an update
+  // must not overwrite user data, while a fresh unpack still enters portable
+  // mode before the settings file has been created.
+  QVERIFY(QDir().mkpath(dir));
+  QFile file(marker);
+  QVERIFY(file.open(QIODevice::WriteOnly));
+  file.write("marker");
+  file.close();
+  QVERIFY(Settings::isPortableMode());
+  QVERIFY(QFile::remove(marker));
+  QVERIFY(!Settings::isPortableMode());
+  QDir().rmdir(dir);
 }
 
 QTEST_MAIN(SettingsTests)

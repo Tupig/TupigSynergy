@@ -28,6 +28,7 @@ private Q_SLOTS:
   void missingKeysReturnDefaults();
   void corruptedConfigFallsBackToDefaults();
   void wrongTypeValueIsReturnedAsStored();
+  void portableModeFollowsMarker();
 
 private:
   inline static const QString m_settingsPathTemp = QStringLiteral("tmp/test");
