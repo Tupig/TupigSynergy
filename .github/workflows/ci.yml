@@ -223,6 +223,11 @@ jobs:
       - name: Check source encoding
         run: python3 scripts/ci/check-encoding.py
 
+      # lupdate only adds new tr() sources as unfinished; without this gate a
+      # new dialog would silently ship in English on a Chinese system.
+      - name: Check Chinese translations
+        run: python3 scripts/ci/check-translations.py
+
   # ---------------------------------------------------------------------------
   # 2. Build. One CMake configure line per OS; the runner compiler differs.
   # Windows: MSVC + Ninja. macOS: AppleClang (arm64 and x86_64). Linux: gcc.
@@ -1176,7 +1181,16 @@ jobs:
           printf ' - %s\n' "${files[@]}"
           tag="v${VERSION}"
           title="TuPig Synergy ${VERSION}"
-          notes="Packages for ${VERSION}."$'\n\n'"Each package file from this workflow has a GitHub build-provenance attestation. Verify a downloaded file with: gh attestation verify FILE --repo Tupig/Tupig_synergy"$'\n\n'"Windows builds are Authenticode-signed by SignPath Foundation when that project is approved. Until then they are unsigned. Provenance shows which workflow and commit produced the file. It is not itself an Authenticode or Apple signature."
+          # Every release must carry user-visible update notes. The body starts
+          # with GitHub's generated notes (merged pull requests since the
+          # previous release), then this footer documents provenance and
+          # signing. Keep both bilingual: the project is Chinese-first.
+          notes="## 发布信息 / Release information"$'\n\n'
+          notes+="- 每个安装包都附带 GitHub 构建来源证明 / Every package carries a GitHub build-provenance attestation:"$'\n'
+          notes+="  \`gh attestation verify FILE --repo Tupig/Tupig_synergy\`"$'\n'
+          notes+="- Windows 包在 SignPath 审批前未签名 / Windows packages are unsigned until SignPath approval."$'\n'
+          notes+="- macOS 包未使用 Developer ID 签名与公证，首次运行需在「系统设置 → 隐私与安全性 → 辅助功能」中授权；升级后如再次提示，请重新授权 / "
+          notes+="macOS packages use an ad-hoc signature (no Developer ID, no notarization); grant Accessibility permission after the first launch and re-grant after an update if prompted."$'\n'
           marker="Built-From: ${GITHUB_SHA}"
           # A published release must have an incremented version: reusing a tag
           # for different code is exactly what the auto-bump prevents. A rerun
@@ -1195,7 +1209,11 @@ jobs:
             fi
             gh release edit "$tag" --notes "${cleaned}"$'\n\n'"${marker}"
           else
-            gh release create "$tag" "${files[@]}" --title "$title" --notes "${notes}"$'\n\n'"${marker}" --latest
+            # --generate-notes lists the merged pull requests since the last
+            # release; the edit appends the provenance/signing footer.
+            gh release create "$tag" "${files[@]}" --title "$title" --generate-notes --latest
+            generated=$(gh release view "$tag" --json body -q .body)
+            gh release edit "$tag" --notes "${generated}"$'\n\n'"${notes}"$'\n\n'"${marker}"
           fi
 
   # Upload release packages to AWS S3 for distribution. Snapshot validation

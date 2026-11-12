@@ -68,10 +68,10 @@ void AboutDialog::copyVersionText() const
   QString infoString = QStringLiteral("%1: %2\nQt: %3\nSystem: %4")
                            .arg(kAppName, kDisplayVersion, qVersion(), QSysInfo::prettyProductName());
   if (Settings::isPortableMode()) {
-    infoString.append(QStringLiteral("\nPortable Mode"));
+    infoString.append(tr("\nPortable Mode"));
   }
 #ifdef Q_OS_LINUX
-  infoString.append(QStringLiteral("\nSession: %1 (%2)")
+  infoString.append(tr("\nSession: %1 (%2)")
                         .arg(qEnvironmentVariable("XDG_CURRENT_DESKTOP"), qEnvironmentVariable("XDG_SESSION_TYPE")));
 #endif
   QGuiApplication::clipboard()->setText(infoString);

@@ -406,7 +406,7 @@ void SettingsDialog::updateKeyLengthOnFile(const QString &path)
     labelIcon = QPixmap(QIcon::fromTheme(QStringLiteral("security-high")).pixmap(24, 24));
 
   ui->lblTlsCertInfo->setPixmap(labelIcon);
-  ui->lblTlsCertInfo->setToolTip(QStringLiteral("Key length: %1 bits").arg(QString::number(length)));
+  ui->lblTlsCertInfo->setToolTip(tr("Key length: %1 bits").arg(QString::number(length)));
 }
 
 void SettingsDialog::updateControls()
