@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 #if defined(Q_OS_MACOS)
 
   if (app.applicationDirPath().startsWith("/Volumes/")) {
-    QString msgBody = QStringLiteral(
+    QString msgBody = QObject::tr(
         "Please drag %1 to the Applications folder, "
         "and open it from there."
     );

@@ -51,6 +51,18 @@ p, li { white-space: pre-wrap; }
         <source>&amp;Close</source>
         <translation>关闭(&amp;C)</translation>
     </message>
+    <message>
+        <source>
+Portable Mode</source>
+        <translation>
+便携模式</translation>
+    </message>
+    <message>
+        <source>
+Session: %1 (%2)</source>
+        <translation>
+会话：%1（%2）</translation>
+    </message>
 </context>
 <context>
     <name>ActionDialog</name>
@@ -523,7 +535,8 @@ A bound IP is now invalid, you may need to restart the server.</source>
     <message>
         <source>
 &lt;p&gt;%1 listens on all network interfaces because no IP is selected in the settings.&lt;/p&gt;</source>
-        <translation type="unfinished"></translation>
+        <translation>
+&lt;p&gt;%1 正在监听所有网络接口，因为设置中未选择 IP。&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Invalid Screen Name</source>
@@ -817,7 +830,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Issues</source>
-        <translation type="unfinished"></translation>
+        <translation>问题反馈</translation>
     </message>
     <message>
         <source>TuPig Synergy is a trademark of TuPig</source>
@@ -857,7 +870,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>&lt;p&gt;We&apos;ve migrated your settings to a new format used by this version of Synergy.&lt;/p&gt;&lt;p&gt;Your previous settings have been backed up to:&lt;/p&gt;&lt;p&gt;&lt;code&gt;%1&lt;/code&gt;&lt;/p&gt;&lt;p&gt;If anything looks different, report it at &lt;a href=&quot;%2&quot;&gt;%2&lt;/a&gt;.&lt;/p&gt;</source>
-        <translation type="unfinished"></translation>
+        <translation>&lt;p&gt;我们已将您的设置迁移到此版本 Synergy 使用的新格式。&lt;/p&gt;&lt;p&gt;原有设置已备份至：&lt;/p&gt;&lt;p&gt;&lt;code&gt;%1&lt;/code&gt;&lt;/p&gt;&lt;p&gt;如有任何异常，请到 &lt;a href=&quot;%2&quot;&gt;%2&lt;/a&gt; 反馈。&lt;/p&gt;</translation>
     </message>
     <message>
         <source>&lt;p&gt;We&apos;ve migrated your settings to a new format used by this version of Synergy.&lt;/p&gt;&lt;p&gt;Your previous settings have been backed up to:&lt;/p&gt;&lt;p&gt;&lt;code&gt;%1&lt;/code&gt;&lt;/p&gt;&lt;p&gt;If anything looks different, please contact us.&lt;/p&gt;</source>
@@ -878,6 +891,34 @@ Additionally, check you are able to %1 the server config file: %2</source>
     <message>
         <source>&lt;p&gt;Settings scope changes take effect when %1 restarts.&lt;/p&gt;&lt;p&gt;Quit %1 now? You&apos;ll need to launch it again from your applications menu.&lt;/p&gt;</source>
         <translation>&lt;p&gt;设置范围更改将在 %1 重启后生效。&lt;/p&gt;&lt;p&gt;现在退出 %1 吗？之后需要从应用程序菜单重新启动它。&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>Please drag %1 to the Applications folder, and open it from there.</source>
+        <translation>请将 %1 拖到“应用程序”文件夹，然后从那里打开。</translation>
+    </message>
+    <message>
+        <source>macOS requires Accessibility permission for %1 to control the keyboard and mouse.</source>
+        <translation>macOS 需要为 %1 授予“辅助功能”权限，才能控制键盘和鼠标。</translation>
+    </message>
+    <message>
+        <source>Open System Settings → Privacy &amp; Security → Accessibility, enable %1, then choose Continue. If it stays disabled, quit and relaunch the app.</source>
+        <translation>打开“系统设置”→“隐私与安全性”→“辅助功能”，启用 %1，然后选择“继续”。如果它仍处于关闭状态，请退出并重新启动应用。</translation>
+    </message>
+    <message>
+        <source>Open System Settings</source>
+        <translation>打开系统设置</translation>
+    </message>
+    <message>
+        <source>Continue</source>
+        <translation>继续</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation>退出</translation>
+    </message>
+    <message>
+        <source>Accessibility permission is still not granted. Enable %1 in System Settings, then quit and relaunch it.</source>
+        <translation>仍未获得“辅助功能”权限。请在“系统设置”中启用 %1，然后退出并重新启动。</translation>
     </message>
 </context>
 <context>
@@ -1443,6 +1484,10 @@ Enabling this setting will disable the server config GUI.</source>
         <source>Check for updates on startup</source>
         <translation>启动时检查更新</translation>
     </message>
+    <message>
+        <source>Key length: %1 bits</source>
+        <translation>密钥长度：%1 位</translation>
+    </message>
 </context>
 <context>
     <name>StatusBar</name>
@@ -1630,6 +1675,14 @@ Package: %3</source>
     <message>
         <source>No release package is available for this platform.</source>
         <translation>此平台没有可用的发布包。</translation>
+    </message>
+    <message>
+        <source>
+
+[release notes truncated]</source>
+        <translation>
+
+[发行说明已截断]</translation>
     </message>
 </context>
 <context>

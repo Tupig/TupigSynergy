@@ -159,7 +159,7 @@ QString UpdateChecker::sanitizedNotes(const QString &notes)
   if (notes.size() <= kNotesLimit) {
     return notes;
   }
-  return notes.left(kNotesLimit) + QStringLiteral("\n\n[release notes truncated]");
+  return notes.left(kNotesLimit) + tr("\n\n[release notes truncated]");
 }
 
 void UpdateChecker::checkForUpdates()
