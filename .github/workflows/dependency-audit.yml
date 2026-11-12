@@ -54,13 +54,6 @@ permissions:
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - vcpkg.json
-      - scripts/ci/generate-vcpkg-sbom.py
-      - scripts/ci/check-cve-report.py
-      - .github/workflows/dependency-audit.yml
   pull_request:
     branches: [main]
     paths:
