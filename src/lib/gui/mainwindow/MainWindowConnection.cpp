@@ -39,6 +39,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QCloseEvent>
+#include <QCursor>
 #include <QDebug>
 #include <QDesktopServices>
 #include <QFileDialog>
@@ -49,6 +50,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QNetworkInterface>
+#include <QPixmap>
 #include <QPointer>
 #include <QPushButton>
 #include <QRegularExpression>
@@ -65,6 +67,27 @@
 #endif
 
 using namespace synergy::gui;
+
+namespace {
+
+//! Set a busy cursor without using the platform system-cursor image.
+/*!
+Qt 6.11's Cocoa wait cursor builds a null QImage on macOS 26/27 and crashes in
+CGImageCreate. A valid transparent pixmap keeps the window marked busy without
+that platform path; other platforms keep the native wait cursor.
+*/
+void setBusyCursor()
+{
+#if defined(Q_OS_MACOS)
+  QPixmap pixmap(16, 16);
+  pixmap.fill(Qt::transparent);
+  QApplication::setOverrideCursor(QCursor(pixmap));
+#else
+  QApplication::setOverrideCursor(Qt::WaitCursor);
+#endif
+}
+
+} // namespace
 
 void MainWindow::coreProcessError(CoreProcess::Error error)
 {
@@ -344,7 +367,7 @@ void MainWindow::generateCertificateAsync()
   const auto keyLength = std::max(kMinimumRsaBits, Settings::value(Settings::Security::KeySize).toInt());
   const auto certPath = Settings::value(Settings::Security::Certificate).toString();
 
-  QApplication::setOverrideCursor(Qt::WaitCursor);
+  setBusyCursor();
   QPointer<MainWindow> self(this);
   std::thread([self, keyLength, certPath] {
     const bool ok = TlsUtility::generateCertificateAt(certPath, keyLength);
