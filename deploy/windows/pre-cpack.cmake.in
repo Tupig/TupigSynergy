@@ -5,13 +5,18 @@ cmake_minimum_required(VERSION 3.21)
 set(_root "${CPACK_TEMPORARY_INSTALL_DIRECTORY}")
 if(CPACK_GENERATOR MATCHES "^(7Z|ZIP)$")
   set(_kind portable)
+  # Ship a marker rather than the settings file itself: extracting a new
+  # portable build over an existing folder must not overwrite the user's
+  # configuration. The application creates the settings file on first run and
+  # Settings::isPortableMode() also accepts the marker.
   file(MAKE_DIRECTORY "${_root}/settings")
-  file(WRITE "${_root}/settings/@CMAKE_PROJECT_PROPER_NAME@.conf" " ")
+  file(WRITE "${_root}/settings/@CMAKE_PROJECT_NAME@.portable"
+    "Portable mode marker. Keep this file next to the application.\n")
   file(REMOVE "${_root}/@CMAKE_PROJECT_NAME@-daemon.exe")
   file(WRITE "${_root}/README.txt"
 "Portable @CMAKE_PROJECT_PROPER_NAME@: @CMAKE_PROJECT_VERSION@
 
-Keep settings/@CMAKE_PROJECT_PROPER_NAME@.conf to save settings locally.
+Keep the settings/ folder next to the application to save settings locally.
 The portable version omits the daemon and does not support UAC or login screens.
 ")
 else()

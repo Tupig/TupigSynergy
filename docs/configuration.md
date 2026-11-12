@@ -12,9 +12,11 @@ The settings file is named after the application (`kAppName`). In a normal build
 that name is `TuPig Synergy`, so the file is `TuPig Synergy.conf`, not
 `Synergy.conf`. The directory uses the same name.
 
-On Windows, `<install-dir>/settings/TuPig Synergy.conf` is used when that
-portable file exists. Otherwise the first existing file below is used, and if
-neither exists the user file is created:
+On Windows, portable mode is enabled when `<install-dir>/settings/TuPig Synergy.conf`
+exists or the shipped `<install-dir>/settings/synergy.portable` marker exists; the
+application creates the settings file on first run. Extracting an updated portable
+archive therefore never overwrites that file. Otherwise the first existing file
+below is used, and if neither exists the user file is created:
 
 1. `%APPDATA%\TuPig Synergy\TuPig Synergy.conf`
 2. `<system-drive>\ProgramData\TuPig Synergy\TuPig Synergy.conf`
@@ -408,7 +410,7 @@ settings path, log level, and certificate in the INI file, or pass
 
 配置文件名来自应用名（`kAppName`）。正常构建中该名字是 `TuPig Synergy`，所以文件是 `TuPig Synergy.conf`，不是 `Synergy.conf`。目录名相同。
 
-Windows 上，若 `<安装目录>/settings/TuPig Synergy.conf` 存在，就用这份便携配置。否则使用下面第一个已经存在的文件；两个都不存在时创建用户文件：
+Windows 上，`<安装目录>/settings/TuPig Synergy.conf` 或随包交付的 `<安装目录>/settings/synergy.portable` 标记任一存在时进入便携模式，配置文件由应用在首次运行时创建；因此解压新版便携包不会覆盖该文件。否则使用下面第一个已经存在的文件；两个都不存在时创建用户文件：
 
 1. `%APPDATA%\TuPig Synergy\TuPig Synergy.conf`
 2. `<系统盘>\ProgramData\TuPig Synergy\TuPig Synergy.conf`
