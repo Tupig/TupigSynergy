@@ -174,7 +174,9 @@ void UpdateChecker::checkForUpdates()
   request.setRawHeader("Accept", "application/vnd.github+json");
   request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
   request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
   request.setTransferTimeout(30000);
+#endif
 
   auto *reply = m_network->get(request);
   m_reply = reply;

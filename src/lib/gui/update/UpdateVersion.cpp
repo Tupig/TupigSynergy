@@ -96,7 +96,11 @@ ParsedVersion parseVersion(QStringView text)
   }
 
   if (const auto dash = value.indexOf(QChar(u'-')); dash >= 0) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     version.prerelease = value.mid(dash + 1).split(QChar(u'.'), Qt::SkipEmptyParts);
+#else
+    version.prerelease = value.mid(dash + 1).split(QChar(u'.'), QString::SkipEmptyParts);
+#endif
     value.truncate(dash);
   }
 

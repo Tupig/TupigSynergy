@@ -87,7 +87,9 @@ void UpdateDownloader::start(const UpdateAsset &asset, const QString &directory)
   QNetworkRequest request(asset.url);
   request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Synergy-UpdateDownloader"));
   request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
   request.setTransferTimeout(300000);
+#endif
 
   auto *reply = m_network->get(request);
   m_reply = reply;
