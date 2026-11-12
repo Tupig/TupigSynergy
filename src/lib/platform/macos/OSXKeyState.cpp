@@ -14,6 +14,8 @@
 #include "OSXSDKHeaders.h"
 #include <IOKit/hidsystem/IOHIDLib.h>
 
+#include <atomic>
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -345,7 +347,28 @@ int32_t OSXKeyState::pollActiveGroup() const
     return i->second;
   }
 
-  LOG_WARN("can't get the active group, use the first group instead");
+  // An input method (for example Pinyin) is not a keyboard layout group, so its
+  // ID has no entry. Resolve the ASCII-capable layout behind it; only a
+  // genuinely unknown layout falls back to group 0.
+  AutoTISInputSourceRef asciiLayout(nullptr, CFRelease);
+  {
+    std::lock_guard<std::mutex> lock(g_tisMutex);
+    asciiLayout = AutoTISInputSourceRef(TISCopyCurrentASCIICapableKeyboardLayoutInputSource(), CFRelease);
+    if (asciiLayout) {
+      const auto asciiId = (CFDataRef)TISGetInputSourceProperty(asciiLayout.get(), kTISPropertyInputSourceID);
+      i = m_groupMap.find(asciiId);
+      if (i != m_groupMap.end()) {
+        return i->second;
+      }
+    }
+  }
+
+  // This is normal while an input method is active. Log it once instead of on
+  // every key event, which otherwise floods the log during normal typing.
+  static std::atomic<bool> warned{false};
+  if (!warned.exchange(true)) {
+    LOG_WARN("can't get the active group, use the first group instead");
+  }
 
   return 0;
 }
