@@ -17,7 +17,10 @@ void UpdateVersionTests::parsesReleaseAndPrerelease()
 {
   const auto release = parseVersion(QStringLiteral("v1.21.2"));
   QVERIFY(release.valid);
-  QCOMPARE(release.numbers, QList<int>({1, 21, 2}));
+  QCOMPARE(release.numbers.size(), 3);
+  QCOMPARE(release.numbers.at(0), 1);
+  QCOMPARE(release.numbers.at(1), 21);
+  QCOMPARE(release.numbers.at(2), 2);
   QVERIFY(release.prerelease.isEmpty());
 
   const auto prerelease = parseVersion(QStringLiteral("1.21.2-dev+8c36d07e"));
