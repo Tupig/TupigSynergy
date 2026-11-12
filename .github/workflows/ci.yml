@@ -514,7 +514,9 @@ jobs:
           - name: "macos-x64"
             expected-arch: x64
             runs-on: macos-15-intel
-            timeout: 30
+            # The Intel build cross-compiles every dependency; 30 minutes was
+            # hit during a 1.21.7 release run and cancelled the job mid-build.
+            timeout: 45
             qt-version: 6.9.3
             config-args: '-DCMAKE_OSX_ARCHITECTURES="x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0'
 
