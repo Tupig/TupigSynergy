@@ -27,15 +27,15 @@
 #include "gui/TlsUtility.h"
 #include "gui/core/CoreProcess.h"
 #include "gui/ipc/DaemonIpcClient.h"
-#include "gui/widgets/LogDock.h"
 #include "gui/update/UpdateChecker.h"
 #include "gui/update/UpdateDialog.h"
+#include "gui/widgets/LogDock.h"
 
-#include <QDebug>
-#include <QMessageBox>
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
 #include "widgets/StatusBar.h"
+#include <QDebug>
+#include <QMessageBox>
 
 #ifdef SYNERGY_EXTRA_HEADER
 #include "synergy/hooks/gui_hook.h"
@@ -115,24 +115,19 @@ void MainWindow::checkForUpdates(bool manual)
       checker, &synergy::gui::update::UpdateChecker::noUpdate, this,
       [this, manual, release](const QString &version) {
         if (manual) {
-          QMessageBox::information(
-              this, tr("No Updates"), tr("You are running the latest version (%1).").arg(version)
-          );
+          QMessageBox::information(this, tr("No Updates"), tr("You are running the latest version (%1).").arg(version));
         }
         release();
       }
   );
-  connect(
-      checker, &synergy::gui::update::UpdateChecker::failed, this,
-      [this, manual, release](const QString &reason) {
-        if (manual) {
-          QMessageBox::warning(this, tr("Update Check Failed"), reason);
-        } else {
-          qWarning().noquote() << "update check failed:" << reason;
-        }
-        release();
-      }
-  );
+  connect(checker, &synergy::gui::update::UpdateChecker::failed, this, [this, manual, release](const QString &reason) {
+    if (manual) {
+      QMessageBox::warning(this, tr("Update Check Failed"), reason);
+    } else {
+      qWarning().noquote() << "update check failed:" << reason;
+    }
+    release();
+  });
 
   checker->checkForUpdates();
 }

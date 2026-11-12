@@ -94,12 +94,12 @@ void UpdateChecker::setAssetSuffixes(const QStringList &suffixes)
 QStringList UpdateChecker::defaultAssetSuffixes()
 {
 #if defined(Q_OS_WIN)
-  const auto arch = QSysInfo::currentCpuArchitecture() == QLatin1String("arm64") ? QStringLiteral("arm64")
-                                                                                 : QStringLiteral("x64");
+  const auto arch =
+      QSysInfo::currentCpuArchitecture() == QLatin1String("arm64") ? QStringLiteral("arm64") : QStringLiteral("x64");
   return {QStringLiteral("_windows_%1.msi").arg(arch)};
 #elif defined(Q_OS_MACOS)
-  const auto arch = QSysInfo::currentCpuArchitecture() == QLatin1String("arm64") ? QStringLiteral("arm64")
-                                                                                 : QStringLiteral("x64");
+  const auto arch =
+      QSysInfo::currentCpuArchitecture() == QLatin1String("arm64") ? QStringLiteral("arm64") : QStringLiteral("x64");
   return {QStringLiteral("_mac_%1.dmg").arg(arch)};
 #elif defined(Q_OS_LINUX)
   const auto arch = linuxArchitecture();
@@ -261,7 +261,9 @@ void UpdateChecker::handleResponse(QNetworkReply *reply)
       return;
     }
 
-    selected = {name, url, static_cast<qint64>(asset.value(QStringLiteral("size")).toDouble(-1)), match.captured(1).toLower()};
+    selected = {
+        name, url, static_cast<qint64>(asset.value(QStringLiteral("size")).toDouble(-1)), match.captured(1).toLower()
+    };
     break;
   }
 
@@ -280,7 +282,9 @@ void UpdateChecker::handleResponse(QNetworkReply *reply)
     version.remove(0, 1);
   }
 
-  emit updateAvailable({version, tag, sanitizedNotes(root.value(QStringLiteral("body")).toString()), releaseUrl, selected});
+  emit updateAvailable(
+      {version, tag, sanitizedNotes(root.value(QStringLiteral("body")).toString()), releaseUrl, selected}
+  );
 }
 
 } // namespace synergy::gui::update

@@ -23,7 +23,9 @@ const auto kSha256Pattern = QRegularExpression(QStringLiteral("^[0-9a-f]{64}$"))
 } // namespace
 
 UpdateDownloader::UpdateDownloader(QObject *parent, const DownloadPolicy &policy)
-    : QObject(parent), m_network(new QNetworkAccessManager(this)), m_policy(policy)
+    : QObject(parent),
+      m_network(new QNetworkAccessManager(this)),
+      m_policy(policy)
 {
 }
 
@@ -34,8 +36,7 @@ UpdateDownloader::~UpdateDownloader()
 
 bool UpdateDownloader::isAllowedDownloadUrl(const QUrl &url) const
 {
-  return url.scheme() == m_policy.scheme && url.host() == m_policy.host &&
-         url.path().startsWith(m_policy.pathPrefix);
+  return url.scheme() == m_policy.scheme && url.host() == m_policy.host && url.path().startsWith(m_policy.pathPrefix);
 }
 
 QString UpdateDownloader::safeFileName(const QString &name)

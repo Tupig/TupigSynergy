@@ -102,9 +102,7 @@ void UpdateDialog::startDownload()
       },
       Qt::UniqueConnection
   );
-  connect(
-      m_downloader, &UpdateDownloader::finished, this, &UpdateDialog::installDownloaded, Qt::UniqueConnection
-  );
+  connect(m_downloader, &UpdateDownloader::finished, this, &UpdateDialog::installDownloaded, Qt::UniqueConnection);
   connect(
       m_downloader, &UpdateDownloader::failed, this,
       [this](const QString &reason) {
@@ -130,8 +128,7 @@ void UpdateDialog::installDownloaded(const QString &filePath)
 
   setBusy(false);
   QMessageBox::critical(
-      this, tr("Update Failed"),
-      error.isEmpty() ? tr("The system installer could not be started.") : error
+      this, tr("Update Failed"), error.isEmpty() ? tr("The system installer could not be started.") : error
   );
 }
 
