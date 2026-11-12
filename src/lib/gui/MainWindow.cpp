@@ -119,6 +119,9 @@ MainWindow::MainWindow()
   m_actionClearSettings->setIcon(QIcon::fromTheme(QStringLiteral("edit-clear-all")));
   m_actionClearSettings->setMenuRole(QAction::NoRole);
 
+  m_actionCheckForUpdates->setIcon(QIcon::fromTheme(QStringLiteral("system-software-update")));
+  m_actionCheckForUpdates->setMenuRole(QAction::NoRole);
+
   m_actionSettings->setIcon(QIcon::fromTheme(QStringLiteral("configure")));
   m_actionSettings->setMenuRole(QAction::PreferencesRole);
 
