@@ -50,7 +50,7 @@ public:
 
   void start(const UpdateAsset &asset, const QString &directory);
 
-signals:
+Q_SIGNALS:
   void progress(qint64 received, qint64 total);
   void finished(const QString &filePath);
   void failed(const QString &reason);

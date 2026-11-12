@@ -61,7 +61,7 @@ public:
 
   void checkForUpdates();
 
-signals:
+Q_SIGNALS:
   void updateAvailable(const UpdateInfo &info);
   void noUpdate(const QString &currentVersion);
   void failed(const QString &reason);
