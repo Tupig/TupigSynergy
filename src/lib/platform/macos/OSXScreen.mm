@@ -64,7 +64,6 @@ void avoidHesitatingCursor();
 __attribute__((used)) __attribute__((section("__CGPreLoginApp,__cgpreloginapp"))) static const char magic_section[] =
     "";
 
-static const double kCarbonLoopWaitTimeout = 10.0;
 OSXScreen::OSXScreen(IEventQueue *events, bool isPrimary, bool enableLangSync)
     : PlatformScreen(events),
       m_isPrimary(isPrimary),
@@ -642,12 +641,12 @@ void OSXScreen::waitForCarbonLoop() const
 
   LOG_DEBUG("waiting for carbon loop");
 
-  double timeout = Arch::time() + kCarbonLoopWaitTimeout;
-  while (!m_carbonLoopReady->wait()) {
-    if (Arch::time() > timeout) {
-      LOG_DEBUG("carbon loop not ready, waiting again");
-      timeout = Arch::time() + kCarbonLoopWaitTimeout;
-    }
+  // CondVar::wait() reports only a signal received while waiting, so check the
+  // stored value after taking the lock: the session thread may have signalled
+  // between the fast-path check above and this lock, and waiting on the return
+  // value alone would then block forever.
+  while (!*m_carbonLoopReady) {
+    m_carbonLoopReady->wait();
   }
 
   LOG_DEBUG("carbon loop ready");
