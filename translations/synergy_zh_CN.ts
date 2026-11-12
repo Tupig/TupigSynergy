@@ -599,6 +599,22 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>&lt;p&gt;Keyboard layout support requires matching layouts on all computers. The following layouts from the other computer are not installed on this computer:&lt;/p&gt;&lt;p&gt;&lt;b&gt;%1&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Please install them to enable support for these layouts.&lt;/p&gt;</source>
         <translation>&lt;p&gt;键盘布局支持需要所有计算机上都有匹配的布局。以下来自其他计算机的布局未安装在此计算机上：&lt;/p&gt;&lt;p&gt;&lt;b&gt;%1&lt;/b&gt;&lt;/p&gt;&lt;p&gt;请安装它们以启用对这些布局的支持。&lt;/p&gt;</translation>
     </message>
+    <message>
+        <source>Check for &amp;Updates</source>
+        <translation>检查更新(&amp;U)</translation>
+    </message>
+    <message>
+        <source>No Updates</source>
+        <translation>无更新</translation>
+    </message>
+    <message>
+        <source>You are running the latest version (%1).</source>
+        <translation>您正在使用最新版本（%1）。</translation>
+    </message>
+    <message>
+        <source>Update Check Failed</source>
+        <translation>检查更新失败</translation>
+    </message>
 </context>
 <context>
     <name>NewScreenWidget</name>
@@ -1423,6 +1439,10 @@ Enabling this setting will disable the server config GUI.</source>
         <source>Using a log level higher than Info may affect performance.</source>
         <translation>使用高于 Info 级别的日志级别可能会影响性能。</translation>
     </message>
+    <message>
+        <source>Check for updates on startup</source>
+        <translation>启动时检查更新</translation>
+    </message>
 </context>
 <context>
     <name>StatusBar</name>
@@ -1536,6 +1556,119 @@ Enabling this setting will disable the server config GUI.</source>
     <message>
         <source>A computer with this name already exists</source>
         <translation>一台同名的计算机已经存在</translation>
+    </message>
+</context>
+<context>
+    <name>synergy::gui::update::UpdateDialog</name>
+    <message>
+        <source>Update Available</source>
+        <translation>有可用更新</translation>
+    </message>
+    <message>
+        <source>A newer version is available.
+
+Current version: %1
+Latest version: %2
+Package: %3</source>
+        <translation>有新版本可用。
+
+当前版本：%1
+最新版本：%2
+安装包：%3</translation>
+    </message>
+    <message>
+        <source>Open Release Page</source>
+        <translation>打开发布页</translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation>稍后</translation>
+    </message>
+    <message>
+        <source>Download and Install</source>
+        <translation>下载并安装</translation>
+    </message>
+    <message>
+        <source>Update Failed</source>
+        <translation>更新失败</translation>
+    </message>
+    <message>
+        <source>The system installer could not be started.</source>
+        <translation>无法启动系统安装器。</translation>
+    </message>
+</context>
+<context>
+    <name>synergy::gui::update::UpdateChecker</name>
+    <message>
+        <source>Could not reach GitHub Releases: %1</source>
+        <translation>无法连接 GitHub Releases：%1</translation>
+    </message>
+    <message>
+        <source>GitHub Releases response is unexpectedly large.</source>
+        <translation>GitHub Releases 响应异常大。</translation>
+    </message>
+    <message>
+        <source>GitHub Releases returned an unreadable response.</source>
+        <translation>GitHub Releases 返回了无法解析的响应。</translation>
+    </message>
+    <message>
+        <source>GitHub Release tag is not a semantic version.</source>
+        <translation>GitHub Release 标签不是语义版本号。</translation>
+    </message>
+    <message>
+        <source>GitHub Release URL is outside this repository.</source>
+        <translation>GitHub Release 地址不属于本仓库。</translation>
+    </message>
+    <message>
+        <source>Release asset URL is outside this repository.</source>
+        <translation>发布资产地址不属于本仓库。</translation>
+    </message>
+    <message>
+        <source>Release asset does not publish a SHA-256 digest; refusing to install it.</source>
+        <translation>发布资产未提供 SHA-256 摘要，拒绝安装。</translation>
+    </message>
+    <message>
+        <source>No release package is available for this platform.</source>
+        <translation>此平台没有可用的发布包。</translation>
+    </message>
+</context>
+<context>
+    <name>synergy::gui::update::UpdateDownloader</name>
+    <message>
+        <source>Refusing to download a package outside this repository.</source>
+        <translation>拒绝下载本仓库之外的安装包。</translation>
+    </message>
+    <message>
+        <source>Refusing to download a package without a SHA-256 digest.</source>
+        <translation>拒绝下载缺少 SHA-256 摘要的安装包。</translation>
+    </message>
+    <message>
+        <source>Update package is larger than the allowed limit.</source>
+        <translation>更新包超过允许的大小上限。</translation>
+    </message>
+    <message>
+        <source>Update package has an unsafe file name.</source>
+        <translation>更新包文件名不安全。</translation>
+    </message>
+    <message>
+        <source>Could not create the update file: %1</source>
+        <translation>无法创建更新文件：%1</translation>
+    </message>
+    <message>
+        <source>Could not download the update: %1</source>
+        <translation>无法下载更新：%1</translation>
+    </message>
+    <message>
+        <source>Could not finish writing the update file.</source>
+        <translation>无法完成更新文件写入。</translation>
+    </message>
+    <message>
+        <source>Update package size does not match the release metadata.</source>
+        <translation>更新包大小与发布元数据不一致。</translation>
+    </message>
+    <message>
+        <source>Update package failed SHA-256 verification.</source>
+        <translation>更新包 SHA-256 校验失败。</translation>
     </message>
 </context>
 </TS>
