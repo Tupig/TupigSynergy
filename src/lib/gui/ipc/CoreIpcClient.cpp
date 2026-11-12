@@ -15,7 +15,8 @@
 
 namespace synergy::gui::ipc {
 
-CoreIpcClient::CoreIpcClient(QObject *parent) : IpcClient(parent, kCoreIpcName, QStringLiteral("core"))
+CoreIpcClient::CoreIpcClient(QObject *parent)
+    : IpcClient(parent, kCoreIpcName, QStringLiteral("core"), QString::fromLatin1(kCoreBinName))
 {
   // do nothing
 }
