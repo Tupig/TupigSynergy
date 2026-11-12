@@ -96,6 +96,13 @@ source/data export audit: it never runs `msiexec /a`, installs a service or
 executes a custom action. Flatpak delivery is an offline OSTree repository
 archive containing the app, runtime and extensions for each architecture.
 
+Update checks query the GitHub Releases API over HTTPS and accept only assets
+under `https://github.com/Tupig/TupigSynergy/releases/download/`. A package is
+handed to the OS installer only after its SHA-256 matches the release asset
+`digest`; the digest is mandatory, and a missing or mismatched value aborts the
+update. Elevation is always the OS installer's own user-visible prompt (Windows
+UAC); nothing elevates silently.
+
 ### Other boundaries
 
 - Drag-and-drop file copy is off by default (`fileTransfer/enabled`).
@@ -160,6 +167,8 @@ gh attestation verify <file> --repo Tupig/Tupig_synergy
 Windows 便携包不含 `synergy-daemon.exe`。daemon 是独立进程，由 MSI 安装。本仓库没有任何代码自行注册 Windows 服务。
 
 每个交付包都内置其应用所需的第三方运行库、Qt 插件、CRT 与许可声明；构建机的搜索路径不得为缺失依赖兜底。包验证会解包到一次性载荷目录，逐个检查 PE/Mach-O/ELF 依赖与目标架构，并在隔离设置下启动 GUI、core 与 TLS 路径。Windows MSI 验证是只读的 WiX 5.0.2 source/data 导出审计：不执行 `msiexec /a`、不安装服务、不运行自定义操作。Flatpak 交付是包含 app、runtime 与 extensions 的离线 OSTree 仓库归档（按架构提供）。
+
+更新检查通过 HTTPS 查询 GitHub Releases API，只接受 `https://github.com/Tupig/TupigSynergy/releases/download/` 下的资产。只有包的 SHA-256 与 Release 资产发布的 `digest` 完全一致时才会交给系统安装器；摘要缺失或不匹配一律中止更新。提权始终由系统安装器自己的用户可见提示完成（Windows UAC），不会静默提权。
 
 ### 其他边界
 

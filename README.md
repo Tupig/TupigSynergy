@@ -170,6 +170,32 @@ Actions 工作流 **TuPig Synergy**（`.github/workflows/ci.yml`）在推送到 
 
 The **TuPig Synergy** Actions workflow (`.github/workflows/ci.yml`) runs automatically on a push to `main` and on a pull request into `main`. Those runs compile and test Windows, macOS, and the free Linux subset, skipping Flatpak. Push builds use snapshot versions and PRs use development versions. Packages are uploaded as unsigned Actions artifacts without signing, notarization, publication, or external notifications. A manual `package-type=release` ignores the platform filter and builds all three platforms from one CMake command: Windows MSVC, macOS AppleClang (arm64 and x86_64), and Linux gcc, then publishes. `package-type=snapshot` honors `platform`, including Windows (blank builds all platforms), and does not sign or publish. The Windows GUI filename always uses the base version: `synergy_<X.Y.Z>.exe`. Publishing a Release in the GitHub UI also builds every platform. The packages are attached to the GitHub Release tag `v<X.Y.Z>` (for example [v1.21.2](https://github.com/Tupig/Tupig_synergy/releases/tag/v1.21.2)). Until the SignPath Foundation secret and variables exist, those Windows packages are unsigned and the job says so. The publish job attaches a GitHub build-provenance attestation to those packages; after downloading one, check it with `gh attestation verify <file> --repo Tupig/Tupig_synergy`. The existing v1.21.2 assets were built before that step, so they have no attestation. The same Release build also runs every day at 08:23 China time (UTC+8; the cron is `23 0 * * *` in UTC). If the `v<X.Y.Z>` notes already contain `Built-From` for this commit, or the tag itself points at this commit, that scheduled run does not compile or publish.
 
+### Updates / 自动更新
+
+GUI 启动约 3 秒后（也可用 **Help → Check for Updates** 手动触发）查询
+`https://api.github.com/repos/Tupig/TupigSynergy/releases/latest`。只有语义版本
+更新的正式 Release 才会提示；对话框展示版本号与更新说明，用户确认后才下载。
+
+下载只接受 `https://github.com/Tupig/TupigSynergy/releases/download/` 下的资产。
+下载过程中边写盘边计算 SHA-256，只有与 Release 资产发布的 `digest` 完全一致时才会
+交给系统安装器：Windows 打开 MSI（由 UAC 提示提权），macOS 在 Finder 中打开 DMG，
+Linux 交给 `xdg-open` 的包管理器。任何一步都不会静默安装或静默提权；摘要缺失或
+不匹配时直接拒绝。可在 `[gui]` 中设置 `checkForUpdates=false` 关闭启动检查。
+
+About three seconds after startup (or via **Help → Check for Updates**), the GUI
+queries `https://api.github.com/repos/Tupig/TupigSynergy/releases/latest`. Only a
+newer semantic version triggers a prompt; the dialog shows the version and release
+notes, and nothing downloads until the user agrees.
+
+Downloads are restricted to assets under
+`https://github.com/Tupig/TupigSynergy/releases/download/`. The SHA-256 is computed
+while the bytes are written, and the package is handed to the OS installer only when
+it matches the release asset `digest`: Windows opens the MSI (UAC owns the elevation
+prompt), macOS opens the DMG in Finder, and Linux hands the package to `xdg-open`.
+Nothing installs or elevates silently; a missing or mismatched digest is a hard
+failure. Set `checkForUpdates=false` under `[gui]` to disable the startup check.
+
+
 ---
 
 ## 📁 Project Structure / 项目结构

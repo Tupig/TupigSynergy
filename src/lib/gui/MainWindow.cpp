@@ -79,6 +79,7 @@ MainWindow::MainWindow()
       m_menuView{new QMenu(this)},
       m_menuHelp{new QMenu(this)},
       m_actionAbout{new QAction(this)},
+      m_actionCheckForUpdates{new QAction(this)},
       m_actionClearSettings{new QAction(this)},
       m_actionReportBug{new QAction(this)},
       m_actionMinimize{new QAction(this)},
@@ -167,6 +168,14 @@ MainWindow::MainWindow()
   applyConfig();
   m_statusBar->setSecurityIcon(TlsUtility::isEnabled());
   restoreWindow();
+
+  // Check GitHub Releases after the window is up; the check is non-blocking and
+  // only surfaces a dialog when a newer version exists or the user asks.
+  QTimer::singleShot(3000, this, [this]() {
+    if (Settings::value(Settings::Gui::CheckForUpdates).toBool()) {
+      checkForUpdates(false);
+    }
+  });
 
 #ifdef SYNERGY_EXTRA_HEADER
   synergy::hooks::onMainWindow(this, &m_coreProcess);
@@ -266,6 +275,7 @@ void MainWindow::connectSlots()
   connect(&m_coreProcess, &CoreProcess::securityLevelChanged, m_statusBar, &StatusBar::setSecurityLevel);
 
   connect(m_actionAbout, &QAction::triggered, this, &MainWindow::openAboutDialog);
+  connect(m_actionCheckForUpdates, &QAction::triggered, this, [this]() { checkForUpdates(true); });
   connect(m_actionClearSettings, &QAction::triggered, this, &MainWindow::clearSettings);
   connect(m_actionReportBug, &QAction::triggered, this, &MainWindow::openHelpUrl);
   connect(m_actionMinimize, &QAction::triggered, this, &MainWindow::hide);
@@ -515,6 +525,7 @@ void MainWindow::updateText()
   m_menuHelp->setTitle(tr("&Help"));
 
   m_actionClearSettings->setText(tr("Clear settings"));
+  m_actionCheckForUpdates->setText(tr("Check for &Updates"));
   m_actionReportBug->setText(tr("Get help"));
   m_actionMinimize->setText(tr("&Minimize to tray"));
   m_actionQuit->setText(tr("&Quit"));

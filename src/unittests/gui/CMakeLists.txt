@@ -3,6 +3,7 @@
 
 add_subdirectory(config)
 add_subdirectory(core)
+add_subdirectory(update)
 
 # Settings/SecureUtils pull in arch's Windows version resource helpers, so
 # these tests need Version.lib like the other arch-linked test targets

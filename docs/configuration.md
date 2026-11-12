@@ -103,6 +103,7 @@ Comments start with `#` or `;`. Only non-default values are written.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `autoHide` | bool | `false` | Hide window on startup |
+| `checkForUpdates` | bool | `true` | Check GitHub Releases for a newer version shortly after startup |
 | `closeReminder` | bool | `true` | Show "runs in background" reminder |
 | `closeToTray` | bool | `true` | Minimize to tray on close |
 | `ignoreMissingKeyboardLayouts` | bool | `false` | Suppress missing-layout warnings |
@@ -492,6 +493,7 @@ key=value
 | 键 | 类型 | 默认值 | 说明 |
 |-----|------|--------|------|
 | `autoHide` | bool | `false` | 启动时隐藏窗口 |
+| `checkForUpdates` | bool | `true` | 启动后检查 GitHub Release 是否有新版本 |
 | `closeReminder` | bool | `true` | 显示"后台运行"提醒 |
 | `closeToTray` | bool | `true` | 关闭窗口最小化到托盘 |
 | `ignoreMissingKeyboardLayouts` | bool | `false` | 抑制缺失键盘布局的警告 |

@@ -23,6 +23,8 @@
 #include "synergy/hooks/gui_hook.h"
 #endif
 
+#include <QBoxLayout>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDebug>
 #include <QDir>
@@ -60,6 +62,16 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
   // force the first tab, since qt creator sets the active tab as the last one
   // the developer was looking at, and it's easy to accidentally save that.
   ui->tabWidget->setCurrentIndex(0);
+
+  // The update toggle lives in source so it stays next to the other startup
+  // behaviour controls without touching the generated .ui file.
+  if (auto *group = ui->rbAutoHide->parentWidget(); group != nullptr) {
+    if (auto *layout = qobject_cast<QBoxLayout *>(group->layout()); layout != nullptr) {
+      m_checkForUpdates = new QCheckBox(tr("Check for updates on startup"), group);
+      layout->addWidget(m_checkForUpdates);
+      connect(m_checkForUpdates, &QCheckBox::toggled, this, &SettingsDialog::setButtonBoxEnabledButtons);
+    }
+  }
 
   // Populate the list of IP addresses
   const auto validAddresses = NetworkMonitor::validAddresses();
@@ -268,6 +280,9 @@ void SettingsDialog::accept()
   Settings::setValue(Settings::Core::Language, I18N::nativeTo639Name(ui->comboLanguage->currentText()));
   Settings::setValue(Settings::Log::GuiDebug, ui->cbGuiDebug->isChecked());
   Settings::setValue(Settings::Gui::ShowVersionInTitle, ui->cbShowVersion->isChecked());
+  if (m_checkForUpdates != nullptr) {
+    Settings::setValue(Settings::Gui::CheckForUpdates, m_checkForUpdates->isChecked());
+  }
   Settings::setValue(Settings::Core::EnableEnterCommand, ui->cbRunEnterCommand->isChecked());
   Settings::setValue(Settings::Core::EnableExitCommand, ui->cbRunExitCommand->isChecked());
   Settings::setValue(Settings::Core::ScreenEnterCommand, ui->lineCommandEnter->text());
@@ -295,6 +310,9 @@ void SettingsDialog::loadFromConfig()
   ui->cbElevateDaemon->setChecked(Settings::value(Settings::Daemon::Elevate).toBool());
   ui->cbGuiDebug->setChecked(Settings::value(Settings::Log::GuiDebug).toBool());
   ui->cbShowVersion->setChecked(Settings::value(Settings::Gui::ShowVersionInTitle).toBool());
+  if (m_checkForUpdates != nullptr) {
+    m_checkForUpdates->setChecked(Settings::value(Settings::Gui::CheckForUpdates).toBool());
+  }
   ui->cbRunEnterCommand->setChecked(Settings::value(Settings::Core::EnableEnterCommand).toBool());
   ui->cbRunExitCommand->setChecked(Settings::value(Settings::Core::EnableExitCommand).toBool());
   ui->lineCommandEnter->setText(Settings::value(Settings::Core::ScreenEnterCommand).toString());
