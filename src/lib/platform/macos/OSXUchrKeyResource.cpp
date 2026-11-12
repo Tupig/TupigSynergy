@@ -6,7 +6,7 @@
 
 #include "OSXUchrKeyResource.h"
 
-#include <Carbon/Carbon.h>
+#include "OSXSDKHeaders.h"
 
 //
 // OSXUchrKeyResource

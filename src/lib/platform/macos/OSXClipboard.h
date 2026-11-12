@@ -10,7 +10,7 @@
 
 #include "IClipboard.h"
 
-#include <Carbon/Carbon.h>
+#include "OSXSDKHeaders.h"
 #include <vector>
 
 class IOSXClipboardConverter;

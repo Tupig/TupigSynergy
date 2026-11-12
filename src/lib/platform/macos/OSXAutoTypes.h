@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include <Carbon/Carbon.h>
+#include "OSXSDKHeaders.h"
 #include <memory>
 #include <mutex>
 

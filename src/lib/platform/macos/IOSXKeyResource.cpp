@@ -7,7 +7,7 @@
 #include "IOSXKeyResource.h"
 
 #include "OSXAutoTypes.h"
-#include <Carbon/Carbon.h>
+#include "OSXSDKHeaders.h"
 
 KeyID IOSXKeyResource::getKeyID(uint8_t c)
 {

@@ -11,7 +11,7 @@
 #include "arch/Arch.h"
 #include "base/Log.h"
 
-#include <Carbon/Carbon.h>
+#include "OSXSDKHeaders.h"
 #include <IOKit/hidsystem/IOHIDLib.h>
 
 #pragma clang diagnostic push

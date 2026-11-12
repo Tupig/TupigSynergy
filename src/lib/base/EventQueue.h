@@ -50,7 +50,13 @@ public:
   void waitForReady() const override;
 
 private:
-  const EventHandler *getHandler(EventTypes type, void *target) const;
+  //! Copy a handler while holding the table lock.
+  /*!
+  Returning a pointer into the handler table would let a concurrent
+  removeHandler() erase the entry before dispatchEvent() invoked it. The
+  caller owns this copy, so the map entry may be removed at any time.
+  */
+  bool getHandler(EventTypes type, void *target, EventHandler &handler) const;
   uint32_t saveEvent(Event &&event);
   Event removeEvent(uint32_t eventID);
   bool hasTimerExpired(Event &event);

@@ -12,7 +12,7 @@
 #include "OSXPowerManager.h"
 #include "PlatformScreen.h"
 
-#include <Carbon/Carbon.h>
+#include "OSXSDKHeaders.h"
 #include <IOKit/IOMessage.h>
 #include <mach/mach_init.h>
 #include <mach/mach_interface.h>

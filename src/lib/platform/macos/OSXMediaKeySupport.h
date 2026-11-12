@@ -6,7 +6,7 @@
 
 #pragma once
 
-#import <Carbon/Carbon.h>
+#include "OSXSDKHeaders.h"
 #import <CoreFoundation/CoreFoundation.h>
 
 #include "KeyTypes.h"

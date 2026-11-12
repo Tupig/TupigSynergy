@@ -9,7 +9,7 @@
 
 #include "KeyState.h"
 
-#include <CoreServices/CoreServices.h>
+#include "OSXSDKHeaders.h"
 
 class IOSXKeyResource
 {

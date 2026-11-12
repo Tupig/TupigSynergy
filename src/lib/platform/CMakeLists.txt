@@ -117,6 +117,7 @@ elseif(APPLE)
     macos/OSXScreenSaverControl.h
     macos/OSXScreenSaverUtil.h
     macos/OSXScreenSaverUtil.m
+    macos/OSXSDKHeaders.h
     macos/OSXUchrKeyResource.cpp
     macos/OSXUchrKeyResource.h
   )
