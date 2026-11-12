@@ -9,6 +9,8 @@
 #include "arch/Arch.h"
 #include "base/EventQueue.h"
 
+#include <QElapsedTimer>
+
 void EventQueueTests::initTestCase()
 {
   // The event queue reaches for the ARCH singleton (signal handlers), which
@@ -83,6 +85,23 @@ void EventQueueTests::deletedTimerDoesNotFire()
   Event event;
   QVERIFY(!events.getEvent(event, 0.3));
   QCOMPARE(fired, 0);
+}
+
+void EventQueueTests::waitForReadyAfterLoopStarted()
+{
+  EventQueue events;
+
+  // Queue Quit before the loop starts: loop() signals readiness, drains the
+  // pending event and returns, so the wakeup predates waitForReady(). The old
+  // implementation treated CondVar::wait()'s return value as the predicate and
+  // lost this wakeup, blocking until the 10 second deadline.
+  events.addEvent(Event(EventTypes::Quit));
+  events.loop();
+
+  QElapsedTimer timer;
+  timer.start();
+  events.waitForReady();
+  QVERIFY2(timer.elapsed() < 2000, "waitForReady lost the ready signal");
 }
 
 QTEST_MAIN(EventQueueTests)

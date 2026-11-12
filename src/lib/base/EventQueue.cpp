@@ -452,10 +452,15 @@ void EventQueue::waitForReady() const
   Lock lock(m_readyMutex.get());
   Stopwatch timer(true);
 
-  while (!m_readyCondVar->wait(kWaitSliceSeconds)) {
+  // Check the stored value before every wait. CondVar::wait() reports only a
+  // signal received while waiting, so treating its return value as the
+  // predicate loses a wakeup that arrives between loop() and this thread
+  // taking the lock; the waiter then always hits the 10 second deadline.
+  while (!*m_readyCondVar) {
     if (timer.getTime() > kReadyTimeoutSeconds) {
       throw std::runtime_error("event queue is not ready within 10 seconds");
     }
+    m_readyCondVar->wait(kWaitSliceSeconds);
   }
 }
 
