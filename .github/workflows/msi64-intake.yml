@@ -35,13 +35,13 @@ jobs:
 
     steps:
       - name: Checkout frozen intake sources
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           path: msi intake!
           persist-credentials: false
 
       - name: Setup native VC++ environment
-        uses: TheMrMilchmann/setup-msvc-dev@v4
+        uses: TheMrMilchmann/setup-msvc-dev@368ef7d1ee4d1171b31d4a7f67f4d954f903f5a9 # v4.1.0
         with:
           arch: ${{ matrix.target.msvc-arch }}
 
