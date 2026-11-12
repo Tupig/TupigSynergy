@@ -18,6 +18,8 @@
 #include <QObject>
 #include <QTranslator>
 
+#include <utility>
+
 I18N *I18N::instance()
 {
   static I18N m;
@@ -84,9 +86,29 @@ I18N::I18N(QObject *parent) : QObject{parent}
 
   static const auto s_prefix = QStringLiteral("_");
 
+  // Qt matches catalogues by the full locale (zh_HK, zh_SG, ...), but the
+  // project ships Simplified (zh_CN) and Traditional (zh_TW) Chinese only.
+  // Without this fallback a Chinese system whose region is not China/HK/Taiwan
+  // starts in English even though a Chinese catalogue exists.
+  const auto loadTranslation = [](QTranslator *translator, const QString &prefix, const QString &path) {
+    QList<QLocale> candidates{QLocale()};
+    if (QLocale().language() == QLocale::Chinese) {
+      if (QLocale().script() == QLocale::TraditionalChineseScript) {
+        candidates.append(QLocale(QLocale::Chinese, QLocale::Taiwan));
+      }
+      candidates.append(QLocale(QLocale::Chinese, QLocale::China));
+    }
+    for (const auto &locale : std::as_const(candidates)) {
+      if (translator->load(locale, prefix, s_prefix, path)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   if (Settings::value(Settings::Core::Language).toString().isEmpty()) {
     auto appTranslator = new QTranslator(this);
-    if (appTranslator->load(QLocale(), kUpstreamId, s_prefix, m_appTrPath)) {
+    if (loadTranslation(appTranslator, kUpstreamId, m_appTrPath)) {
       m_currentTranslations.append(appTranslator);
       QCoreApplication::installTranslator(appTranslator);
     }
@@ -96,7 +118,7 @@ I18N::I18N(QObject *parent) : QObject{parent}
       m_currentLang = QStringLiteral("en");
 
     auto qtTranslator = new QTranslator(this);
-    if (qtTranslator->load(QLocale(), QStringLiteral("qt"), s_prefix, m_qtTrPath)) {
+    if (loadTranslation(qtTranslator, QStringLiteral("qt"), m_qtTrPath)) {
       m_currentTranslations.append(qtTranslator);
       QCoreApplication::installTranslator(qtTranslator);
     }
