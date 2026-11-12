@@ -63,7 +63,7 @@ QString linuxArchitecture()
 UpdateChecker::UpdateChecker(QObject *parent)
     : QObject(parent),
       m_network(new QNetworkAccessManager(this)),
-      m_apiUrl(QStringLiteral(kApiUrl)),
+      m_apiUrl(QString::fromLatin1(kApiUrl)),
       m_currentVersion(QString::fromLatin1(kVersion)),
       m_assetSuffixes(defaultAssetSuffixes())
 {
