@@ -120,7 +120,7 @@ jobs:
       # One place decides what this event builds. Job `if`s only read these
       # outputs, so a platform is not accidentally both required and skipped.
       # push/PR: free Linux. release and explicit package-type=release:
-      # every platform and a GitHub Release. snapshot: honor platform; all or legacy blank means all.
+      # Windows and macOS and a GitHub Release. snapshot: honor platform; all or legacy blank means all.
       - name: Plan builds for this event
         id: plan
         env:
@@ -145,20 +145,19 @@ jobs:
               build_linux=true
               ;;
             release)
-              linux_key=full
+              # Release packaging is Windows and macOS only; Linux packages are
+              # validated by the free push/PR subset but not published.
               build_windows=true
               build_macos=true
-              build_linux=true
-              build_flatpak=true
               publish_release=true
               ;;
             workflow_dispatch)
               linux_key=full
               if [ "$PACKAGE_TYPE" = "release" ]; then
+                # Release packaging is Windows and macOS only; Linux packages are
+                # validated by the free push/PR subset but not published.
                 build_windows=true
                 build_macos=true
-                build_linux=true
-                build_flatpak=true
                 publish_release=true
               else
                 if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "all" ] || [ "$PLATFORM" = "windows" ]; then

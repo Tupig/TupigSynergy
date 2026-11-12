@@ -86,7 +86,7 @@ Build artifacts are **64-bit only**. `vcpkg.json` sets `"supports": "x64 | arm64
 
 x86_64 and x64 name the same 64-bit Intel/AMD architecture. They are not 32-bit.
 
-A push to `main` and a pull request compile and test Windows, macOS, and the free Linux subset in the same run; automatic validation skips Flatpak. Push builds use a snapshot version and pull requests use a development version. The Windows GUI filename remains `synergy_<X.Y.Z>.exe`, using the base version from `Version.cmake`. These runs upload unsigned Actions artifacts without signing, notarization, release publication, or external notifications. Manual snapshots support every platform, including Windows, and do not sign or publish. The GitHub Release is still published by the daily 08:23 schedule, a manual `package-type=release` run, or a published Release.
+A push to `main` and a pull request compile and test Windows, macOS, and the free Linux subset in the same run; automatic validation skips Flatpak. Push builds use a snapshot version and pull requests use a development version. The Windows GUI filename remains `synergy_<X.Y.Z>.exe`, using the base version from `Version.cmake`. These runs upload unsigned Actions artifacts without signing, notarization, release publication, or external notifications. Manual snapshots support every platform, including Windows, and do not sign or publish. A `package-type=release` run (and a published Release) builds and publishes **Windows and macOS only**; Linux is validated by the free push/PR subset but is not part of the release packages. The GitHub Release is published by the daily 08:23 schedule, a manual `package-type=release` run, or a published Release.
 
 The macOS and Linux vcpkg overlays use their platform system runtime (`VCPKG_CRT_LINKAGE=dynamic`) while retaining static Qt/OpenSSL libraries (`VCPKG_LIBRARY_LINKAGE=static`). This differs from the Windows release triplet, which uses `/MT`, and from CI's shared Qt distribution.
 
@@ -534,7 +534,7 @@ Qt6，打包策略不变。真实 Qt 选择、下载量、耗时、构建及包�
 
 x86_64 与 x64 都是 64 位 Intel/AMD，不是 32 位。
 
-推送到 `main` 和 Pull Request 会在同一次运行里编译并测试 Windows、macOS 和精简 Linux 矩阵；自动验证跳过 Flatpak。推送使用 snapshot 版本，PR 使用开发版本；Windows GUI 文件名仍取 `Version.cmake` 的基础版本，保持 `synergy_<X.Y.Z>.exe`。这些运行上传未签名 Actions 产物，不执行签名、公证、正式发布或外部通知。手动 snapshot 支持包括 Windows 在内的所有平台，同样不签名、不发布。GitHub Release 仍由每天 08:23 的定时任务、手动的 `package-type=release`，或一次已发布的 Release 来发布。
+推送到 `main` 和 Pull Request 会在同一次运行里编译并测试 Windows、macOS 和精简 Linux 矩阵；自动验证跳过 Flatpak。推送使用 snapshot 版本，PR 使用开发版本；Windows GUI 文件名仍取 `Version.cmake` 的基础版本，保持 `synergy_<X.Y.Z>.exe`。这些运行上传未签名 Actions 产物，不执行签名、公证、正式发布或外部通知。手动 snapshot 支持包括 Windows 在内的所有平台，同样不签名、不发布。`package-type=release`（以及已发布的 Release）只构建并发布 **Windows 与 macOS**；Linux 仅由推送/PR 的免费子集验证，不进入发布包。GitHub Release 由每天 08:23 的定时任务、手动的 `package-type=release`，或一次已发布的 Release 来发布。
 
 macOS 与 Linux 的 vcpkg overlay 使用平台系统运行库（`VCPKG_CRT_LINKAGE=dynamic`），Qt/OpenSSL 仍保持静态库（`VCPKG_LIBRARY_LINKAGE=static`）。这与 Windows 发布 triplet 的 `/MT`、以及 CI 的共享 Qt 分发分别不同。
 
