@@ -155,6 +155,7 @@ pkg-config --modversion libei
 | Issue | Solution |
 |-------|----------|
 | **No input at all** | Grant **Accessibility** + **Input Monitoring** in System Settings → Privacy & Security |
+| **Permission seems granted but the app still prompts** | Ad-hoc signed builds are identified by their code hash; after an update macOS treats the new build as a different app. Remove the old entry in System Settings → Privacy & Security → Accessibility (select it and use “−”), then re-add and enable the current app. A Developer ID signed build keeps the grant across updates. |
 | **Notarization fails** | Codesign with `--options runtime`, notarize via `xcrun notarytool` |
 | **Apple Silicon: Rosetta** | Build native `arm64`; avoid Rosetta |
 | **Menu bar icon missing** | Grant **Screen Recording** permission (for tray) |
@@ -471,6 +472,7 @@ pkg-config --modversion libei
 | 问题 | 解决方案 |
 |------|----------|
 | **完全无输入** | 系统设置 → 隐私与安全性 → **辅助功能** + **输入监控** 授权 |
+| **已授权但仍反复提示** | ad-hoc 签名以代码哈希标识应用，更新后 macOS 会把新构建视为另一个应用。请在 系统设置 → 隐私与安全性 → 辅助功能 中先移除旧条目（选中后点“−”），再重新添加并勾选当前应用。Developer ID 签名的构建可跨更新保留授权。 |
 | **公证失败** | 签名加 `--options runtime`，`xcrun notarytool` 公证 |
 | **Apple Silicon Rosetta** | 原生构建 `arm64`；避免 Rosetta |
 | **菜单栏图标缺失** | 授予 **屏幕录制** 权限 (托盘用) |
