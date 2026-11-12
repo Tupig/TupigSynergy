@@ -115,6 +115,7 @@ private:
   void setupTrayIcon();
   void applyConfig();
   void setTrayIcon();
+  void checkForUpdates(bool manual);
   void handleUnrecognisedClient(const QString &clientName);
   void handleConnectionRefused(synergy::core::ConnectionRefusal reason);
   void handlePeerFingerprint(const QString &fingerprint);
@@ -200,6 +201,7 @@ private:
 
   // Window Actions
   QAction *m_actionAbout = nullptr;
+  QAction *m_actionCheckForUpdates = nullptr;
   QAction *m_actionClearSettings = nullptr;
   QAction *m_actionReportBug = nullptr;
   QAction *m_actionMinimize = nullptr;

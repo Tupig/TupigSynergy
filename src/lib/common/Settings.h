@@ -76,6 +76,7 @@ public:
   {
     inline static const auto Autohide = QStringLiteral("gui/autoHide");
     inline static const auto AutoStartCore = QStringLiteral("gui/startCoreWithGui");
+    inline static const auto CheckForUpdates = QStringLiteral("gui/checkForUpdates");
     inline static const auto CloseReminder = QStringLiteral("gui/closeReminder");
     inline static const auto CloseToTray = QStringLiteral("gui/closeToTray");
     inline static const auto LogExpanded = QStringLiteral("gui/logExpanded");
@@ -234,6 +235,7 @@ private:
     , Settings::Log::GuiDebug
     , Settings::Gui::Autohide
     , Settings::Gui::AutoStartCore
+    , Settings::Gui::CheckForUpdates
     , Settings::Gui::CloseReminder
     , Settings::Gui::CloseToTray
     , Settings::Gui::LogExpanded
@@ -283,6 +285,7 @@ private:
   inline static const QStringList m_defaultTrueValues = {
       Settings::Core::UseHooks
     , Settings::Client::LanguageSync
+    , Settings::Gui::CheckForUpdates
     , Settings::Gui::CloseToTray
     , Settings::Gui::CloseReminder
     , Settings::Gui::LogExpanded

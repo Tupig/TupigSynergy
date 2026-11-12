@@ -28,6 +28,11 @@
 #include "gui/core/CoreProcess.h"
 #include "gui/ipc/DaemonIpcClient.h"
 #include "gui/widgets/LogDock.h"
+#include "gui/update/UpdateChecker.h"
+#include "gui/update/UpdateDialog.h"
+
+#include <QDebug>
+#include <QMessageBox>
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
 #include "widgets/StatusBar.h"
@@ -78,6 +83,7 @@ void MainWindow::createMenuBar()
 
   m_menuView->addAction(m_logDock->toggleViewAction());
 
+  m_menuHelp->addAction(m_actionCheckForUpdates);
   m_menuHelp->addAction(m_actionAbout);
   m_menuHelp->addAction(m_actionReportBug);
   m_menuHelp->addSeparator();
@@ -90,6 +96,45 @@ void MainWindow::createMenuBar()
   menuBar->addMenu(m_menuHelp);
 
   setMenuBar(menuBar);
+}
+
+void MainWindow::checkForUpdates(bool manual)
+{
+  auto *checker = new synergy::gui::update::UpdateChecker(this);
+  const auto release = [checker]() { checker->deleteLater(); };
+
+  connect(
+      checker, &synergy::gui::update::UpdateChecker::updateAvailable, this,
+      [this, release](const synergy::gui::update::UpdateInfo &info) {
+        synergy::gui::update::UpdateDialog dialog(info, this);
+        dialog.exec();
+        release();
+      }
+  );
+  connect(
+      checker, &synergy::gui::update::UpdateChecker::noUpdate, this,
+      [this, manual, release](const QString &version) {
+        if (manual) {
+          QMessageBox::information(
+              this, tr("No Updates"), tr("You are running the latest version (%1).").arg(version)
+          );
+        }
+        release();
+      }
+  );
+  connect(
+      checker, &synergy::gui::update::UpdateChecker::failed, this,
+      [this, manual, release](const QString &reason) {
+        if (manual) {
+          QMessageBox::warning(this, tr("Update Check Failed"), reason);
+        } else {
+          qWarning().noquote() << "update check failed:" << reason;
+        }
+        release();
+      }
+  );
+
+  checker->checkForUpdates();
 }
 
 void MainWindow::setupTrayIcon()

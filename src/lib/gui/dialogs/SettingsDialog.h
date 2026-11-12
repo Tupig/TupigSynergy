@@ -11,6 +11,8 @@
 
 #include "gui/config/ServerConfig.h"
 
+class QCheckBox;
+
 namespace Ui {
 class SettingsDialog;
 }
@@ -84,5 +86,6 @@ private:
 
   bool m_interfaceSetOnLoad = false;
   std::unique_ptr<Ui::SettingsDialog> ui;
+  QCheckBox *m_checkForUpdates = nullptr;
   const synergy::gui::ServerConfig &m_serverConfig;
 };

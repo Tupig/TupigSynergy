@@ -40,6 +40,14 @@ add_library(${target} STATIC
   StyleUtils.h
   TlsUtility.cpp
   TlsUtility.h
+  update/UpdateChecker.cpp
+  update/UpdateChecker.h
+  update/UpdateDialog.cpp
+  update/UpdateDialog.h
+  update/UpdateDownloader.cpp
+  update/UpdateDownloader.h
+  update/UpdateVersion.cpp
+  update/UpdateVersion.h
   config/Screen.cpp
   config/Screen.h
   config/ScreenConfig.cpp
