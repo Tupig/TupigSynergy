@@ -133,6 +133,12 @@ SOURCES = {('libdrm', '2.4.115'): {'sha256': '554cfbfe0542bddb391b4e3e05bfbbfc3e
                         'authority': 'B '
                                      'https://raw.githubusercontent.com/buildroot/buildroot/913e48076e9e6ee9fa106bfe812ceb8e54a70339/package/systemd/systemd.hash '
                                      '(same commit systemd.mk uses github macro/v262.1)'},
+ ('systemd', '262.2'): {'url': 'https://github.com/systemd/systemd/archive/v262.2/systemd-262.2.tar.gz',
+                        'sha256': '116432ee9dce9bfef4c7da7963c6de41899ab44197f2876ee99545707a5c7c1f',
+                        'authority': 'G https://github.com/systemd/systemd/releases/tag/v262.2 '
+                                     '(SHA256 computed locally from the fixed tag bytes; no independently published hash)',
+                        'authority_kind': 'official fixed source identity; SHA256 computed locally, not '
+                                          'independently published or signature verified'},
  ('tslib', '1.24'): {'url': 'https://github.com/libts/tslib/releases/download/1.24/tslib-1.24.tar.xz',
                      'sha256': '58d9941ffaa269c399f00d0d308184c96087f7acf69aa8e3c6645e852f993ba2',
                      'authority': 'G '
@@ -155,6 +161,18 @@ SOURCES = {('libdrm', '2.4.115'): {'sha256': '554cfbfe0542bddb391b4e3e05bfbbfc3e
                                       'https://raw.githubusercontent.com/buildroot/buildroot/261a30b253068338d8c4f1548828eddef754ffe0/package/keyutils/keyutils.hash '
                                       '(source URL from same commit keyutils.mk)',
                          'mirror': 'https://sources.buildroot.net/keyutils/keyutils-1.6.3.tar.gz'},
+ ('gcc', '16.2.1+git9901'): {'url': 'https://api.opensuse.org/public/source/openSUSE:Factory/gcc16/gcc-16.2.1+git9901.tar.xz?rev=13',
+                             'sha256': '0dff62fde25a78f75347e9251326c03db35d2572d6692fd6ae3c9f60730736f9',
+                             'authority': 'Official revision13/srcmd5 `975fdbd383304dfa6798fd8a54ce331a`, '
+                                          'upstream gcc.obsinfo commit '
+                                          '`fa86c5b409fa1c265ddb1cb564b32961bbe943001ada57386275e19372e50bdf`; '
+                                          'SHA256 computed locally from fixed official bytes; no independently '
+                                          'published SHA256/signature claim.',
+                             'authority_kind': 'official fixed source identity; SHA256 computed locally, not '
+                                               'independently published or signature verified',
+                             'source_revision': '13',
+                             'source_md5': '975fdbd383304dfa6798fd8a54ce331a',
+                             'source_commit': 'fa86c5b409fa1c265ddb1cb564b32961bbe943001ada57386275e19372e50bdf'},
  ('gcc', '16.2.1+git9713'): {'url': 'https://api.opensuse.org/public/source/openSUSE:Factory/gcc16/gcc-16.2.1+git9713.tar.xz?rev=12',
                              'sha256': '799ed061638a96a66318ff43bad5a85487d7dc371578cca1de9b5d2fbee62410',
                              'authority': 'Official revision12/srcmd5 `3375872901fc83888c8145116e865305`, '
