@@ -16,4 +16,5 @@ private Q_SLOTS:
   void postedEventIsDispatched();
   void removedHandlerStopsDispatch();
   void deletedTimerDoesNotFire();
+  void waitForReadyAfterLoopStarted();
 };
