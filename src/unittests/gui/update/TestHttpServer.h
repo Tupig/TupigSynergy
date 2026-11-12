@@ -30,7 +30,7 @@ public:
     m_status = status;
     m_body = body;
     m_contentType = QByteArrayLiteral("application/json");
-    m_redirect = {};
+    m_redirect.clear();
   }
 
   void setBinary(const QByteArray &body, const QByteArray &contentType = QByteArrayLiteral("application/octet-stream"))
@@ -38,7 +38,7 @@ public:
     m_status = 200;
     m_body = body;
     m_contentType = contentType;
-    m_redirect = {};
+    m_redirect.clear();
   }
 
   void setRedirect(const QUrl &location)

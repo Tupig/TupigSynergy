@@ -30,6 +30,7 @@ constexpr auto kDownloadPath = "/Tupig/TupigSynergy/releases/download/";
 constexpr auto kNotesLimit = 64 * 1024;
 constexpr auto kResponseLimit = 4 * 1024 * 1024;
 
+#if defined(Q_OS_LINUX)
 QHash<QString, QString> readOsRelease()
 {
   QHash<QString, QString> values;
@@ -57,6 +58,7 @@ QString linuxArchitecture()
   return QSysInfo::currentCpuArchitecture() == QLatin1String("arm64") ? QStringLiteral("aarch64")
                                                                       : QStringLiteral("x86_64");
 }
+#endif
 
 } // namespace
 
