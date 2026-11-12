@@ -20,6 +20,30 @@ set (translations
   ${filename}_ko.ts
 )
 
+# macOS resolves the application locale from the localizations the bundle
+# declares. A bundle that omits CFBundleLocalizations starts in the development
+# region (English) even when the system language is Chinese, so keep the plist
+# in step with the catalogues above. zh_CN is matched through the script-based
+# zh-Hans/zh-Hant identifiers macOS reports.
+file(READ "${CMAKE_SOURCE_DIR}/src/apps/res/synergy.plist.in" _bundle_plist)
+set(_bundle_languages en)
+foreach(_ts IN LISTS translations)
+  string(REPLACE "${filename}_" "" _lang "${_ts}")
+  string(REPLACE ".ts" "" _lang "${_lang}")
+  if(_lang STREQUAL "zh_CN")
+    list(APPEND _bundle_languages zh-Hans zh-Hant)
+  else()
+    list(APPEND _bundle_languages "${_lang}")
+  endif()
+endforeach()
+foreach(_bundle_language IN LISTS _bundle_languages)
+  if(NOT _bundle_plist MATCHES "<string>${_bundle_language}</string>")
+    message(FATAL_ERROR
+      "CFBundleLocalizations is missing '${_bundle_language}' in "
+      "src/apps/res/synergy.plist.in; macOS would fall back to English.")
+  endif()
+endforeach()
+
 # Trees scanned for translatable strings.
 #
 # The Synergy overlay under src/lib/synergy carries user-visible strings of its own
