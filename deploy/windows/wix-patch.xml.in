@@ -20,6 +20,16 @@
     <RemoveFile Id="RmOldLog" On="install" Name="@CMAKE_PROJECT_NAME@-daemon.log"/>
   </CPackWiXFragment>
 
+  <CPackWiXFragment Id="CM_CP_@SYNERGY_GUI_EXE_NAME@.exe">
+    <Shortcut
+      Id="DesktopShortcut"
+      Directory="DesktopFolder"
+      Name="@CMAKE_PROJECT_PROPER_NAME@"
+      Target="[INSTALL_ROOT]@SYNERGY_GUI_EXE_NAME@.exe"
+      WorkingDirectory="INSTALL_ROOT"
+      Advertise="no" />
+  </CPackWiXFragment>
+
   <CPackWiXFragment Id="CM_CP_@CMAKE_PROJECT_NAME@_core.exe">
     <firewall:FirewallException Id="ServerFirewallException" Name="@CMAKE_PROJECT_PROPER_NAME@ Server" Program="[INSTALL_ROOT]@CMAKE_PROJECT_NAME@-core.exe" Scope="any"/>
     <firewall:FirewallException Id="ClientFirewallException" Name="@CMAKE_PROJECT_PROPER_NAME@ Client" Program="[INSTALL_ROOT]@CMAKE_PROJECT_NAME@-core.exe" Scope="any"/>
