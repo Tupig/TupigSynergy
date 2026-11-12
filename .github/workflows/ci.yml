@@ -1235,17 +1235,15 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Configure AWS credentials
-        if: steps.aws.outputs.configured == 'true'
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
-
       - name: Upload to AWS S3
         if: steps.aws.outputs.configured == 'true'
         shell: bash
+        # The AWS CLI reads these from the environment; no third-party action.
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-2
+          AWS_DEFAULT_REGION: us-east-2
         run: |
           version="${{ needs.get-version.outputs.version }}"
           s3_uri="${{ inputs.aws-s3-uri || format('s3://{0}/{1}', vars.AWS_S3_BUCKET, vars.AWS_S3_UPLOAD_DIR) }}"
@@ -1307,13 +1305,18 @@ jobs:
 
       - name: Send Slack notification
         if: steps.slack.outputs.configured == 'true'
-        uses: slackapi/slack-github-action@0d95c9a7becc1e6e297d76df9bc735c44f4cbcbc # v3
-        with:
-          method: chat.postMessage
-          token: ${{ secrets.SLACK_TOKEN }}
-          payload: |
-            channel: ${{ secrets.SLACK_NOTIFY_CHANNEL_ID }}
-            text: ${{ toJSON(steps.message.outputs.text) }}
+        shell: bash
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_NOTIFY_CHANNEL_ID }}
+          SLACK_TEXT: ${{ steps.message.outputs.text }}
+        run: |
+          payload=$(jq -n --arg channel "$SLACK_CHANNEL" --arg text "$SLACK_TEXT" '{channel: $channel, text: $text}')
+          curl --silent --show-error --fail \
+            --request POST https://slack.com/api/chat.postMessage \
+            --header "Authorization: Bearer $SLACK_TOKEN" \
+            --header "Content-type: application/json; charset=utf-8" \
+            --data "$payload"
 
   # ---------------------------------------------------------------------------
   # 4. Analysis. Manual dispatch with analyze=true only. Push and pull
@@ -1407,7 +1410,7 @@ jobs:
           apt-get update -qqq > /dev/null
           apt-get install -qqq git > /dev/null
       - name: Checkout
-        uses: sithlord48/fancy-checkout@8db15be361005e6d51b0a3b51b39bebd4cde170c # v2
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
         with:
@@ -1439,7 +1442,7 @@ jobs:
           apt-get update -qqq > /dev/null
           apt-get install -qqq git curl unzip gcovr dirmngr gpg > /dev/null
       - name: Checkout
-        uses: sithlord48/fancy-checkout@8db15be361005e6d51b0a3b51b39bebd4cde170c # v2
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install project dependencies
         uses: ./.github/actions/install-dependencies
         with:
@@ -1501,7 +1504,7 @@ jobs:
           apt-get update -qqq > /dev/null
           apt-get install -qqq git valgrind > /dev/null
       - name: Checkout
-        uses: sithlord48/fancy-checkout@8db15be361005e6d51b0a3b51b39bebd4cde170c # v2
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
         with:
