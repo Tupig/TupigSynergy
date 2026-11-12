@@ -30,6 +30,10 @@
 #include <QThread>
 #include <QTimer>
 
+#if defined(Q_OS_MACOS)
+#include <ApplicationServices/ApplicationServices.h>
+#endif
+
 #include <memory>
 
 void qtMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &message)
@@ -142,6 +146,21 @@ int main(int argc, char **argv)
   const auto processName = QFileInfo(argv[0]).fileName();
 
   App *coreApp = createApp(parser, events, processName);
+
+#if defined(Q_OS_MACOS)
+  // synergy-core is a helper process. Hide it from the Dock before
+  // QApplication creates the NSApplication; transforming later (after the
+  // application object exists) still leaves a Dock icon behind for every core
+  // instance, so the GUI and the service look like several applications.
+  {
+    ProcessSerialNumber psn = {0, kCurrentProcess};
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    GetCurrentProcess(&psn);
+#pragma GCC diagnostic pop
+    TransformProcessType(&psn, kProcessTransformToBackgroundApplication);
+  }
+#endif
 
   QApplication app(argc, argv);
   QApplication::setApplicationName(QStringLiteral("%1 Core").arg(kAppName));
