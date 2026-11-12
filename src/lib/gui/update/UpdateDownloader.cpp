@@ -53,21 +53,21 @@ void UpdateDownloader::start(const UpdateAsset &asset, const QString &directory)
   cleanup();
 
   if (!isAllowedDownloadUrl(asset.url)) {
-    emit failed(tr("Refusing to download a package outside this repository."));
+    Q_EMIT failed(tr("Refusing to download a package outside this repository."));
     return;
   }
   if (!kSha256Pattern.match(asset.sha256).hasMatch()) {
-    emit failed(tr("Refusing to download a package without a SHA-256 digest."));
+    Q_EMIT failed(tr("Refusing to download a package without a SHA-256 digest."));
     return;
   }
   if (asset.size > kMaxPackageSize) {
-    emit failed(tr("Update package is larger than the allowed limit."));
+    Q_EMIT failed(tr("Update package is larger than the allowed limit."));
     return;
   }
 
   const auto fileName = safeFileName(asset.name);
   if (fileName.isEmpty()) {
-    emit failed(tr("Update package has an unsafe file name."));
+    Q_EMIT failed(tr("Update package has an unsafe file name."));
     return;
   }
 
@@ -79,7 +79,7 @@ void UpdateDownloader::start(const UpdateAsset &asset, const QString &directory)
 
   m_file = std::make_unique<QFile>(m_path);
   if (!m_file->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-    emit failed(tr("Could not create the update file: %1").arg(m_file->errorString()));
+    Q_EMIT failed(tr("Could not create the update file: %1").arg(m_file->errorString()));
     cleanup();
     return;
   }
@@ -110,7 +110,7 @@ void UpdateDownloader::start(const UpdateAsset &asset, const QString &directory)
       reply->abort();
       return;
     }
-    emit progress(m_received, m_asset.size);
+    Q_EMIT progress(m_received, m_asset.size);
   });
   connect(reply, &QNetworkReply::finished, this, [this, reply]() {
     if (m_reply != reply) {
@@ -130,26 +130,26 @@ void UpdateDownloader::finishDownload()
   reply->deleteLater();
 
   if (reply->error() != QNetworkReply::NoError) {
-    emit failed(tr("Could not download the update: %1").arg(reply->errorString()));
+    Q_EMIT failed(tr("Could not download the update: %1").arg(reply->errorString()));
     cleanup();
     return;
   }
 
   if (m_file == nullptr || !m_file->flush()) {
-    emit failed(tr("Could not finish writing the update file."));
+    Q_EMIT failed(tr("Could not finish writing the update file."));
     cleanup();
     return;
   }
   m_file->close();
 
   if (m_asset.size > 0 && m_received != m_asset.size) {
-    emit failed(tr("Update package size does not match the release metadata."));
+    Q_EMIT failed(tr("Update package size does not match the release metadata."));
     cleanup();
     return;
   }
 
   if (m_hash.result().toHex() != m_asset.sha256) {
-    emit failed(tr("Update package failed SHA-256 verification."));
+    Q_EMIT failed(tr("Update package failed SHA-256 verification."));
     cleanup();
     return;
   }
@@ -157,7 +157,7 @@ void UpdateDownloader::finishDownload()
   m_completed = true;
   const auto path = m_path;
   m_file.reset();
-  emit finished(path);
+  Q_EMIT finished(path);
 }
 
 void UpdateDownloader::cleanup()

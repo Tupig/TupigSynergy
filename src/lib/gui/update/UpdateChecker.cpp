@@ -202,38 +202,38 @@ void UpdateChecker::checkForUpdates()
 void UpdateChecker::handleResponse(QNetworkReply *reply)
 {
   if (reply->error() != QNetworkReply::NoError) {
-    emit failed(tr("Could not reach GitHub Releases: %1").arg(reply->errorString()));
+    Q_EMIT failed(tr("Could not reach GitHub Releases: %1").arg(reply->errorString()));
     return;
   }
 
   const auto payload = reply->readAll();
   if (payload.size() > kResponseLimit) {
-    emit failed(tr("GitHub Releases response is unexpectedly large."));
+    Q_EMIT failed(tr("GitHub Releases response is unexpectedly large."));
     return;
   }
 
   QJsonParseError parseError{};
   const auto document = QJsonDocument::fromJson(payload, &parseError);
   if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-    emit failed(tr("GitHub Releases returned an unreadable response."));
+    Q_EMIT failed(tr("GitHub Releases returned an unreadable response."));
     return;
   }
 
   const auto root = document.object();
   if (root.value(QStringLiteral("draft")).toBool() || root.value(QStringLiteral("prerelease")).toBool()) {
-    emit noUpdate(m_currentVersion);
+    Q_EMIT noUpdate(m_currentVersion);
     return;
   }
 
   const auto tag = root.value(QStringLiteral("tag_name")).toString();
   if (!parseVersion(tag).valid) {
-    emit failed(tr("GitHub Release tag is not a semantic version."));
+    Q_EMIT failed(tr("GitHub Release tag is not a semantic version."));
     return;
   }
 
   const auto releaseUrl = QUrl(root.value(QStringLiteral("html_url")).toString());
   if (!isAllowedReleaseUrl(releaseUrl)) {
-    emit failed(tr("GitHub Release URL is outside this repository."));
+    Q_EMIT failed(tr("GitHub Release URL is outside this repository."));
     return;
   }
 
@@ -251,7 +251,7 @@ void UpdateChecker::handleResponse(QNetworkReply *reply)
 
     const auto url = QUrl(asset.value(QStringLiteral("browser_download_url")).toString());
     if (!isAllowedAssetUrl(url)) {
-      emit failed(tr("Release asset URL is outside this repository."));
+      Q_EMIT failed(tr("Release asset URL is outside this repository."));
       return;
     }
 
@@ -259,7 +259,7 @@ void UpdateChecker::handleResponse(QNetworkReply *reply)
     static const auto digestPattern = QRegularExpression(QStringLiteral("^sha256:([0-9a-fA-F]{64})$"));
     const auto match = digestPattern.match(digest);
     if (!match.hasMatch()) {
-      emit failed(tr("Release asset does not publish a SHA-256 digest; refusing to install it."));
+      Q_EMIT failed(tr("Release asset does not publish a SHA-256 digest; refusing to install it."));
       return;
     }
 
@@ -270,12 +270,12 @@ void UpdateChecker::handleResponse(QNetworkReply *reply)
   }
 
   if (selected.name.isEmpty()) {
-    emit failed(tr("No release package is available for this platform."));
+    Q_EMIT failed(tr("No release package is available for this platform."));
     return;
   }
 
   if (compareVersions(tag, m_currentVersion) <= 0) {
-    emit noUpdate(m_currentVersion);
+    Q_EMIT noUpdate(m_currentVersion);
     return;
   }
 
@@ -284,7 +284,7 @@ void UpdateChecker::handleResponse(QNetworkReply *reply)
     version.remove(0, 1);
   }
 
-  emit updateAvailable(
+  Q_EMIT updateAvailable(
       {version, tag, sanitizedNotes(root.value(QStringLiteral("body")).toString()), releaseUrl, selected}
   );
 }

@@ -14,9 +14,10 @@ class QLabel;
 class QPlainTextEdit;
 class QProgressBar;
 class QPushButton;
-class UpdateDownloader;
 
 namespace synergy::gui::update {
+
+class UpdateDownloader;
 
 /**
  * @brief Shows an available update, downloads it and hands it to the installer.
