@@ -4,6 +4,22 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
+	<!-- macOS resolves the app locale only from the localizations a bundle
+	     declares; without this list a Chinese system falls back to the
+	     development region and QLocale() reports English. Keep in step with
+	     the .ts files under translations/ (zh_CN is matched through
+	     zh-Hans/zh-Hant). -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>es</string>
+		<string>it</string>
+		<string>ja</string>
+		<string>ko</string>
+		<string>ru</string>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>@BUNDLE_EXECUTABLE_NAME@</string>
 	<key>CFBundleGetInfoString</key>
