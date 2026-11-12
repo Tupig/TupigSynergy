@@ -8,6 +8,7 @@
 
 #include "arch/Arch.h"
 #include "base/EventQueue.h"
+#include "base/Log.h"
 
 #include <QElapsedTimer>
 
@@ -16,6 +17,9 @@ void EventQueueTests::initTestCase()
   // The event queue reaches for the ARCH singleton (signal handlers), which
   // only the application normally installs.
   static Arch arch;
+  // loop() logs through the CLOG singleton; without a Log instance the logging
+  // macros dereference a null pointer in release builds.
+  static Log log;
 #if defined(Q_OS_WIN)
   arch.init();
 #endif
