@@ -52,6 +52,8 @@ protected:
     auto *socket = new QTcpSocket(this);
     socket->setSocketDescriptor(handle);
     connect(socket, &QTcpSocket::readyRead, this, [this, socket]() {
+      // Respond exactly once per connection; the client request is not parsed.
+      socket->disconnect(this);
       socket->readAll();
       const auto reason = m_status == 200 ? QByteArrayLiteral("OK") : QByteArrayLiteral("Error");
       QByteArray response;
