@@ -83,6 +83,9 @@ env:
   # Pull requests fall through to the cmake dev default.
   SYNERGY_VERSION_RELEASE: ${{ github.event_name == 'release' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'release') }}
   SYNERGY_VERSION_SNAPSHOT: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'snapshot') }}
+  # A manual release must publish an incremented version; its patch is computed
+  # from existing tags so a new GitHub Release is created for every build.
+  SYNERGY_VERSION_AUTO_BUMP: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'release' }}
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -95,6 +98,7 @@ jobs:
     outputs:
       version: ${{ steps.get-version.outputs.version }}
       base: ${{ steps.get-version.outputs.base }}
+      patch: ${{ steps.get-version.outputs.patch }}
       linux_targets: ${{ steps.plan.outputs.targets }}
       build_windows: ${{ steps.plan.outputs.build_windows }}
       build_macos: ${{ steps.plan.outputs.build_macos }}
@@ -235,6 +239,7 @@ jobs:
       actions: read
 
     env:
+      SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
       # SignPath Foundation holds the code-signing key. The API token is the only
       # secret. Organization id and project slug are Actions variables assigned
       # after the project is approved. Missing any of them leaves the package unsigned.
@@ -490,6 +495,7 @@ jobs:
     timeout-minutes: ${{ matrix.target.timeout }}
 
     env:
+      SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
       MAC_SIGNING: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID != '' }}
       MAC_CODESIGN_ID: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}
 
@@ -701,6 +707,8 @@ jobs:
       volumes:
         - /etc/ssl/certs/ca-certificates.crt:/run/synergy-ci/host-ca-certificates.crt:ro
     timeout-minutes: 20
+    env:
+      SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
     strategy:
       fail-fast: false
       matrix:
@@ -1042,6 +1050,8 @@ jobs:
     name: flatpak-${{matrix.flatpak.arch}}
     runs-on: ${{matrix.flatpak.runs-on}}
     timeout-minutes: 90
+    env:
+      SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
       options: --privileged
@@ -1169,6 +1179,14 @@ jobs:
           title="TuPig Synergy ${VERSION}"
           notes="Packages for ${VERSION}."$'\n\n'"Each package file from this workflow has a GitHub build-provenance attestation. Verify a downloaded file with: gh attestation verify FILE --repo Tupig/Tupig_synergy"$'\n\n'"Windows builds are Authenticode-signed by SignPath Foundation when that project is approved. Until then they are unsigned. Provenance shows which workflow and commit produced the file. It is not itself an Authenticode or Apple signature."
           marker="Built-From: ${GITHUB_SHA}"
+          # A published release must have an incremented version: reusing a tag
+          # for different code is exactly what the auto-bump prevents. A rerun
+          # of the same commit may still refresh its own assets.
+          if existing_sha=$(gh api "repos/${GH_REPO}/commits/${tag}" --jq .sha 2>/dev/null) &&
+             [ -n "$existing_sha" ] && [ "$existing_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::Release ${tag} already points to ${existing_sha}; bump the version before publishing"
+            exit 1
+          fi
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "${files[@]}" --clobber
             existing=$(gh release view "$tag" --json body -q .body)

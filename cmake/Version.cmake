@@ -7,7 +7,14 @@
 # Keep vcpkg.json "version-string" equal to MAJOR.MINOR.PATCH (CI checks this).
 set(SYNERGY_VERSION_MAJOR 1)
 set(SYNERGY_VERSION_MINOR 21)
-set(SYNERGY_VERSION_PATCH 3)
+# CI release builds compute the next patch from existing tags and pass it in the
+# environment, so every published build gets an incremented version. Keep the
+# committed value in sync with vcpkg.json for the consistency check.
+if(DEFINED ENV{SYNERGY_VERSION_PATCH} AND NOT "$ENV{SYNERGY_VERSION_PATCH}" STREQUAL "")
+  set(SYNERGY_VERSION_PATCH $ENV{SYNERGY_VERSION_PATCH})
+elseif(NOT DEFINED SYNERGY_VERSION_PATCH)
+  set(SYNERGY_VERSION_PATCH 3)
+endif()
 set(SYNERGY_VERSION_STAGE "")
 
 # Composes the full version string by applying SYNERGY_VERSION_RELEASE /
