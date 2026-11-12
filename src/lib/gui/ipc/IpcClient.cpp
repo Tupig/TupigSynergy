@@ -9,7 +9,9 @@
 #include "common/IpcToken.h"
 #include "common/VersionInfo.h"
 
+#include <QCoreApplication>
 #include <QDebug>
+#include <QDir>
 #include <QLocalSocket>
 #include <QTimer>
 
@@ -18,6 +20,8 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <Windows.h>
+
+#include <aclapi.h>
 
 #include <vector>
 #else
@@ -53,14 +57,53 @@ bool readTokenUserSid(HANDLE token, std::vector<unsigned char> &buffer)
   return GetTokenInformation(token, TokenUser, buffer.data(), static_cast<DWORD>(buffer.size()), &needed) != 0;
 }
 
-//! True when the connected pipe server runs as this process's user or as
-//! LocalSystem.
-bool verifyServerIsTrusted(const QLocalSocket *socket)
+//! True when the connected pipe server runs as this process's user, as
+//! LocalSystem, or from the installed executable next to this GUI.
+bool verifyServerIsTrusted(const QLocalSocket *socket, const QString &serverExecutable)
 {
   const auto handle = reinterpret_cast<HANDLE>(static_cast<qintptr>(socket->socketDescriptor()));
   if (handle == nullptr || handle == INVALID_HANDLE_VALUE)
     return false;
 
+  // The named-pipe object is created by the server, so its owner SID is the
+  // server's user. Reading it from our own handle needs no access to the
+  // server process, which a normal-user GUI is denied for a SYSTEM service.
+  PSID ownerSid = nullptr;
+  PSECURITY_DESCRIPTOR descriptor = nullptr;
+  const auto securityResult = GetSecurityInfo(
+      handle, SE_KERNEL_OBJECT, OWNER_SECURITY_INFORMATION, &ownerSid, nullptr, nullptr, nullptr, &descriptor
+  );
+
+  bool trusted = false;
+  if (securityResult == ERROR_SUCCESS && ownerSid != nullptr) {
+    HANDLE ownToken = nullptr;
+    std::vector<unsigned char> ownUser;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &ownToken)) {
+      const bool ownSidRead = readTokenUserSid(ownToken, ownUser);
+      CloseHandle(ownToken);
+      if (ownSidRead) {
+        PSID ownSid = reinterpret_cast<TOKEN_USER *>(ownUser.data())->User.Sid;
+        if (EqualSid(ownerSid, ownSid))
+          trusted = true;
+      }
+    }
+
+    if (!trusted) {
+      unsigned char systemSid[SECURITY_MAX_SID_SIZE];
+      DWORD systemSidSize = sizeof(systemSid);
+      if (CreateWellKnownSid(WinLocalSystemSid, nullptr, systemSid, &systemSidSize) != 0 &&
+          EqualSid(ownerSid, systemSid) != 0)
+        trusted = true;
+    }
+  }
+  if (descriptor != nullptr)
+    LocalFree(descriptor);
+  if (trusted)
+    return true;
+
+  // Fall back to the exact installed image path when the pipe owner cannot be
+  // read (older systems or a restricted pipe DACL). A low-privilege squatter
+  // cannot place a binary in the install directory, which requires elevation.
   ULONG serverPid = 0;
   if (!GetNamedPipeServerProcessId(handle, &serverPid) || serverPid == 0)
     return false;
@@ -69,42 +112,22 @@ bool verifyServerIsTrusted(const QLocalSocket *socket)
   if (serverProcess == nullptr)
     return false;
 
-  HANDLE serverToken = nullptr;
-  const BOOL tokenOpened = OpenProcessToken(serverProcess, TOKEN_QUERY, &serverToken);
+  wchar_t imagePath[32768];
+  DWORD imagePathSize = static_cast<DWORD>(sizeof(imagePath) / sizeof(imagePath[0]));
+  const bool imageRead = QueryFullProcessImageNameW(serverProcess, 0, imagePath, &imagePathSize) != 0;
   CloseHandle(serverProcess);
-  if (!tokenOpened)
+  if (!imageRead)
     return false;
 
-  std::vector<unsigned char> serverUser;
-  const bool serverSidRead = readTokenUserSid(serverToken, serverUser);
-  CloseHandle(serverToken);
-  if (!serverSidRead)
-    return false;
-  PSID serverSid = reinterpret_cast<TOKEN_USER *>(serverUser.data())->User.Sid;
-
-  HANDLE ownToken = nullptr;
-  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &ownToken))
-    return false;
-
-  std::vector<unsigned char> ownUser;
-  const bool ownSidRead = readTokenUserSid(ownToken, ownUser);
-  CloseHandle(ownToken);
-  if (!ownSidRead)
-    return false;
-  PSID ownSid = reinterpret_cast<TOKEN_USER *>(ownUser.data())->User.Sid;
-
-  if (EqualSid(serverSid, ownSid))
-    return true;
-
-  unsigned char systemSid[SECURITY_MAX_SID_SIZE];
-  DWORD systemSidSize = sizeof(systemSid);
-  return CreateWellKnownSid(WinLocalSystemSid, nullptr, systemSid, &systemSidSize) != 0 &&
-         EqualSid(serverSid, systemSid) != 0;
+  const auto actual = QDir::cleanPath(QString::fromWCharArray(imagePath, static_cast<int>(imagePathSize)));
+  const auto expected = QDir::cleanPath(QDir(QCoreApplication::applicationDirPath()).filePath(serverExecutable));
+  return actual.compare(expected, Qt::CaseInsensitive) == 0;
 }
 #elif defined(Q_OS_LINUX)
 //! True when the local socket's server runs as this process's user or as root.
-bool verifyServerIsTrusted(const QLocalSocket *socket)
+bool verifyServerIsTrusted(const QLocalSocket *socket, const QString &serverExecutable)
 {
+  Q_UNUSED(serverExecutable)
   const int fd = static_cast<int>(socket->socketDescriptor());
   if (fd < 0)
     return false;
@@ -119,8 +142,9 @@ bool verifyServerIsTrusted(const QLocalSocket *socket)
 }
 #else
 //! macOS and other platforms: verify the peer with getpeereid().
-bool verifyServerIsTrusted(const QLocalSocket *socket)
+bool verifyServerIsTrusted(const QLocalSocket *socket, const QString &serverExecutable)
 {
+  Q_UNUSED(serverExecutable)
   const int fd = static_cast<int>(socket->socketDescriptor());
   if (fd < 0)
     return false;
@@ -152,11 +176,14 @@ static const auto kLocalSocketError = &QLocalSocket::errorOccurred;
 static const auto kLocalSocketError = qOverload<QLocalSocket::LocalSocketError>(&QLocalSocket::error);
 #endif
 
-IpcClient::IpcClient(QObject *parent, const QString &socketName, const QString &typeName)
+IpcClient::IpcClient(
+    QObject *parent, const QString &socketName, const QString &typeName, const QString &serverExecutable
+)
     : QObject(parent),
       m_socket{new QLocalSocket(this)},
       m_socketName(socketName), // NOSONAR - Qt memory
-      m_typeName(typeName)
+      m_typeName(typeName),
+      m_serverExecutable(serverExecutable)
 {
   connect(m_socket, &QLocalSocket::disconnected, this, &IpcClient::handleDisconnected);
   connect(m_socket, kLocalSocketError, this, &IpcClient::handleErrorOccurred);
@@ -218,7 +245,7 @@ void IpcClient::attemptConnection()
         // server listens.  Never hand the hello token to such a squatter:
         // only accept a server that runs with the same identity as the
         // daemon/core (this user, SYSTEM on Windows, root on Unix).
-        if (!verifyServerIsTrusted(m_socket)) {
+        if (!verifyServerIsTrusted(m_socket, m_serverExecutable)) {
           qWarning().noquote(
           ) << QStringLiteral("%1 ipc server failed peer verification, refusing to send hello").arg(m_typeName);
           disconnectFromServer();

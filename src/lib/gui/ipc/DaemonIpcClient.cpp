@@ -11,8 +11,21 @@
 #include <QDebug>
 
 namespace synergy::gui::ipc {
+namespace {
 
-DaemonIpcClient::DaemonIpcClient(QObject *parent) : IpcClient(parent, kDaemonIpcName, QStringLiteral("daemon"))
+QString daemonExecutable()
+{
+#ifdef Q_OS_WIN
+  return QString::fromLatin1(kDaemonBinName) + QStringLiteral(".exe");
+#else
+  return QString::fromLatin1(kDaemonBinName);
+#endif
+}
+
+} // namespace
+
+DaemonIpcClient::DaemonIpcClient(QObject *parent)
+    : IpcClient(parent, kDaemonIpcName, QStringLiteral("daemon"), daemonExecutable())
 {
 }
 

@@ -26,7 +26,9 @@ class IpcClient : public QObject
   };
 
 public:
-  explicit IpcClient(QObject *parent, const QString &socketName, const QString &typeName);
+  explicit IpcClient(
+      QObject *parent, const QString &socketName, const QString &typeName, const QString &serverExecutable
+  );
   void connectToServer();
   void disconnectFromServer();
 
@@ -66,6 +68,7 @@ private:
   QByteArray m_readBuffer;
   int m_retryCount{0};
   QString m_typeName;
+  QString m_serverExecutable;
 };
 
 } // namespace synergy::gui::ipc
