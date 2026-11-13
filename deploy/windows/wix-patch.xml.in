@@ -60,6 +60,7 @@
     <CustomAction
       Id="CloseRunningApps"
       ExeCommand="cmd /c taskkill /F /IM synergy.exe /IM synergy-core.exe /IM synergy-daemon.exe /IM synergy_*.exe"
+      Directory="INSTALL_ROOT"
       Execute="deferred"
       Impersonate="no"
       Return="ignore" />
