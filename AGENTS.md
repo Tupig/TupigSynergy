@@ -142,7 +142,10 @@ This section is the authoritative list. The following are deliberate, not defect
   (`SYNERGY_GUI_EXE_NAME`). Do not hardcode it, and do not put `-dev` or `Daemon` in that name.
   `synergy-core` and `synergy-daemon` stay unversioned: `Constants.h.in` `kCoreBinName` /
   `kDaemonBinName`, the Linux `.desktop` `Exec=`, and the WiX service/firewall component IDs
-  look those two up by those exact names.
+  look those two up by those exact names. A stable-name `synergy.exe` **copy** is also installed
+  and used by the shortcuts and the post-install launch: Windows remembers notification-area
+  visibility per executable path, so pointing users at the versioned file would re-hide the tray
+  icon after every upgrade. The versioned file remains the MSI component identity.
 - **macOS ships a `.app` bundle inside a `.dmg`**, not a bare binary — signing and notarization require
   the bundle layout.
 - **Nothing in this codebase registers the Windows service, and that is deliberate.**
@@ -292,6 +295,9 @@ manifest 仍是发布构建与所有本地构建的唯一真源。该例外附�
   （`SYNERGY_GUI_EXE_NAME`），不要写死，也不要带 `-dev` 或 `Daemon`。
   `synergy-core` 与 `synergy-daemon` 仍不带版本号：`Constants.h.in` 的 `kCoreBinName` /
   `kDaemonBinName`、Linux `.desktop` 的 `Exec=`、WiX 服务与防火墙组件 ID 都按这两个固定名字查找。
+  安装时**额外**复制一份稳定命名的 `synergy.exe`，快捷方式与安装后启动都指向它：Windows 按
+  可执行文件路径记住通知区可见性，指向版本化文件会导致每次升级后托盘图标重新被隐藏。版本化文件
+  仍是 MSI 组件身份。
 - **macOS 交付的是 `.dmg` 内的 `.app` bundle**，而非裸二进制 —— 签名与公证都要求 bundle 结构。
 - **本代码库中没有任何地方注册 Windows 服务，这是有意为之。**
   `synergy-daemon.exe` 无法自行安装：既无 `--install-service` 选项，也无 `CreateService` 调用。

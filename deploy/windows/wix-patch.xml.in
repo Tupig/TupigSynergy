@@ -25,7 +25,7 @@
       Id="DesktopShortcut"
       Directory="DesktopFolder"
       Name="@CMAKE_PROJECT_PROPER_NAME@"
-      Target="[INSTALL_ROOT]@SYNERGY_GUI_EXE_NAME@.exe"
+      Target="[INSTALL_ROOT]synergy.exe"
       WorkingDirectory="INSTALL_ROOT"
       Advertise="no" />
   </CPackWiXFragment>
@@ -48,11 +48,25 @@
 
     <CustomAction
       Id="RunApp"
-      ExeCommand="[INSTALL_ROOT]@SYNERGY_GUI_EXE_NAME@.exe"
+      ExeCommand="[INSTALL_ROOT]synergy.exe"
       Directory="INSTALL_ROOT"
       Execute="immediate"
       Impersonate="yes"
       Return="asyncNoWait" />
+
+    <!-- Stop the running GUI, core and daemon before replacing their files.
+         Without this the installer reports that files are in use and asks for
+         a reboot after every upgrade. -->
+    <CustomAction
+      Id="CloseRunningApps"
+      ExeCommand="cmd /c taskkill /F /IM synergy.exe /IM synergy-core.exe /IM synergy-daemon.exe /IM synergy_*.exe"
+      Directory="INSTALL_ROOT"
+      Execute="deferred"
+      Impersonate="no"
+      Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="CloseRunningApps" Before="InstallFiles" />
+    </InstallExecuteSequence>
   </CPackWiXFragment>
 
 </CPackWiXPatch>

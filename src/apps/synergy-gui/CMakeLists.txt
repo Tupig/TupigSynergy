@@ -80,6 +80,14 @@ install(
 )
 
 if(WIN32)
+  # Windows remembers notification-area visibility per executable path. The
+  # versioned GUI file therefore looks like a new app after every update and
+  # its tray icon is hidden again. Install a stable-name copy and point the
+  # shortcuts at it; the versioned file stays for MSI component identity.
+  install(PROGRAMS $<TARGET_FILE:${target}> DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME synergy.exe)
+endif()
+
+if(WIN32)
   # 注意：此处曾设置 LINK_FLAGS "/NODEFAULTLIB:LIBCMT"。该标志让链接器忽略静态 CRT，
   # 在早期使用 /MD（动态 CRT）时用于避免 CRT 冲突；但本项目改用 /MT 静态 CRT
   # （见根 CMakeLists.txt 的 CMAKE_MSVC_RUNTIME_LIBRARY 与 vcpkg 静态 triplet）后，
