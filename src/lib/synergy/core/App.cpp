@@ -67,18 +67,6 @@ void App::run(QThread &coreThread)
   connect(&coreThread, &QThread::started, this, [this, &coreThread]() {
     LOG_DEBUG("core thread started");
 
-#if MAC_OS_X_VERSION_10_7
-    // dock hide only supported on lion :(
-    ProcessSerialNumber psn = {0, kCurrentProcess};
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    GetCurrentProcess(&psn);
-#pragma GCC diagnostic pop
-
-    TransformProcessType(&psn, kProcessTransformToBackgroundApplication);
-#endif
-
     // install application in to arch
     appUtil().adoptApp(this);
 

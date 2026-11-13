@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+SPDX-FileCopyrightText: (c) .NET Foundation and contributors
+SPDX-License-Identifier: MS-RL
+
+Chinese localization for the WiX 5.0.2 Firewall and Util extensions. Those
+extensions do not ship a zh-CN catalogue, so CPack's `-culture zh-CN` would
+fail with "localization variable !(loc....) is unknown". The English strings
+come from src/ext/{Firewall,Util}/wixlib/en-us.wxl in the WiX source tree; only
+the values are translated.
+-->
+<WixLocalization Culture="zh-cn" Codepage="936" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <!-- Firewall extension -->
+  <String Id="msierrFirewallCannotConnect" Overridable="yes" Value="无法连接 Windows 防火墙。([2] [3] [4] [5])" />
+  <String Id="WixSchedFirewallExceptionsInstall" Overridable="yes" Value="正在配置 Windows 防火墙" />
+  <String Id="WixSchedFirewallExceptionsUninstall" Overridable="yes" Value="正在配置 Windows 防火墙" />
+  <String Id="WixRollbackFirewallExceptionsInstall" Overridable="yes" Value="正在回滚 Windows 防火墙配置" />
+  <String Id="WixExecFirewallExceptionsInstall" Overridable="yes" Value="正在安装 Windows 防火墙配置" />
+  <String Id="WixRollbackFirewallExceptionsUninstall" Overridable="yes" Value="正在回滚 Windows 防火墙配置" />
+  <String Id="WixExecFirewallExceptionsUninstall" Overridable="yes" Value="正在卸载 Windows 防火墙配置" />
+
+  <!-- Util extension -->
+  <String Id="msierrUSRFailedUserCreate" Overridable="yes" Value="创建用户失败。([2] [3] [4] [5])" />
+  <String Id="msierrUSRFailedUserCreatePswd" Overridable="yes" Value="密码无效，创建用户失败。([2] [3] [4] [5])" />
+  <String Id="msierrUSRFailedUserGroupAdd" Overridable="yes" Value="将用户添加到组失败。([2] [3] [4] [5])" />
+  <String Id="msierrUSRFailedUserCreateExists" Overridable="yes" Value="用户已存在，创建失败。([2] [3] [4] [5])" />
+  <String Id="msierrSMBFailedCreate" Overridable="yes" Value="创建网络共享失败。([2] [3] [4] [5])" />
+  <String Id="msierrSMBFailedDrop" Overridable="yes" Value="删除网络共享失败。([2] [3] [4] [5])" />
+  <String Id="msierrPERFMONFailedRegisterDLL" Overridable="yes" Value="向 PerfMon 注册 DLL 失败。([2] [3] [4] [5])" />
+  <String Id="msierrPERFMONFailedUnregisterDLL" Overridable="yes" Value="从 PerfMon 注销 DLL 失败。([2] [3] [4] [5])" />
+  <String Id="msierrInstallPerfCounterData" Overridable="yes" Value="安装性能计数器失败。([2] [3] [4] [5])" />
+  <String Id="msierrUninstallPerfCounterData" Overridable="yes" Value="卸载性能计数器失败。([2] [3] [4] [5])" />
+  <String Id="msierrSecureObjectsFailedCreateSD" Overridable="yes" Value="为 [3]\[4] 创建安全描述符失败，系统错误：[2]" />
+  <String Id="msierrSecureObjectsFailedSet" Overridable="yes" Value="在对象 [3] 上设置安全描述符失败，系统错误：[2]" />
+  <String Id="msierrSecureObjectsUnknownType" Overridable="yes" Value="未知对象类型 [3]，系统错误：[2]" />
+  <String Id="msierrXmlFileFailedRead" Overridable="yes" Value="配置 XML 文件时失败。" />
+  <String Id="msierrXmlFileFailedOpen" Overridable="yes" Value="打开 XML 文件 [3] 失败，系统错误：[2]" />
+  <String Id="msierrXmlFileFailedSelect" Overridable="yes" Value="在 XML 文件 [4] 中找不到节点 [3]，系统错误：[2]" />
+  <String Id="msierrXmlFileFailedSave" Overridable="yes" Value="保存 XML 文件 [3] 的更改失败，系统错误：[2]" />
+  <String Id="msierrXmlConfigFailedRead" Overridable="yes" Value="配置 XML 文件时失败。" />
+  <String Id="msierrXmlConfigFailedOpen" Overridable="yes" Value="打开 XML 文件 [3] 失败，系统错误：[2]" />
+  <String Id="msierrXmlConfigFailedSelect" Overridable="yes" Value="在 XML 文件 [4] 中找不到节点 [3]，系统错误：[2]" />
+  <String Id="msierrXmlConfigFailedSave" Overridable="yes" Value="保存 XML 文件 [3] 的更改失败，系统错误：[2]" />
+</WixLocalization>

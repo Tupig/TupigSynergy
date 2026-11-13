@@ -94,7 +94,7 @@ MainWindow::MainWindow()
 {
   ui->setupUi(this);
 
-  setWindowIcon(QIcon::fromTheme(kRevFqdnName));
+  setWindowIcon(QIcon::fromTheme(kRevFqdnName, QIcon(QStringLiteral(":/image/logo-dark.png"))));
 
   addDockWidget(Qt::BottomDockWidgetArea, m_logDock);
 
@@ -211,9 +211,6 @@ void MainWindow::restoreWindow()
     QRect screenGeometry = QGuiApplication::primaryScreen()->geometry();
     move(screenGeometry.center() - rect().center());
   }
-
-  if (!Settings::value(Settings::Gui::LogExpanded).toBool())
-    setFixedSize(size());
 }
 
 void MainWindow::setupControls()
@@ -349,12 +346,14 @@ void MainWindow::toggleLogVisible(bool visible)
     return;
   }
 
-  setFixedSize(16777215, 16777215);
+  // Keep the window resizable: the QMainWindow dock splitter can only move
+  // while the window itself is allowed to change height. Locking the size
+  // here made the log area impossible to drag.
+  setMinimumSize(minimumSizeHint());
   Settings::setValue(Settings::Gui::LogExpanded, visible);
   if (visible) {
     if (m_logDock->isFloating()) {
       adjustSize();
-      setFixedSize(size());
     } else {
       QTimer::singleShot(15, this, [&] { resize(m_expandedSize); });
     }
@@ -366,7 +365,6 @@ void MainWindow::toggleLogVisible(bool visible)
     if (!m_logDock->isFloating()) {
       adjustSize();
     }
-    setFixedSize(size());
   }
   Settings::setValue(Settings::Gui::WindowGeometry, geometry());
 }

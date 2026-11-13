@@ -55,6 +55,10 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent)
   m_progress->setVisible(false);
   layout->addWidget(m_progress);
 
+  m_progressText = new QLabel(this);
+  m_progressText->setVisible(false);
+  layout->addWidget(m_progressText);
+
   auto *buttons = new QWidget(this);
   auto *buttonLayout = new QHBoxLayout(buttons);
   buttonLayout->setContentsMargins(0, 0, 0, 0);
@@ -83,34 +87,46 @@ void UpdateDialog::setBusy(bool busy)
   m_install->setEnabled(!busy);
   m_release->setEnabled(!busy);
   m_progress->setVisible(busy);
+  m_progressText->setVisible(busy);
 }
 
 void UpdateDialog::startDownload()
 {
   setBusy(true);
+  m_downloadTimer.start();
+  m_progressText->setText(tr("Downloading…"));
 
   auto directory = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
   directory.mkpath(QStringLiteral("synergy-update"));
 
-  connect(
-      m_downloader, &UpdateDownloader::progress, this,
-      [this](qint64 received, qint64 total) {
-        if (total > 0) {
-          m_progress->setRange(0, static_cast<int>(total));
-          m_progress->setValue(static_cast<int>(received));
-        }
-      },
-      Qt::UniqueConnection
-  );
+  connect(m_downloader, &UpdateDownloader::progress, this, [this](qint64 received, qint64 total) {
+    if (total > 0) {
+      m_progress->setRange(0, static_cast<int>(total));
+      m_progress->setValue(static_cast<int>(received));
+    }
+    const auto elapsed = m_downloadTimer.elapsed();
+    const auto speed = elapsed > 0 ? static_cast<double>(received) * 1000.0 / static_cast<double>(elapsed) : 0.0;
+    if (total > 0) {
+      m_progressText->setText(tr("%1 / %2 MB — %3 MB/s")
+                                  .arg(received / 1048576.0, 0, 'f', 1)
+                                  .arg(total / 1048576.0, 0, 'f', 1)
+                                  .arg(speed / 1048576.0, 0, 'f', 1));
+    } else {
+      m_progressText->setText(
+          tr("%1 MB — %2 MB/s").arg(received / 1048576.0, 0, 'f', 1).arg(speed / 1048576.0, 0, 'f', 1)
+      );
+    }
+  });
+  // Qt::UniqueConnection is only valid for member-function slots; with lambdas
+  // Qt logs "unique connections require a pointer to member function" and
+  // rejects the connection, so progress and failure were never delivered.
+  // The install button is disabled after the first click, so a single
+  // connection per dialog is enough.
   connect(m_downloader, &UpdateDownloader::finished, this, &UpdateDialog::installDownloaded, Qt::UniqueConnection);
-  connect(
-      m_downloader, &UpdateDownloader::failed, this,
-      [this](const QString &reason) {
-        setBusy(false);
-        QMessageBox::critical(this, tr("Update Failed"), reason);
-      },
-      Qt::UniqueConnection
-  );
+  connect(m_downloader, &UpdateDownloader::failed, this, [this](const QString &reason) {
+    setBusy(false);
+    QMessageBox::critical(this, tr("Update Failed"), reason);
+  });
 
   // Start last: start() can fail synchronously.
   m_downloader->start(m_info.asset, directory.filePath(QStringLiteral("synergy-update")));

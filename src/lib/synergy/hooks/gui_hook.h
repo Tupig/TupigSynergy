@@ -29,6 +29,7 @@
 
 #include <QColor>
 #include <QDialog>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QMainWindow>
@@ -51,9 +52,16 @@ inline void onPreInit()
   if (synergy::gui::SettingsScope::preferSystem()) {
     if (synergy::gui::SettingsScope::isSystemWritable()) {
       Settings::setSettingsFile(Settings::SystemSettingFile);
+    } else if (QFileInfo(Settings::SystemSettingFile).isReadable()) {
+      // An upgrade can leave the machine-wide file temporarily read-only.
+      // Loading it keeps the user's settings visible; a later launch with
+      // write access returns to the normal path, so do not clear the preference.
+      qWarning("scope: system-scope is read-only, loading it without saving");
+      Settings::setSettingsFile(Settings::SystemSettingFile);
     } else {
-      qWarning("scope: system-scope no longer writable, falling back to user scope");
-      synergy::gui::SettingsScope::setPreferSystem(false);
+      // Keep preferSystem: clearing it on a transient failure permanently
+      // switches the user to the empty user-scope file and looks like data loss.
+      qWarning("scope: system-scope unavailable, retrying on the next launch");
     }
   }
 }

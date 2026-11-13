@@ -51,6 +51,18 @@ p, li { white-space: pre-wrap; }
         <source>&amp;Close</source>
         <translation>关闭(&amp;C)</translation>
     </message>
+    <message>
+        <source>
+Portable Mode</source>
+        <translation>
+便携模式</translation>
+    </message>
+    <message>
+        <source>
+Session: %1 (%2)</source>
+        <translation>
+会话：%1（%2）</translation>
+    </message>
 </context>
 <context>
     <name>ActionDialog</name>
@@ -523,7 +535,8 @@ A bound IP is now invalid, you may need to restart the server.</source>
     <message>
         <source>
 &lt;p&gt;%1 listens on all network interfaces because no IP is selected in the settings.&lt;/p&gt;</source>
-        <translation type="unfinished"></translation>
+        <translation>
+&lt;p&gt;%1 正在监听所有网络接口，因为设置中未选择 IP。&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Invalid Screen Name</source>
@@ -817,7 +830,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Issues</source>
-        <translation type="unfinished"></translation>
+        <translation>问题反馈</translation>
     </message>
     <message>
         <source>TuPig Synergy is a trademark of TuPig</source>
@@ -857,7 +870,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>&lt;p&gt;We&apos;ve migrated your settings to a new format used by this version of Synergy.&lt;/p&gt;&lt;p&gt;Your previous settings have been backed up to:&lt;/p&gt;&lt;p&gt;&lt;code&gt;%1&lt;/code&gt;&lt;/p&gt;&lt;p&gt;If anything looks different, report it at &lt;a href=&quot;%2&quot;&gt;%2&lt;/a&gt;.&lt;/p&gt;</source>
-        <translation type="unfinished"></translation>
+        <translation>&lt;p&gt;我们已将您的设置迁移到此版本 Synergy 使用的新格式。&lt;/p&gt;&lt;p&gt;原有设置已备份至：&lt;/p&gt;&lt;p&gt;&lt;code&gt;%1&lt;/code&gt;&lt;/p&gt;&lt;p&gt;如有任何异常，请到 &lt;a href=&quot;%2&quot;&gt;%2&lt;/a&gt; 反馈。&lt;/p&gt;</translation>
     </message>
     <message>
         <source>&lt;p&gt;We&apos;ve migrated your settings to a new format used by this version of Synergy.&lt;/p&gt;&lt;p&gt;Your previous settings have been backed up to:&lt;/p&gt;&lt;p&gt;&lt;code&gt;%1&lt;/code&gt;&lt;/p&gt;&lt;p&gt;If anything looks different, please contact us.&lt;/p&gt;</source>
@@ -878,6 +891,38 @@ Additionally, check you are able to %1 the server config file: %2</source>
     <message>
         <source>&lt;p&gt;Settings scope changes take effect when %1 restarts.&lt;/p&gt;&lt;p&gt;Quit %1 now? You&apos;ll need to launch it again from your applications menu.&lt;/p&gt;</source>
         <translation>&lt;p&gt;设置范围更改将在 %1 重启后生效。&lt;/p&gt;&lt;p&gt;现在退出 %1 吗？之后需要从应用程序菜单重新启动它。&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>Please drag %1 to the Applications folder, and open it from there.</source>
+        <translation>请将 %1 拖到“应用程序”文件夹，然后从那里打开。</translation>
+    </message>
+    <message>
+        <source>macOS requires Accessibility permission for %1 to control the keyboard and mouse.</source>
+        <translation>macOS 需要为 %1 授予“辅助功能”权限，才能控制键盘和鼠标。</translation>
+    </message>
+    <message>
+        <source>Open System Settings → Privacy &amp; Security → Accessibility, enable %1, then restart %1. You can configure %1 now; input sharing starts once the permission is granted.</source>
+        <translation>打开“系统设置”→“隐私与安全性”→“辅助功能”，启用 %1，然后重新启动 %1。你现在就可以配置 %1；授予权限后才会开始输入共享。</translation>
+    </message>
+    <message>
+        <source>Open System Settings</source>
+        <translation>打开系统设置</translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation type="unfinished">稍后</translation>
+    </message>
+    <message>
+        <source>Continue</source>
+        <translation type="vanished">继续</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation type="vanished">退出</translation>
+    </message>
+    <message>
+        <source>Accessibility permission is still not granted. Enable %1 in System Settings, then quit and relaunch it.</source>
+        <translation type="vanished">仍未获得“辅助功能”权限。请在“系统设置”中启用 %1，然后退出并重新启动。</translation>
     </message>
 </context>
 <context>
@@ -1249,7 +1294,7 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>Check for updates on startup</source>
-        <translation type="vanished">启动时检查更新</translation>
+        <translation>启动时检查更新</translation>
     </message>
     <message>
         <source>Prevent this computer from going to sleep</source>
@@ -1440,8 +1485,8 @@ Enabling this setting will disable the server config GUI.</source>
         <translation>使用高于 Info 级别的日志级别可能会影响性能。</translation>
     </message>
     <message>
-        <source>Check for updates on startup</source>
-        <translation>启动时检查更新</translation>
+        <source>Key length: %1 bits</source>
+        <translation>密钥长度：%1 位</translation>
     </message>
 </context>
 <context>
@@ -1525,37 +1570,46 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
 </context>
 <context>
-    <name>validators::AliasValidator</name>
+    <name>synergy::gui::update::UpdateChecker</name>
     <message>
-        <source>Computer name cannot contain spaces</source>
-        <translation>计算机名称不能包含空格</translation>
+        <source>Could not reach GitHub Releases: %1</source>
+        <translation>无法连接 GitHub Releases：%1</translation>
     </message>
     <message>
-        <source>Aliases may not be ip addresses</source>
-        <translation>不能用 IP 地址作为别名</translation>
+        <source>GitHub Releases response is unexpectedly large.</source>
+        <translation>GitHub Releases 响应异常大。</translation>
     </message>
     <message>
-        <source>Contains invalid characters or is too long</source>
-        <translation>包含无效字符或过长</translation>
-    </message>
-</context>
-<context>
-    <name>validators::ScreenNameValidator</name>
-    <message>
-        <source>Computer name cannot be empty</source>
-        <translation>计算机名称不能为空</translation>
+        <source>GitHub Releases returned an unreadable response.</source>
+        <translation>GitHub Releases 返回了无法解析的响应。</translation>
     </message>
     <message>
-        <source>Computer name cannot contain spaces</source>
-        <translation>计算机名称不能包含空格</translation>
+        <source>GitHub Release tag is not a semantic version.</source>
+        <translation>GitHub Release 标签不是语义版本号。</translation>
     </message>
     <message>
-        <source>Contains invalid characters or is too long</source>
-        <translation>包含无效字符或过长</translation>
+        <source>GitHub Release URL is outside this repository.</source>
+        <translation>GitHub Release 地址不属于本仓库。</translation>
     </message>
     <message>
-        <source>A computer with this name already exists</source>
-        <translation>一台同名的计算机已经存在</translation>
+        <source>Release asset URL is outside this repository.</source>
+        <translation>发布资产地址不属于本仓库。</translation>
+    </message>
+    <message>
+        <source>Release asset does not publish a SHA-256 digest; refusing to install it.</source>
+        <translation>发布资产未提供 SHA-256 摘要，拒绝安装。</translation>
+    </message>
+    <message>
+        <source>No release package is available for this platform.</source>
+        <translation>此平台没有可用的发布包。</translation>
+    </message>
+    <message>
+        <source>
+
+[release notes truncated]</source>
+        <translation>
+
+[发行说明已截断]</translation>
     </message>
 </context>
 <context>
@@ -1596,40 +1650,17 @@ Package: %3</source>
         <source>The system installer could not be started.</source>
         <translation>无法启动系统安装器。</translation>
     </message>
-</context>
-<context>
-    <name>synergy::gui::update::UpdateChecker</name>
     <message>
-        <source>Could not reach GitHub Releases: %1</source>
-        <translation>无法连接 GitHub Releases：%1</translation>
+        <source>Downloading…</source>
+        <translation>正在下载…</translation>
     </message>
     <message>
-        <source>GitHub Releases response is unexpectedly large.</source>
-        <translation>GitHub Releases 响应异常大。</translation>
+        <source>%1 / %2 MB — %3 MB/s</source>
+        <translation>%1 / %2 MB — %3 MB/s</translation>
     </message>
     <message>
-        <source>GitHub Releases returned an unreadable response.</source>
-        <translation>GitHub Releases 返回了无法解析的响应。</translation>
-    </message>
-    <message>
-        <source>GitHub Release tag is not a semantic version.</source>
-        <translation>GitHub Release 标签不是语义版本号。</translation>
-    </message>
-    <message>
-        <source>GitHub Release URL is outside this repository.</source>
-        <translation>GitHub Release 地址不属于本仓库。</translation>
-    </message>
-    <message>
-        <source>Release asset URL is outside this repository.</source>
-        <translation>发布资产地址不属于本仓库。</translation>
-    </message>
-    <message>
-        <source>Release asset does not publish a SHA-256 digest; refusing to install it.</source>
-        <translation>发布资产未提供 SHA-256 摘要，拒绝安装。</translation>
-    </message>
-    <message>
-        <source>No release package is available for this platform.</source>
-        <translation>此平台没有可用的发布包。</translation>
+        <source>%1 MB — %2 MB/s</source>
+        <translation>%1 MB — %2 MB/s</translation>
     </message>
 </context>
 <context>
@@ -1669,6 +1700,40 @@ Package: %3</source>
     <message>
         <source>Update package failed SHA-256 verification.</source>
         <translation>更新包 SHA-256 校验失败。</translation>
+    </message>
+</context>
+<context>
+    <name>validators::AliasValidator</name>
+    <message>
+        <source>Computer name cannot contain spaces</source>
+        <translation>计算机名称不能包含空格</translation>
+    </message>
+    <message>
+        <source>Aliases may not be ip addresses</source>
+        <translation>不能用 IP 地址作为别名</translation>
+    </message>
+    <message>
+        <source>Contains invalid characters or is too long</source>
+        <translation>包含无效字符或过长</translation>
+    </message>
+</context>
+<context>
+    <name>validators::ScreenNameValidator</name>
+    <message>
+        <source>Computer name cannot be empty</source>
+        <translation>计算机名称不能为空</translation>
+    </message>
+    <message>
+        <source>Computer name cannot contain spaces</source>
+        <translation>计算机名称不能包含空格</translation>
+    </message>
+    <message>
+        <source>Contains invalid characters or is too long</source>
+        <translation>包含无效字符或过长</translation>
+    </message>
+    <message>
+        <source>A computer with this name already exists</source>
+        <translation>一台同名的计算机已经存在</translation>
     </message>
 </context>
 </TS>

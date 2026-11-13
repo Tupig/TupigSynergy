@@ -152,9 +152,14 @@ void MainWindow::setTrayIcon()
 
   QString themeIcon = kRevFqdnName;
   if (!Settings::value(Settings::Gui::SymbolicTrayIcon).toBool()) {
-    if (synergy::platform::isMac())
-      m_trayIcon->setIcon(QIcon::fromTheme(themeIcon));
-    else
+    if (synergy::platform::isMac()) {
+      // macOS has no freedesktop icon theme, so fromTheme() returns a null
+      // icon and QSystemTrayIcon logs "No Icon set" and stays invisible.
+      // Fall back to the bundled brand icon.
+      // The bundle ships the SVG icon engine but not the qsvg image plugin,
+      // so QIcon("*.svg") is null; use the PNG brand asset as the fallback.
+      m_trayIcon->setIcon(QIcon::fromTheme(themeIcon, QIcon(QStringLiteral(":/image/logo-dark.png"))));
+    } else
 #ifdef SYNERGY_EXTRA_HEADER
       m_trayIcon->setIcon(synergy::hooks::trayIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
 #else
@@ -248,7 +253,7 @@ void MainWindow::changeEvent(QEvent *e)
   QMainWindow::changeEvent(e);
   if (e->type() == QEvent::PaletteChange) {
     updateIconTheme();
-    setWindowIcon(QIcon::fromTheme(kRevFqdnName));
+    setWindowIcon(QIcon::fromTheme(kRevFqdnName, QIcon(QStringLiteral(":/image/logo-dark.png"))));
     setTrayIcon();
   } else if (e->type() == QEvent::LanguageChange) {
     ui->retranslateUi(this);

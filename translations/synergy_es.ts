@@ -51,6 +51,16 @@ p, li { white-space: pre-wrap; }
         <source>&amp;Close</source>
         <translation type="unfinished">&amp;Cerrar</translation>
     </message>
+    <message>
+        <source>
+Portable Mode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>
+Session: %1 (%2)</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ActionDialog</name>
@@ -374,6 +384,10 @@ Do you want to connect to the server?
         <translation type="unfinished">Borrar configuración</translation>
     </message>
     <message>
+        <source>Check for &amp;Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>&amp;Minimize to tray</source>
         <translation type="unfinished">&amp;Minimizar a la bandeja</translation>
     </message>
@@ -599,6 +613,18 @@ Además, verifique que puede %1 el archivo de configuración del servidor: %2</t
         <source>&lt;p&gt;Keyboard layout support requires matching layouts on all computers. The following layouts from the other computer are not installed on this computer:&lt;/p&gt;&lt;p&gt;&lt;b&gt;%1&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Please install them to enable support for these layouts.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>No Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>You are running the latest version (%1).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Update Check Failed</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>NewScreenWidget</name>
@@ -768,6 +794,26 @@ Además, verifique que puede %1 el archivo de configuración del servidor: %2</t
     <message>
         <source>%1 is already running</source>
         <translation type="unfinished">%1 ya se está ejecutando</translation>
+    </message>
+    <message>
+        <source>Please drag %1 to the Applications folder, and open it from there.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>macOS requires Accessibility permission for %1 to control the keyboard and mouse.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open System Settings → Privacy &amp; Security → Accessibility, enable %1, then restart %1. You can configure %1 now; input sharing starts once the permission is granted.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open System Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Test</source>
@@ -1227,7 +1273,7 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
     </message>
     <message>
         <source>Check for updates on startup</source>
-        <translation type="obsolete">Buscar actualizaciones al iniciar</translation>
+        <translation type="unfinished">Buscar actualizaciones al iniciar</translation>
     </message>
     <message>
         <source>Prevent this computer from going to sleep</source>
@@ -1332,6 +1378,10 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
     <message>
         <source>Reset to default values</source>
         <translation type="unfinished">Restablecer valores predeterminados</translation>
+    </message>
+    <message>
+        <source>Key length: %1 bits</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>TLS Certificate Regenerated</source>
@@ -1497,6 +1547,133 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
         <source>LocalizedName</source>
         <extracomment>Replace with your Language name This is a required string</extracomment>
         <translation>Español</translation>
+    </message>
+</context>
+<context>
+    <name>synergy::gui::update::UpdateChecker</name>
+    <message>
+        <source>
+
+[release notes truncated]</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not reach GitHub Releases: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub Releases response is unexpectedly large.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub Releases returned an unreadable response.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub Release tag is not a semantic version.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub Release URL is outside this repository.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Release asset URL is outside this repository.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Release asset does not publish a SHA-256 digest; refusing to install it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No release package is available for this platform.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>synergy::gui::update::UpdateDialog</name>
+    <message>
+        <source>Update Available</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A newer version is available.
+
+Current version: %1
+Latest version: %2
+Package: %3</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open Release Page</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Download and Install</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Downloading…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 / %2 MB — %3 MB/s</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 MB — %2 MB/s</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Update Failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The system installer could not be started.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>synergy::gui::update::UpdateDownloader</name>
+    <message>
+        <source>Refusing to download a package outside this repository.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Refusing to download a package without a SHA-256 digest.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Update package is larger than the allowed limit.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Update package has an unsafe file name.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not create the update file: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not download the update: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not finish writing the update file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Update package size does not match the release metadata.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Update package failed SHA-256 verification.</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

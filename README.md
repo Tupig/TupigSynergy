@@ -123,9 +123,9 @@ scripts\build.bat release
 | Linux | `build/bin/synergy` | `build/bin/synergy-core` | — |
 | macOS | `build/bin/TuPig Synergy.app` | `build/bin/synergy-core` | — |
 
-`./scripts/build.sh` on macOS uses the `macos-release` preset (`arm64-osx`). Intel x86_64 is the Actions job `macos-x64`, not that preset. Every shipped binary is 64-bit (`vcpkg.json` `supports`: `x64 | arm64`). There is no 32-bit build. Details, packaging, and tests: [docs/build.md](docs/build.md).
+`./scripts/build.sh` on macOS uses the `macos-release` preset (`arm64-osx`). Intel x86_64 is the Actions job `macos-x64`, not that preset. Every shipped binary is 64-bit (`vcpkg.json` `supports`: `x64 | arm64`). There is no 32-bit build. Details, packaging, and tests: [docs/build.md](docs/build.md); the free self-signed setup that keeps Accessibility grants across updates: [docs/macos-signing.md](docs/macos-signing.md).
 
-macOS 上 `./scripts/build.sh` 使用预设 `macos-release`（`arm64-osx`）。Intel x86_64 由 Actions 作业 `macos-x64` 构建，不是这个预设。发布的二进制都是 64 位（`vcpkg.json` 的 `supports` 为 `x64 | arm64`）。没有 32 位构建。打包与测试见 [docs/build.md](docs/build.md)。
+macOS 上 `./scripts/build.sh` 使用预设 `macos-release`（`arm64-osx`）。Intel x86_64 由 Actions 作业 `macos-x64` 构建，不是这个预设。发布的二进制都是 64 位（`vcpkg.json` 的 `supports` 为 `x64 | arm64`）。没有 32 位构建。打包与测试见 [docs/build.md](docs/build.md)；辅助功能授权跨版本保留的自签名方案见 [docs/macos-signing.md](docs/macos-signing.md)。
 
 ### Run / 运行
 

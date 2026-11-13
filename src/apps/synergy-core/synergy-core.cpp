@@ -30,6 +30,10 @@
 #include <QThread>
 #include <QTimer>
 
+#if defined(Q_OS_MACOS)
+#include <ApplicationServices/ApplicationServices.h>
+#endif
+
 #include <memory>
 
 void qtMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &message)
@@ -145,6 +149,21 @@ int main(int argc, char **argv)
 
   QApplication app(argc, argv);
   QApplication::setApplicationName(QStringLiteral("%1 Core").arg(kAppName));
+
+#if defined(Q_OS_MACOS)
+  // synergy-core is a helper process. QApplication resets the activation
+  // policy to "regular" while it initializes, so transforming before it
+  // constructs is undone and every core instance leaves a Dock icon behind.
+  // Apply the transform after the application object exists.
+  {
+    ProcessSerialNumber psn = {0, kCurrentProcess};
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    GetCurrentProcess(&psn);
+#pragma GCC diagnostic pop
+    TransformProcessType(&psn, kProcessTransformToBackgroundApplication);
+  }
+#endif
 
   const auto ipcServer = new synergy::core::ipc::CoreIpcServer(&app); // NOSONAR - Qt managed
   QObject::connect(
