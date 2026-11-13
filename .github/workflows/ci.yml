@@ -110,7 +110,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -196,7 +196,7 @@ jobs:
           macos_targets=$(jq -c -n --argjson publish "$publish_release" '[
             {"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.1","config-args":"-DCMAKE_OSX_ARCHITECTURES=\"arm64\" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}
           ] + (if $publish then [] else [
-            {"name":"macos-x64","expected-arch":"x64","runs-on":"macos-15-intel","timeout":30,"qt-version":"6.9.3","config-args":"-DCMAKE_OSX_ARCHITECTURES=\"x86_64\" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}
+            {"name":"macos-x64","expected-arch":"x64","runs-on":"macos-15-intel","timeout":45,"qt-version":"6.9.3","config-args":"-DCMAKE_OSX_ARCHITECTURES=\"x86_64\" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}
           ] end)')
           {
             echo "targets=$targets"
@@ -219,7 +219,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Clang-format
         uses: ./.github/actions/lint-clang
@@ -234,7 +234,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Check source encoding
         run: python3 scripts/ci/check-encoding.py
@@ -273,14 +273,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           fetch-tags: true
 
       # Stage: toolchain. vcvars via setup-msvc-dev; Qt from the CI Qt build, OpenSSL from vcpkg.
       - name: Setup VC++ environment
-        uses: TheMrMilchmann/setup-msvc-dev@v4
+        uses: TheMrMilchmann/setup-msvc-dev@368ef7d1ee4d1171b31d4a7f67f4d954f903f5a9 # v4.1.0
         with:
           arch: ${{ matrix.target.arch }}
           spectre: true
@@ -393,7 +393,7 @@ jobs:
       - name: Upload unsigned executables
         if: env.SYNERGY_VERSION_RELEASE == 'true' && env.WINDOWS_SIGNING == 'true'
         id: upload-unsigned-exes
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: unsigned-signpath-exes-${{ matrix.target.name }}
           path: ${{ runner.temp }}\sign-stage\in\*.exe
@@ -422,7 +422,7 @@ jobs:
 
       - name: Upload synergy_<version>.exe
         if: ${{ needs.get-version.outputs.publish_release == 'true' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: synergy_${{ needs.get-version.outputs.base }}.exe
           path: ${{ steps.gui-exe.outputs.path }}
@@ -441,7 +441,7 @@ jobs:
       - name: Upload unsigned MSI
         if: env.SYNERGY_VERSION_RELEASE == 'true' && env.WINDOWS_SIGNING == 'true'
         id: upload-unsigned-msi
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: unsigned-signpath-msi-${{ matrix.target.name }}
           path: ${{ steps.locate-msi.outputs.path }}
@@ -491,7 +491,7 @@ jobs:
 
       - name: Upload package
         if: ${{ needs.get-version.outputs.publish_release == 'true' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
@@ -517,7 +517,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -687,7 +687,7 @@ jobs:
 
       - name: Upload package
         if: ${{ needs.get-version.outputs.publish_release == 'true' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
@@ -871,7 +871,7 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -1034,7 +1034,7 @@ jobs:
 
       - name: Upload package
         if: ${{ needs.get-version.outputs.publish_release == 'true' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
@@ -1061,7 +1061,7 @@ jobs:
             arch: aarch64
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -1083,7 +1083,7 @@ jobs:
       # .flatpak-builder/ and the bundle at the workspace root; Validate/Upload
       # must anchor there too.
       - name: Build
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6
         with:
           bundle: ${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_linux_${{ matrix.flatpak.arch }}.flatpak
           manifest-path: deploy/linux/flatpak/com.tupig.synergy.yml
@@ -1103,7 +1103,7 @@ jobs:
 
       - name: Upload package
         if: ${{ needs.get-version.outputs.publish_release == 'true' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-flatpak-${{matrix.flatpak.arch}}
           path: ${{github.workspace}}/${{ env.PACKAGE_PREFIX }}[-_]*-flatpak-offline.tar.zst
@@ -1129,7 +1129,7 @@ jobs:
       attestations: write
     steps:
       - name: Download packages
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: package-*
           path: dist
@@ -1239,23 +1239,21 @@ jobs:
 
       - name: Download all artifacts
         if: steps.aws.outputs.configured == 'true'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: package-*
           path: dist
           merge-multiple: true
 
-      - name: Configure AWS credentials
-        if: steps.aws.outputs.configured == 'true'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
-
       - name: Upload to AWS S3
         if: steps.aws.outputs.configured == 'true'
         shell: bash
+        # The AWS CLI reads these from the environment; no third-party action.
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-2
+          AWS_DEFAULT_REGION: us-east-2
         run: |
           version="${{ needs.get-version.outputs.version }}"
           s3_uri="${{ inputs.aws-s3-uri || format('s3://{0}/{1}', vars.AWS_S3_BUCKET, vars.AWS_S3_UPLOAD_DIR) }}"
@@ -1317,13 +1315,18 @@ jobs:
 
       - name: Send Slack notification
         if: steps.slack.outputs.configured == 'true'
-        uses: slackapi/slack-github-action@v3
-        with:
-          method: chat.postMessage
-          token: ${{ secrets.SLACK_TOKEN }}
-          payload: |
-            channel: ${{ secrets.SLACK_NOTIFY_CHANNEL_ID }}
-            text: ${{ toJSON(steps.message.outputs.text) }}
+        shell: bash
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_NOTIFY_CHANNEL_ID }}
+          SLACK_TEXT: ${{ steps.message.outputs.text }}
+        run: |
+          payload=$(jq -n --arg channel "$SLACK_CHANNEL" --arg text "$SLACK_TEXT" '{channel: $channel, text: $text}')
+          curl --silent --show-error --fail \
+            --request POST https://slack.com/api/chat.postMessage \
+            --header "Authorization: Bearer $SLACK_TOKEN" \
+            --header "Content-type: application/json; charset=utf-8" \
+            --data "$payload"
 
   # ---------------------------------------------------------------------------
   # 4. Analysis. Manual dispatch with analyze=true only. Push and pull
@@ -1335,7 +1338,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -1365,7 +1368,7 @@ jobs:
             2>&1 | tee clang-tidy-output.txt
       - name: Upload results
         if: ${{ always() && env.SYNERGY_VERSION_RELEASE == 'true' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: clang-tidy-results
           path: clang-tidy-output.txt
@@ -1377,7 +1380,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -1396,7 +1399,7 @@ jobs:
           cat cppcheck-results.txt
       - name: Upload results
         if: ${{ always() && env.SYNERGY_VERSION_RELEASE == 'true' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: cppcheck-results
           path: cppcheck-results.txt
@@ -1417,13 +1420,13 @@ jobs:
           apt-get update -qqq > /dev/null
           apt-get install -qqq git > /dev/null
       - name: Checkout
-        uses: sithlord48/fancy-checkout@v2
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
         with:
           like: "debian"
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
         with:
           languages: cpp
           build-mode: manual
@@ -1434,7 +1437,7 @@ jobs:
             -DSKIP_BUILD_TESTS=ON
           cmake --build build -j"$(nproc)"
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
 
   sonar:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.analyze && vars.SONAR_SCANNER_ENABLED }}
@@ -1449,13 +1452,13 @@ jobs:
           apt-get update -qqq > /dev/null
           apt-get install -qqq git curl unzip gcovr dirmngr gpg > /dev/null
       - name: Checkout
-        uses: sithlord48/fancy-checkout@v2
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install project dependencies
         uses: ./.github/actions/install-dependencies
         with:
           like: "debian"
       - name: Install Build Wrapper
-        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6
+        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
       - name: Configure
         run: |
           cmake -B build \
@@ -1491,7 +1494,7 @@ jobs:
           fi
           echo "csv=$paths" >> "$GITHUB_OUTPUT"
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v8
+        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8
         with:
           args: >
             -Dproject.settings=config/sonar-project.properties
@@ -1511,7 +1514,7 @@ jobs:
           apt-get update -qqq > /dev/null
           apt-get install -qqq git valgrind > /dev/null
       - name: Checkout
-        uses: sithlord48/fancy-checkout@v2
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
         with:
