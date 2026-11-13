@@ -95,9 +95,10 @@ endif()
 
 set(CPACK_PACKAGE_NAME "${CMAKE_PROJECT_PROPER_NAME}")
 
-# Menu Entry
+# Menu Entry. Point the Start Menu shortcut at the stable launcher copy so
+# Windows keeps the tray icon visible across versioned updates.
 set(CPACK_WIX_PROGRAM_MENU_FOLDER "${CMAKE_PROJECT_PROPER_NAME}")
-set(CPACK_PACKAGE_EXECUTABLES "${SYNERGY_GUI_EXE_NAME}" "${CMAKE_PROJECT_PROPER_NAME}")
+set(CPACK_PACKAGE_EXECUTABLES "synergy" "${CMAKE_PROJECT_PROPER_NAME}")
 
 # Default Install Path
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CMAKE_PROJECT_PROPER_NAME}")
