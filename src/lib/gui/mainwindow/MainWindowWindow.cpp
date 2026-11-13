@@ -150,20 +150,23 @@ void MainWindow::setTrayIcon()
 {
   static const auto fallbackPath = QStringLiteral(":/icons/%1-%2/apps/64/%3");
 
+  if (synergy::platform::isMac()) {
+    // macOS has no freedesktop icon theme, and the bundle ships the SVG icon
+    // engine but not the qsvg image plugin, so fromTheme() and every SVG
+    // fallback below are null; QSystemTrayIcon then logs "No Icon set" and
+    // stays invisible. Use the bundled PNG brand asset for both the symbolic
+    // and the regular setting: there is no monochrome variant to fall back to,
+    // and setIsMask() would only tint a multi-colour icon.
+    m_trayIcon->setIcon(QIcon(QStringLiteral(":/image/logo-%1.png").arg(synergy::gui::iconMode())));
+    return;
+  }
+
   QString themeIcon = kRevFqdnName;
   if (!Settings::value(Settings::Gui::SymbolicTrayIcon).toBool()) {
-    if (synergy::platform::isMac()) {
-      // macOS has no freedesktop icon theme, so fromTheme() returns a null
-      // icon and QSystemTrayIcon logs "No Icon set" and stays invisible.
-      // Fall back to the bundled brand icon.
-      // The bundle ships the SVG icon engine but not the qsvg image plugin,
-      // so QIcon("*.svg") is null; use the PNG brand asset as the fallback.
-      m_trayIcon->setIcon(QIcon::fromTheme(themeIcon, QIcon(QStringLiteral(":/image/logo-dark.png"))));
-    } else
 #ifdef SYNERGY_EXTRA_HEADER
-      m_trayIcon->setIcon(synergy::hooks::trayIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
+    m_trayIcon->setIcon(synergy::hooks::trayIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
 #else
-      m_trayIcon->setIcon(QIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
+    m_trayIcon->setIcon(QIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
 #endif
     return;
   }
@@ -253,7 +256,7 @@ void MainWindow::changeEvent(QEvent *e)
   QMainWindow::changeEvent(e);
   if (e->type() == QEvent::PaletteChange) {
     updateIconTheme();
-    setWindowIcon(QIcon::fromTheme(kRevFqdnName, QIcon(QStringLiteral(":/image/logo-dark.png"))));
+    setWindowIcon(QIcon(QStringLiteral(":/image/logo-%1.png").arg(synergy::gui::iconMode())));
     setTrayIcon();
   } else if (e->type() == QEvent::LanguageChange) {
     ui->retranslateUi(this);
