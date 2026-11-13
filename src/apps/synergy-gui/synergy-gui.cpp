@@ -32,6 +32,7 @@
 #include <QSharedMemory>
 #include <QTextStream>
 #include <QThread>
+#include <QTimer>
 #include <QUrl>
 
 #if defined(Q_OS_MACOS)
@@ -223,6 +224,16 @@ bool checkMacAssistiveDevices()
     );
   });
   box->show();
+
+  // TCC publishes the grant to the running process, so close the reminder as
+  // soon as it takes effect instead of making the user dismiss a stale dialog.
+  auto *timer = new QTimer(box);
+  QObject::connect(timer, &QTimer::timeout, box, [box]() {
+    if (AXIsProcessTrusted()) {
+      box->accept();
+    }
+  });
+  timer->start(1000);
   return true;
 }
 #endif
