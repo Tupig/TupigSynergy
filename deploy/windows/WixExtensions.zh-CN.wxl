@@ -9,7 +9,7 @@ fail with "localization variable !(loc....) is unknown". The English strings
 come from src/ext/{Firewall,Util}/wixlib/en-us.wxl in the WiX source tree; only
 the values are translated.
 -->
-<WixLocalization Culture="zh-CN" Codepage="936" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+<WixLocalization Culture="zh-cn" Codepage="936" xmlns="http://wixtoolset.org/schemas/v4/wxl">
   <!-- Firewall extension -->
   <String Id="msierrFirewallCannotConnect" Overridable="yes" Value="无法连接 Windows 防火墙。([2] [3] [4] [5])" />
   <String Id="WixSchedFirewallExceptionsInstall" Overridable="yes" Value="正在配置 Windows 防火墙" />
