@@ -109,7 +109,13 @@ set(CPACK_WIX_UPGRADE_GUID "027D1C8A-E7A5-4754-BB93-B2D45BFDBDC8")
 # but the Firewall and Util extensions do not ship a zh-CN catalogue. Supply
 # their strings from WixExtensions.zh-CN.wxl via -loc; the Windows job uploads
 # wix.log if this still fails.
-set(CPACK_WIX_CULTURES "zh-CN")
+#
+# CPack splits this option on semicolons and emits one `-culture` per entry
+# (Source/CPack/WiX/cmCPackWIXGenerator.cxx), so the MSI carries both
+# localizations and Windows picks the one matching the user's UI language.
+# zh-CN stays first: it is also the fallback for languages we do not ship, and
+# the product is Chinese-first.
+set(CPACK_WIX_CULTURES "zh-CN;en-US")
 # CPack quotes each extra flag itself, so pass -loc and the path unquoted.
 set(CPACK_WIX_BUILD_EXTRA_FLAGS "-loc;${CMAKE_SOURCE_DIR}/deploy/windows/WixExtensions.zh-CN.wxl")
 set(CPACK_WIX_UI_BANNER "${CMAKE_SOURCE_DIR}/deploy/windows/wix-banner.png")
