@@ -483,15 +483,6 @@ jobs:
         with:
           expected-arch: ${{ matrix.target.arch }}
 
-      - name: Upload WiX log on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: wix-log-${{ matrix.target.name }}
-          path: build/_CPack_Packages/win64/WIX/wix.log
-          if-no-files-found: ignore
-          retention-days: 7
-
       - name: Upload package
         if: ${{ needs.get-version.outputs.publish_release == 'true' }}
         uses: actions/upload-artifact@v7
