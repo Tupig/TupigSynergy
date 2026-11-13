@@ -147,11 +147,14 @@ int main(int argc, char **argv)
 
   App *coreApp = createApp(parser, events, processName);
 
+  QApplication app(argc, argv);
+  QApplication::setApplicationName(QStringLiteral("%1 Core").arg(kAppName));
+
 #if defined(Q_OS_MACOS)
-  // synergy-core is a helper process. Hide it from the Dock before
-  // QApplication creates the NSApplication; transforming later (after the
-  // application object exists) still leaves a Dock icon behind for every core
-  // instance, so the GUI and the service look like several applications.
+  // synergy-core is a helper process. QApplication resets the activation
+  // policy to "regular" while it initializes, so transforming before it
+  // constructs is undone and every core instance leaves a Dock icon behind.
+  // Apply the transform after the application object exists.
   {
     ProcessSerialNumber psn = {0, kCurrentProcess};
 #pragma GCC diagnostic push
@@ -161,9 +164,6 @@ int main(int argc, char **argv)
     TransformProcessType(&psn, kProcessTransformToBackgroundApplication);
   }
 #endif
-
-  QApplication app(argc, argv);
-  QApplication::setApplicationName(QStringLiteral("%1 Core").arg(kAppName));
 
   const auto ipcServer = new synergy::core::ipc::CoreIpcServer(&app); // NOSONAR - Qt managed
   QObject::connect(
