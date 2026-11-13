@@ -901,8 +901,8 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <translation>macOS 需要为 %1 授予“辅助功能”权限，才能控制键盘和鼠标。</translation>
     </message>
     <message>
-        <source>Open System Settings → Privacy &amp; Security → Accessibility, enable %1, then choose Continue. If it stays disabled, quit and relaunch the app.</source>
-        <translation>打开“系统设置”→“隐私与安全性”→“辅助功能”，启用 %1，然后选择“继续”。如果它仍处于关闭状态，请退出并重新启动应用。</translation>
+        <source>Open System Settings → Privacy &amp; Security → Accessibility, enable %1, then restart %1. You can configure %1 now; input sharing starts once the permission is granted.</source>
+        <translation>打开“系统设置”→“隐私与安全性”→“辅助功能”，启用 %1，然后重新启动 %1。你现在就可以配置 %1；授予权限后才会开始输入共享。</translation>
     </message>
     <message>
         <source>Open System Settings</source>

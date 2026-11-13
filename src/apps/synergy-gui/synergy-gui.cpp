@@ -184,8 +184,10 @@ bool checkMacAssistiveDevices()
   // Applications are trusted individually for the accessibility API. The
   // system prompt only appears once; when the user has already granted the
   // permission the check below succeeds. When it does not (for example an
-  // ad-hoc signed build whose code identity changed after an update), explain
-  // the exact setting and let the user grant it without losing the window.
+  // ad-hoc signed build whose code identity changed after an update), register
+  // the app and show a modeless reminder. Startup must never block on this:
+  // the configuration window opens either way, and only input sharing needs
+  // the permission.
   if (AXIsProcessTrusted()) {
     return true;
   }
@@ -200,53 +202,27 @@ bool checkMacAssistiveDevices()
   AXIsProcessTrustedWithOptions(options);
   CFRelease(options);
 
-  QMessageBox box(
+  auto *box = new QMessageBox(
       QMessageBox::Warning, appName,
       QObject::tr("macOS requires Accessibility permission for %1 to control the keyboard and mouse.").arg(appName),
       QMessageBox::NoButton
   );
-  box.setInformativeText(
+  box->setAttribute(Qt::WA_DeleteOnClose);
+  box->setInformativeText(
       QObject::tr(
-          "Open System Settings → Privacy & Security → Accessibility, enable %1, then choose Continue. "
-          "If it stays disabled, quit and relaunch the app."
+          "Open System Settings → Privacy & Security → Accessibility, enable %1, then restart %1. "
+          "You can configure %1 now; input sharing starts once the permission is granted."
       )
           .arg(appName)
   );
-  auto *openSettings = box.addButton(QObject::tr("Open System Settings"), QMessageBox::ActionRole);
-  auto *retry = box.addButton(QObject::tr("Continue"), QMessageBox::AcceptRole);
-  box.addButton(QObject::tr("Quit"), QMessageBox::RejectRole);
+  auto *openSettings = box->addButton(QObject::tr("Open System Settings"), QMessageBox::ActionRole);
+  box->addButton(QObject::tr("Later"), QMessageBox::RejectRole);
   QObject::connect(openSettings, &QPushButton::clicked, []() {
     QDesktopServices::openUrl(
         QUrl(QStringLiteral("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"))
     );
   });
-
-  // TCC publishes a grant to the running process after the user toggles it;
-  // poll instead of forcing a restart. The loop only ends when the app is
-  // trusted or the user quits.
-  while (true) {
-    box.exec();
-    if (box.clickedButton() != retry) {
-      return false;
-    }
-
-    QElapsedTimer timer;
-    timer.start();
-    while (timer.elapsed() < 10000) {
-      if (AXIsProcessTrusted()) {
-        return true;
-      }
-      QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
-      QThread::msleep(100);
-    }
-
-    QMessageBox::warning(
-        nullptr, appName,
-        QObject::tr(
-            "Accessibility permission is still not granted. Enable %1 in System Settings, then quit and relaunch it."
-        )
-            .arg(appName)
-    );
-  }
+  box->show();
+  return true;
 }
 #endif
