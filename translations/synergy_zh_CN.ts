@@ -1641,6 +1641,18 @@ Package: %3</source>
         <source>The system installer could not be started.</source>
         <translation>无法启动系统安装器。</translation>
     </message>
+    <message>
+        <source>Downloading…</source>
+        <translation>正在下载…</translation>
+    </message>
+    <message>
+        <source>%1 / %2 MB — %3 MB/s</source>
+        <translation>%1 / %2 MB — %3 MB/s</translation>
+    </message>
+    <message>
+        <source>%1 MB — %2 MB/s</source>
+        <translation>%1 MB — %2 MB/s</translation>
+    </message>
 </context>
 <context>
     <name>synergy::gui::update::UpdateChecker</name>

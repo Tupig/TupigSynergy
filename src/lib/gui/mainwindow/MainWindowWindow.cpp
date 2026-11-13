@@ -152,9 +152,15 @@ void MainWindow::setTrayIcon()
 
   QString themeIcon = kRevFqdnName;
   if (!Settings::value(Settings::Gui::SymbolicTrayIcon).toBool()) {
-    if (synergy::platform::isMac())
-      m_trayIcon->setIcon(QIcon::fromTheme(themeIcon));
-    else
+    if (synergy::platform::isMac()) {
+      // macOS has no freedesktop icon theme, so fromTheme() returns a null
+      // icon and QSystemTrayIcon logs "No Icon set" and stays invisible.
+      // Fall back to the bundled brand icon.
+      auto icon = QIcon::fromTheme(themeIcon);
+      if (icon.isNull())
+        icon = QIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon));
+      m_trayIcon->setIcon(icon);
+    } else
 #ifdef SYNERGY_EXTRA_HEADER
       m_trayIcon->setIcon(synergy::hooks::trayIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
 #else
