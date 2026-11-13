@@ -9,6 +9,7 @@
 #include "UpdateChecker.h"
 
 #include <QDialog>
+#include <QElapsedTimer>
 
 class QLabel;
 class QPlainTextEdit;
@@ -43,6 +44,8 @@ private:
   QLabel *m_summary = nullptr;
   QPlainTextEdit *m_notes = nullptr;
   QProgressBar *m_progress = nullptr;
+  QLabel *m_progressText = nullptr;
+  QElapsedTimer m_downloadTimer;
   QPushButton *m_install = nullptr;
   QPushButton *m_release = nullptr;
   QPushButton *m_later = nullptr;
