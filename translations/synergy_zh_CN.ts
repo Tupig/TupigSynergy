@@ -909,16 +909,20 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <translation>打开系统设置</translation>
     </message>
     <message>
+        <source>Later</source>
+        <translation type="unfinished">稍后</translation>
+    </message>
+    <message>
         <source>Continue</source>
-        <translation>继续</translation>
+        <translation type="vanished">继续</translation>
     </message>
     <message>
         <source>Quit</source>
-        <translation>退出</translation>
+        <translation type="vanished">退出</translation>
     </message>
     <message>
         <source>Accessibility permission is still not granted. Enable %1 in System Settings, then quit and relaunch it.</source>
-        <translation>仍未获得“辅助功能”权限。请在“系统设置”中启用 %1，然后退出并重新启动。</translation>
+        <translation type="vanished">仍未获得“辅助功能”权限。请在“系统设置”中启用 %1，然后退出并重新启动。</translation>
     </message>
 </context>
 <context>
@@ -1290,7 +1294,7 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>Check for updates on startup</source>
-        <translation type="vanished">启动时检查更新</translation>
+        <translation>启动时检查更新</translation>
     </message>
     <message>
         <source>Prevent this computer from going to sleep</source>
@@ -1481,10 +1485,6 @@ Enabling this setting will disable the server config GUI.</source>
         <translation>使用高于 Info 级别的日志级别可能会影响性能。</translation>
     </message>
     <message>
-        <source>Check for updates on startup</source>
-        <translation>启动时检查更新</translation>
-    </message>
-    <message>
         <source>Key length: %1 bits</source>
         <translation>密钥长度：%1 位</translation>
     </message>
@@ -1570,37 +1570,46 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
 </context>
 <context>
-    <name>validators::AliasValidator</name>
+    <name>synergy::gui::update::UpdateChecker</name>
     <message>
-        <source>Computer name cannot contain spaces</source>
-        <translation>计算机名称不能包含空格</translation>
+        <source>Could not reach GitHub Releases: %1</source>
+        <translation>无法连接 GitHub Releases：%1</translation>
     </message>
     <message>
-        <source>Aliases may not be ip addresses</source>
-        <translation>不能用 IP 地址作为别名</translation>
+        <source>GitHub Releases response is unexpectedly large.</source>
+        <translation>GitHub Releases 响应异常大。</translation>
     </message>
     <message>
-        <source>Contains invalid characters or is too long</source>
-        <translation>包含无效字符或过长</translation>
-    </message>
-</context>
-<context>
-    <name>validators::ScreenNameValidator</name>
-    <message>
-        <source>Computer name cannot be empty</source>
-        <translation>计算机名称不能为空</translation>
+        <source>GitHub Releases returned an unreadable response.</source>
+        <translation>GitHub Releases 返回了无法解析的响应。</translation>
     </message>
     <message>
-        <source>Computer name cannot contain spaces</source>
-        <translation>计算机名称不能包含空格</translation>
+        <source>GitHub Release tag is not a semantic version.</source>
+        <translation>GitHub Release 标签不是语义版本号。</translation>
     </message>
     <message>
-        <source>Contains invalid characters or is too long</source>
-        <translation>包含无效字符或过长</translation>
+        <source>GitHub Release URL is outside this repository.</source>
+        <translation>GitHub Release 地址不属于本仓库。</translation>
     </message>
     <message>
-        <source>A computer with this name already exists</source>
-        <translation>一台同名的计算机已经存在</translation>
+        <source>Release asset URL is outside this repository.</source>
+        <translation>发布资产地址不属于本仓库。</translation>
+    </message>
+    <message>
+        <source>Release asset does not publish a SHA-256 digest; refusing to install it.</source>
+        <translation>发布资产未提供 SHA-256 摘要，拒绝安装。</translation>
+    </message>
+    <message>
+        <source>No release package is available for this platform.</source>
+        <translation>此平台没有可用的发布包。</translation>
+    </message>
+    <message>
+        <source>
+
+[release notes truncated]</source>
+        <translation>
+
+[发行说明已截断]</translation>
     </message>
 </context>
 <context>
@@ -1655,49 +1664,6 @@ Package: %3</source>
     </message>
 </context>
 <context>
-    <name>synergy::gui::update::UpdateChecker</name>
-    <message>
-        <source>Could not reach GitHub Releases: %1</source>
-        <translation>无法连接 GitHub Releases：%1</translation>
-    </message>
-    <message>
-        <source>GitHub Releases response is unexpectedly large.</source>
-        <translation>GitHub Releases 响应异常大。</translation>
-    </message>
-    <message>
-        <source>GitHub Releases returned an unreadable response.</source>
-        <translation>GitHub Releases 返回了无法解析的响应。</translation>
-    </message>
-    <message>
-        <source>GitHub Release tag is not a semantic version.</source>
-        <translation>GitHub Release 标签不是语义版本号。</translation>
-    </message>
-    <message>
-        <source>GitHub Release URL is outside this repository.</source>
-        <translation>GitHub Release 地址不属于本仓库。</translation>
-    </message>
-    <message>
-        <source>Release asset URL is outside this repository.</source>
-        <translation>发布资产地址不属于本仓库。</translation>
-    </message>
-    <message>
-        <source>Release asset does not publish a SHA-256 digest; refusing to install it.</source>
-        <translation>发布资产未提供 SHA-256 摘要，拒绝安装。</translation>
-    </message>
-    <message>
-        <source>No release package is available for this platform.</source>
-        <translation>此平台没有可用的发布包。</translation>
-    </message>
-    <message>
-        <source>
-
-[release notes truncated]</source>
-        <translation>
-
-[发行说明已截断]</translation>
-    </message>
-</context>
-<context>
     <name>synergy::gui::update::UpdateDownloader</name>
     <message>
         <source>Refusing to download a package outside this repository.</source>
@@ -1734,6 +1700,40 @@ Package: %3</source>
     <message>
         <source>Update package failed SHA-256 verification.</source>
         <translation>更新包 SHA-256 校验失败。</translation>
+    </message>
+</context>
+<context>
+    <name>validators::AliasValidator</name>
+    <message>
+        <source>Computer name cannot contain spaces</source>
+        <translation>计算机名称不能包含空格</translation>
+    </message>
+    <message>
+        <source>Aliases may not be ip addresses</source>
+        <translation>不能用 IP 地址作为别名</translation>
+    </message>
+    <message>
+        <source>Contains invalid characters or is too long</source>
+        <translation>包含无效字符或过长</translation>
+    </message>
+</context>
+<context>
+    <name>validators::ScreenNameValidator</name>
+    <message>
+        <source>Computer name cannot be empty</source>
+        <translation>计算机名称不能为空</translation>
+    </message>
+    <message>
+        <source>Computer name cannot contain spaces</source>
+        <translation>计算机名称不能包含空格</translation>
+    </message>
+    <message>
+        <source>Contains invalid characters or is too long</source>
+        <translation>包含无效字符或过长</translation>
+    </message>
+    <message>
+        <source>A computer with this name already exists</source>
+        <translation>一台同名的计算机已经存在</translation>
     </message>
 </context>
 </TS>
