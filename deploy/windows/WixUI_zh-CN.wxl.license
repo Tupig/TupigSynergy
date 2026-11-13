@@ -1,0 +1,6 @@
+SPDX-FileCopyrightText: (c) .NET Foundation and contributors
+SPDX-License-Identifier: MS-RL
+
+WixUI_zh-CN.wxl is taken verbatim from the WiX Toolset v5.0.2 source tree
+(src/ext/UI/wixlib/WixUI_zh-CN.wxl) so the CPack WiX generator can render a
+Chinese installer wizard. It is not modified.
