@@ -99,6 +99,8 @@ jobs:
       base: ${{ steps.get-version.outputs.base }}
       patch: ${{ steps.get-version.outputs.patch }}
       linux_targets: ${{ steps.plan.outputs.targets }}
+      windows_targets: ${{ steps.plan.outputs.windows_targets }}
+      macos_targets: ${{ steps.plan.outputs.macos_targets }}
       build_windows: ${{ steps.plan.outputs.build_windows }}
       build_macos: ${{ steps.plan.outputs.build_macos }}
       build_linux: ${{ steps.plan.outputs.build_linux }}
@@ -184,8 +186,22 @@ jobs:
               ;;
           esac
           targets=$(jq -c --arg k "$linux_key" '.[$k] | map(. + {"expected-arch": (if (.name | endswith("-arm64")) then "arm64" elif (.name | endswith("-x86_64")) then "x64" else error("unsupported declared Linux target") end)})' .github/matrices/linux-targets.json)
+          # Release packaging ships Windows x64 and macOS arm64 only. Pull
+          # requests and snapshots keep the full architecture matrix.
+          windows_targets=$(jq -c -n --argjson publish "$publish_release" '[
+            {"name":"windows-2022-x64","runs-on":"windows-2022","vcpkg-triplet":"x64-windows-release","arch":"amd64","qt-version":"6.10.3"}
+          ] + (if $publish then [] else [
+            {"name":"windows-2022-arm64","runs-on":"windows-11-arm","vcpkg-triplet":"arm64-windows","arch":"arm64","qt-version":"6.11.1"}
+          ] end)')
+          macos_targets=$(jq -c -n --argjson publish "$publish_release" '[
+            {"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.1","config-args":"-DCMAKE_OSX_ARCHITECTURES=\"arm64\" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}
+          ] + (if $publish then [] else [
+            {"name":"macos-x64","expected-arch":"x64","runs-on":"macos-15-intel","timeout":30,"qt-version":"6.9.3","config-args":"-DCMAKE_OSX_ARCHITECTURES=\"x86_64\" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}
+          ] end)')
           {
             echo "targets=$targets"
+            echo "windows_targets=$windows_targets"
+            echo "macos_targets=$macos_targets"
             echo "build_windows=$build_windows"
             echo "build_macos=$build_macos"
             echo "build_linux=$build_linux"
@@ -252,18 +268,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - name: "windows-2022-x64"
-            runs-on: "windows-2022"
-            vcpkg-triplet: x64-windows-release
-            arch: "amd64"
-            qt-version: 6.10.3
-
-          - name: "windows-2022-arm64"
-            runs-on: "windows-11-arm"
-            vcpkg-triplet: arm64-windows
-            arch: "arm64"
-            qt-version: 6.11.1
+        # Built by the plan step: release packaging excludes Windows arm64.
+        target: ${{ fromJSON(needs.get-version.outputs.windows_targets) }}
 
     steps:
       - name: Checkout
@@ -506,22 +512,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - name: "macos-arm64"
-            expected-arch: arm64
-            runs-on: macos-15
-            timeout: 20
-            qt-version: 6.11.1
-            # These CI artifacts use providers built for macOS 15. The local
-            # manifest build retains its separately checked requested floor.
-            config-args: '-DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0'
-
-          - name: "macos-x64"
-            expected-arch: x64
-            runs-on: macos-15-intel
-            timeout: 30
-            qt-version: 6.9.3
-            config-args: '-DCMAKE_OSX_ARCHITECTURES="x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0'
+        # Built by the plan step: release packaging excludes macOS x64.
+        target: ${{ fromJSON(needs.get-version.outputs.macos_targets) }}
 
     steps:
       - name: Checkout
