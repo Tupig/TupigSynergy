@@ -35,6 +35,11 @@ if(WIN32)
   target_link_libraries(common PUBLIC advapi32 wtsapi32)
 endif()
 
+if(APPLE)
+  # SCDynamicStoreCopyComputerName: the machine name macOS shows everywhere else.
+  target_link_libraries(common PUBLIC "-framework SystemConfiguration")
+endif()
+
 target_include_directories(common
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/lib>
