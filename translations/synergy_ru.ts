@@ -298,6 +298,18 @@ Do you want to connect to the server?
         <translation>Журнал</translation>
     </message>
     <message>
+        <source>Collapse Log</source>
+        <translation>Свернуть журнал</translation>
+    </message>
+    <message>
+        <source>Copy Log</source>
+        <translation>Копировать журнал</translation>
+    </message>
+    <message>
+        <source>Clear Log</source>
+        <translation>Очистить журнал</translation>
+    </message>
+    <message>
         <source>Detach from window</source>
         <translation>Открепить от окна</translation>
     </message>
@@ -306,8 +318,36 @@ Do you want to connect to the server?
         <translation>Закрыть журнал</translation>
     </message>
     <message>
+        <source>All</source>
+        <translation>Все</translation>
+    </message>
+    <message>
+        <source>Info</source>
+        <translation>Информация</translation>
+    </message>
+    <message>
+        <source>Warn</source>
+        <translation>Предупреждение</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation>Ошибка</translation>
+    </message>
+    <message>
+        <source>Expand Log</source>
+        <translation>Развернуть журнал</translation>
+    </message>
+    <message>
         <source>Attach to window</source>
         <translation>Прикрепить к окну</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation>Работает</translation>
+    </message>
+    <message>
+        <source>Search</source>
+        <translation>Поиск</translation>
     </message>
 </context>
 <context>
@@ -476,6 +516,10 @@ A bound IP is now invalid, you may need to restart the server.</source>
     <message>
         <source>&amp;View</source>
         <translation>&amp;Вид</translation>
+    </message>
+    <message>
+        <source>&amp;Support</source>
+        <translation>&amp;Поддержка</translation>
     </message>
     <message>
         <source>&amp;Help</source>
@@ -800,22 +844,6 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>macOS requires Accessibility permission for %1 to control the keyboard and mouse.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Open System Settings → Privacy &amp; Security → Accessibility, enable %1, then restart %1. You can configure %1 now; input sharing starts once the permission is granted.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Open System Settings</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Later</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -901,6 +929,22 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>&lt;p&gt;Settings scope changes take effect when %1 restarts.&lt;/p&gt;&lt;p&gt;Quit %1 now? You&apos;ll need to launch it again from your applications menu.&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>macOS requires Accessibility permission for %1 to control the keyboard and mouse.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open System Settings → Privacy &amp; Security → Accessibility, enable %1, then restart %1. You can configure %1 now; input sharing starts once the permission is granted.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open System Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Later</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

@@ -11,13 +11,18 @@
 
 #include <QPlainTextEdit>
 #include <QScrollBar>
+#include <QTextBlock>
 #include <QVBoxLayout>
+
+#include <utility>
 
 LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_textLog{new QPlainTextEdit(this)}
 {
   m_textLog->setReadOnly(true);
   m_textLog->setMaximumBlockCount(10000);
-  m_textLog->setLineWrapMode(QPlainTextEdit::NoWrap);
+  // Wrap long lines instead of showing a horizontal scrollbar: log messages are
+  // sentences, and reading them normally beats scrolling sideways.
+  m_textLog->setLineWrapMode(QPlainTextEdit::WidgetWidth);
 
   // setup the log font
   if (synergy::platform::isWindows()) {
@@ -47,7 +52,71 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_textLog{new QPlainTex
 
 void LogWidget::appendLine(const QString &msg)
 {
-  m_textLog->appendPlainText(msg);
+  m_history.append(msg);
+  if (m_filter.isEmpty() || levelOf(msg) == m_filter)
+    m_textLog->appendPlainText(msg);
+}
+
+void LogWidget::setVisibleLines(int lines)
+{
+  const auto metrics = m_textLog->fontMetrics();
+  const auto margins = m_textLog->contentsMargins();
+  const auto frame = m_textLog->frameWidth() * 2;
+  const auto height = metrics.lineSpacing() * lines + margins.top() + margins.bottom() + frame;
+  m_textLog->setFixedHeight(height);
+  setFixedHeight(height);
+}
+
+void LogWidget::setLevelFilter(const QString &level)
+{
+  // "全部" (or anything unexpected) means no filtering.
+  const auto next = (level == QStringLiteral("信息") || level == QStringLiteral("警告") || level == QStringLiteral("错误"))
+                        ? level
+                        : QString();
+  if (next == m_filter)
+    return;
+  m_filter = next;
+  rebuild();
+}
+
+QString LogWidget::levelOf(const QString &line)
+{
+  // "[2026-11-15T00:52:25.518] INFO: message"
+  const auto close = line.indexOf(QLatin1String("] "));
+  if (close < 0)
+    return {};
+  const auto start = close + 2;
+  const auto colon = line.indexOf(QLatin1Char(':'), start);
+  if (colon < 0)
+    return {};
+  const auto level = line.mid(start, colon - start).trimmed();
+  if (level.startsWith(QLatin1String("WARN")))
+    return QStringLiteral("警告");
+  if (level.startsWith(QLatin1String("ERR")) || level.startsWith(QLatin1String("CRIT")) ||
+      level.startsWith(QLatin1String("FATAL")))
+    return QStringLiteral("错误");
+  return QStringLiteral("信息");
+}
+
+void LogWidget::rebuild()
+{
+  m_textLog->clear();
+  for (const auto &line : std::as_const(m_history)) {
+    if (m_filter.isEmpty() || levelOf(line) == m_filter)
+      m_textLog->appendPlainText(line);
+  }
+  scrollToBottom();
+}
+
+void LogWidget::clear()
+{
+  m_history.clear();
+  m_textLog->clear();
+}
+
+QString LogWidget::allText() const
+{
+  return m_textLog->toPlainText();
 }
 
 void LogWidget::findNext(const QString &text)

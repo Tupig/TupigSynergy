@@ -298,6 +298,18 @@ Do you want to connect to the server?
         <translation>ログ</translation>
     </message>
     <message>
+        <source>Collapse Log</source>
+        <translation>ログを折りたたむ</translation>
+    </message>
+    <message>
+        <source>Copy Log</source>
+        <translation>ログをコピー</translation>
+    </message>
+    <message>
+        <source>Clear Log</source>
+        <translation>ログを消去</translation>
+    </message>
+    <message>
         <source>Detach from window</source>
         <translation>ウィンドウから切り離し</translation>
     </message>
@@ -306,8 +318,36 @@ Do you want to connect to the server?
         <translation>ログを閉じる</translation>
     </message>
     <message>
+        <source>All</source>
+        <translation>すべて</translation>
+    </message>
+    <message>
+        <source>Info</source>
+        <translation>情報</translation>
+    </message>
+    <message>
+        <source>Warn</source>
+        <translation>警告</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation>エラー</translation>
+    </message>
+    <message>
+        <source>Expand Log</source>
+        <translation>ログを展開</translation>
+    </message>
+    <message>
         <source>Attach to window</source>
         <translation>ウィンドウに結合</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation>実行中</translation>
+    </message>
+    <message>
+        <source>Search</source>
+        <translation>検索</translation>
     </message>
 </context>
 <context>
@@ -476,6 +516,10 @@ A bound IP is now invalid, you may need to restart the server.</source>
     <message>
         <source>&amp;View</source>
         <translation>表示(&amp;V)</translation>
+    </message>
+    <message>
+        <source>&amp;Support</source>
+        <translation>&amp;サポート</translation>
     </message>
     <message>
         <source>&amp;Help</source>
@@ -802,22 +846,6 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>macOS requires Accessibility permission for %1 to control the keyboard and mouse.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Open System Settings → Privacy &amp; Security → Accessibility, enable %1, then restart %1. You can configure %1 now; input sharing starts once the permission is granted.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Open System Settings</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Later</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Test</source>
         <translation type="unfinished"></translation>
     </message>
@@ -903,6 +931,22 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>&lt;p&gt;Settings scope changes take effect when %1 restarts.&lt;/p&gt;&lt;p&gt;Quit %1 now? You&apos;ll need to launch it again from your applications menu.&lt;/p&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>macOS requires Accessibility permission for %1 to control the keyboard and mouse.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open System Settings → Privacy &amp; Security → Accessibility, enable %1, then restart %1. You can configure %1 now; input sharing starts once the permission is granted.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open System Settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Later</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

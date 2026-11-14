@@ -300,6 +300,18 @@ Do you want to connect to the server?
         <translation>日志</translation>
     </message>
     <message>
+        <source>Collapse Log</source>
+        <translation>收起日志</translation>
+    </message>
+    <message>
+        <source>Copy Log</source>
+        <translation>复制日志</translation>
+    </message>
+    <message>
+        <source>Clear Log</source>
+        <translation>清空日志</translation>
+    </message>
+    <message>
         <source>Detach from window</source>
         <translation>从窗口分离</translation>
     </message>
@@ -308,8 +320,36 @@ Do you want to connect to the server?
         <translation>关闭日志</translation>
     </message>
     <message>
+        <source>All</source>
+        <translation>全部</translation>
+    </message>
+    <message>
+        <source>Info</source>
+        <translation>信息</translation>
+    </message>
+    <message>
+        <source>Warn</source>
+        <translation>警告</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation>错误</translation>
+    </message>
+    <message>
+        <source>Expand Log</source>
+        <translation>展开日志</translation>
+    </message>
+    <message>
         <source>Attach to window</source>
         <translation>吸附到窗口</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation>运行中</translation>
+    </message>
+    <message>
+        <source>Search</source>
+        <translation>搜索</translation>
     </message>
 </context>
 <context>
@@ -478,6 +518,10 @@ A bound IP is now invalid, you may need to restart the server.</source>
     <message>
         <source>&amp;View</source>
         <translation>视图(&amp;V)</translation>
+    </message>
+    <message>
+        <source>&amp;Support</source>
+        <translation>&amp;支持</translation>
     </message>
     <message>
         <source>&amp;Help</source>

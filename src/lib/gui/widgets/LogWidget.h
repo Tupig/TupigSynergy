@@ -7,9 +7,11 @@
 #pragma once
 
 #include <QObject>
+#include <QStringList>
 #include <QWidget>
 
 class QPlainTextEdit;
+class QPushButton;
 class QTemporaryFile;
 
 class LogWidget : public QWidget
@@ -22,6 +24,18 @@ public:
   void findPrevious(const QString &text);
   void scrollToBottom() const;
 
+  /// Number of visible text lines the dock should show (6 expanded, 1 collapsed).
+  void setVisibleLines(int lines);
+  /// "全部" / "信息" / "警告" / "错误" - filters what is rendered, keeps history.
+  void setLevelFilter(const QString &level);
+  void clear();
+  [[nodiscard]] QString allText() const;
+
 private:
+  static QString levelOf(const QString &line);
+  void rebuild();
+
   QPlainTextEdit *m_textLog = nullptr;
+  QStringList m_history;
+  QString m_filter;
 };

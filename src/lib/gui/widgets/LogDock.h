@@ -9,6 +9,7 @@
 #include <QDockWidget>
 
 class LogWidget;
+class QButtonGroup;
 class QLabel;
 class QPushButton;
 class SearchWidget;
@@ -21,14 +22,29 @@ public:
   void appendLine(const QString &msg);
   void setFloating(bool floating);
 
+  /// Expanded shows the latest six lines; collapsed keeps one live line.
+  void setCollapsed(bool collapsed);
+  [[nodiscard]] bool isCollapsed() const;
+
 protected:
   bool eventFilter(QObject *watched, QEvent *event) override;
   void changeEvent(QEvent *e) override;
 
 private:
+  void updateText();
+
   LogWidget *m_textLog = nullptr;
   QPushButton *m_btnClose = nullptr;
   QPushButton *m_btnFloat = nullptr;
+  QPushButton *m_btnCollapse = nullptr;
+  QPushButton *m_btnCopy = nullptr;
+  QPushButton *m_btnClear = nullptr;
   QLabel *m_lblTitle = nullptr;
+  QLabel *m_lblTail = nullptr;
+  QLabel *m_lblBadge = nullptr;
   SearchWidget *m_searchWidget = nullptr;
+  QButtonGroup *m_levelGroup = nullptr;
+  QWidget *m_bodyWidget = nullptr;
+  QWidget *m_tailWidget = nullptr;
+  bool m_collapsed = false;
 };
