@@ -50,10 +50,6 @@
 
 using namespace synergy::gui;
 
-#if defined(Q_OS_MACOS)
-bool checkMacAssistiveDevices();
-#endif
-
 const static auto kHeader = QStringLiteral("%1: %2\n").arg(kAppName, kDisplayVersion);
 
 int main(int argc, char *argv[])
@@ -157,9 +153,10 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  if (!checkMacAssistiveDevices()) {
-    return 1;
-  }
+  // Show the accessibility reminder at startup but keep going: the
+  // configuration window stays usable without the grant, and starting the core
+  // re-checks the permission before spawning a process that would only exit.
+  checkOSXAccessibilityPermission();
 #endif
 
   // --no-reset
@@ -179,61 +176,3 @@ int main(int argc, char *argv[])
   return QApplication::exec();
 }
 
-#if defined(Q_OS_MACOS)
-bool checkMacAssistiveDevices()
-{
-  // Applications are trusted individually for the accessibility API. The
-  // system prompt only appears once; when the user has already granted the
-  // permission the check below succeeds. When it does not (for example an
-  // ad-hoc signed build whose code identity changed after an update), register
-  // the app and show a modeless reminder. Startup must never block on this:
-  // the configuration window opens either way, and only input sharing needs
-  // the permission.
-  if (AXIsProcessTrusted()) {
-    return true;
-  }
-
-  const auto appName = QString::fromUtf8(kAppName);
-
-  // Register the app in the Accessibility list and let the system show its own
-  // prompt first; the dialog below then points at the exact pane.
-  const void *keys[] = {kAXTrustedCheckOptionPrompt};
-  const void *trueValue[] = {kCFBooleanTrue};
-  CFDictionaryRef options = CFDictionaryCreate(nullptr, keys, trueValue, 1, nullptr, nullptr);
-  AXIsProcessTrustedWithOptions(options);
-  CFRelease(options);
-
-  auto *box = new QMessageBox(
-      QMessageBox::Warning, appName,
-      QObject::tr("macOS requires Accessibility permission for %1 to control the keyboard and mouse.").arg(appName),
-      QMessageBox::NoButton
-  );
-  box->setAttribute(Qt::WA_DeleteOnClose);
-  box->setInformativeText(
-      QObject::tr(
-          "Open System Settings → Privacy & Security → Accessibility, enable %1, then restart %1. "
-          "You can configure %1 now; input sharing starts once the permission is granted."
-      )
-          .arg(appName)
-  );
-  auto *openSettings = box->addButton(QObject::tr("Open System Settings"), QMessageBox::ActionRole);
-  box->addButton(QObject::tr("Later"), QMessageBox::RejectRole);
-  QObject::connect(openSettings, &QPushButton::clicked, []() {
-    QDesktopServices::openUrl(
-        QUrl(QStringLiteral("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"))
-    );
-  });
-  box->show();
-
-  // TCC publishes the grant to the running process, so close the reminder as
-  // soon as it takes effect instead of making the user dismiss a stale dialog.
-  auto *timer = new QTimer(box);
-  QObject::connect(timer, &QTimer::timeout, box, [box]() {
-    if (AXIsProcessTrusted()) {
-      box->accept();
-    }
-  });
-  timer->start(1000);
-  return true;
-}
-#endif

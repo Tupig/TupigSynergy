@@ -8,6 +8,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 if(APPLE)
   set (platform_sources
+    OSXAccessibility.cpp
     OSXHelpers.h
     OSXHelpers.mm
   )

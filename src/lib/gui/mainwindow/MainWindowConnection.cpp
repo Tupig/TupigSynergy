@@ -113,10 +113,31 @@ void MainWindow::coreProcessError(CoreProcess::Error error)
 
 void MainWindow::startCore()
 {
+  // The core exits immediately when macOS does not trust this app for the
+  // accessibility API. Check before spawning so the user sees the permission
+  // reminder instead of a process that dies one frame later.
+#if defined(Q_OS_MACOS)
+  if (!checkOSXAccessibilityPermission(this)) {
+    return;
+  }
+#endif
+
   // Save current IP state when server starts
   if (m_coreProcess.mode() == CoreMode::Server && Settings::value(Settings::Core::Interface).toString().isEmpty()) {
     m_serverStartIPs = NetworkMonitor::validAddresses();
     m_serverStartSuggestedIP = m_serverStartIPs.isEmpty() ? "" : m_serverStartIPs.first();
+  }
+
+  if (m_coreProcess.mode() == CoreMode::Server) {
+    // Default to one real interface instead of binding every one: the core logs
+    // an exposure warning for the latter and the user never gets a chance to
+    // pick before the first start. Re-pick when the stored address no longer
+    // exists (DHCP change, cable moved), so the core never binds a dead address.
+    const auto addresses = NetworkMonitor::validAddresses();
+    const auto stored = Settings::value(Settings::Core::Interface).toString();
+    if (!addresses.isEmpty() && (stored.isEmpty() || !addresses.contains(stored))) {
+      Settings::setValue(Settings::Core::Interface, addresses.first());
+    }
   }
 
 #ifdef SYNERGY_EXTRA_HEADER
