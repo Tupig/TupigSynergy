@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
 
+#include "DialogStyle.h"
 #include "ClientConfigDialog.h"
 #include "ui_ClientConfigDialog.h"
 
@@ -14,6 +15,8 @@
 ClientConfigDialog::ClientConfigDialog(QWidget *parent) : QDialog(parent), ui(new Ui::ClientConfigDialog)
 {
   ui->setupUi(this);
+  synergy::gui::applyCompactDialogStyle(this);
+  setMinimumWidth(560);
   updateText();
   initConnections();
   load();

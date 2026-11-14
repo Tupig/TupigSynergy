@@ -6,6 +6,7 @@
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
 
+#include "DialogStyle.h"
 #include "ServerConfigDialog.h"
 #include "ui_ServerConfigDialog.h"
 
@@ -33,6 +34,8 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConf
       m_screenSetupModel(m_serverConfig.screens(), m_serverConfig.numColumns(), m_serverConfig.numRows())
 {
   ui->setupUi(this);
+  synergy::gui::applyCompactDialogStyle(this);
+  setMinimumWidth(560);
 
   ui->labelProtocol->setWhatsThis(ui->labelProtocol->whatsThis().arg(kAppName));
 
