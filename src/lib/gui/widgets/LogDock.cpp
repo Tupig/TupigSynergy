@@ -28,6 +28,7 @@ QPushButton *toolButton(QWidget *parent, const QString &icon, const QString &too
   button->setIcon(QIcon::fromTheme(icon));
   button->setIconSize(QSize(14, 14));
   button->setToolTip(tooltip);
+  button->setProperty("iconButton", true);
   return button;
 }
 } // namespace
@@ -57,6 +58,7 @@ LogDock::LogDock(QWidget *parent)
   m_btnFloat->setFlat(true);
   m_btnFloat->setIcon(QIcon::fromTheme(QStringLiteral("window-minimize-pip")));
   m_btnFloat->setIconSize(iconSize);
+  m_btnFloat->setProperty("iconButton", true);
   m_btnFloat->setToolTip(tr("Detach from window"));
   connect(m_btnFloat, &QPushButton::toggled, this, &LogDock::setFloating);
 
@@ -64,6 +66,7 @@ LogDock::LogDock(QWidget *parent)
   m_btnClose->setFlat(true);
   m_btnClose->setIcon(QIcon::fromTheme(QStringLiteral("view-close")));
   m_btnClose->setIconSize(iconSize);
+  m_btnClose->setProperty("iconButton", true);
   m_btnClose->setToolTip(tr("Close Log"));
   connect(m_btnClose, &QPushButton::clicked, this, &QDockWidget::hide);
 
@@ -97,6 +100,7 @@ LogDock::LogDock(QWidget *parent)
     auto *chip = new QPushButton(label, titleWidget);
     chip->setCheckable(true);
     chip->setFlat(true);
+    chip->setProperty("levelChip", true);
     chip->setProperty("level", key);
     m_levelGroup->addButton(chip);
     titleLayout->addWidget(chip);
@@ -177,7 +181,8 @@ void LogDock::setFloating(bool floating)
     m_btnFloat->setIcon(QIcon::fromTheme(QStringLiteral("window-restore-pip")));
     setWindowFlags(Qt::Dialog);
   } else {
-    m_btnFloat->setToolTip(tr("Detach from window"));
+    m_btnFloat->setProperty("iconButton", true);
+  m_btnFloat->setToolTip(tr("Detach from window"));
     m_btnFloat->setIcon(QIcon::fromTheme(QStringLiteral("window-minimize-pip")));
     setWindowFlags(Qt::Widget);
   }

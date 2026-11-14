@@ -18,6 +18,8 @@ add_library(${target} STATIC
   ${platform_sources}
   Action.cpp
   Action.h
+  AppStyle.cpp
+  AppStyle.h
   Diagnostic.cpp
   Diagnostic.h
   DialogStyle.cpp

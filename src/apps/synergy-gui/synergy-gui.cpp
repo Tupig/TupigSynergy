@@ -12,6 +12,7 @@
 #include "common/PlatformInfo.h"
 #include "common/UrlConstants.h"
 #include "common/VersionInfo.h"
+#include "gui/AppStyle.h"
 #include "gui/Diagnostic.h"
 #include "gui/MainWindow.h"
 #include "gui/Messages.h"
@@ -70,6 +71,7 @@ int main(int argc, char *argv[])
   QGuiApplication::setDesktopFileName(kRevFqdnName);
 
   QApplication app(argc, argv);
+  app.setStyleSheet(synergy::gui::appStyleSheet());
 
 #ifdef SYNERGY_EXTRA_HEADER
   synergy::hooks::onPreInit();

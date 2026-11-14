@@ -333,6 +333,8 @@ void MainWindow::connectSlots()
 
   connect(m_guiDupeChecker, &QLocalServer::newConnection, this, &MainWindow::showAndActivate);
 
+  // 名称编辑是纯图标按钮，交给全局样式收成 24px 方形。
+  ui->btnEditName->setProperty("iconButton", true);
   connect(ui->btnEditName, &QPushButton::clicked, this, &MainWindow::showHostNameEditor);
 
   connect(ui->lineEditName, &QLineEdit::editingFinished, this, &MainWindow::setHostName);
