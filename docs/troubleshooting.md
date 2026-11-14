@@ -10,7 +10,7 @@
 
 | Symptom | Likely Cause | First Check |
 |---------|--------------|-------------|
-| Can't connect | Firewall / wrong IP / port | `telnet <server-ip> 24800` |
+| Can't connect | Firewall / wrong IP / port | `telnet <server-ip> 22211` |
 | Connects but no control | Screen layout / links missing | Verify `links` section |
 | Mouse jumps / stuck | Corner size / delay | Adjust `switchCornerSize`, `switchDelay` |
 | Clipboard not sync | `clipboardSharing=false` | Enable in `[server]` or options |
@@ -27,22 +27,22 @@
 
 ```bash
 # 1. Verify server is listening
-netstat -an | grep 24800
+netstat -an | grep 22211
 # or
-ss -tlnp | grep 24800
+ss -tlnp | grep 22211
 
 # 2. Test TCP connectivity
-telnet <server-ip> 24800
+telnet <server-ip> 22211
 # or
-nc -zv <server-ip> 24800
+nc -zv <server-ip> 22211
 
 # 3. Check firewall
 # Windows:
-netsh advfirewall firewall add rule name="TuPig Synergy" dir=in action=allow protocol=TCP localport=24800
+netsh advfirewall firewall add rule name="TuPig Synergy" dir=in action=allow protocol=TCP localport=22211
 # Linux (ufw):
-sudo ufw allow 24800/tcp
+sudo ufw allow 22211/tcp
 # Linux (firewalld):
-sudo firewall-cmd --permanent --add-port=24800/tcp
+sudo firewall-cmd --permanent --add-port=22211/tcp
 sudo firewall-cmd --reload
 # macOS:
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /path/to/synergy-core
@@ -179,7 +179,7 @@ tccutil reset InputMonitoring
 | **Service mode fails** | Same; the binaries cannot self-install the service, so it must come from the MSI or a manual `sc create` |
 | **Antivirus blocks** | Add exclusions for `synergy_<version>.exe`, `synergy-core.exe`, and `synergy-daemon.exe` |
 | **High DPI scaling** | Set DPI awareness in manifest; per-monitor v2 |
-| **Port already in use** | `netstat -ano | findstr :24800`, kill PID |
+| **Port already in use** | `netstat -ano | findstr :22211`, kill PID |
 | **FIPS mode breaks TLS** | Disable FIPS or use OpenSSL FIPS provider |
 
 **Debug Service**:
@@ -278,11 +278,11 @@ checkPeerFingerprints = false  # for self-signed
 | Tool | Purpose |
 |------|---------|
 | `[log] level=DEBUG` in `TuPig Synergy.conf` | Verbose logging. `synergy-core` has no `--debug` flag |
-| Wireshark | Capture port 24800, decode as Synergy |
+| Wireshark | Capture port 22211, decode as Synergy |
 | `strace -p <pid>` | Linux syscall trace |
 | `dtruss -p <pid>` | macOS syscall trace |
 | Process Monitor | Windows file/reg/net activity |
-| `lsof -i :24800` | Check port usage |
+| `lsof -i :22211` | Check port usage |
 
 ---
 
@@ -327,7 +327,7 @@ The level token is `INFO`, `WARNING`, `ERROR`, `DEBUG`, or `VERBOSE`. The second
 
 | 现象 | 可能原因 | 首要检查 |
 |------|----------|----------|
-| 无法连接 | 防火墙 / IP 错误 / 端口 | `telnet <server-ip> 24800` |
+| 无法连接 | 防火墙 / IP 错误 / 端口 | `telnet <server-ip> 22211` |
 | 连上但无法控制 | 屏幕布局/链接缺失 | 检查 `links` 节 |
 | 鼠标跳跃/卡住 | 角落大小/延迟 | 调整 `switchCornerSize`, `switchDelay` |
 | 剪贴板不同步 | `clipboardSharing=false` | 在 `[server]` 或 options 启用 |
@@ -344,22 +344,22 @@ The level token is `INFO`, `WARNING`, `ERROR`, `DEBUG`, or `VERBOSE`. The second
 
 ```bash
 # 1. 验证服务端监听
-netstat -an | grep 24800
+netstat -an | grep 22211
 # 或
-ss -tlnp | grep 24800
+ss -tlnp | grep 22211
 
 # 2. 测试 TCP 连通性
-telnet <server-ip> 24800
+telnet <server-ip> 22211
 # 或
-nc -zv <server-ip> 24800
+nc -zv <server-ip> 22211
 
 # 3. 检查防火墙
 # Windows:
-netsh advfirewall firewall add rule name="TuPig Synergy" dir=in action=allow protocol=TCP localport=24800
+netsh advfirewall firewall add rule name="TuPig Synergy" dir=in action=allow protocol=TCP localport=22211
 # Linux (ufw):
-sudo ufw allow 24800/tcp
+sudo ufw allow 22211/tcp
 # Linux (firewalld):
-sudo firewall-cmd --permanent --add-port=24800/tcp
+sudo firewall-cmd --permanent --add-port=22211/tcp
 sudo firewall-cmd --reload
 # macOS:
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /path/to/synergy-core
@@ -496,7 +496,7 @@ tccutil reset InputMonitoring
 | **服务模式失败** | 同上；可执行文件无法自行安装服务，必须由 MSI 或手工 `sc create` 完成 |
 | **杀毒软件拦截** | 加白 `synergy_<版本>.exe`、`synergy-core.exe` 与 `synergy-daemon.exe` |
 | **高 DPI 缩放** | 清单设 DPI 感知；逐显示器 v2 |
-| **端口被占用** | `netstat -ano | findstr :24800`，结束 PID |
+| **端口被占用** | `netstat -ano | findstr :22211`，结束 PID |
 | **FIPS 模式破坏 TLS** | 关闭 FIPS 或用 OpenSSL FIPS provider |
 
 **服务调试**：
@@ -590,11 +590,11 @@ checkPeerFingerprints = false  # 自签名时
 | 工具 | 用途 |
 |------|------|
 | 在 `TuPig Synergy.conf` 里设 `[log] level=DEBUG` | 详细日志。`synergy-core` 没有 `--debug` 参数 |
-| Wireshark | 抓包端口 24800，解析为 Synergy |
+| Wireshark | 抓包端口 22211，解析为 Synergy |
 | `strace -p <pid>` | Linux 系统调用跟踪 |
 | `dtruss -p <pid>` | macOS 系统调用跟踪 |
 | Process Monitor | Windows 文件/注册表/网络 |
-| `lsof -i :24800` | 检查端口占用 |
+| `lsof -i :22211` | 检查端口占用 |
 
 ---
 
