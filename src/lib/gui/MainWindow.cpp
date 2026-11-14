@@ -93,6 +93,7 @@ MainWindow::MainWindow()
       m_networkMonitor{new NetworkMonitor(this)}
 {
   ui->setupUi(this);
+  setMinimumWidth(600);
 
   setWindowIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
 

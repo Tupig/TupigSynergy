@@ -338,6 +338,14 @@ Vuoi connetterti al server?
         <translation>Espandi registro</translation>
     </message>
     <message>
+        <source>Latest 6 · wrapped</source>
+        <translation>Ultime 6 · a capo</translation>
+    </message>
+    <message>
+        <source>Info %1 · Warn %2 · Error %3</source>
+        <translation>Info %1 · Avviso %2 · Errore %3</translation>
+    </message>
+    <message>
         <source>Attach to window</source>
         <translation>Allega alla finestra</translation>
     </message>

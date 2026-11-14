@@ -338,6 +338,14 @@ Do you want to connect to the server?
         <translation>ログを展開</translation>
     </message>
     <message>
+        <source>Latest 6 · wrapped</source>
+        <translation>最新 6 件 · 自動折り返し</translation>
+    </message>
+    <message>
+        <source>Info %1 · Warn %2 · Error %3</source>
+        <translation>情報 %1 · 警告 %2 · エラー %3</translation>
+    </message>
+    <message>
         <source>Attach to window</source>
         <translation>ウィンドウに結合</translation>
     </message>

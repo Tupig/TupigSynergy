@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <array>
+
 #include <QObject>
 #include <QStringList>
 #include <QWidget>
@@ -30,6 +32,8 @@ public:
   void setLevelFilter(const QString &level);
   void clear();
   [[nodiscard]] QString allText() const;
+  /// {info, warn, error} counts over the whole history (not just the filter).
+  [[nodiscard]] std::array<int, 3> levelCounts() const;
 
 private:
   static QString levelOf(const QString &line);

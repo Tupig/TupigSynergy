@@ -338,6 +338,14 @@ Do you want to connect to the server?
         <translation>Развернуть журнал</translation>
     </message>
     <message>
+        <source>Latest 6 · wrapped</source>
+        <translation>Последние 6 · перенос</translation>
+    </message>
+    <message>
+        <source>Info %1 · Warn %2 · Error %3</source>
+        <translation>Инфо %1 · Предупр. %2 · Ошибка %3</translation>
+    </message>
+    <message>
         <source>Attach to window</source>
         <translation>Прикрепить к окну</translation>
     </message>

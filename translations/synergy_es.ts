@@ -338,6 +338,14 @@ Do you want to connect to the server?
         <translation>Expandir registro</translation>
     </message>
     <message>
+        <source>Latest 6 · wrapped</source>
+        <translation>Últimas 6 · ajuste</translation>
+    </message>
+    <message>
+        <source>Info %1 · Warn %2 · Error %3</source>
+        <translation>Info %1 · Aviso %2 · Error %3</translation>
+    </message>
+    <message>
         <source>Attach to window</source>
         <translation type="unfinished">Adjuntar a la ventana</translation>
     </message>

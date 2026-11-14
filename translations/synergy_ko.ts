@@ -338,6 +338,14 @@ Do you want to connect to the server?
         <translation>로그 펼치기</translation>
     </message>
     <message>
+        <source>Latest 6 · wrapped</source>
+        <translation>최신 6개 · 자동 줄바꿈</translation>
+    </message>
+    <message>
+        <source>Info %1 · Warn %2 · Error %3</source>
+        <translation>정보 %1 · 경고 %2 · 오류 %3</translation>
+    </message>
+    <message>
         <source>Attach to window</source>
         <translation>창에 붙이기</translation>
     </message>

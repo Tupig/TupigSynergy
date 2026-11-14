@@ -28,7 +28,7 @@ QString appStyleSheet()
   const auto accentSoft = dark ? QStringLiteral("rgba(76,195,138,0.16)") : QStringLiteral("rgba(76,195,138,0.18)");
 
   return QStringLiteral(R"(
-    QWidget { color: %1; }
+    QWidget { color: %1; font-size: 13px; }
     QMainWindow, QDialog, QDockWidget { background: %2; }
 
     /* 卡片：分组框与主窗口配置区 */
@@ -38,7 +38,7 @@ QString appStyleSheet()
     QGroupBox::title { color: %4; padding: 0 4px; }
 
     /* 模式选择做成可选卡片 */
-    QRadioButton { color: %1; spacing: 8px; padding: 10px 12px; border-radius: 9px; }
+    QRadioButton { color: %1; spacing: 8px; padding: 8px 10px; border-radius: 9px; }
     QRadioButton:checked { background: %5; }
 
     /* 按钮 32px / 圆角 8；主操作使用强调色 */
@@ -72,7 +72,10 @@ QString appStyleSheet()
     QLineEdit:focus, QComboBox:focus, QSpinBox:focus { border-color: %9; }
 
     /* 日志区 */
-    QPlainTextEdit { background: %12; border: 0; border-radius: 9px; }
+    QPlainTextEdit { background: %12; border: 0; border-radius: 9px; font-size: 11px; }
+    QLabel#logStats, QLabel#logHint { color: %4; font-size: 10px; }
+    QLabel#logTail { color: %4; font-size: 10px; }
+    QLabel#logTitle { font-size: 12px; font-weight: 600; }
 
     /* 状态栏 / 菜单 */
     QStatusBar { background: %13; color: %1; }

@@ -43,6 +43,7 @@ LogDock::LogDock(QWidget *parent)
       m_btnClear{toolButton(this, QStringLiteral("edit-clear"), tr("Clear Log"))},
       m_lblTitle{new QLabel(tr("Log"), this)},
       m_lblTail{new QLabel(this)},
+      m_lblStats{new QLabel(this)},
       m_lblBadge{new QLabel(this)},
       m_searchWidget{new SearchWidget(this)},
       m_levelGroup{new QButtonGroup(this)}
@@ -74,6 +75,7 @@ LogDock::LogDock(QWidget *parent)
   connect(m_btnClear, &QPushButton::clicked, this, [this] {
     m_textLog->clear();
     m_lblTail->clear();
+    updateStats();
   });
   connect(m_btnCollapse, &QPushButton::clicked, this, [this] { setCollapsed(!m_collapsed); });
 
@@ -134,14 +136,29 @@ LogDock::LogDock(QWidget *parent)
   tailLayout->addWidget(expand, 0, Qt::AlignRight);
   m_tailWidget->setVisible(false);
 
+  // 底部统计条（设计稿的 信息 N · 警告 N · 错误 N + 右侧提示）
+  auto *statsWidget = new QWidget(this);
+  auto *statsLayout = new QHBoxLayout(statsWidget);
+  statsLayout->setContentsMargins(12, 4, 12, 6);
+  statsLayout->setSpacing(14);
+  m_lblStats->setObjectName(QStringLiteral("logStats"));
+  auto *hint = new QLabel(tr("Latest 6 · wrapped"), statsWidget);
+  hint->setObjectName(QStringLiteral("logHint"));
+  statsLayout->addWidget(m_lblStats);
+  statsLayout->addStretch(1);
+  statsLayout->addWidget(hint);
+
   auto *container = new QWidget(this);
   auto *containerLayout = new QVBoxLayout(container);
   containerLayout->setContentsMargins(0, 0, 0, 0);
   containerLayout->setSpacing(0);
   containerLayout->addWidget(m_bodyWidget);
   containerLayout->addWidget(m_tailWidget);
+  containerLayout->addWidget(statsWidget);
   setWidget(container);
+  m_statsWidget = statsWidget;
 
+  updateStats();
   m_textLog->setVisibleLines(kVisibleLines);
   setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetFloatable);
   setAllowedAreas(Qt::BottomDockWidgetArea);
@@ -153,6 +170,7 @@ void LogDock::appendLine(const QString &msg)
   m_textLog->appendLine(msg);
   m_lblTail->setText(msg);
   m_lblTail->setToolTip(msg);
+  updateStats();
   if (auto p = static_cast<QWidget *>(parent()); p->isVisible() && !p->isMinimized() && !m_searchWidget->isExpanded()) {
     m_textLog->scrollToBottom();
   }
@@ -164,6 +182,7 @@ void LogDock::setCollapsed(bool collapsed)
 
   m_bodyWidget->setVisible(!collapsed);
   m_tailWidget->setVisible(collapsed);
+  m_statsWidget->setVisible(!collapsed);
   m_searchWidget->setVisible(!collapsed);
   m_btnCollapse->setIcon(QIcon::fromTheme(collapsed ? QStringLiteral("go-up") : QStringLiteral("go-down")));
   m_btnCollapse->setToolTip(collapsed ? tr("Expand Log") : tr("Collapse Log"));
@@ -172,6 +191,14 @@ void LogDock::setCollapsed(bool collapsed)
 bool LogDock::isCollapsed() const
 {
   return m_collapsed;
+}
+
+void LogDock::updateStats()
+{
+  const auto counts = m_textLog->levelCounts();
+  m_lblStats->setText(
+      tr("Info %1 · Warn %2 · Error %3").arg(counts[0]).arg(counts[1]).arg(counts[2])
+  );
 }
 
 void LogDock::setFloating(bool floating)

@@ -120,6 +120,21 @@ QString LogWidget::allText() const
   return m_textLog->toPlainText();
 }
 
+std::array<int, 3> LogWidget::levelCounts() const
+{
+  std::array<int, 3> counts{0, 0, 0};
+  for (const auto &line : m_history) {
+    const auto level = levelOf(line);
+    if (level == QStringLiteral("warn"))
+      ++counts[1];
+    else if (level == QStringLiteral("error"))
+      ++counts[2];
+    else
+      ++counts[0];
+  }
+  return counts;
+}
+
 void LogWidget::findNext(const QString &text)
 {
   if (text.isEmpty())

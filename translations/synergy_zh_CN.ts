@@ -340,6 +340,14 @@ Do you want to connect to the server?
         <translation>展开日志</translation>
     </message>
     <message>
+        <source>Latest 6 · wrapped</source>
+        <translation>最新 6 条 · 自动换行</translation>
+    </message>
+    <message>
+        <source>Info %1 · Warn %2 · Error %3</source>
+        <translation>信息 %1 · 警告 %2 · 错误 %3</translation>
+    </message>
+    <message>
         <source>Attach to window</source>
         <translation>吸附到窗口</translation>
     </message>
