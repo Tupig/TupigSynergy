@@ -79,19 +79,33 @@ void MainWindow::createMenuBar()
   m_menuFile->addSeparator();
   m_menuFile->addAction(m_actionQuit);
 
-  m_menuEdit->addAction(m_actionSettings);
-
   m_menuView->addAction(m_logDock->toggleViewAction());
 
-  m_menuHelp->addAction(m_actionCheckForUpdates);
-  m_menuHelp->addAction(m_actionAbout);
-  m_menuHelp->addAction(m_actionReportBug);
-  m_menuHelp->addSeparator();
-  m_menuHelp->addAction(m_actionClearSettings);
+  // macOS moves actions that carry a menu role into the application menu.
+  // A menu holding only such actions renders empty, so macOS gets no Edit
+  // menu at all; its Preferences action rides on the Help menu and is merged
+  // out, leaving "Get help" as the only remaining Help item. Qt prepends each
+  // merged action, hence the reversed order: the application menu shows
+  // "Check for Updates" above "Clear settings".
+  if (synergy::platform::isMac()) {
+    m_menuHelp->addAction(m_actionReportBug);
+    m_menuHelp->addAction(m_actionSettings);
+    m_menuHelp->addAction(m_actionAbout);
+    m_menuHelp->addAction(m_actionClearSettings);
+    m_menuHelp->addAction(m_actionCheckForUpdates);
+  } else {
+    m_menuEdit->addAction(m_actionSettings);
+    m_menuHelp->addAction(m_actionCheckForUpdates);
+    m_menuHelp->addAction(m_actionAbout);
+    m_menuHelp->addAction(m_actionReportBug);
+    m_menuHelp->addSeparator();
+    m_menuHelp->addAction(m_actionClearSettings);
+  }
 
   auto menuBar = new QMenuBar(this);
   menuBar->addMenu(m_menuFile);
-  menuBar->addMenu(m_menuEdit);
+  if (!synergy::platform::isMac())
+    menuBar->addMenu(m_menuEdit);
   menuBar->addMenu(m_menuView);
   menuBar->addMenu(m_menuHelp);
 
@@ -154,10 +168,10 @@ void MainWindow::setTrayIcon()
     // macOS has no freedesktop icon theme, and the bundle ships the SVG icon
     // engine but not the qsvg image plugin, so fromTheme() and every SVG
     // fallback below are null; QSystemTrayIcon then logs "No Icon set" and
-    // stays invisible. Use the bundled PNG brand asset for both the symbolic
-    // and the regular setting: there is no monochrome variant to fall back to,
-    // and setIsMask() would only tint a multi-colour icon.
-    m_trayIcon->setIcon(QIcon(QStringLiteral(":/image/logo-%1.png").arg(synergy::gui::iconMode())));
+    // stays invisible. Use the bundled square app icon: the logo-*.png
+    // wordmarks are 304x74, so scaling one into the menu bar renders a tiny
+    // mark followed by the word "Synergy" instead of a square icon.
+    m_trayIcon->setIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
     return;
   }
 
@@ -256,7 +270,7 @@ void MainWindow::changeEvent(QEvent *e)
   QMainWindow::changeEvent(e);
   if (e->type() == QEvent::PaletteChange) {
     updateIconTheme();
-    setWindowIcon(QIcon(QStringLiteral(":/image/logo-%1.png").arg(synergy::gui::iconMode())));
+    setWindowIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
     setTrayIcon();
   } else if (e->type() == QEvent::LanguageChange) {
     ui->retranslateUi(this);

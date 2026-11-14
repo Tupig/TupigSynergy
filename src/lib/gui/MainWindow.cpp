@@ -94,7 +94,7 @@ MainWindow::MainWindow()
 {
   ui->setupUi(this);
 
-  setWindowIcon(QIcon::fromTheme(kRevFqdnName, QIcon(QStringLiteral(":/image/logo-dark.png"))));
+  setWindowIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
 
   addDockWidget(Qt::BottomDockWidgetArea, m_logDock);
 
@@ -117,10 +117,13 @@ MainWindow::MainWindow()
   m_actionTrayQuit->setMenuRole(QAction::NoRole);
 
   m_actionClearSettings->setIcon(QIcon::fromTheme(QStringLiteral("edit-clear-all")));
-  m_actionClearSettings->setMenuRole(QAction::NoRole);
+  // ApplicationSpecificRole is macOS-only: Qt merges these actions into the
+  // application menu (updates and maintenance belong next to "Preferences").
+  // Other platforms ignore the role and keep them in the Help menu.
+  m_actionClearSettings->setMenuRole(QAction::ApplicationSpecificRole);
 
   m_actionCheckForUpdates->setIcon(QIcon::fromTheme(QStringLiteral("system-software-update")));
-  m_actionCheckForUpdates->setMenuRole(QAction::NoRole);
+  m_actionCheckForUpdates->setMenuRole(QAction::ApplicationSpecificRole);
 
   m_actionSettings->setIcon(QIcon::fromTheme(QStringLiteral("configure")));
   m_actionSettings->setMenuRole(QAction::PreferencesRole);
@@ -523,7 +526,15 @@ void MainWindow::updateText()
   m_menuFile->setTitle(tr("&File"));
   m_menuEdit->setTitle(tr("&Edit"));
   m_menuView->setTitle(tr("&View"));
+#if defined(Q_OS_MACOS)
+  // AppKit injects a search field into the menu titled "Help" every time it
+  // opens. It drives the system help index, which this application does not
+  // ship, and it alone makes the menu several times wider than its single
+  // item. A different title keeps the menu as wide as its contents.
+  m_menuHelp->setTitle(tr("&Support"));
+#else
   m_menuHelp->setTitle(tr("&Help"));
+#endif
 
   m_actionClearSettings->setText(tr("Clear settings"));
   m_actionCheckForUpdates->setText(tr("Check for &Updates"));
