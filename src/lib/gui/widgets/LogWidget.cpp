@@ -69,8 +69,9 @@ void LogWidget::setVisibleLines(int lines)
 
 void LogWidget::setLevelFilter(const QString &level)
 {
-  // "全部" (or anything unexpected) means no filtering.
-  const auto next = (level == QStringLiteral("信息") || level == QStringLiteral("警告") || level == QStringLiteral("错误"))
+  // Canonical, language-independent keys: "" (all) / "info" / "warn" / "error".
+  // Using the translated label here would break filtering in every non-Chinese UI.
+  const auto next = (level == QStringLiteral("info") || level == QStringLiteral("warn") || level == QStringLiteral("error"))
                         ? level
                         : QString();
   if (next == m_filter)
@@ -91,11 +92,11 @@ QString LogWidget::levelOf(const QString &line)
     return {};
   const auto level = line.mid(start, colon - start).trimmed();
   if (level.startsWith(QLatin1String("WARN")))
-    return QStringLiteral("警告");
+    return QStringLiteral("warn");
   if (level.startsWith(QLatin1String("ERR")) || level.startsWith(QLatin1String("CRIT")) ||
       level.startsWith(QLatin1String("FATAL")))
-    return QStringLiteral("错误");
-  return QStringLiteral("信息");
+    return QStringLiteral("error");
+  return QStringLiteral("info");
 }
 
 void LogWidget::rebuild()

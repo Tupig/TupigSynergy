@@ -87,12 +87,17 @@ LogDock::LogDock(QWidget *parent)
   titleLayout->setSpacing(6);
   titleLayout->addWidget(m_lblTitle);
   titleLayout->addWidget(m_lblBadge);
-  const auto levels = QStringList{tr("All"), tr("Info"), tr("Warn"), tr("Error")};
-  for (const auto &level : levels) {
-    auto *chip = new QPushButton(level, titleWidget);
+  const auto levels = QList<QPair<QString, QString>>{
+      {QString(), tr("All")},
+      {QStringLiteral("info"), tr("Info")},
+      {QStringLiteral("warn"), tr("Warn")},
+      {QStringLiteral("error"), tr("Error")},
+  };
+  for (const auto &[key, label] : levels) {
+    auto *chip = new QPushButton(label, titleWidget);
     chip->setCheckable(true);
     chip->setFlat(true);
-    chip->setProperty("level", level);
+    chip->setProperty("level", key);
     m_levelGroup->addButton(chip);
     titleLayout->addWidget(chip);
     connect(chip, &QPushButton::clicked, this, [this, chip] { m_textLog->setLevelFilter(chip->property("level").toString()); });
@@ -206,10 +211,9 @@ void LogDock::updateText()
   m_btnClear->setToolTip(tr("Clear Log"));
   m_btnCollapse->setToolTip(m_collapsed ? tr("Expand Log") : tr("Collapse Log"));
   m_searchWidget->setToolTip(tr("Search"));
-  const auto levels = QStringList{tr("All"), tr("Info"), tr("Warn"), tr("Error")};
+  const auto labels = QStringList{tr("All"), tr("Info"), tr("Warn"), tr("Error")};
   const auto buttons = m_levelGroup->buttons();
-  for (int i = 0; i < buttons.size() && i < levels.size(); ++i) {
-    buttons.at(i)->setText(levels.at(i));
-    buttons.at(i)->setProperty("level", levels.at(i));
+  for (int i = 0; i < buttons.size() && i < labels.size(); ++i) {
+    buttons.at(i)->setText(labels.at(i));
   }
 }
