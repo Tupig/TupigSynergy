@@ -1125,7 +1125,7 @@ Inoltre, verifica di poter %1 il file di configurazione del server: %2</translat
     </message>
     <message>
         <source>Computers</source>
-        <translation>Computer</translation>
+        <translation type="vanished">Computer</translation>
     </message>
     <message>
         <source>Drag a computer from the grid to the trashcan to remove it.</source>
@@ -1177,7 +1177,7 @@ Inoltre, verifica di poter %1 il file di configurazione del server: %2</translat
     </message>
     <message>
         <source>Advanced</source>
-        <translation>Avanzate</translation>
+        <translation type="vanished">Avanzate</translation>
     </message>
     <message>
         <source>&amp;Dead corners (for this computer)</source>
@@ -1307,6 +1307,14 @@ L&apos;abilitazione di questa impostazione disabiliterà l&apos;interfaccia graf
     <message>
         <source>Enable lock to computer at startup</source>
         <translation type="unfinished">Abilita il blocco al computer all&apos;avvio</translation>
+    </message>
+    <message>
+        <source>Computer Layout</source>
+        <translation>Disposizione computer</translation>
+    </message>
+    <message>
+        <source>Sharing &amp; Switching</source>
+        <translation>Condivisione e cambio</translation>
     </message>
 </context>
 <context>

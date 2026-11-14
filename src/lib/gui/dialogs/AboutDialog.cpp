@@ -6,6 +6,7 @@
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
 
+#include "DialogStyle.h"
 #include "AboutDialog.h"
 #include "ui_AboutDialog.h"
 
@@ -23,6 +24,7 @@
 AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique<Ui::AboutDialog>()}
 {
   ui->setupUi(this);
+  synergy::gui::applyCompactDialogStyle(this);
 
   setWindowTitle(windowTitle().arg(kAppName));
   ui->lblIcon->hide();

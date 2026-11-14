@@ -1125,7 +1125,7 @@ Además, verifique que puede %1 el archivo de configuración del servidor: %2</t
     </message>
     <message>
         <source>Computers</source>
-        <translation type="unfinished">Computadoras</translation>
+        <translation type="obsolete">Computadoras</translation>
     </message>
     <message>
         <source>Drag a computer from the grid to the trashcan to remove it.</source>
@@ -1177,7 +1177,7 @@ Además, verifique que puede %1 el archivo de configuración del servidor: %2</t
     </message>
     <message>
         <source>Advanced</source>
-        <translation type="unfinished">Avanzado</translation>
+        <translation type="obsolete">Avanzado</translation>
     </message>
     <message>
         <source>&amp;Dead corners (for this computer)</source>
@@ -1307,6 +1307,14 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
     <message>
         <source>Enable lock to computer at startup</source>
         <translation type="unfinished">Activar el bloqueo del ordenador al iniciar</translation>
+    </message>
+    <message>
+        <source>Computer Layout</source>
+        <translation>Disposición de equipos</translation>
+    </message>
+    <message>
+        <source>Sharing &amp; Switching</source>
+        <translation>Compartir y cambiar</translation>
     </message>
 </context>
 <context>

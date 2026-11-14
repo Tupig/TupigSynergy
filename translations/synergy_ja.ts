@@ -1127,7 +1127,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Computers</source>
-        <translation>コンピューター</translation>
+        <translation type="vanished">コンピューター</translation>
     </message>
     <message>
         <source>Drag a computer from the grid to the trashcan to remove it.</source>
@@ -1179,7 +1179,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Advanced</source>
-        <translation>詳細設定</translation>
+        <translation type="vanished">詳細設定</translation>
     </message>
     <message>
         <source>&amp;Dead corners (for this computer)</source>
@@ -1309,6 +1309,14 @@ Enabling this setting will disable the server config GUI.</source>
     <message>
         <source>Enable lock to computer at startup</source>
         <translation>起動時にコンピューター間移動のロックを有効にする</translation>
+    </message>
+    <message>
+        <source>Computer Layout</source>
+        <translation>コンピューター配置</translation>
+    </message>
+    <message>
+        <source>Sharing &amp; Switching</source>
+        <translation>共有と切り替え</translation>
     </message>
 </context>
 <context>

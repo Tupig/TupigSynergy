@@ -1146,7 +1146,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Computers</source>
-        <translation>计算机</translation>
+        <translation type="vanished">计算机</translation>
     </message>
     <message>
         <source>Drag a computer from the grid to the trashcan to remove it.</source>
@@ -1198,7 +1198,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Advanced</source>
-        <translation>高级</translation>
+        <translation type="vanished">高级</translation>
     </message>
     <message>
         <source>&amp;Dead corners (for this computer)</source>
@@ -1328,6 +1328,14 @@ Enabling this setting will disable the server config GUI.</source>
     <message>
         <source>Enable lock to computer at startup</source>
         <translation>启动时启用锁定到计算机</translation>
+    </message>
+    <message>
+        <source>Computer Layout</source>
+        <translation>计算机布局</translation>
+    </message>
+    <message>
+        <source>Sharing &amp; Switching</source>
+        <translation>共享与切换</translation>
     </message>
 </context>
 <context>

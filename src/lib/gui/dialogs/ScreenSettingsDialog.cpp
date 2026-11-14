@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
 
+#include "DialogStyle.h"
 #include "ScreenSettingsDialog.h"
 #include "ui_ScreenSettingsDialog.h"
 
@@ -30,6 +31,7 @@ ScreenSettingsDialog::ScreenSettingsDialog(
 {
 
   ui->setupUi(this);
+  synergy::gui::applyCompactDialogStyle(this);
   ui->buttonBox->button(QDialogButtonBox::Cancel)->setFocus();
 
   ui->lineNameEdit->setText(m_screen->name());

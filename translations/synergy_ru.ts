@@ -1125,7 +1125,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Computers</source>
-        <translation>Компьютеры</translation>
+        <translation type="vanished">Компьютеры</translation>
     </message>
     <message>
         <source>Drag a computer from the grid to the trashcan to remove it.</source>
@@ -1177,7 +1177,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Advanced</source>
-        <translation>Расширенные</translation>
+        <translation type="vanished">Расширенные</translation>
     </message>
     <message>
         <source>&amp;Dead corners (for this computer)</source>
@@ -1305,6 +1305,14 @@ Enabling this setting will disable the server config GUI.</source>
     <message>
         <source>Enable lock to computer at startup</source>
         <translation>Включать привязку к компьютеру при запуске</translation>
+    </message>
+    <message>
+        <source>Computer Layout</source>
+        <translation>Расположение компьютеров</translation>
+    </message>
+    <message>
+        <source>Sharing &amp; Switching</source>
+        <translation>Общий доступ и переключение</translation>
     </message>
 </context>
 <context>

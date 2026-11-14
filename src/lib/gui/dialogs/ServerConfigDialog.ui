@@ -24,7 +24,7 @@
     <widget class="QTabWidget" name="tabWidget">
      <widget class="QWidget" name="tabComputers">
       <attribute name="title">
-       <string>Computers</string>
+       <string>Computer Layout</string>
       </attribute>
       <layout class="QVBoxLayout">
        <property name="leftMargin">
@@ -305,7 +305,7 @@
      </widget>
      <widget class="QWidget" name="tabAdvanced">
       <attribute name="title">
-       <string>Advanced</string>
+       <string>Sharing &amp; Switching</string>
       </attribute>
       <layout class="QGridLayout" name="m_pGridCorners">
        <item row="0" column="1">
