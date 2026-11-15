@@ -4,7 +4,9 @@
 
 ### Scope
 
-The previous dialog stylesheet layer (`DialogStyle`) was deleted; every page now derives its spacing, radii and control heights from the single design-token stylesheet. Dialog `.ui` files are rebuilt as card + form-row structures instead of carrying legacy grid layouts. A shared design-token stylesheet defines the palette, radii (11/8) and control heights (32/30/26); the main window is now a declarative page bar, scrollable workspace and status bar. The log is an embedded card with toolbar, filter chips, records and footer instead of a dock widget.
+The previous dialog stylesheet layer (`DialogStyle`) was deleted; every page now derives its spacing, radii and control heights from the single design-token stylesheet. Dialog `.ui` files are rebuilt as card + form-row structures instead of carrying legacy grid layouts.
+
+The main window was compared against a headless render of the approved HTML at the same size. That comparison produced the following corrections: page-bar shortcuts are icon+label small buttons, the identity row uses an “Edit” button and a “Local IP” label, the action row reads “Configure Server / Start / Restart”, the log uses time/level/message columns with an always-visible search field, the log card uses `#212125` on `#34353b`, and the About page and informational prompts use card-based pages instead of an embedded `QMessageBox`. A shared design-token stylesheet defines the palette, radii (11/8) and control heights (32/30/26); the main window is now a declarative page bar, scrollable workspace and status bar. The log is an embedded card with toolbar, filter chips, records and footer instead of a dock widget.
 
 The UI refactor preserves the separate GUI, core and Windows daemon processes. `PageHost` embeds existing editor transactions in the main window, replacing blocking editor calls with accepted/rejected callbacks. Native file pickers and OS permission dialogs remain native.
 
