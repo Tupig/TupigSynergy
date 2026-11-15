@@ -13,6 +13,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QTimer>
+#include <QVariant>
 
 StatusBar::StatusBar(QWidget *parent)
     : QWidget{parent},

@@ -58,6 +58,7 @@
 #include <QScreen>
 #include <QScrollBar>
 #include <QShowEvent>
+#include <QVariant>
 
 #include <memory>
 #include <thread>

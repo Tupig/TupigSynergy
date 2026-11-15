@@ -12,6 +12,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <QVariant>
 
 MessagePage::MessagePage(QWidget *parent, Kind kind, const QString &title, const QString &message, bool richText)
     : QDialog(parent)

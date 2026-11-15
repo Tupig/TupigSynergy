@@ -35,6 +35,7 @@
 #include <QLabel>
 #include <QLayoutItem>
 #include <QMessageBox>
+#include <QVariant>
 
 using namespace synergy::gui;
 

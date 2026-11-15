@@ -23,6 +23,7 @@
 #include <QStandardPaths>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <QVariant>
 
 namespace synergy::gui::update {
 
