@@ -32,8 +32,8 @@
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QGridLayout>
-#include <QLayoutItem>
 #include <QLabel>
+#include <QLayoutItem>
 #include <QMessageBox>
 
 using namespace synergy::gui;
