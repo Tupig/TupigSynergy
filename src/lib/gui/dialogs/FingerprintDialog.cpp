@@ -30,7 +30,6 @@ FingerprintDialog::FingerprintDialog(
 
   auto layout = new QVBoxLayout();
   layout->addWidget(m_lblHeader);
-  layout->addSpacerItem(new QSpacerItem(0, 10, QSizePolicy::Fixed, QSizePolicy::Fixed));
   layout->addLayout(
       localMode ? makeLocalLayout(localFingerprint) : makeCompareLayout(localFingerprint, isServer, remoteFingerprint)
   );

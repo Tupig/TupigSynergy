@@ -7,7 +7,6 @@
  */
 
 #include "AboutDialog.h"
-#include "DialogStyle.h"
 #include "ui_AboutDialog.h"
 
 #include "common/Constants.h"
@@ -24,7 +23,6 @@
 AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique<Ui::AboutDialog>()}
 {
   ui->setupUi(this);
-  synergy::gui::applyCompactDialogStyle(this);
 
   setWindowTitle(windowTitle().arg(kAppName));
   ui->lblIcon->hide();
@@ -57,7 +55,8 @@ AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique
   ui->lblImportantDevs->setText(QStringLiteral("%1\n").arg(devsNbsp.join(", ")));
 
   ui->btnOk->setDefault(true);
-  connect(ui->btnOk, &QPushButton::clicked, this, &AboutDialog::close);
+  // 嵌入页面宿主时 close() 不会发出 finished，必须使用 reject 才能返回上一页。
+  connect(ui->btnOk, &QPushButton::clicked, this, &QDialog::reject);
 
 #ifdef SYNERGY_EXTRA_HEADER
   synergy::hooks::onAbout(this);

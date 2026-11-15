@@ -35,6 +35,8 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent)
   setMinimumWidth(520);
 
   auto *layout = new QVBoxLayout(this);
+  layout->setContentsMargins(12, 12, 12, 12);
+  layout->setSpacing(8);
 
   m_summary = new QLabel(
       tr("A newer version is available.\n\nCurrent version: %1\nLatest version: %2\nPackage: %3")
@@ -79,6 +81,7 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent)
   buttonLayout->addWidget(m_later);
 
   m_install = new QPushButton(tr("Download and Install"), buttons);
+  m_install->setProperty("primary", true);
   m_install->setDefault(true);
   connect(m_install, &QPushButton::clicked, this, [this] {
     if (m_downloadedPath.isEmpty())

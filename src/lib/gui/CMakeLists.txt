@@ -22,8 +22,6 @@ add_library(${target} STATIC
   AppStyle.h
   Diagnostic.cpp
   Diagnostic.h
-  DialogStyle.cpp
-  DialogStyle.h
   FileTail.cpp
   FileTail.h
   Hotkey.cpp

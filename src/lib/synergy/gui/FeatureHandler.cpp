@@ -139,7 +139,11 @@ void FeatureHandler::setAttribution(QDialog *parent) const
   // Dim via alpha on the theme foreground (not a fixed grey) so it adapts to light/dark.
   description->setWordWrap(true);
   auto font = description->font();
-  font.setPointSizeF(font.pointSizeF() * 0.85);
+  // 应用统一使用像素字号；pointSizeF() 此时为 -1，直接相乘会传入非法负值。
+  if (font.pointSizeF() > 0)
+    font.setPointSizeF(font.pointSizeF() * 0.85);
+  else if (font.pixelSize() > 0)
+    font.setPixelSize(qMax(1, qRound(font.pixelSize() * 0.85)));
   description->setFont(font);
   auto palette = description->palette();
   auto color = palette.color(QPalette::WindowText);

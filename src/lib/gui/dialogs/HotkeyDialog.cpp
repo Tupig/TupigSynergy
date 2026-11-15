@@ -6,7 +6,6 @@
  */
 
 #include "HotkeyDialog.h"
-#include "DialogStyle.h"
 #include "ui_HotkeyDialog.h"
 
 HotkeyDialog::HotkeyDialog(QWidget *parent, Hotkey &hotkey)
@@ -15,7 +14,6 @@ HotkeyDialog::HotkeyDialog(QWidget *parent, Hotkey &hotkey)
       m_Hotkey(hotkey)
 {
   ui->setupUi(this);
-  synergy::gui::applyCompactDialogStyle(this);
 
   ui->m_pKeySequenceWidgetHotkey->setText(m_Hotkey.text());
 }

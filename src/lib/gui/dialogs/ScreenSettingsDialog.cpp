@@ -6,7 +6,6 @@
  */
 
 #include "ScreenSettingsDialog.h"
-#include "DialogStyle.h"
 #include "ui_ScreenSettingsDialog.h"
 #include "widgets/PageHost.h"
 
@@ -33,7 +32,6 @@ ScreenSettingsDialog::ScreenSettingsDialog(
 {
 
   ui->setupUi(this);
-  synergy::gui::applyCompactDialogStyle(this);
   ui->listAliases->setMaximumHeight(100);
   for (auto *form : findChildren<QFormLayout *>()) {
     int labelWidth = 120;

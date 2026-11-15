@@ -5,7 +5,6 @@
  */
 
 #include "ClientConfigDialog.h"
-#include "DialogStyle.h"
 #include "ui_ClientConfigDialog.h"
 
 #include "common/Settings.h"
@@ -15,7 +14,6 @@
 ClientConfigDialog::ClientConfigDialog(QWidget *parent) : QDialog(parent), ui(new Ui::ClientConfigDialog)
 {
   ui->setupUi(this);
-  synergy::gui::applyCompactDialogStyle(this);
   setMinimumWidth(560);
   updateText();
   initConnections();

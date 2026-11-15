@@ -7,7 +7,6 @@
  */
 
 #include "ServerConfigDialog.h"
-#include "DialogStyle.h"
 #include "ui_ServerConfigDialog.h"
 
 #include "common/Constants.h"
@@ -38,7 +37,6 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConf
       m_screenSetupModel(m_serverConfig.screens(), m_serverConfig.numColumns(), m_serverConfig.numRows())
 {
   ui->setupUi(this);
-  synergy::gui::applyCompactDialogStyle(this);
   setMinimumWidth(560);
 
   ui->labelProtocol->setWhatsThis(ui->labelProtocol->whatsThis().arg(kAppName));
@@ -65,6 +63,15 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConf
   if (auto *layout = qobject_cast<QVBoxLayout *>(ui->tabComputers->layout()))
     layout->addLayout(computerActions);
   ui->lblNewScreen->setPixmap(QIcon::fromTheme("video-display").pixmap(QSize(64, 64)));
+
+  // 死角复选框按标签宽度收缩，避免网格拉伸后只剩指示框。
+  for (auto *corner : {ui->cbCornerTopLeft, ui->cbCornerTopRight, ui->cbCornerBottomLeft, ui->cbCornerBottomRight}) {
+    corner->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    corner->setMinimumWidth(corner->fontMetrics().horizontalAdvance(corner->text()) + 32);
+  }
+  // 设计稿的网格按内容高度，工具行紧随其下，不能被拉伸挤出视口。
+  ui->screenSetupView->setMinimumHeight(180);
+  ui->screenSetupView->setMaximumHeight(260);
 
   connect(ui->btnNewHotkey, &QPushButton::clicked, this, &ServerConfigDialog::addHotkey);
   connect(ui->btnEditHotkey, &QPushButton::clicked, this, &ServerConfigDialog::editHotkey);

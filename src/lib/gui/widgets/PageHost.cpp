@@ -7,6 +7,8 @@
 #include <QDialog>
 #include <QScrollArea>
 #include <QStackedWidget>
+#include <QTabBar>
+#include <QTabWidget>
 #include <QVBoxLayout>
 #include <QVariant>
 
@@ -86,6 +88,12 @@ void PageHost::push(QDialog *editor)
   editor->setWindowModality(Qt::NonModal);
   editor->setMinimumWidth(0);
   editor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+  // 设计稿的页签不省略、不用滚动按钮，标签始终完整可读。
+  for (auto *tabs : editor->findChildren<QTabWidget *>()) {
+    tabs->setDocumentMode(true);
+    tabs->tabBar()->setElideMode(Qt::ElideNone);
+    tabs->setUsesScrollButtons(false);
+  }
   area->setProperty("pageEditor", QVariant::fromValue(editor));
   area->setWidget(container);
   pages->addWidget(area);

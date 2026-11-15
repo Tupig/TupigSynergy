@@ -7,7 +7,6 @@
  */
 
 #include "SettingsDialog.h"
-#include "DialogStyle.h"
 #include "common/LogLevel.h"
 #include "common/PlatformInfo.h"
 #include "ui_SettingsDialog.h"
@@ -44,7 +43,6 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
 {
 
   ui->setupUi(this);
-  synergy::gui::applyCompactDialogStyle(this);
   setMinimumWidth(560);
 
   // these are enabled by the control next to them

@@ -83,6 +83,10 @@ QString appStyleSheet()
     QLabel#lblComputerName { font-size: 13px; font-weight: 600; color: %1; }
     QLabel#lblIpAddresses { font-size: 11.5px; color: %4; }
     QLabel#fieldLabel, QLabel[fieldLabel="true"] { color: %3; font-size: 12px; }
+    QDialog QLabel { font-size: 12px; color: %3; }
+    QDialog QGroupBox { padding: 12px; }
+    QDialog QGroupBox::title { font-size: 12.5px; font-weight: 600; }
+    QDialog QCheckBox, QDialog QRadioButton { font-size: 12.5px; color: %1; }
     QLabel[muted="true"] { color: %4; font-size: 11px; }
 
     /* 卡片：无边框、圆角 11，内边距由布局给出 10/12 */
