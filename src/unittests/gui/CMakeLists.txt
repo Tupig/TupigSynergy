@@ -5,10 +5,32 @@ add_subdirectory(config)
 add_subdirectory(core)
 add_subdirectory(update)
 
-# Settings/SecureUtils pull in arch's Windows version resource helpers, so
-# these tests need Version.lib like the other arch-linked test targets
+# Settings/SecureUtils 使用 arch 的 Windows 版本资源辅助函数。
 if(WIN32)
   set(extra_libs version)
+endif()
+
+create_test(
+  NAME PageHostTests
+  DEPENDS gui
+  SOURCE PageHostTests.cpp
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/gui"
+)
+# macOS 静态 Qt 仅包含 cocoa；测试不显示窗口，也不发送宿主输入。
+if(UNIX AND NOT APPLE)
+  set_property(TEST PageHostTests APPEND PROPERTY ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endif()
+
+create_test(
+  NAME EditorTransactionTests
+  DEPENDS gui
+  LIBS ${extra_libs}
+  SOURCE EditorTransactionTests.cpp
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/gui"
+)
+target_include_directories(EditorTransactionTests PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/gui)
+if(UNIX AND NOT APPLE)
+  set_property(TEST EditorTransactionTests APPEND PROPERTY ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endif()
 
 create_test(

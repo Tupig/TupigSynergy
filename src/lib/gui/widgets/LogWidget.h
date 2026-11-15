@@ -7,6 +7,7 @@
 #pragma once
 
 #include <array>
+#include <deque>
 
 #include <QObject>
 #include <QStringList>
@@ -26,20 +27,32 @@ public:
   void findPrevious(const QString &text);
   void scrollToBottom() const;
 
-  /// Number of visible text lines the dock should show (6 expanded, 1 collapsed).
+  /// Size the viewport for the latest records, including wrapped lines.
   void setVisibleLines(int lines);
-  /// "全部" / "信息" / "警告" / "错误" - filters what is rendered, keeps history.
+  /// Canonical keys: "" / "info" / "warn" / "error"; keeps retained history.
   void setLevelFilter(const QString &level);
   void clear();
   [[nodiscard]] QString allText() const;
   /// {info, warn, error} counts over the whole history (not just the filter).
   [[nodiscard]] std::array<int, 3> levelCounts() const;
 
+Q_SIGNALS:
+  void historyChanged(const QString &latestLine);
+
+protected:
+  bool eventFilter(QObject *watched, QEvent *event) override;
+
 private:
   static QString levelOf(const QString &line);
+  static int levelIndex(const QString &line);
   void rebuild();
+  void updateVisibleHeight();
 
   QPlainTextEdit *m_textLog = nullptr;
-  QStringList m_history;
+  std::deque<QString> m_history;
+  std::deque<int> m_visibleBlockCounts;
+  std::array<int, 3> m_counts{0, 0, 0};
   QString m_filter;
+  QString m_latestLine;
+  int m_visibleLines = 6;
 };

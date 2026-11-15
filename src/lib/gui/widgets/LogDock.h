@@ -22,7 +22,7 @@ public:
   void appendLine(const QString &msg);
   void setFloating(bool floating);
 
-  /// Expanded shows the latest six lines; collapsed keeps one live line.
+  /// Expanded fits the latest six records; collapsed keeps the latest matching record.
   void setCollapsed(bool collapsed);
   [[nodiscard]] bool isCollapsed() const;
 
@@ -42,7 +42,6 @@ private:
   QLabel *m_lblTitle = nullptr;
   QLabel *m_lblTail = nullptr;
   QLabel *m_lblStats = nullptr;
-  QLabel *m_lblBadge = nullptr;
   SearchWidget *m_searchWidget = nullptr;
   QButtonGroup *m_levelGroup = nullptr;
   QWidget *m_bodyWidget = nullptr;

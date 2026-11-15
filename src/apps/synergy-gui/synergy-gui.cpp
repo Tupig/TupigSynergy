@@ -71,6 +71,12 @@ int main(int argc, char *argv[])
   QGuiApplication::setDesktopFileName(kRevFqdnName);
 
   QApplication app(argc, argv);
+  {
+    // 设计稿以 13px 为基准字号；Qt 默认按点值放大，这里统一成像素。
+    auto font = app.font();
+    font.setPixelSize(13);
+    app.setFont(font);
+  }
   app.setStyleSheet(synergy::gui::appStyleSheet());
 
 #ifdef SYNERGY_EXTRA_HEADER
@@ -155,10 +161,7 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  // Show the accessibility reminder at startup but keep going: the
-  // configuration window stays usable without the grant, and starting the core
-  // re-checks the permission before spawning a process that would only exit.
-  checkOSXAccessibilityPermission();
+  // 配置界面不需要辅助功能权限；仅实际启动 core 时由 MainWindow 检查。
 #endif
 
   // --no-reset
@@ -177,4 +180,3 @@ int main(int argc, char *argv[])
 
   return QApplication::exec();
 }
-

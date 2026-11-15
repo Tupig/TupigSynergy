@@ -15,6 +15,10 @@
   </property>
   <layout class="QVBoxLayout">
    <item>
+    <widget class="QGroupBox" name="hotkeyCard">
+     <property name="title"><string/></property>
+     <layout class="QVBoxLayout" name="hotkeyCardLayout">
+   <item>
     <widget class="QLabel" name="label">
      <property name="text">
       <string>Enter the specification for the hotkey:</string>
@@ -23,6 +27,9 @@
    </item>
    <item>
     <widget class="KeySequenceWidget" name="m_pKeySequenceWidgetHotkey"/>
+   </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">

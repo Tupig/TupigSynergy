@@ -7,6 +7,7 @@
 #include "Messages.h"
 
 #include "Logger.h"
+#include "widgets/PageHost.h"
 
 #include "common/Settings.h"
 #include "common/UrlConstants.h"
@@ -145,14 +146,17 @@ void showCloseReminder(QWidget *parent)
 
 void showFirstServerStartMessage(QWidget *parent)
 {
-  QMessageBox::information(
-      parent, QObject::tr("%1 Server").arg(kAppName),
-      QObject::tr(
-          "<p>Great, the %1 server is now running.</p>"
-          "<p>Now you can connect your client computers to this server. "
-          "You should see a prompt here on the server when a new client tries to connect.</p>"
-      )
-          .arg(kAppName)
+  PageHost::present(
+      parent, new QMessageBox(
+                  QMessageBox::Information, QObject::tr("%1 Server").arg(kAppName),
+                  QObject::tr(
+                      "<p>Great, the %1 server is now running.</p>"
+                      "<p>Now you can connect your client computers to this server. "
+                      "You should see a prompt here on the server when a new client tries to connect.</p>"
+                  )
+                      .arg(kAppName),
+                  QMessageBox::Ok, parent
+              )
   );
 }
 
@@ -195,7 +199,7 @@ void showFirstConnectedMessage(QWidget *parent)
   }
 
   const auto title = QObject::tr("%1 Connected").arg(kAppName);
-  QMessageBox::information(parent, title, message);
+  PageHost::present(parent, new QMessageBox(QMessageBox::Information, title, message, QMessageBox::Ok, parent));
 }
 
 bool showNewClientPrompt(QWidget *parent, const QString &clientName)

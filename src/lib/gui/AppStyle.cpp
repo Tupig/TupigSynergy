@@ -38,9 +38,8 @@ QString appStyleSheet()
     QGroupBox::title { color: %4; padding: 0 4px; }
 
     /* 模式选择做成可选卡片 */
-    QRadioButton { color: %1; spacing: 8px; padding: 6px 10px; border-radius: 9px;
-                  min-height: 52px; max-height: 52px; }
-    QRadioButton:checked { background: %5; }
+    QRadioButton { color: %1; spacing: 8px; }
+    ModeCard { padding: 0; min-height: 66px; max-height: 66px; }
 
     /* 按钮 32px / 圆角 8；主操作使用强调色 */
     QPushButton {

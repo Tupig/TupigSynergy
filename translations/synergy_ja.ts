@@ -199,6 +199,10 @@ Session: %1 (%2)</source>
         <source>Use dynamic reconnection time based on connection attempts</source>
         <translation type="unfinished">接続試行回数に基づき、再接続時間を動的に調整する</translation>
     </message>
+    <message>
+        <source>Connection Behaviour</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FingerprintDialog</name>
@@ -351,7 +355,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Running</source>
-        <translation>実行中</translation>
+        <translation type="vanished">実行中</translation>
     </message>
     <message>
         <source>Search</source>
@@ -389,11 +393,11 @@ Do you want to connect to the server?
     <name>MainWindow</name>
     <message>
         <source>This computer&apos;s name:</source>
-        <translation>このコンピューターの名前:</translation>
+        <translation type="vanished">このコンピューターの名前:</translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Name can&apos;t have have spaces or special characters&lt;/p&gt;&lt;p&gt;Use Enter to save the name change.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;名前は英数字のみで空白や特殊文字は使えません&lt;/p&gt;&lt;p&gt;Enterキーで確定&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation type="vanished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;名前は英数字のみで空白や特殊文字は使えません&lt;/p&gt;&lt;p&gt;Enterキーで確定&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>Edit Computer Name</source>
@@ -402,13 +406,13 @@ Do you want to connect to the server?
     <message>
         <source>Use this computer&apos;s keyboard and mouse
 (make this computer the server)</source>
-        <translation>このコンピューターのキーボードとマウスを使用する
+        <translation type="vanished">このコンピューターのキーボードとマウスを使用する
 (このコンピューターをサーバーにする)</translation>
     </message>
     <message>
         <source>Use another computer’s mouse and keyboard
 (make this computer the client)</source>
-        <translation>別のコンピューターのキーボードとマウスを使用する
+        <translation type="vanished">別のコンピューターのキーボードとマウスを使用する
 (このコンピューターをクライアントにする)</translation>
     </message>
     <message>
@@ -446,6 +450,14 @@ Do you want to connect to the server?
     <message>
         <source>Please enter the hostname or IP address of the other computer.</source>
         <translation>他のコンピューターのIPアドレスかホスト名を入力してください。</translation>
+    </message>
+    <message>
+        <source>%1 Clear Settings</source>
+        <translation type="unfinished">%1 設定消去</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Are you sure you want to clear all settings and restart %1?&lt;/p&gt;&lt;p&gt;This action cannot be undone.&lt;/p&gt;</source>
+        <translation type="unfinished">&lt;p&gt;全ての設定を消去して %1 を再起動しますか？&lt;/p&gt;&lt;p&gt;この操作は取り消せません。&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Save server configuration as...</source>
@@ -639,7 +651,7 @@ Valid names:
     </message>
     <message>
         <source>&lt;html&gt;Hostname or IP address of the server computer.&lt;br/&gt;May contain a comma seperated list.&lt;/html&gt;</source>
-        <translation>&lt;html&gt;サーバーコンピューターのホスト名または IP アドレス。&lt;br/&gt;カンマ区切りのリストを含めることができます。&lt;/html&gt;</translation>
+        <translation type="vanished">&lt;html&gt;サーバーコンピューターのホスト名または IP アドレス。&lt;br/&gt;カンマ区切りのリストを含めることができます。&lt;/html&gt;</translation>
     </message>
     <message>
         <source>read</source>
@@ -662,7 +674,43 @@ Additionally, check you are able to %1 the server config file: %2</source>
 また、サーバー設定ファイルを%1できることを確認してください: %2</translation>
     </message>
     <message>
+        <source>%1 - New Client</source>
+        <translation type="unfinished">%1 - 新しいクライアント</translation>
+    </message>
+    <message>
+        <source>A new client called &apos;%1&apos; has been accepted. You&apos;ll need to add it to your server&apos;s screen layout.</source>
+        <translation type="unfinished">新しいクライアント &apos;%1&apos; が接続許可されました。サーバーのコンピューター配置に追加してください。</translation>
+    </message>
+    <message>
+        <source>A new client called &apos;%1&apos; wants to connect</source>
+        <translation type="unfinished">新しいクライアント &apos;%1&apos; が接続を求めています</translation>
+    </message>
+    <message>
+        <source>Ignore</source>
+        <translation type="unfinished">無視</translation>
+    </message>
+    <message>
+        <source>Add client</source>
+        <translation type="unfinished">クライアントを追加</translation>
+    </message>
+    <message>
         <source>Don&apos;t show this again</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Background service offline</source>
+        <translation type="unfinished">バックグラウンドサービス停止中</translation>
+    </message>
+    <message>
+        <source>Retry</source>
+        <translation type="unfinished">再試行</translation>
+    </message>
+    <message>
+        <source>Disable</source>
+        <translation type="unfinished">無効化</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;There was a problem finding the %1 background service (daemon).&lt;/p&gt;&lt;p&gt;The background service makes %1 work with UAC prompts and the login screen.&lt;/p&gt;&lt;p&gt;If %1 is installed, the service may have stopped. Restart it from Windows Services, then retry.&lt;/p&gt;&lt;p&gt;If it was never installed, install %1 using its installer.&lt;/p&gt;&lt;p&gt;Disable stops using the background service.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -685,6 +733,41 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Update Check Failed</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>%1 will continue to run in the background. Use the tray icon to reopen the window.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use Enter to save the name change.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Client</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation type="unfinished">ポート</translation>
+    </message>
+</context>
+<context>
+    <name>ModeCard</name>
+    <message>
+        <source>Share this computer&apos;s keyboard and mouse</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use another computer&apos;s keyboard and mouse</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>NewScreenWidget</name>
@@ -692,6 +775,13 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Unnamed</source>
         <extracomment>Used as the hostname. Translation may not contain spaces</extracomment>
         <translation>Unnamed</translation>
+    </message>
+</context>
+<context>
+    <name>PageHost</name>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1314,6 +1404,18 @@ Enabling this setting will disable the server config GUI.</source>
         <translation>設定ファイルのパス</translation>
     </message>
     <message>
+        <source>Add computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Filename invalid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Please select a valid configuration file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>%1 Configurations (*.conf);;All files (*.*)</source>
         <extracomment>%1 is replaced with the application names (*.conf) and (*.*) should not be translated</extracomment>
         <translation>%1 設定 (*.conf);;すべてのファイル (*.*)</translation>
@@ -1432,6 +1534,14 @@ Enabling this setting will disable the server config GUI.</source>
     <message>
         <source>Save log file to...</source>
         <translation>ログをファイルに保存…</translation>
+    </message>
+    <message>
+        <source>%1 Read-only settings</source>
+        <translation type="unfinished">%1 読み取り専用設定</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Settings are read-only because you only have read access to the file:&lt;/p&gt;&lt;p&gt;%1&lt;/p&gt;</source>
+        <translation type="unfinished">&lt;p&gt;以下のファイルへの書き込み権限がないため、設定は読み取り専用です:&lt;/p&gt;&lt;p&gt;%1&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Required messages</source>
@@ -1674,6 +1784,10 @@ Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Release Notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Open Release Page</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1686,11 +1800,19 @@ Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Downloading…</source>
+        <source>%1 / %2 MB — %3 MB/s — %4% — %5 s remaining</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>%1 / %2 MB — %3 MB/s</source>
+        <source>Download verified. Ready to install.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Install Now</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Downloading…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1699,6 +1821,10 @@ Package: %3</source>
     </message>
     <message>
         <source>Update Failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not create a temporary download directory.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

@@ -7,6 +7,7 @@
  */
 
 #include "ActionDialog.h"
+#include "DialogStyle.h"
 #include "ui_ActionDialog.h"
 
 #include "Action.h"
@@ -23,6 +24,7 @@ ActionDialog::ActionDialog(QWidget *parent, const synergy::gui::ServerConfig &co
       m_action(action)
 {
   ui->setupUi(this);
+  synergy::gui::applyCompactDialogStyle(this);
   connect(ui->keySequenceWidget, &KeySequenceWidget::keySequenceChanged, this, &ActionDialog::keySequenceChanged);
   connect(
       ui->comboActionType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &ActionDialog::actionTypeChanged

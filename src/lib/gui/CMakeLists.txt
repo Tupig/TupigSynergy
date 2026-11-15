@@ -122,6 +122,10 @@ add_library(${target} STATIC
   widgets/LogDock.h
   widgets/LogWidget.h
   widgets/LogWidget.cpp
+  widgets/ModeCard.cpp
+  widgets/ModeCard.h
+  widgets/PageHost.cpp
+  widgets/PageHost.h
   widgets/NewScreenWidget.cpp
   widgets/NewScreenWidget.h
   widgets/ScreenSetupView.cpp

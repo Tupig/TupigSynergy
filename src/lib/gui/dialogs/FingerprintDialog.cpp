@@ -68,6 +68,8 @@ FingerprintDialog::FingerprintDialog(
 
     m_buttonBox->addButton(QDialogButtonBox::Yes);
     m_buttonBox->addButton(QDialogButtonBox::No);
+    m_buttonBox->button(QDialogButtonBox::Yes)->setAutoDefault(false);
+    m_buttonBox->button(QDialogButtonBox::No)->setDefault(true);
     m_buttonBox->button(QDialogButtonBox::No)->setFocus();
     connect(m_buttonBox->button(QDialogButtonBox::No), &QPushButton::clicked, this, &QDialog::reject);
     connect(m_buttonBox->button(QDialogButtonBox::Yes), &QPushButton::clicked, this, &QDialog::accept);
@@ -80,8 +82,11 @@ FingerprintDialog::FingerprintDialog(
       m_buttonBox->button(QDialogButtonBox::Help), &QPushButton::toggled, this, &FingerprintDialog::togglePreviewMode
   );
 
+  layout->setContentsMargins(12, 10, 12, 10);
+  layout->setSpacing(8);
+  m_lblHeader->setWordWrap(true);
+  m_lblFooter->setWordWrap(true);
   adjustSize();
-  setFixedSize(size());
 }
 
 QLayout *FingerprintDialog::makeLocalLayout(const Fingerprint &localFingerprint)

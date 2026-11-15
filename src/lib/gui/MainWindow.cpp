@@ -30,6 +30,7 @@
 #include "gui/widgets/LogDock.h"
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
+#include "widgets/PageHost.h"
 #include "widgets/StatusBar.h"
 
 #ifdef SYNERGY_EXTRA_HEADER
@@ -37,6 +38,7 @@
 #endif
 
 #include <QApplication>
+#include <QBoxLayout>
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QDebug>
@@ -46,7 +48,6 @@
 #include <QLocalServer>
 #include <QLocalSocket>
 #include <QMenu>
-#include <QBoxLayout>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QNetworkInterface>
@@ -95,11 +96,30 @@ MainWindow::MainWindow()
 {
   ui->setupUi(this);
   setMinimumWidth(600);
-  setMinimumHeight(660);
+  setMinimumHeight(360);
 
   setWindowIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
 
   addDockWidget(Qt::BottomDockWidgetArea, m_logDock);
+  // 卡片按内容高度，不随窗口拉伸；空出来的高度留给日志区。
+  ui->groupBox->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+
+  ui->btnEditName->setProperty("iconButton", true);
+  ui->btnSaveServerConfig->setProperty("iconButton", true);
+  ui->btnRestartCore->setProperty("iconButton", true);
+  ui->spinPort->setValue(Settings::value(Settings::Core::Port).toInt());
+  ui->spinPort->setEnabled(Settings::isWritable());
+  connect(ui->spinPort, &QSpinBox::editingFinished, this, [this] {
+    if (!Settings::isWritable())
+      return;
+    const int port = ui->spinPort->value();
+    if (port == Settings::value(Settings::Core::Port).toInt())
+      return;
+    Settings::setValue(Settings::Core::Port, port);
+    Settings::save();
+    if (m_coreProcess.isStarted())
+      m_coreProcess.restart();
+  });
 
   // Setup Actions
   m_actionAbout->setMenuRole(QAction::AboutRole);
@@ -164,8 +184,14 @@ MainWindow::MainWindow()
       auto *button = new QPushButton(pagebar);
       button->setObjectName(QStringLiteral("pageShortcut"));
       button->setProperty("pageAction", text);
-      button->setMinimumHeight(26);
+      button->setProperty("iconButton", true);
       button->setIcon(action->icon());
+      connect(action, &QAction::changed, button, [button, action] {
+        const auto label = QString(action->text()).remove(QLatin1Char('&'));
+        button->setToolTip(label);
+        button->setAccessibleName(label);
+        button->setEnabled(action->isEnabled());
+      });
       connect(button, &QPushButton::clicked, action, &QAction::trigger);
       pageLayout->addWidget(button);
     };
@@ -174,8 +200,21 @@ MainWindow::MainWindow()
     addShortcut(QStringLiteral("about"), m_actionAbout);
     if (auto *box = qobject_cast<QBoxLayout *>(central)) {
       box->insertWidget(0, pagebar);
+      box->setContentsMargins(12, 10, 12, 10);
+      box->setSpacing(8);
     }
   }
+
+  m_pageHost = new PageHost(takeCentralWidget(), this);
+  setCentralWidget(m_pageHost);
+  connect(m_pageHost, &PageHost::editorVisibilityChanged, this, [this](bool visible) {
+    if (visible) {
+      m_logDock->setProperty("visibleBeforePage", !m_logDock->isHidden());
+      m_logDock->hide();
+    } else if (m_logDock->property("visibleBeforePage").toBool()) {
+      m_logDock->show();
+    }
+  });
 
   createMenuBar();
   setupControls();
@@ -189,10 +228,14 @@ MainWindow::MainWindow()
   // Force generation of a certificate on the host
   if (TlsUtility::isEnabled()) {
     if (Settings::value(Settings::Security::KeySize).toInt() < kMinimumRsaBits) {
-      QMessageBox::information(
-          this, kAppName,
-          tr("Your current TLS key is smaller than the minimum allowed size, A new key 2048-bit key will be generated.")
-      );
+      QTimer::singleShot(0, this, [this] {
+        showPage(new QMessageBox(
+            QMessageBox::Information, kAppName,
+            tr("Your current TLS key is smaller than the minimum allowed size, A new key 2048-bit key will be "
+               "generated."),
+            QMessageBox::Ok, this
+        ));
+      });
       Settings::setValue(Settings::Security::KeySize, kMinimumRsaBits);
     }
     if (!TlsUtility::isCertValid()) {
@@ -377,8 +420,8 @@ void MainWindow::toggleLogVisible(bool visible)
 {
   // When the main window is hidden e.g. close to tray / minimized), this also triggers the log visibility toggle,
   // but we don't want to hide the log in this case since we would need to un-hide it when the window is shown again.
-  if (!isVisible() || isMinimized()) {
-    qDebug() << "not toggling log, window not visible";
+  if (!isVisible() || isMinimized() || (m_pageHost && m_pageHost->hasEditor())) {
+    qDebug() << "not toggling log, window not visible or editor active";
     return;
   }
 
@@ -433,10 +476,15 @@ void MainWindow::trayIconActivated(QSystemTrayIcon::ActivationReason reason)
   isVisible() ? hide() : showAndActivate();
 }
 
+void MainWindow::showPage(QDialog *editor)
+{
+  m_pageHost->push(editor);
+  showAndActivate();
+}
+
 void MainWindow::openAboutDialog()
 {
-  AboutDialog about(this);
-  about.exec();
+  showPage(new AboutDialog(this));
 }
 
 void MainWindow::openHelpUrl() const
@@ -446,17 +494,19 @@ void MainWindow::openHelpUrl() const
 
 void MainWindow::openSettings()
 {
-  auto dialog = SettingsDialog(this, m_serverConfig);
-
-  if (dialog.exec() == QDialog::Accepted) {
-    Settings::save();
-
-    applyConfig();
-
-    if (m_coreProcess.isStarted()) {
-      m_coreProcess.restart();
-    }
+  if (m_pageHost->activateEditor(SettingsDialog::staticMetaObject)) {
+    showAndActivate();
+    return;
   }
+  auto *dialog = new SettingsDialog(this, m_serverConfig);
+  connect(dialog, &QDialog::accepted, this, [this] {
+    Settings::save();
+    applyConfig();
+    ui->spinPort->setValue(Settings::value(Settings::Core::Port).toInt());
+    if (m_coreProcess.isStarted())
+      m_coreProcess.restart();
+  });
+  showPage(dialog);
 }
 
 void MainWindow::resetCore()
@@ -472,8 +522,7 @@ void MainWindow::resetCore()
 
 void MainWindow::showMyFingerprint()
 {
-  FingerprintDialog fingerprintDialog(this, m_fingerprint);
-  fingerprintDialog.exec();
+  showPage(new FingerprintDialog(this, m_fingerprint));
 }
 
 void MainWindow::updateSecurityIcon(bool visible)
@@ -499,12 +548,17 @@ void MainWindow::updateNetworkInfo()
 
 void MainWindow::serverConnectionConfigureClient(const QString &clientName)
 {
-  m_serverConfigDialogVisible = true;
-  ServerConfigDialog dialog(this, m_serverConfig);
-  if (dialog.addClient(clientName) && dialog.exec() == QDialog::Accepted) {
-    m_coreProcess.restart();
+  if (m_serverConfigDialogVisible)
+    return;
+  auto *dialog = new ServerConfigDialog(this, m_serverConfig);
+  if (!dialog->addClient(clientName)) {
+    dialog->deleteLater();
+    return;
   }
-  m_serverConfigDialogVisible = false;
+  m_serverConfigDialogVisible = true;
+  connect(dialog, &QDialog::accepted, this, [this] { m_coreProcess.restart(); });
+  connect(dialog, &QDialog::finished, this, [this] { m_serverConfigDialogVisible = false; });
+  showPage(dialog);
 }
 
 //////////////////////////////////////////////////////////////////////////////

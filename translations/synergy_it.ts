@@ -199,6 +199,10 @@ Session: %1 (%2)</source>
         <source>Use dynamic reconnection time based on connection attempts</source>
         <translation type="unfinished">Utilizza un tempo di riconnessione dinamico basato sui tentativi di connessione</translation>
     </message>
+    <message>
+        <source>Connection Behaviour</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FingerprintDialog</name>
@@ -351,7 +355,7 @@ Vuoi connetterti al server?
     </message>
     <message>
         <source>Running</source>
-        <translation>In esecuzione</translation>
+        <translation type="vanished">In esecuzione</translation>
     </message>
     <message>
         <source>Search</source>
@@ -389,7 +393,7 @@ Vuoi connetterti al server?
     <name>MainWindow</name>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Name can&apos;t have have spaces or special characters&lt;/p&gt;&lt;p&gt;Use Enter to save the name change.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Il nome non può contenere spazi o caratteri speciali&lt;/p&gt;&lt;p&gt;Usa Invio per salvare la modifica del nome.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation type="vanished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Il nome non può contenere spazi o caratteri speciali&lt;/p&gt;&lt;p&gt;Usa Invio per salvare la modifica del nome.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>Edit Computer Name</source>
@@ -483,6 +487,14 @@ Vuoi connetterti al server?
     <message>
         <source>Please enter the hostname or IP address of the other computer.</source>
         <translation>Inserisci l&apos;hostname o l&apos;indirizzo IP dell&apos;altro computer.</translation>
+    </message>
+    <message>
+        <source>%1 Clear Settings</source>
+        <translation type="unfinished">%1 Azzera Impostazioni</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Are you sure you want to clear all settings and restart %1?&lt;/p&gt;&lt;p&gt;This action cannot be undone.&lt;/p&gt;</source>
+        <translation type="unfinished">&lt;p&gt;Sei sicuro di voler azzerare tutte le impostazioni e riavviare %1?&lt;/p&gt;&lt;p&gt;Questa azione non può essere annullata.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Save server configuration as...</source>
@@ -615,18 +627,18 @@ Nomi validi:
     </message>
     <message>
         <source>This computer&apos;s name:</source>
-        <translation>Nome di questo computer:</translation>
+        <translation type="vanished">Nome di questo computer:</translation>
     </message>
     <message>
         <source>Use this computer&apos;s keyboard and mouse
 (make this computer the server)</source>
-        <translation>Usa tastiera e mouse di questo computer
+        <translation type="vanished">Usa tastiera e mouse di questo computer
 (imposta questo computer come server)</translation>
     </message>
     <message>
         <source>Use another computer’s mouse and keyboard
 (make this computer the client)</source>
-        <translation>Usa mouse e tastiera di un altro computer
+        <translation type="vanished">Usa mouse e tastiera di un altro computer
 (imposta questo computer come client)</translation>
     </message>
     <message>
@@ -639,7 +651,7 @@ Nomi validi:
     </message>
     <message>
         <source>&lt;html&gt;Hostname or IP address of the server computer.&lt;br/&gt;May contain a comma seperated list.&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;html&gt;Nome host o indirizzo IP del computer server.&lt;br/&gt;Può contenere un elenco separato da virgole.&lt;/html&gt;</translation>
+        <translation type="obsolete">&lt;html&gt;Nome host o indirizzo IP del computer server.&lt;br/&gt;Può contenere un elenco separato da virgole.&lt;/html&gt;</translation>
     </message>
     <message>
         <source>read</source>
@@ -662,7 +674,43 @@ Additionally, check you are able to %1 the server config file: %2</source>
 Inoltre, verifica di poter %1 il file di configurazione del server: %2</translation>
     </message>
     <message>
+        <source>%1 - New Client</source>
+        <translation type="unfinished">%1 - Nuovo Client</translation>
+    </message>
+    <message>
+        <source>A new client called &apos;%1&apos; has been accepted. You&apos;ll need to add it to your server&apos;s screen layout.</source>
+        <translation type="unfinished">Un nuovo client chiamato &quot;%1&quot; è stato accettato. Dovrai aggiungerlo al layout dello schermo del tuo server.</translation>
+    </message>
+    <message>
+        <source>A new client called &apos;%1&apos; wants to connect</source>
+        <translation type="unfinished">Un nuovo client chiamato &quot;%1&quot; vuole connettersi</translation>
+    </message>
+    <message>
+        <source>Ignore</source>
+        <translation type="unfinished">Ignora</translation>
+    </message>
+    <message>
+        <source>Add client</source>
+        <translation type="unfinished">Aggiungi client</translation>
+    </message>
+    <message>
         <source>Don&apos;t show this again</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Background service offline</source>
+        <translation type="unfinished">Servizio in background offline</translation>
+    </message>
+    <message>
+        <source>Retry</source>
+        <translation type="unfinished">Riprova</translation>
+    </message>
+    <message>
+        <source>Disable</source>
+        <translation type="unfinished">Disabilita</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;There was a problem finding the %1 background service (daemon).&lt;/p&gt;&lt;p&gt;The background service makes %1 work with UAC prompts and the login screen.&lt;/p&gt;&lt;p&gt;If %1 is installed, the service may have stopped. Restart it from Windows Services, then retry.&lt;/p&gt;&lt;p&gt;If it was never installed, install %1 using its installer.&lt;/p&gt;&lt;p&gt;Disable stops using the background service.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -685,6 +733,41 @@ Inoltre, verifica di poter %1 il file di configurazione del server: %2</translat
         <source>Update Check Failed</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>%1 will continue to run in the background. Use the tray icon to reopen the window.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use Enter to save the name change.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Client</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation type="unfinished">Porta</translation>
+    </message>
+</context>
+<context>
+    <name>ModeCard</name>
+    <message>
+        <source>Share this computer&apos;s keyboard and mouse</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use another computer&apos;s keyboard and mouse</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>NewScreenWidget</name>
@@ -692,6 +775,13 @@ Inoltre, verifica di poter %1 il file di configurazione del server: %2</translat
         <source>Unnamed</source>
         <extracomment>Used as the hostname. Translation may not contain spaces</extracomment>
         <translation>Senzanome</translation>
+    </message>
+</context>
+<context>
+    <name>PageHost</name>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1312,6 +1402,18 @@ Enabling this setting will disable the server config GUI.</source>
 L&apos;abilitazione di questa impostazione disabiliterà l&apos;interfaccia grafica di configurazione del server.</translation>
     </message>
     <message>
+        <source>Add computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Filename invalid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Please select a valid configuration file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>%1 Configurations (*.conf);;All files (*.*)</source>
         <extracomment>%1 is replaced with the application names (*.conf) and (*.*) should not be translated</extracomment>
         <translation>%1 Configurazioni (*.conf);;Tutti i file (*.*)</translation>
@@ -1406,6 +1508,14 @@ L&apos;abilitazione di questa impostazione disabiliterà l&apos;interfaccia graf
     <message>
         <source>Always run as system (work at login screen and UAC)</source>
         <translation>Esegui sempre come sistema (funziona nella schermata di accesso e UAC)</translation>
+    </message>
+    <message>
+        <source>%1 Read-only settings</source>
+        <translation type="unfinished">%1 Impostazioni di sola lettura</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Settings are read-only because you only have read access to the file:&lt;/p&gt;&lt;p&gt;%1&lt;/p&gt;</source>
+        <translation type="unfinished">&lt;p&gt;Le impostazioni sono di sola lettura perché hai solo accesso in lettura al file:&lt;/p&gt;&lt;p&gt;%1&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Required messages</source>
@@ -1673,6 +1783,10 @@ Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Release Notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Open Release Page</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1685,11 +1799,19 @@ Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Downloading…</source>
+        <source>%1 / %2 MB — %3 MB/s — %4% — %5 s remaining</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>%1 / %2 MB — %3 MB/s</source>
+        <source>Download verified. Ready to install.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Install Now</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Downloading…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1698,6 +1820,10 @@ Package: %3</source>
     </message>
     <message>
         <source>Update Failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not create a temporary download directory.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

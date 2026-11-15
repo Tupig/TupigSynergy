@@ -30,6 +30,8 @@ class QMenu;
 class QLocalServer;
 
 class LogDock;
+class PageHost;
+class QDialog;
 class StatusBar;
 
 namespace Ui {
@@ -82,6 +84,8 @@ private:
    * @brief updateText Update all text not in the UI
    */
   void updateText();
+  void showPage(QDialog *editor);
+  PageHost *m_pageHost = nullptr;
   void toggleLogVisible(bool visible);
 
   void settingsChanged(const QString &key = QString());

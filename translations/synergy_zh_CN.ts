@@ -201,6 +201,10 @@ Session: %1 (%2)</source>
         <source>Use dynamic reconnection time based on connection attempts</source>
         <translation>根据连接尝试次数，采用动态重连时间</translation>
     </message>
+    <message>
+        <source>Connection Behaviour</source>
+        <translation>连接行为</translation>
+    </message>
 </context>
 <context>
     <name>FingerprintDialog</name>
@@ -353,7 +357,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Running</source>
-        <translation>运行中</translation>
+        <translation type="vanished">运行中</translation>
     </message>
     <message>
         <source>Search</source>
@@ -391,11 +395,11 @@ Do you want to connect to the server?
     <name>MainWindow</name>
     <message>
         <source>This computer&apos;s name:</source>
-        <translation>此计算机名称：</translation>
+        <translation type="vanished">此计算机名称：</translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Name can&apos;t have have spaces or special characters&lt;/p&gt;&lt;p&gt;Use Enter to save the name change.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;名称不能包含空格或特殊字符&lt;/p&gt;&lt;p&gt;按 Enter 键保存更改。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation type="vanished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;名称不能包含空格或特殊字符&lt;/p&gt;&lt;p&gt;按 Enter 键保存更改。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>Edit Computer Name</source>
@@ -404,13 +408,13 @@ Do you want to connect to the server?
     <message>
         <source>Use this computer&apos;s keyboard and mouse
 (make this computer the server)</source>
-        <translation>使用此计算机的键盘和鼠标
+        <translation type="vanished">使用此计算机的键盘和鼠标
 (将此计算机设为服务器)</translation>
     </message>
     <message>
         <source>Use another computer’s mouse and keyboard
 (make this computer the client)</source>
-        <translation>使用另一台计算机的鼠标和键盘
+        <translation type="vanished">使用另一台计算机的鼠标和键盘
 (将此计算机设为客户端)</translation>
     </message>
     <message>
@@ -448,6 +452,14 @@ Do you want to connect to the server?
     <message>
         <source>Please enter the hostname or IP address of the other computer.</source>
         <translation>请输入另一台计算机的主机名或 IP 地址。</translation>
+    </message>
+    <message>
+        <source>%1 Clear Settings</source>
+        <translation>%1 清除设置</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Are you sure you want to clear all settings and restart %1?&lt;/p&gt;&lt;p&gt;This action cannot be undone.&lt;/p&gt;</source>
+        <translation>&lt;p&gt;您确定要清除所有设置并重启 %1 吗？&lt;/p&gt;&lt;p&gt;此操作无法撤销。&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Save server configuration as...</source>
@@ -638,7 +650,7 @@ Valid names:
     </message>
     <message>
         <source>&lt;html&gt;Hostname or IP address of the server computer.&lt;br/&gt;May contain a comma seperated list.&lt;/html&gt;</source>
-        <translation>&lt;html&gt;服务器计算机的主机名或 IP 地址。&lt;br/&gt;可以包含以逗号分隔的列表。&lt;/html&gt;</translation>
+        <translation type="vanished">&lt;html&gt;服务器计算机的主机名或 IP 地址。&lt;br/&gt;可以包含以逗号分隔的列表。&lt;/html&gt;</translation>
     </message>
     <message>
         <source>read</source>
@@ -661,8 +673,44 @@ Additionally, check you are able to %1 the server config file: %2</source>
 另外，请检查您是否能够 %1 服务器配置文件：%2</translation>
     </message>
     <message>
+        <source>%1 - New Client</source>
+        <translation>%1 - 新客户端</translation>
+    </message>
+    <message>
+        <source>A new client called &apos;%1&apos; has been accepted. You&apos;ll need to add it to your server&apos;s screen layout.</source>
+        <translation>已接受名为“%1”的新客户端。您需要将其添加到服务器的屏幕布局中。</translation>
+    </message>
+    <message>
+        <source>A new client called &apos;%1&apos; wants to connect</source>
+        <translation>名为“%1”的新客户端请求连接</translation>
+    </message>
+    <message>
+        <source>Ignore</source>
+        <translation>忽略</translation>
+    </message>
+    <message>
+        <source>Add client</source>
+        <translation>添加客户端</translation>
+    </message>
+    <message>
         <source>Don&apos;t show this again</source>
         <translation>不再显示此消息</translation>
+    </message>
+    <message>
+        <source>Background service offline</source>
+        <translation>后台服务离线</translation>
+    </message>
+    <message>
+        <source>Retry</source>
+        <translation>重试</translation>
+    </message>
+    <message>
+        <source>Disable</source>
+        <translation>禁用</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;There was a problem finding the %1 background service (daemon).&lt;/p&gt;&lt;p&gt;The background service makes %1 work with UAC prompts and the login screen.&lt;/p&gt;&lt;p&gt;If %1 is installed, the service may have stopped. Restart it from Windows Services, then retry.&lt;/p&gt;&lt;p&gt;If it was never installed, install %1 using its installer.&lt;/p&gt;&lt;p&gt;Disable stops using the background service.&lt;/p&gt;</source>
+        <translation>&lt;p&gt;找不到 %1 后台服务（daemon）。&lt;/p&gt;&lt;p&gt;后台服务使 %1 能够在 UAC 提示和登录界面工作。&lt;/p&gt;&lt;p&gt;如果已安装 %1，服务可能已停止。请在 Windows 服务中重新启动，然后重试。&lt;/p&gt;&lt;p&gt;如果从未安装，请使用 %1 安装程序安装。&lt;/p&gt;&lt;p&gt;选择“禁用”将停止使用后台服务。&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Missing Keyboard Layouts</source>
@@ -688,6 +736,49 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Update Check Failed</source>
         <translation>检查更新失败</translation>
     </message>
+    <message>
+        <source>%1 will continue to run in the background. Use the tray icon to reopen the window.</source>
+        <translation>%1 将继续在后台运行，可通过托盘图标重新打开窗口。</translation>
+    </message>
+    <message>
+        <source>Use Enter to save the name change.</source>
+        <translation>按 Enter 保存名称修改。</translation>
+    </message>
+    <message>
+        <source>Server</source>
+        <translation>服务端</translation>
+    </message>
+    <message>
+        <source>Client</source>
+        <translation>客户端</translation>
+    </message>
+    <message>
+        <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
+        <translation>服务端计算机的主机名或 IP 地址，可填写逗号分隔的列表。</translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation>端口</translation>
+    </message>
+</context>
+<context>
+    <name>ModeCard</name>
+    <message>
+        <source>Server</source>
+        <translation type="vanished">服务端</translation>
+    </message>
+    <message>
+        <source>Client</source>
+        <translation type="vanished">客户端</translation>
+    </message>
+    <message>
+        <source>Share this computer&apos;s keyboard and mouse</source>
+        <translation>共享本机的键盘和鼠标</translation>
+    </message>
+    <message>
+        <source>Use another computer&apos;s keyboard and mouse</source>
+        <translation>使用另一台计算机的键盘和鼠标</translation>
+    </message>
 </context>
 <context>
     <name>NewScreenWidget</name>
@@ -695,6 +786,13 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Unnamed</source>
         <extracomment>Used as the hostname. Translation may not contain spaces</extracomment>
         <translation>未命名</translation>
+    </message>
+</context>
+<context>
+    <name>PageHost</name>
+    <message>
+        <source>Back</source>
+        <translation>返回</translation>
     </message>
 </context>
 <context>
@@ -970,7 +1068,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Later</source>
-        <translation type="unfinished">稍后</translation>
+        <translation>稍后</translation>
     </message>
     <message>
         <source>Continue</source>
@@ -1333,6 +1431,18 @@ Enabling this setting will disable the server config GUI.</source>
         <translation>配置文件路径</translation>
     </message>
     <message>
+        <source>Add computer</source>
+        <translation>新增计算机</translation>
+    </message>
+    <message>
+        <source>Filename invalid</source>
+        <translation>文件名无效</translation>
+    </message>
+    <message>
+        <source>Please select a valid configuration file.</source>
+        <translation>请选择有效的配置文件。</translation>
+    </message>
+    <message>
         <source>%1 Configurations (*.conf);;All files (*.*)</source>
         <extracomment>%1 is replaced with the application names (*.conf) and (*.*) should not be translated</extracomment>
         <translation>%1 配置 (*.conf);;所有文件 (*.*)</translation>
@@ -1451,6 +1561,14 @@ Enabling this setting will disable the server config GUI.</source>
     <message>
         <source>Save log file to...</source>
         <translation>保存日志文件到...</translation>
+    </message>
+    <message>
+        <source>%1 Read-only settings</source>
+        <translation>%1 只读设置</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Settings are read-only because you only have read access to the file:&lt;/p&gt;&lt;p&gt;%1&lt;/p&gt;</source>
+        <translation>&lt;p&gt;设置是只读的，因为您对该文件只有读取权限：&lt;/p&gt;&lt;p&gt;%1&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Required messages</source>
@@ -1699,6 +1817,10 @@ Package: %3</source>
 安装包：%3</translation>
     </message>
     <message>
+        <source>Release Notes</source>
+        <translation>更新说明</translation>
+    </message>
+    <message>
         <source>Open Release Page</source>
         <translation>打开发布页</translation>
     </message>
@@ -1711,8 +1833,24 @@ Package: %3</source>
         <translation>下载并安装</translation>
     </message>
     <message>
+        <source>%1 / %2 MB — %3 MB/s — %4% — %5 s remaining</source>
+        <translation>%1 / %2 MB — %3 MB/s — %4% — 剩余 %5 秒</translation>
+    </message>
+    <message>
+        <source>Download verified. Ready to install.</source>
+        <translation>下载已校验，可以安装。</translation>
+    </message>
+    <message>
+        <source>Install Now</source>
+        <translation>立即安装</translation>
+    </message>
+    <message>
         <source>Update Failed</source>
         <translation>更新失败</translation>
+    </message>
+    <message>
+        <source>Could not create a temporary download directory.</source>
+        <translation>无法创建临时下载目录。</translation>
     </message>
     <message>
         <source>The system installer could not be started.</source>
@@ -1724,7 +1862,7 @@ Package: %3</source>
     </message>
     <message>
         <source>%1 / %2 MB — %3 MB/s</source>
-        <translation>%1 / %2 MB — %3 MB/s</translation>
+        <translation type="vanished">%1 / %2 MB — %3 MB/s</translation>
     </message>
     <message>
         <source>%1 MB — %2 MB/s</source>

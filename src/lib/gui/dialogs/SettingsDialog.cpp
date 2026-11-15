@@ -6,11 +6,12 @@
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
 
-#include "DialogStyle.h"
 #include "SettingsDialog.h"
+#include "DialogStyle.h"
 #include "common/LogLevel.h"
 #include "common/PlatformInfo.h"
 #include "ui_SettingsDialog.h"
+#include "widgets/PageHost.h"
 
 #include "common/Constants.h"
 #include "common/I18N.h"
@@ -30,6 +31,8 @@
 #include <QDebug>
 #include <QDir>
 #include <QFileDialog>
+#include <QFormLayout>
+#include <QLabel>
 #include <QMessageBox>
 
 using namespace synergy::gui;
@@ -66,15 +69,9 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
   // the developer was looking at, and it's easy to accidentally save that.
   ui->tabWidget->setCurrentIndex(0);
 
-  // The update toggle lives in source so it stays next to the other startup
-  // behaviour controls without touching the generated .ui file.
-  if (auto *group = ui->rbAutoHide->parentWidget(); group != nullptr) {
-    if (auto *layout = qobject_cast<QBoxLayout *>(group->layout()); layout != nullptr) {
-      m_checkForUpdates = new QCheckBox(tr("Check for updates on startup"), group);
-      layout->addWidget(m_checkForUpdates);
-      connect(m_checkForUpdates, &QCheckBox::toggled, this, &SettingsDialog::setButtonBoxEnabledButtons);
-    }
-  }
+  // The UI owns this control on the General page, independent of the window radio layout.
+  m_checkForUpdates = ui->checkForUpdates;
+  connect(m_checkForUpdates, &QCheckBox::toggled, this, &SettingsDialog::setButtonBoxEnabledButtons);
 
   // Populate the list of IP addresses
   const auto validAddresses = NetworkMonitor::validAddresses();
@@ -94,9 +91,6 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
   logLevelChanged();
 
   adjustSize();
-  QApplication::processEvents();
-  setFixedHeight(height());
-  setWindowFlags((windowFlags() | Qt::CustomizeWindowHint) & ~Qt::WindowMinMaxButtonsHint);
 
   setButtonBoxEnabledButtons();
   initConnections();
@@ -104,6 +98,38 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
 #ifdef SYNERGY_EXTRA_HEADER
   synergy::hooks::onSettings(this);
 #endif
+
+  // Include hook-provided pages (Scope) without replacing their controls or connections.
+  for (int index = 0; index < ui->tabWidget->count(); ++index) {
+    auto *page = ui->tabWidget->widget(index);
+    if (index >= 5) {
+      if (auto *source = qobject_cast<QVBoxLayout *>(page->layout()); source != nullptr) {
+        auto *card = new QGroupBox(page);
+        card->setObjectName(QStringLiteral("scopeCard"));
+        auto *contents = new QVBoxLayout(card);
+        contents->setContentsMargins(12, 14, 12, 12);
+        contents->setSpacing(8);
+        while (auto *item = source->takeAt(0)) {
+          if (item->spacerItem() != nullptr) {
+            delete item;
+          } else {
+            contents->addItem(item);
+            if (auto *widget = item->widget(); widget != nullptr) {
+              widget->setParent(card);
+              widget->show();
+            }
+          }
+        }
+        source->setContentsMargins(12, 12, 12, 12);
+        source->addWidget(card);
+      }
+    }
+    if (page->layout() != nullptr)
+      page->layout()->setAlignment(Qt::AlignTop);
+  }
+
+  // Align independently nested form rows, and recompute when translated labels change.
+  updateText();
 }
 
 void SettingsDialog::changeEvent(QEvent *e)
@@ -188,7 +214,12 @@ void SettingsDialog::initConnections() const
 void SettingsDialog::regenCertificates()
 {
   if (TlsUtility::generateCertificate()) {
-    QMessageBox::information(this, tr("TLS Certificate Regenerated"), tr("TLS certificate regenerated successfully."));
+    PageHost::present(
+        this, new QMessageBox(
+                  QMessageBox::Information, tr("TLS Certificate Regenerated"),
+                  tr("TLS certificate regenerated successfully."), QMessageBox::Ok, this
+              )
+    );
     const auto certificate = Settings::value(Settings::Security::Certificate).toString();
     updateKeyLengthOnFile(certificate);
   }
@@ -237,7 +268,17 @@ void SettingsDialog::showReadOnlyMessage()
 {
   if (Settings::isWritable())
     return;
-  messages::showReadOnlySettings(this, Settings::settingsFile());
+  if (property("readOnlyNoticeShown").toBool())
+    return;
+  setProperty("readOnlyNoticeShown", true);
+  PageHost::present(
+      this, new QMessageBox(
+                QMessageBox::Information, tr("%1 Read-only settings").arg(kAppName),
+                tr("<p>Settings are read-only because you only have read access to the file:</p><p>%1</p>")
+                    .arg(QDir::toNativeSeparators(Settings::settingsFile()).toHtmlEscaped()),
+                QMessageBox::Ok, this
+            )
+  );
 }
 
 void SettingsDialog::updateText()
@@ -262,6 +303,34 @@ void SettingsDialog::updateText()
   ui->buttonBox->button(QDialogButtonBox::Cancel)->setToolTip(tr("Close and forget changes"));
   ui->buttonBox->button(QDialogButtonBox::Reset)->setToolTip(tr("Reset to stored values"));
   ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setToolTip(tr("Reset to default values"));
+
+  for (int index = 0; index < ui->tabWidget->count(); ++index) {
+    auto *page = ui->tabWidget->widget(index);
+    const auto forms = page->findChildren<QFormLayout *>();
+    int fieldOffset = 0;
+    const auto inset = [page](QFormLayout *form) {
+      int result = 0;
+      for (auto *parent = form->parentWidget(); parent != nullptr && parent != page; parent = parent->parentWidget()) {
+        if (qobject_cast<QGroupBox *>(parent) != nullptr)
+          result += parent->layout()->contentsMargins().left();
+      }
+      return result;
+    };
+    for (auto *form : forms) {
+      for (int row = 0; row < form->rowCount(); ++row) {
+        if (auto *item = form->itemAt(row, QFormLayout::LabelRole); item != nullptr && item->widget() != nullptr) {
+          item->widget()->setMinimumWidth(0);
+          fieldOffset = qMax(fieldOffset, inset(form) + item->widget()->sizeHint().width());
+        }
+      }
+    }
+    for (auto *form : forms) {
+      for (int row = 0; row < form->rowCount(); ++row) {
+        if (auto *item = form->itemAt(row, QFormLayout::LabelRole); item != nullptr && item->widget() != nullptr)
+          item->widget()->setMinimumWidth(fieldOffset - inset(form));
+      }
+    }
+  }
 }
 
 void SettingsDialog::accept()
@@ -427,6 +496,12 @@ void SettingsDialog::updateControls()
   ui->rbAutoHide->setEnabled(writable);
   ui->rbShowOnStart->setEnabled(writable);
   ui->cbPreventSleep->setEnabled(writable);
+  m_checkForUpdates->setEnabled(writable);
+  ui->comboLanguage->setEnabled(writable);
+  ui->rbIconMono->setEnabled(writable);
+  ui->rbIconColorful->setEnabled(writable);
+  ui->cbShowVersion->setEnabled(writable);
+  ui->cbGuiDebug->setEnabled(writable);
   ui->lineTlsCertPath->setEnabled(writable);
   ui->comboTlsKeyLength->setEnabled(writable);
   ui->rbCloseToTray->setEnabled(writable);
@@ -490,6 +565,8 @@ bool SettingsDialog::isModified() const
       (ui->lineCommandExit->text() != Settings::value(Settings::Core::ScreenExitCommand).toString()) ||
       (I18N::nativeTo639Name(ui->comboLanguage->currentText()) != Settings::value(Settings::Core::Language).toString());
 
+  modified = modified || (m_checkForUpdates->isChecked() != Settings::value(Settings::Gui::CheckForUpdates).toBool());
+
   if (!ignoreInterface)
     modified = modified || ui->comboInterface->currentText() != Settings::value(Settings::Core::Interface).toString();
   return modified;
@@ -512,6 +589,7 @@ bool SettingsDialog::isDefault() const
       (ui->cbElevateDaemon->isChecked() == Settings::defaultValue(Settings::Daemon::Elevate).toBool()) &&
       (ui->cbGuiDebug->isChecked() == Settings::defaultValue(Settings::Log::GuiDebug).toBool()) &&
       (ui->cbShowVersion->isChecked() == Settings::defaultValue(Settings::Gui::ShowVersionInTitle).toBool()) &&
+      (m_checkForUpdates->isChecked() == Settings::defaultValue(Settings::Gui::CheckForUpdates).toBool()) &&
       (ui->rbIconMono->isChecked() == Settings::defaultValue(Settings::Gui::SymbolicTrayIcon).toBool()) &&
       (ui->groupService->isChecked() == (processMode == Settings::ProcessMode::Service)) &&
       (ui->comboInterface->currentIndex() == 0) &&
@@ -539,6 +617,7 @@ void SettingsDialog::resetToDefault()
   ui->cbElevateDaemon->setChecked(Settings::defaultValue(Settings::Daemon::Elevate).toBool());
   ui->cbGuiDebug->setChecked(Settings::defaultValue(Settings::Log::GuiDebug).toBool());
   ui->cbShowVersion->setChecked(Settings::defaultValue(Settings::Gui::ShowVersionInTitle).toBool());
+  m_checkForUpdates->setChecked(Settings::defaultValue(Settings::Gui::CheckForUpdates).toBool());
   ui->cbRunEnterCommand->setChecked(Settings::defaultValue(Settings::Core::EnableEnterCommand).toBool());
   ui->cbRunExitCommand->setChecked(Settings::defaultValue(Settings::Core::EnableExitCommand).toBool());
   ui->lineCommandEnter->setText(Settings::defaultValue(Settings::Core::ScreenEnterCommand).toString());
@@ -574,10 +653,11 @@ void SettingsDialog::resetToDefault()
 
 void SettingsDialog::setButtonBoxEnabledButtons() const
 {
+  const bool writable = Settings::isWritable();
   const bool modified = isModified();
-  ui->buttonBox->button(QDialogButtonBox::Save)->setEnabled(modified);
-  ui->buttonBox->button(QDialogButtonBox::Reset)->setEnabled(modified);
-  ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(!isDefault());
+  ui->buttonBox->button(QDialogButtonBox::Save)->setEnabled(writable && modified);
+  ui->buttonBox->button(QDialogButtonBox::Reset)->setEnabled(writable && modified);
+  ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(writable && !isDefault());
 }
 
 SettingsDialog::~SettingsDialog() = default;

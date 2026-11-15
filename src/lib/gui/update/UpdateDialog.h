@@ -10,6 +10,7 @@
 
 #include <QDialog>
 #include <QElapsedTimer>
+#include <QTemporaryDir>
 
 class QLabel;
 class QPlainTextEdit;
@@ -32,6 +33,7 @@ class UpdateDialog : public QDialog
 public:
   explicit UpdateDialog(const UpdateInfo &info, QWidget *parent = nullptr);
   ~UpdateDialog() override;
+  void reject() override;
 
 private:
   void startDownload();
@@ -39,6 +41,8 @@ private:
   void openReleasePage();
   void setBusy(bool busy);
 
+  QTemporaryDir m_downloadDirectory;
+  QString m_downloadedPath;
   UpdateInfo m_info;
   UpdateDownloader *m_downloader = nullptr;
   QLabel *m_summary = nullptr;

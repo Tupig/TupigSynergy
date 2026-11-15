@@ -44,12 +44,16 @@ LogDock::LogDock(QWidget *parent)
       m_lblTitle{new QLabel(tr("Log"), this)},
       m_lblTail{new QLabel(this)},
       m_lblStats{new QLabel(this)},
-      m_lblBadge{new QLabel(this)},
       m_searchWidget{new SearchWidget(this)},
       m_levelGroup{new QButtonGroup(this)}
 {
   connect(m_searchWidget, &SearchWidget::findNext, m_textLog, &LogWidget::findNext);
   connect(m_searchWidget, &SearchWidget::findPrevious, m_textLog, &LogWidget::findPrevious);
+  connect(m_textLog, &LogWidget::historyChanged, this, [this](const QString &latestLine) {
+    m_lblTail->setText(latestLine);
+    m_lblTail->setToolTip(latestLine);
+    updateStats();
+  });
 
   const auto iconSize = QSize(fontMetrics().height() - 2, fontMetrics().height() - 2);
   const auto maxBtnSize = QSize(fontMetrics().height() + 2, fontMetrics().height() + 2);
@@ -72,15 +76,12 @@ LogDock::LogDock(QWidget *parent)
   connect(m_btnClose, &QPushButton::clicked, this, &QDockWidget::hide);
 
   connect(m_btnCopy, &QPushButton::clicked, this, [this] { QApplication::clipboard()->setText(m_textLog->allText()); });
-  connect(m_btnClear, &QPushButton::clicked, this, [this] {
-    m_textLog->clear();
-    m_lblTail->clear();
-    updateStats();
-  });
+  connect(m_btnClear, &QPushButton::clicked, m_textLog, &LogWidget::clear);
   connect(m_btnCollapse, &QPushButton::clicked, this, [this] { setCollapsed(!m_collapsed); });
 
   m_lblTitle->setObjectName(QStringLiteral("logTitle"));
-  m_lblBadge->setObjectName(QStringLiteral("logBadge"));
+  m_lblTail->setTextFormat(Qt::PlainText);
+  m_lblTail->setWordWrap(true);
   m_lblTail->setObjectName(QStringLiteral("logTail"));
   m_lblTail->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
 
@@ -91,7 +92,6 @@ LogDock::LogDock(QWidget *parent)
   titleLayout->setContentsMargins(10, 4, 10, 4);
   titleLayout->setSpacing(6);
   titleLayout->addWidget(m_lblTitle);
-  titleLayout->addWidget(m_lblBadge);
   const auto levels = QList<QPair<QString, QString>>{
       {QString(), tr("All")},
       {QStringLiteral("info"), tr("Info")},
@@ -106,7 +106,9 @@ LogDock::LogDock(QWidget *parent)
     chip->setProperty("level", key);
     m_levelGroup->addButton(chip);
     titleLayout->addWidget(chip);
-    connect(chip, &QPushButton::clicked, this, [this, chip] { m_textLog->setLevelFilter(chip->property("level").toString()); });
+    connect(chip, &QPushButton::clicked, this, [this, chip] {
+      m_textLog->setLevelFilter(chip->property("level").toString());
+    });
   }
   if (auto *first = m_levelGroup->buttons().value(0))
     first->setChecked(true);
@@ -160,6 +162,7 @@ LogDock::LogDock(QWidget *parent)
 
   updateStats();
   m_textLog->setVisibleLines(kVisibleLines);
+  setCollapsed(false);
   setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetFloatable);
   setAllowedAreas(Qt::BottomDockWidgetArea);
   updateText();
@@ -168,12 +171,6 @@ LogDock::LogDock(QWidget *parent)
 void LogDock::appendLine(const QString &msg)
 {
   m_textLog->appendLine(msg);
-  m_lblTail->setText(msg);
-  m_lblTail->setToolTip(msg);
-  updateStats();
-  if (auto p = static_cast<QWidget *>(parent()); p->isVisible() && !p->isMinimized() && !m_searchWidget->isExpanded()) {
-    m_textLog->scrollToBottom();
-  }
 }
 
 void LogDock::setCollapsed(bool collapsed)
@@ -185,6 +182,7 @@ void LogDock::setCollapsed(bool collapsed)
   m_statsWidget->setVisible(!collapsed);
   m_searchWidget->setVisible(!collapsed);
   m_btnCollapse->setIcon(QIcon::fromTheme(collapsed ? QStringLiteral("go-up") : QStringLiteral("go-down")));
+
   m_btnCollapse->setToolTip(collapsed ? tr("Expand Log") : tr("Collapse Log"));
 }
 
@@ -196,9 +194,7 @@ bool LogDock::isCollapsed() const
 void LogDock::updateStats()
 {
   const auto counts = m_textLog->levelCounts();
-  m_lblStats->setText(
-      tr("Info %1 · Warn %2 · Error %3").arg(counts[0]).arg(counts[1]).arg(counts[2])
-  );
+  m_lblStats->setText(tr("Info %1 · Warn %2 · Error %3").arg(counts[0]).arg(counts[1]).arg(counts[2]));
 }
 
 void LogDock::setFloating(bool floating)
@@ -209,7 +205,7 @@ void LogDock::setFloating(bool floating)
     setWindowFlags(Qt::Dialog);
   } else {
     m_btnFloat->setProperty("iconButton", true);
-  m_btnFloat->setToolTip(tr("Detach from window"));
+    m_btnFloat->setToolTip(tr("Detach from window"));
     m_btnFloat->setIcon(QIcon::fromTheme(QStringLiteral("window-minimize-pip")));
     setWindowFlags(Qt::Widget);
   }
@@ -238,7 +234,6 @@ void LogDock::updateText()
 {
   setWindowTitle(tr("Log"));
   m_lblTitle->setText(tr("Log"));
-  m_lblBadge->setText(tr("Running"));
   m_btnCopy->setToolTip(tr("Copy Log"));
   m_btnClear->setToolTip(tr("Clear Log"));
   m_btnCollapse->setToolTip(m_collapsed ? tr("Expand Log") : tr("Collapse Log"));

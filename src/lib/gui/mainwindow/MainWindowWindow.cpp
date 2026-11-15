@@ -120,8 +120,7 @@ void MainWindow::checkForUpdates(bool manual)
   connect(
       checker, &synergy::gui::update::UpdateChecker::updateAvailable, this,
       [this, release](const synergy::gui::update::UpdateInfo &info) {
-        synergy::gui::update::UpdateDialog dialog(info, this);
-        dialog.exec();
+        showPage(new synergy::gui::update::UpdateDialog(info, this));
         release();
       }
   );
@@ -129,14 +128,19 @@ void MainWindow::checkForUpdates(bool manual)
       checker, &synergy::gui::update::UpdateChecker::noUpdate, this,
       [this, manual, release](const QString &version) {
         if (manual) {
-          QMessageBox::information(this, tr("No Updates"), tr("You are running the latest version (%1).").arg(version));
+          showPage(new QMessageBox(
+              QMessageBox::Information, tr("No Updates"), tr("You are running the latest version (%1).").arg(version),
+              QMessageBox::Ok, this
+          ));
         }
         release();
       }
   );
   connect(checker, &synergy::gui::update::UpdateChecker::failed, this, [this, manual, release](const QString &reason) {
     if (manual) {
-      QMessageBox::warning(this, tr("Update Check Failed"), reason);
+      auto *message = new QMessageBox(QMessageBox::Warning, tr("Update Check Failed"), reason, QMessageBox::Ok, this);
+      message->setTextFormat(Qt::PlainText);
+      showPage(message);
     } else {
       qWarning().noquote() << "update check failed:" << reason;
     }
@@ -230,8 +234,19 @@ void MainWindow::closeEvent(QCloseEvent *event)
 {
   if (Settings::value(Settings::Gui::CloseToTray).toBool() && event->spontaneous()) {
     if (Settings::value(Settings::Gui::CloseReminder).toBool()) {
-      messages::showCloseReminder(this);
+      event->ignore();
       Settings::setValue(Settings::Gui::CloseReminder, false);
+      auto *message = new QMessageBox(
+          QMessageBox::Information, kAppName,
+          tr("%1 will continue to run in the background. Use the tray icon to reopen the window.").arg(kAppName),
+          QMessageBox::Ok, this
+      );
+      connect(message, &QDialog::finished, this, [this] {
+        Settings::setValue(Settings::Gui::WindowGeometry, geometry());
+        hide();
+      });
+      showPage(message);
+      return;
     }
     Settings::setValue(Settings::Gui::WindowGeometry, geometry());
     qDebug() << "hiding to tray";

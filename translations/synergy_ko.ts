@@ -199,6 +199,10 @@ Session: %1 (%2)</source>
         <source>Use dynamic reconnection time based on connection attempts</source>
         <translation type="unfinished">연결 시도 횟수에 따라 동적 재연결 시간을 사용합니다</translation>
     </message>
+    <message>
+        <source>Connection Behaviour</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>FingerprintDialog</name>
@@ -351,7 +355,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Running</source>
-        <translation>실행 중</translation>
+        <translation type="vanished">실행 중</translation>
     </message>
     <message>
         <source>Search</source>
@@ -389,11 +393,11 @@ Do you want to connect to the server?
     <name>MainWindow</name>
     <message>
         <source>This computer&apos;s name:</source>
-        <translation>이 컴퓨터 이름:</translation>
+        <translation type="vanished">이 컴퓨터 이름:</translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Name can&apos;t have have spaces or special characters&lt;/p&gt;&lt;p&gt;Use Enter to save the name change.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;이름에는 공백이나 특수문자를 사용할 수 없습니다&lt;/p&gt;&lt;p&gt;Enter 키로 이름 변경을 저장합니다.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation type="vanished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;이름에는 공백이나 특수문자를 사용할 수 없습니다&lt;/p&gt;&lt;p&gt;Enter 키로 이름 변경을 저장합니다.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>Edit Computer Name</source>
@@ -402,13 +406,13 @@ Do you want to connect to the server?
     <message>
         <source>Use this computer&apos;s keyboard and mouse
 (make this computer the server)</source>
-        <translation>이 컴퓨터의 키보드와 마우스를 사용
+        <translation type="vanished">이 컴퓨터의 키보드와 마우스를 사용
 (이 컴퓨터를 서버로 설정)</translation>
     </message>
     <message>
         <source>Use another computer’s mouse and keyboard
 (make this computer the client)</source>
-        <translation>다른 컴퓨터의 키보드와 마우스를 사용
+        <translation type="vanished">다른 컴퓨터의 키보드와 마우스를 사용
 (이 컴퓨터를 클라이언트로 설정)</translation>
     </message>
     <message>
@@ -446,6 +450,14 @@ Do you want to connect to the server?
     <message>
         <source>Please enter the hostname or IP address of the other computer.</source>
         <translation>다른 컴퓨터의 호스트 이름 또는 IP 주소를 입력하세요.</translation>
+    </message>
+    <message>
+        <source>%1 Clear Settings</source>
+        <translation type="unfinished">%1 설정 초기화</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Are you sure you want to clear all settings and restart %1?&lt;/p&gt;&lt;p&gt;This action cannot be undone.&lt;/p&gt;</source>
+        <translation type="unfinished">&lt;p&gt;모든 설정을 초기화하고 %1을(를) 재시작할까요?&lt;/p&gt;&lt;p&gt;이 작업은 번복될 수 없습니다.&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Save server configuration as...</source>
@@ -639,7 +651,7 @@ Valid names:
     </message>
     <message>
         <source>&lt;html&gt;Hostname or IP address of the server computer.&lt;br/&gt;May contain a comma seperated list.&lt;/html&gt;</source>
-        <translation>&lt;html&gt;서버 컴퓨터의 호스트 이름 또는 IP 주소입니다.&lt;br/&gt;목록 요소는 쉼표로 구분됩니다.&lt;/html&gt;</translation>
+        <translation type="vanished">&lt;html&gt;서버 컴퓨터의 호스트 이름 또는 IP 주소입니다.&lt;br/&gt;목록 요소는 쉼표로 구분됩니다.&lt;/html&gt;</translation>
     </message>
     <message>
         <source>read</source>
@@ -662,7 +674,43 @@ Additionally, check you are able to %1 the server config file: %2</source>
 또한 서버 구성 파일을 %1할 수 있는지 확인하세요: %2</translation>
     </message>
     <message>
+        <source>%1 - New Client</source>
+        <translation type="unfinished">%1 - 새 클라이언트</translation>
+    </message>
+    <message>
+        <source>A new client called &apos;%1&apos; has been accepted. You&apos;ll need to add it to your server&apos;s screen layout.</source>
+        <translation type="unfinished">새 클라이언트 &apos;%1&apos;이(가) 허용되었습니다. 서버의 화면 배치에 추가해 주세요.</translation>
+    </message>
+    <message>
+        <source>A new client called &apos;%1&apos; wants to connect</source>
+        <translation type="unfinished">새 클라이언트 &apos;%1&apos;이(가) 연결을 요청합니다</translation>
+    </message>
+    <message>
+        <source>Ignore</source>
+        <translation type="unfinished">무시</translation>
+    </message>
+    <message>
+        <source>Add client</source>
+        <translation type="unfinished">클라이언트 추가</translation>
+    </message>
+    <message>
         <source>Don&apos;t show this again</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Background service offline</source>
+        <translation type="unfinished">백그라운드 서비스 오프라인</translation>
+    </message>
+    <message>
+        <source>Retry</source>
+        <translation type="unfinished">재시도</translation>
+    </message>
+    <message>
+        <source>Disable</source>
+        <translation type="unfinished">비활성화</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;There was a problem finding the %1 background service (daemon).&lt;/p&gt;&lt;p&gt;The background service makes %1 work with UAC prompts and the login screen.&lt;/p&gt;&lt;p&gt;If %1 is installed, the service may have stopped. Restart it from Windows Services, then retry.&lt;/p&gt;&lt;p&gt;If it was never installed, install %1 using its installer.&lt;/p&gt;&lt;p&gt;Disable stops using the background service.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -685,6 +733,41 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Update Check Failed</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>%1 will continue to run in the background. Use the tray icon to reopen the window.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use Enter to save the name change.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Client</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation type="unfinished">포트</translation>
+    </message>
+</context>
+<context>
+    <name>ModeCard</name>
+    <message>
+        <source>Share this computer&apos;s keyboard and mouse</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use another computer&apos;s keyboard and mouse</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>NewScreenWidget</name>
@@ -692,6 +775,13 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Unnamed</source>
         <extracomment>Used as the hostname. Translation may not contain spaces</extracomment>
         <translation>이름없음</translation>
+    </message>
+</context>
+<context>
+    <name>PageHost</name>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1312,6 +1402,18 @@ Enabling this setting will disable the server config GUI.</source>
         <translation>설정 파일 경로</translation>
     </message>
     <message>
+        <source>Add computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Filename invalid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Please select a valid configuration file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>%1 Configurations (*.conf);;All files (*.*)</source>
         <extracomment>%1 is replaced with the application names (*.conf) and (*.*) should not be translated</extracomment>
         <translation>%1 설정 (*.conf);;모든 파일 (*.*)</translation>
@@ -1430,6 +1532,14 @@ Enabling this setting will disable the server config GUI.</source>
     <message>
         <source>Save log file to...</source>
         <translation>로그 파일 저장 위치...</translation>
+    </message>
+    <message>
+        <source>%1 Read-only settings</source>
+        <translation type="unfinished">%1 읽기 전용 설정</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Settings are read-only because you only have read access to the file:&lt;/p&gt;&lt;p&gt;%1&lt;/p&gt;</source>
+        <translation type="unfinished">&lt;p&gt;다음 파일에 대한 쓰기 권한이 없어 설정이 읽기 전용입니다:&lt;/p&gt;&lt;p&gt;%1&lt;/p&gt;</translation>
     </message>
     <message>
         <source>Required messages</source>
@@ -1672,6 +1782,10 @@ Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Release Notes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Open Release Page</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1684,11 +1798,19 @@ Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Downloading…</source>
+        <source>%1 / %2 MB — %3 MB/s — %4% — %5 s remaining</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>%1 / %2 MB — %3 MB/s</source>
+        <source>Download verified. Ready to install.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Install Now</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Downloading…</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1697,6 +1819,10 @@ Package: %3</source>
     </message>
     <message>
         <source>Update Failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not create a temporary download directory.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

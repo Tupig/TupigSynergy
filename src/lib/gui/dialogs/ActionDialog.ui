@@ -21,7 +21,11 @@
   </property>
   <layout class="QVBoxLayout" name="_2">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_4">
+    <widget class="QGroupBox" name="actionCard">
+     <property name="title"><string/></property>
+     <layout class="QVBoxLayout" name="actionCardLayout">
+   <item>
+    <layout class="QVBoxLayout" name="horizontalLayout_4">
      <item>
       <widget class="QComboBox" name="comboTriggerOn">
        <item>
@@ -144,6 +148,9 @@
       <widget class="KeySequenceWidget" name="keySequenceWidget"/>
      </item>
     </layout>
+   </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <widget class="QGroupBox" name="groupScreens">
