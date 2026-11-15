@@ -107,7 +107,6 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
     grid->setColumnStretch(2, 1);
   }
 
-
 #ifdef SYNERGY_EXTRA_HEADER
   synergy::hooks::onSettings(this);
 #endif
