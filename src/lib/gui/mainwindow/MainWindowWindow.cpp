@@ -30,6 +30,7 @@
 #include "gui/update/UpdateChecker.h"
 #include "gui/update/UpdateDialog.h"
 #include "gui/widgets/LogPanel.h"
+#include "gui/widgets/MessagePage.h"
 
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
@@ -146,9 +147,10 @@ void MainWindow::checkForUpdates(bool manual)
   );
   connect(checker, &synergy::gui::update::UpdateChecker::failed, this, [this, manual, release](const QString &reason) {
     if (manual) {
-      auto *message = new QMessageBox(QMessageBox::Warning, tr("Update Check Failed"), reason, QMessageBox::Ok, this);
-      message->setTextFormat(Qt::PlainText);
-      showPage(message);
+      auto *page = new MessagePage(this, MessagePage::Kind::Warning, tr("Update Check Failed"), reason);
+      auto *ok = page->addButton(tr("OK"), true);
+      connect(ok, &QPushButton::clicked, page, &QDialog::accept);
+      showPage(page);
     } else {
       qWarning().noquote() << "update check failed:" << reason;
     }
