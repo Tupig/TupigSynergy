@@ -7,6 +7,7 @@
 #pragma once
 
 #include "UpdateChecker.h"
+#include "UpdateDownloader.h"
 
 #include <QDialog>
 #include <QElapsedTimer>
@@ -31,7 +32,7 @@ class UpdateDialog : public QDialog
 {
   Q_OBJECT
 public:
-  explicit UpdateDialog(const UpdateInfo &info, QWidget *parent = nullptr);
+  explicit UpdateDialog(const UpdateInfo &info, QWidget *parent = nullptr, const DownloadPolicy &policy = {});
   ~UpdateDialog() override;
   void reject() override;
 

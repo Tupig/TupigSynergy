@@ -26,10 +26,10 @@
 
 namespace synergy::gui::update {
 
-UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent)
+UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const DownloadPolicy &policy)
     : QDialog(parent),
       m_info(info),
-      m_downloader(new UpdateDownloader(this))
+      m_downloader(new UpdateDownloader(this, policy))
 {
   setWindowTitle(tr("Update Available"));
   setMinimumWidth(520);

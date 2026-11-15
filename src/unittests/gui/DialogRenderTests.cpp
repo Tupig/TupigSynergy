@@ -10,11 +10,15 @@
 #include "gui/dialogs/HotkeyDialog.h"
 #include "gui/update/UpdateChecker.h"
 #include "gui/update/UpdateDialog.h"
+#include "gui/widgets/KeySequenceWidget.h"
+#include "update/TestHttpServer.h"
 
 #include <QApplication>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QListWidget>
 #include <QPixmap>
+#include <QProgressBar>
 #include <QtTest>
 
 namespace {
@@ -37,6 +41,8 @@ class DialogRenderTests : public QObject
   Q_OBJECT
 private Q_SLOTS:
   void rendersHotkeyAndAction();
+  void recordsHotkeyWithSyntheticKeys();
+  void downloadsUpdateFromLoopback();
   void rendersUpdateAndFingerprint();
 };
 
@@ -81,6 +87,65 @@ void DialogRenderTests::rendersUpdateAndFingerprint()
   FingerprintDialog fingerprint(nullptr, local, FingerprintDialogMode::Server, remote);
   renderToFile(fingerprint, QDir(outputDir).filePath(QStringLiteral("fingerprint.png")));
   QVERIFY(fingerprint.width() > 0);
+}
+
+void DialogRenderTests::recordsHotkeyWithSyntheticKeys()
+{
+  Hotkey hotkey;
+  HotkeyDialog dialog(nullptr, hotkey);
+  auto *sequence = dialog.findChild<KeySequenceWidget *>(QStringLiteral("m_pKeySequenceWidgetHotkey"));
+  QVERIFY(sequence != nullptr);
+
+  // 点击进入录制，再用 Qt 合成按键事件，避免向系统注入真实输入。
+  QTest::mouseClick(sequence, Qt::LeftButton);
+  QTest::keyClick(sequence, Qt::Key_K, Qt::ControlModifier | Qt::AltModifier);
+  QVERIFY(sequence->valid());
+  QVERIFY(!sequence->keySequence().toString().isEmpty());
+
+  QMetaObject::invokeMethod(&dialog, "accept", Qt::DirectConnection);
+  QCOMPARE(dialog.result(), static_cast<int>(QDialog::Accepted));
+  QVERIFY(!hotkey.text().isEmpty());
+}
+
+void DialogRenderTests::downloadsUpdateFromLoopback()
+{
+  const QByteArray payload(256 * 1024, 'x');
+  TestHttpServer server;
+  server.setBinary(payload);
+  const auto digest = QString::fromLatin1(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+
+  synergy::gui::update::UpdateInfo info;
+  info.version = QStringLiteral("1.22.0");
+  info.tag = QStringLiteral("v1.22.0");
+  info.notes = QStringLiteral("- 修复日志面板高度");
+  info.releaseUrl = QUrl(QStringLiteral("https://github.com/Tupig/TupigSynergy/releases/tag/v1.22.0"));
+  info.asset.name = QStringLiteral("synergy_1.22.0_mac_arm64.dmg");
+  info.asset.url = server.url(QStringLiteral("/download/synergy_1.22.0_mac_arm64.dmg"));
+  info.asset.size = payload.size();
+  info.asset.sha256 = digest;
+
+  synergy::gui::update::DownloadPolicy policy;
+  policy.scheme = QStringLiteral("http");
+  policy.host = QStringLiteral("127.0.0.1");
+  policy.pathPrefix = QStringLiteral("/download/");
+
+  synergy::gui::update::UpdateDialog dialog(info, nullptr, policy);
+  auto *install = dialog.findChild<QPushButton *>();
+  QVERIFY(install != nullptr);
+  // 找到「下载并安装」按钮。
+  QPushButton *downloadButton = nullptr;
+  for (auto *button : dialog.findChildren<QPushButton *>()) {
+    if (button->text().contains(QStringLiteral("Download")))
+      downloadButton = button;
+  }
+  QVERIFY(downloadButton != nullptr);
+  QTest::mouseClick(downloadButton, Qt::LeftButton);
+
+  QTRY_COMPARE_WITH_TIMEOUT(downloadButton->text(), QStringLiteral("Install Now"), 15000);
+  auto *progress = dialog.findChild<QProgressBar *>();
+  QVERIFY(progress != nullptr);
+  QCOMPARE(progress->value(), 100);
+  // 只验证校验完成，不点击安装，避免启动系统安装器。
 }
 
 QTEST_MAIN(DialogRenderTests)
