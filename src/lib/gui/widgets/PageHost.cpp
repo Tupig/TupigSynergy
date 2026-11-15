@@ -12,6 +12,7 @@
 #include <QStackedWidget>
 #include <QStyle>
 #include <QVBoxLayout>
+#include <QVariant>
 
 PageHost::PageHost(QWidget *home, QWidget *parent) : QWidget(parent)
 {
