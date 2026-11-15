@@ -167,6 +167,20 @@ QString appStyleSheet()
     QCheckBox, QRadioButton { color: %1; font-size: 12.5px; spacing: 8px; }
     QCheckBox:disabled, QRadioButton:disabled, QLabel:disabled { color: %4; }
 
+    /* Windows 使用窗口内菜单栏：32px、圆角悬停，与设计稿一致 */
+    QMenuBar {
+      background: %2; color: %1; font-size: 12.5px;
+      padding: 0 8px; border: 0;
+    }
+    QMenuBar::item { padding: 3px 9px; border-radius: 5px; background: transparent; }
+    QMenuBar::item:selected { background: %10; }
+    QMenu {
+      background: %5; color: %1; border: 1px solid %7; border-radius: 8px; padding: 4px;
+    }
+    QMenu::item { padding: 5px 10px; border-radius: 5px; }
+    QMenu::item:selected { background: %10; }
+    QMenu::separator { height: 1px; background: %7; margin: 4px 8px; }
+
     QWidget#statusBar { background: %19; }
     QLabel#statusText { font-size: 12px; }
     QLabel#statusRight { font-size: 11px; color: %4; }
