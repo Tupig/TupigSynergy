@@ -1257,6 +1257,22 @@ Inoltre, verifica di poter %1 il file di configurazione del server: %2</translat
         <translation>&amp;Rimuovi</translation>
     </message>
     <message>
+        <source>Top-left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Top-right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bottom-left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bottom-right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Screen name is empty</source>
         <translation>Il nome dello schermo è vuoto</translation>
     </message>

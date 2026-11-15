@@ -1257,6 +1257,22 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <translation>&amp;Удалить</translation>
     </message>
     <message>
+        <source>Top-left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Top-right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bottom-left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bottom-right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Screen name is empty</source>
         <translation>Имя экрана пустое</translation>
     </message>

@@ -14,6 +14,7 @@
 #include "validators/ScreenNameValidator.h"
 #include "validators/ValidationError.h"
 
+#include <QCheckBox>
 #include <QFormLayout>
 #include <QMessageBox>
 
@@ -52,6 +53,19 @@ ScreenSettingsDialog::ScreenSettingsDialog(
     }
   }
   ui->buttonBox->button(QDialogButtonBox::Cancel)->setFocus();
+
+  // 设计稿：四个死角复选框显示方位文字，宽度按文字取最小。
+  const QList<QPair<QCheckBox *, QString>> corners{
+      {ui->chkDeadTopLeft, tr("Top-left")},
+      {ui->chkDeadTopRight, tr("Top-right")},
+      {ui->chkDeadBottomLeft, tr("Bottom-left")},
+      {ui->chkDeadBottomRight, tr("Bottom-right")},
+  };
+  for (const auto &[checkBox, text] : corners) {
+    checkBox->setText(text);
+    checkBox->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    checkBox->setMinimumWidth(checkBox->fontMetrics().horizontalAdvance(text) + 32);
+  }
 
   ui->lineNameEdit->setText(m_screen->name());
 
