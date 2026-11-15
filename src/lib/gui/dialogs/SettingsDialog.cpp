@@ -32,6 +32,7 @@
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QGridLayout>
+#include <QLayoutItem>
 #include <QLabel>
 #include <QMessageBox>
 

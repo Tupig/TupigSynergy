@@ -7,6 +7,7 @@
 
 #include <QCheckBox>
 #include <QFrame>
+#include <QIcon>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
