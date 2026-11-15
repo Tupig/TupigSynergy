@@ -29,7 +29,7 @@ class QAction;
 class QMenu;
 class QLocalServer;
 
-class LogDock;
+class LogPanel;
 class PageHost;
 class QDialog;
 class StatusBar;
@@ -194,7 +194,7 @@ private:
   QLocalServer *m_guiDupeChecker = nullptr;
   synergy::gui::ipc::DaemonIpcClient *m_daemonIpcClient = nullptr;
 
-  LogDock *m_logDock;
+  LogPanel *m_logDock;
   StatusBar *m_statusBar = nullptr;
 
   // Window Menu

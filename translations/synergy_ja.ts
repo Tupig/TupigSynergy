@@ -299,59 +299,59 @@ Do you want to connect to the server?
     <name>LogDock</name>
     <message>
         <source>Log</source>
-        <translation>ログ</translation>
+        <translation type="vanished">ログ</translation>
     </message>
     <message>
         <source>Collapse Log</source>
-        <translation>ログを折りたたむ</translation>
+        <translation type="vanished">ログを折りたたむ</translation>
     </message>
     <message>
         <source>Copy Log</source>
-        <translation>ログをコピー</translation>
+        <translation type="vanished">ログをコピー</translation>
     </message>
     <message>
         <source>Clear Log</source>
-        <translation>ログを消去</translation>
+        <translation type="vanished">ログを消去</translation>
     </message>
     <message>
         <source>Detach from window</source>
-        <translation>ウィンドウから切り離し</translation>
+        <translation type="vanished">ウィンドウから切り離し</translation>
     </message>
     <message>
         <source>Close Log</source>
-        <translation>ログを閉じる</translation>
+        <translation type="vanished">ログを閉じる</translation>
     </message>
     <message>
         <source>All</source>
-        <translation>すべて</translation>
+        <translation type="vanished">すべて</translation>
     </message>
     <message>
         <source>Info</source>
-        <translation>情報</translation>
+        <translation type="vanished">情報</translation>
     </message>
     <message>
         <source>Warn</source>
-        <translation>警告</translation>
+        <translation type="vanished">警告</translation>
     </message>
     <message>
         <source>Error</source>
-        <translation>エラー</translation>
+        <translation type="vanished">エラー</translation>
     </message>
     <message>
         <source>Expand Log</source>
-        <translation>ログを展開</translation>
+        <translation type="vanished">ログを展開</translation>
     </message>
     <message>
         <source>Latest 6 · wrapped</source>
-        <translation>最新 6 件 · 自動折り返し</translation>
+        <translation type="vanished">最新 6 件 · 自動折り返し</translation>
     </message>
     <message>
         <source>Info %1 · Warn %2 · Error %3</source>
-        <translation>情報 %1 · 警告 %2 · エラー %3</translation>
+        <translation type="vanished">情報 %1 · 警告 %2 · エラー %3</translation>
     </message>
     <message>
         <source>Attach to window</source>
-        <translation>ウィンドウに結合</translation>
+        <translation type="vanished">ウィンドウに結合</translation>
     </message>
     <message>
         <source>Running</source>
@@ -359,7 +359,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Search</source>
-        <translation>検索</translation>
+        <translation type="vanished">検索</translation>
     </message>
 </context>
 <context>
@@ -387,6 +387,53 @@ Do you want to connect to the server?
     <message>
         <source>Verbose</source>
         <translation type="unfinished">冗長</translation>
+    </message>
+</context>
+<context>
+    <name>LogPanel</name>
+    <message>
+        <source>Log</source>
+        <translation type="unfinished">ログ</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation type="unfinished">すべて</translation>
+    </message>
+    <message>
+        <source>Info</source>
+        <translation type="unfinished">情報</translation>
+    </message>
+    <message>
+        <source>Warn</source>
+        <translation type="unfinished">警告</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation type="unfinished">エラー</translation>
+    </message>
+    <message>
+        <source>Copy Log</source>
+        <translation type="unfinished">ログをコピー</translation>
+    </message>
+    <message>
+        <source>Clear Log</source>
+        <translation type="unfinished">ログを消去</translation>
+    </message>
+    <message>
+        <source>Collapse Log</source>
+        <translation type="unfinished">ログを折りたたむ</translation>
+    </message>
+    <message>
+        <source>Latest 6 · wrapped</source>
+        <translation type="unfinished">最新 6 件 · 自動折り返し</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation type="unfinished">実行中</translation>
+    </message>
+    <message>
+        <source>Expand Log</source>
+        <translation type="unfinished">ログを展開</translation>
     </message>
 </context>
 <context>
@@ -531,7 +578,7 @@ A bound IP is now invalid, you may need to restart the server.</source>
     </message>
     <message>
         <source>Preferences</source>
-        <translation type="obsolete">設定</translation>
+        <translation type="unfinished">設定</translation>
     </message>
     <message>
         <source>&amp;File</source>
@@ -722,6 +769,10 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Show &amp;Log</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>No Updates</source>
         <translation type="unfinished"></translation>
     </message>
@@ -757,6 +808,18 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Port</source>
         <translation type="unfinished">ポート</translation>
     </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ModeCard</name>
@@ -775,13 +838,6 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Unnamed</source>
         <extracomment>Used as the hostname. Translation may not contain spaces</extracomment>
         <translation>Unnamed</translation>
-    </message>
-</context>
-<context>
-    <name>PageHost</name>
-    <message>
-        <source>Back</source>
-        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1692,6 +1748,14 @@ Enabling this setting will disable the server config GUI.</source>
  %1</translation>
     </message>
     <message>
+        <source>TLS enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>TLS disabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>A new version v%1 is available</source>
         <translation type="vanished">新しいバージョン(v%1)が利用できます</translation>
     </message>
@@ -1713,11 +1777,11 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>%1 Encryption Enabled</source>
-        <translation>%1 暗号化有効</translation>
+        <translation type="vanished">%1 暗号化有効</translation>
     </message>
     <message>
         <source>Encryption Disabled</source>
-        <translation>暗号化無効</translation>
+        <translation type="vanished">暗号化無効</translation>
     </message>
 </context>
 <context>

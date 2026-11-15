@@ -301,59 +301,59 @@ Do you want to connect to the server?
     <name>LogDock</name>
     <message>
         <source>Log</source>
-        <translation>日志</translation>
+        <translation type="vanished">日志</translation>
     </message>
     <message>
         <source>Collapse Log</source>
-        <translation>收起日志</translation>
+        <translation type="vanished">收起日志</translation>
     </message>
     <message>
         <source>Copy Log</source>
-        <translation>复制日志</translation>
+        <translation type="vanished">复制日志</translation>
     </message>
     <message>
         <source>Clear Log</source>
-        <translation>清空日志</translation>
+        <translation type="vanished">清空日志</translation>
     </message>
     <message>
         <source>Detach from window</source>
-        <translation>从窗口分离</translation>
+        <translation type="vanished">从窗口分离</translation>
     </message>
     <message>
         <source>Close Log</source>
-        <translation>关闭日志</translation>
+        <translation type="vanished">关闭日志</translation>
     </message>
     <message>
         <source>All</source>
-        <translation>全部</translation>
+        <translation type="vanished">全部</translation>
     </message>
     <message>
         <source>Info</source>
-        <translation>信息</translation>
+        <translation type="vanished">信息</translation>
     </message>
     <message>
         <source>Warn</source>
-        <translation>警告</translation>
+        <translation type="vanished">警告</translation>
     </message>
     <message>
         <source>Error</source>
-        <translation>错误</translation>
+        <translation type="vanished">错误</translation>
     </message>
     <message>
         <source>Expand Log</source>
-        <translation>展开日志</translation>
+        <translation type="vanished">展开日志</translation>
     </message>
     <message>
         <source>Latest 6 · wrapped</source>
-        <translation>最新 6 条 · 自动换行</translation>
+        <translation type="vanished">最新 6 条 · 自动换行</translation>
     </message>
     <message>
         <source>Info %1 · Warn %2 · Error %3</source>
-        <translation>信息 %1 · 警告 %2 · 错误 %3</translation>
+        <translation type="vanished">信息 %1 · 警告 %2 · 错误 %3</translation>
     </message>
     <message>
         <source>Attach to window</source>
-        <translation>吸附到窗口</translation>
+        <translation type="vanished">吸附到窗口</translation>
     </message>
     <message>
         <source>Running</source>
@@ -361,7 +361,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Search</source>
-        <translation>搜索</translation>
+        <translation type="vanished">搜索</translation>
     </message>
 </context>
 <context>
@@ -389,6 +389,53 @@ Do you want to connect to the server?
     <message>
         <source>Verbose</source>
         <translation>详细</translation>
+    </message>
+</context>
+<context>
+    <name>LogPanel</name>
+    <message>
+        <source>Log</source>
+        <translation type="unfinished">日志</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation type="unfinished">全部</translation>
+    </message>
+    <message>
+        <source>Info</source>
+        <translation type="unfinished">信息</translation>
+    </message>
+    <message>
+        <source>Warn</source>
+        <translation type="unfinished">警告</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation type="unfinished">错误</translation>
+    </message>
+    <message>
+        <source>Copy Log</source>
+        <translation type="unfinished">复制日志</translation>
+    </message>
+    <message>
+        <source>Clear Log</source>
+        <translation type="unfinished">清空日志</translation>
+    </message>
+    <message>
+        <source>Collapse Log</source>
+        <translation type="unfinished">收起日志</translation>
+    </message>
+    <message>
+        <source>Latest 6 · wrapped</source>
+        <translation type="unfinished">最新 6 条 · 自动换行</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation type="unfinished">运行中</translation>
+    </message>
+    <message>
+        <source>Expand Log</source>
+        <translation type="unfinished">展开日志</translation>
     </message>
 </context>
 <context>
@@ -533,7 +580,7 @@ A bound IP is now invalid, you may need to restart the server.</source>
     </message>
     <message>
         <source>Preferences</source>
-        <translation type="obsolete">首选项</translation>
+        <translation type="unfinished">首选项</translation>
     </message>
     <message>
         <source>&amp;File</source>
@@ -725,6 +772,10 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <translation>检查更新(&amp;U)</translation>
     </message>
     <message>
+        <source>Show &amp;Log</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>No Updates</source>
         <translation>无更新</translation>
     </message>
@@ -760,6 +811,18 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Port</source>
         <translation>端口</translation>
     </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished">返回</translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ModeCard</name>
@@ -792,7 +855,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     <name>PageHost</name>
     <message>
         <source>Back</source>
-        <translation>返回</translation>
+        <translation type="vanished">返回</translation>
     </message>
 </context>
 <context>
@@ -1719,6 +1782,14 @@ Enabling this setting will disable the server config GUI.</source>
  %1</translation>
     </message>
     <message>
+        <source>TLS enabled</source>
+        <translation>TLS 已启用</translation>
+    </message>
+    <message>
+        <source>TLS disabled</source>
+        <translation>TLS 未启用</translation>
+    </message>
+    <message>
         <source>A new version v%1 is available</source>
         <translation type="vanished">新版本 v%1 可用</translation>
     </message>
@@ -1740,11 +1811,11 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>%1 Encryption Enabled</source>
-        <translation>%1 加密已启用</translation>
+        <translation type="vanished">%1 加密已启用</translation>
     </message>
     <message>
         <source>Encryption Disabled</source>
-        <translation>加密已禁用</translation>
+        <translation type="vanished">加密已禁用</translation>
     </message>
 </context>
 <context>

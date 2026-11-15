@@ -299,59 +299,59 @@ Do you want to connect to the server?
     <name>LogDock</name>
     <message>
         <source>Log</source>
-        <translation>로그</translation>
+        <translation type="vanished">로그</translation>
     </message>
     <message>
         <source>Collapse Log</source>
-        <translation>로그 접기</translation>
+        <translation type="vanished">로그 접기</translation>
     </message>
     <message>
         <source>Copy Log</source>
-        <translation>로그 복사</translation>
+        <translation type="vanished">로그 복사</translation>
     </message>
     <message>
         <source>Clear Log</source>
-        <translation>로그 지우기</translation>
+        <translation type="vanished">로그 지우기</translation>
     </message>
     <message>
         <source>Detach from window</source>
-        <translation>창에서 분리</translation>
+        <translation type="vanished">창에서 분리</translation>
     </message>
     <message>
         <source>Close Log</source>
-        <translation>로그 닫기</translation>
+        <translation type="vanished">로그 닫기</translation>
     </message>
     <message>
         <source>All</source>
-        <translation>전체</translation>
+        <translation type="vanished">전체</translation>
     </message>
     <message>
         <source>Info</source>
-        <translation>정보</translation>
+        <translation type="vanished">정보</translation>
     </message>
     <message>
         <source>Warn</source>
-        <translation>경고</translation>
+        <translation type="vanished">경고</translation>
     </message>
     <message>
         <source>Error</source>
-        <translation>오류</translation>
+        <translation type="vanished">오류</translation>
     </message>
     <message>
         <source>Expand Log</source>
-        <translation>로그 펼치기</translation>
+        <translation type="vanished">로그 펼치기</translation>
     </message>
     <message>
         <source>Latest 6 · wrapped</source>
-        <translation>최신 6개 · 자동 줄바꿈</translation>
+        <translation type="vanished">최신 6개 · 자동 줄바꿈</translation>
     </message>
     <message>
         <source>Info %1 · Warn %2 · Error %3</source>
-        <translation>정보 %1 · 경고 %2 · 오류 %3</translation>
+        <translation type="vanished">정보 %1 · 경고 %2 · 오류 %3</translation>
     </message>
     <message>
         <source>Attach to window</source>
-        <translation>창에 붙이기</translation>
+        <translation type="vanished">창에 붙이기</translation>
     </message>
     <message>
         <source>Running</source>
@@ -359,7 +359,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Search</source>
-        <translation>검색</translation>
+        <translation type="vanished">검색</translation>
     </message>
 </context>
 <context>
@@ -387,6 +387,53 @@ Do you want to connect to the server?
     <message>
         <source>Verbose</source>
         <translation type="unfinished">말 수가 많은</translation>
+    </message>
+</context>
+<context>
+    <name>LogPanel</name>
+    <message>
+        <source>Log</source>
+        <translation type="unfinished">로그</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation type="unfinished">전체</translation>
+    </message>
+    <message>
+        <source>Info</source>
+        <translation type="unfinished">정보</translation>
+    </message>
+    <message>
+        <source>Warn</source>
+        <translation type="unfinished">경고</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation type="unfinished">오류</translation>
+    </message>
+    <message>
+        <source>Copy Log</source>
+        <translation type="unfinished">로그 복사</translation>
+    </message>
+    <message>
+        <source>Clear Log</source>
+        <translation type="unfinished">로그 지우기</translation>
+    </message>
+    <message>
+        <source>Collapse Log</source>
+        <translation type="unfinished">로그 접기</translation>
+    </message>
+    <message>
+        <source>Latest 6 · wrapped</source>
+        <translation type="unfinished">최신 6개 · 자동 줄바꿈</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation type="unfinished">실행 중</translation>
+    </message>
+    <message>
+        <source>Expand Log</source>
+        <translation type="unfinished">로그 펼치기</translation>
     </message>
 </context>
 <context>
@@ -531,7 +578,7 @@ A bound IP is now invalid, you may need to restart the server.</source>
     </message>
     <message>
         <source>Preferences</source>
-        <translation type="obsolete">환경설정</translation>
+        <translation type="unfinished">환경설정</translation>
     </message>
     <message>
         <source>&amp;File</source>
@@ -722,6 +769,10 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Show &amp;Log</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>No Updates</source>
         <translation type="unfinished"></translation>
     </message>
@@ -757,6 +808,18 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Port</source>
         <translation type="unfinished">포트</translation>
     </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ModeCard</name>
@@ -775,13 +838,6 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Unnamed</source>
         <extracomment>Used as the hostname. Translation may not contain spaces</extracomment>
         <translation>이름없음</translation>
-    </message>
-</context>
-<context>
-    <name>PageHost</name>
-    <message>
-        <source>Back</source>
-        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1690,6 +1746,14 @@ Enabling this setting will disable the server config GUI.</source>
  %1</translation>
     </message>
     <message>
+        <source>TLS enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>TLS disabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>A new version v%1 is available</source>
         <translation type="vanished">새 버전(v%1)을 사용할 수 있습니다</translation>
     </message>
@@ -1711,11 +1775,11 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>%1 Encryption Enabled</source>
-        <translation>%1 암호화 사용</translation>
+        <translation type="vanished">%1 암호화 사용</translation>
     </message>
     <message>
         <source>Encryption Disabled</source>
-        <translation>암호화 사용 안 함</translation>
+        <translation type="vanished">암호화 사용 안 함</translation>
     </message>
 </context>
 <context>

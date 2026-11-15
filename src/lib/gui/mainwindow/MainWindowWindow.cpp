@@ -29,7 +29,7 @@
 #include "gui/ipc/DaemonIpcClient.h"
 #include "gui/update/UpdateChecker.h"
 #include "gui/update/UpdateDialog.h"
-#include "gui/widgets/LogDock.h"
+#include "gui/widgets/LogPanel.h"
 
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
@@ -79,7 +79,15 @@ void MainWindow::createMenuBar()
   m_menuFile->addSeparator();
   m_menuFile->addAction(m_actionQuit);
 
-  m_menuView->addAction(m_logDock->toggleViewAction());
+  auto *logAction = new QAction(tr("Show &Log"), this);
+  logAction->setCheckable(true);
+  logAction->setChecked(Settings::value(Settings::Gui::LogExpanded).toBool());
+  connect(logAction, &QAction::toggled, this, &MainWindow::toggleLogVisible);
+  connect(m_logDock, &LogPanel::collapsedChanged, logAction, [logAction](bool collapsed) {
+    QSignalBlocker blocker(logAction);
+    logAction->setChecked(!collapsed);
+  });
+  m_menuView->addAction(logAction);
 
   // macOS moves actions that carry a menu role into the application menu.
   // A menu holding only such actions renders empty, so macOS gets no Edit
@@ -260,10 +268,6 @@ void MainWindow::closeEvent(QCloseEvent *event)
     Settings::setValue(Settings::Gui::AutoStartCore, m_coreProcess.isStarted());
   }
   qDebug() << "quitting application";
-
-  // any connected dock view acitons will be triggered
-  // disconnect them before accepting the event
-  disconnect(m_logDock->toggleViewAction(), &QAction::toggled, nullptr, nullptr);
 
   event->accept();
   QApplication::quit();

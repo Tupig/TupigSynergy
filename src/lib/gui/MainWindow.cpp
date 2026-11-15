@@ -27,7 +27,7 @@
 #include "gui/TlsUtility.h"
 #include "gui/core/CoreProcess.h"
 #include "gui/ipc/DaemonIpcClient.h"
-#include "gui/widgets/LogDock.h"
+#include "gui/widgets/LogPanel.h"
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
 #include "widgets/PageHost.h"
@@ -74,8 +74,6 @@ MainWindow::MainWindow()
       m_trayIcon{new QSystemTrayIcon(this)},
       m_guiDupeChecker{new QLocalServer(this)},
       m_daemonIpcClient{new ipc::DaemonIpcClient(this)},
-      m_logDock{new LogDock(this)},
-      m_statusBar{new StatusBar(this)},
       m_menuFile{new QMenu(this)},
       m_menuEdit{new QMenu(this)},
       m_menuView{new QMenu(this)},
@@ -100,13 +98,17 @@ MainWindow::MainWindow()
 
   setWindowIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
 
-  addDockWidget(Qt::BottomDockWidgetArea, m_logDock);
-  // 卡片按内容高度，不随窗口拉伸；空出来的高度留给日志区。
-  ui->groupBox->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+  m_logDock = ui->logPanel;
+  m_statusBar = ui->statusBar;
+  m_pageHost = ui->pageHost;
 
-  ui->btnEditName->setProperty("iconButton", true);
-  ui->btnSaveServerConfig->setProperty("iconButton", true);
-  ui->btnRestartCore->setProperty("iconButton", true);
+  // 纯图标按钮：设计稿的页面条、编辑器与日志工具条。
+  for (auto *button :
+       {ui->btnBack, ui->btnEditName, ui->btnSaveServerConfig, ui->btnRestartCore, ui->btnSettingsShortcut,
+        ui->btnUpdatesShortcut, ui->btnAboutShortcut}) {
+    button->setProperty("iconButton", true);
+  }
+
   ui->spinPort->setValue(Settings::value(Settings::Core::Port).toInt());
   ui->spinPort->setEnabled(Settings::isWritable());
   connect(ui->spinPort, &QSpinBox::editingFinished, this, [this] {
@@ -120,6 +122,25 @@ MainWindow::MainWindow()
     if (m_coreProcess.isStarted())
       m_coreProcess.restart();
   });
+
+  connect(ui->btnBack, &QPushButton::clicked, this, [this] {
+    if (auto *editor = ui->pageStack->currentWidget(); editor != ui->workspace) {
+      if (auto *area = qobject_cast<QScrollArea *>(editor)) {
+        if (auto *dialog = qobject_cast<QDialog *>(area->widget()))
+          dialog->reject();
+      }
+    }
+  });
+  connect(ui->pageHost, &PageHost::editorVisibilityChanged, this, [this](bool visible) {
+    ui->btnBack->setVisible(visible);
+    ui->logPanel->setVisible(!visible);
+  });
+  connect(ui->pageHost, &PageHost::titleChanged, this, [this](const QString &title) {
+    ui->pageTitle->setText(title.isEmpty() ? tr("Devices & Connection") : title);
+  });
+  connect(ui->btnSettingsShortcut, &QPushButton::clicked, this, [this] { m_actionSettings->trigger(); });
+  connect(ui->btnUpdatesShortcut, &QPushButton::clicked, this, [this] { m_actionCheckForUpdates->trigger(); });
+  connect(ui->btnAboutShortcut, &QPushButton::clicked, this, [this] { m_actionAbout->trigger(); });
 
   // Setup Actions
   m_actionAbout->setMenuRole(QAction::AboutRole);
@@ -168,53 +189,6 @@ MainWindow::MainWindow()
   // In case of a previous crash remove first
   QLocalServer::removeServer(m_guiSocketName);
   m_guiDupeChecker->listen(m_guiSocketName);
-
-  // 设计稿的页面条：左侧页面标题，右侧「首选项 / 更新 / 关于」快捷入口。
-  if (auto *central = ui->topLevelWidget->layout(); central != nullptr) {
-    auto *pagebar = new QWidget(this);
-    pagebar->setObjectName(QStringLiteral("pageBar"));
-    auto *pageLayout = new QHBoxLayout(pagebar);
-    pageLayout->setContentsMargins(12, 8, 12, 0);
-    pageLayout->setSpacing(8);
-    auto *pageTitle = new QLabel(tr("Devices & Connection"), pagebar);
-    pageTitle->setObjectName(QStringLiteral("pageTitle"));
-    pageLayout->addWidget(pageTitle);
-    pageLayout->addStretch(1);
-    const auto addShortcut = [&](const QString &text, QAction *action) {
-      auto *button = new QPushButton(pagebar);
-      button->setObjectName(QStringLiteral("pageShortcut"));
-      button->setProperty("pageAction", text);
-      button->setProperty("iconButton", true);
-      button->setIcon(action->icon());
-      connect(action, &QAction::changed, button, [button, action] {
-        const auto label = QString(action->text()).remove(QLatin1Char('&'));
-        button->setToolTip(label);
-        button->setAccessibleName(label);
-        button->setEnabled(action->isEnabled());
-      });
-      connect(button, &QPushButton::clicked, action, &QAction::trigger);
-      pageLayout->addWidget(button);
-    };
-    addShortcut(QStringLiteral("settings"), m_actionSettings);
-    addShortcut(QStringLiteral("updates"), m_actionCheckForUpdates);
-    addShortcut(QStringLiteral("about"), m_actionAbout);
-    if (auto *box = qobject_cast<QBoxLayout *>(central)) {
-      box->insertWidget(0, pagebar);
-      box->setContentsMargins(12, 10, 12, 10);
-      box->setSpacing(8);
-    }
-  }
-
-  m_pageHost = new PageHost(takeCentralWidget(), this);
-  setCentralWidget(m_pageHost);
-  connect(m_pageHost, &PageHost::editorVisibilityChanged, this, [this](bool visible) {
-    if (visible) {
-      m_logDock->setProperty("visibleBeforePage", !m_logDock->isHidden());
-      m_logDock->hide();
-    } else if (m_logDock->property("visibleBeforePage").toBool()) {
-      m_logDock->show();
-    }
-  });
 
   createMenuBar();
   setupControls();
@@ -301,9 +275,7 @@ void MainWindow::setupControls()
     Settings::setValue(Settings::Core::LastVersion, kVersion);
   }
 
-  if (!Settings::value(Settings::Gui::LogExpanded).toBool()) {
-    m_logDock->hide();
-  }
+  m_logDock->setCollapsed(!Settings::value(Settings::Gui::LogExpanded).toBool());
 
   ui->serverOptions->setVisible(false);
   ui->clientOptions->setVisible(false);
@@ -323,7 +295,6 @@ void MainWindow::setupControls()
   } else {
     ui->btnSaveServerConfig->setIconSize(QSize(22, 22));
   }
-  setStatusBar(m_statusBar);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -401,7 +372,10 @@ void MainWindow::connectSlots()
   connect(ui->rbModeServer, &QRadioButton::toggled, this, &MainWindow::coreModeToggled);
   connect(ui->rbModeClient, &QRadioButton::toggled, this, &MainWindow::coreModeToggled);
 
-  connect(m_logDock->toggleViewAction(), &QAction::toggled, this, &MainWindow::toggleLogVisible);
+  connect(m_logDock, &LogPanel::collapsedChanged, this, [this](bool collapsed) {
+    Settings::setValue(Settings::Gui::LogExpanded, !collapsed);
+    Settings::setValue(Settings::Gui::WindowGeometry, geometry());
+  });
 
   connect(m_statusBar, &StatusBar::requestShowMyFingerprints, this, &MainWindow::showMyFingerprint);
 
@@ -418,34 +392,8 @@ void MainWindow::connectSlots()
 
 void MainWindow::toggleLogVisible(bool visible)
 {
-  // When the main window is hidden e.g. close to tray / minimized), this also triggers the log visibility toggle,
-  // but we don't want to hide the log in this case since we would need to un-hide it when the window is shown again.
-  if (!isVisible() || isMinimized() || (m_pageHost && m_pageHost->hasEditor())) {
-    qDebug() << "not toggling log, window not visible or editor active";
-    return;
-  }
-
-  // Keep the window resizable: the QMainWindow dock splitter can only move
-  // while the window itself is allowed to change height. Locking the size
-  // here made the log area impossible to drag.
-  setMinimumSize(minimumSizeHint());
-  Settings::setValue(Settings::Gui::LogExpanded, visible);
-  if (visible) {
-    if (m_logDock->isFloating()) {
-      adjustSize();
-    } else {
-      QTimer::singleShot(15, this, [&] { resize(m_expandedSize); });
-    }
-  } else {
-    if (!m_logDock->isFloating()) {
-      m_expandedSize = geometry().size();
-    }
-    m_logDock->hide();
-    if (!m_logDock->isFloating()) {
-      adjustSize();
-    }
-  }
-  Settings::setValue(Settings::Gui::WindowGeometry, geometry());
+  // 视图菜单与工具条共用同一折叠状态；收起时只保留最新一条。
+  m_logDock->setCollapsed(!visible);
 }
 
 void MainWindow::settingsChanged(const QString &key)

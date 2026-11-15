@@ -118,8 +118,8 @@ add_library(${target} STATIC
   widgets/FingerprintPreview.h
   widgets/KeySequenceWidget.cpp
   widgets/KeySequenceWidget.h
-  widgets/LogDock.cpp
-  widgets/LogDock.h
+  widgets/LogPanel.cpp
+  widgets/LogPanel.h
   widgets/LogWidget.h
   widgets/LogWidget.cpp
   widgets/ModeCard.cpp

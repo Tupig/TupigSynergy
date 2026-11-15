@@ -7,28 +7,32 @@
 #include <QWidget>
 
 class QDialog;
-class QLabel;
-class QPushButton;
 class QStackedWidget;
 
-// 编辑器保留原有 accept/reject 事务，导航仅负责展示与生命周期。
+/**
+ * @brief 设计稿的内容区：主页与子页面共用同一窗口区域。
+ *
+ * 页面栈由 MainWindow.ui 声明（objectName 为 pageStack）；这里只负责把编辑器
+ * 包装成可滚动的子页，并在页面关闭后回到上一页。
+ */
 class PageHost : public QWidget
 {
   Q_OBJECT
 public:
-  explicit PageHost(QWidget *home, QWidget *parent = nullptr);
+  explicit PageHost(QWidget *parent = nullptr);
+
   void push(QDialog *editor);
-  bool activateEditor(const QMetaObject &type);
   static void present(QWidget *origin, QDialog *editor);
   [[nodiscard]] bool hasEditor() const;
+  bool activateEditor(const QMetaObject &type);
 
 Q_SIGNALS:
   void editorVisibilityChanged(bool visible);
+  void titleChanged(const QString &title);
 
 private:
+  QStackedWidget *m_stack = nullptr;
+  QStackedWidget *stack();
   bool m_editorVisible = false;
-  QStackedWidget *m_stack;
-  QLabel *m_title;
-  QPushButton *m_back;
   void updateNavigation();
 };

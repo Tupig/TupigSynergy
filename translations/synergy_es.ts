@@ -299,59 +299,59 @@ Do you want to connect to the server?
     <name>LogDock</name>
     <message>
         <source>Log</source>
-        <translation type="unfinished">Registro</translation>
+        <translation type="obsolete">Registro</translation>
     </message>
     <message>
         <source>Collapse Log</source>
-        <translation>Contraer registro</translation>
+        <translation type="vanished">Contraer registro</translation>
     </message>
     <message>
         <source>Copy Log</source>
-        <translation>Copiar registro</translation>
+        <translation type="vanished">Copiar registro</translation>
     </message>
     <message>
         <source>Clear Log</source>
-        <translation>Borrar registro</translation>
+        <translation type="vanished">Borrar registro</translation>
     </message>
     <message>
         <source>Detach from window</source>
-        <translation type="unfinished">Separar de la ventana</translation>
+        <translation type="obsolete">Separar de la ventana</translation>
     </message>
     <message>
         <source>Close Log</source>
-        <translation type="unfinished">Cerrar registro</translation>
+        <translation type="obsolete">Cerrar registro</translation>
     </message>
     <message>
         <source>All</source>
-        <translation>Todo</translation>
+        <translation type="vanished">Todo</translation>
     </message>
     <message>
         <source>Info</source>
-        <translation>Información</translation>
+        <translation type="vanished">Información</translation>
     </message>
     <message>
         <source>Warn</source>
-        <translation>Aviso</translation>
+        <translation type="vanished">Aviso</translation>
     </message>
     <message>
         <source>Error</source>
-        <translation>Error</translation>
+        <translation type="vanished">Error</translation>
     </message>
     <message>
         <source>Expand Log</source>
-        <translation>Expandir registro</translation>
+        <translation type="vanished">Expandir registro</translation>
     </message>
     <message>
         <source>Latest 6 · wrapped</source>
-        <translation>Últimas 6 · ajuste</translation>
+        <translation type="vanished">Últimas 6 · ajuste</translation>
     </message>
     <message>
         <source>Info %1 · Warn %2 · Error %3</source>
-        <translation>Info %1 · Aviso %2 · Error %3</translation>
+        <translation type="vanished">Info %1 · Aviso %2 · Error %3</translation>
     </message>
     <message>
         <source>Attach to window</source>
-        <translation type="unfinished">Adjuntar a la ventana</translation>
+        <translation type="obsolete">Adjuntar a la ventana</translation>
     </message>
     <message>
         <source>Running</source>
@@ -359,7 +359,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Search</source>
-        <translation>Buscar</translation>
+        <translation type="vanished">Buscar</translation>
     </message>
 </context>
 <context>
@@ -387,6 +387,53 @@ Do you want to connect to the server?
     <message>
         <source>Verbose</source>
         <translation type="unfinished">Verboso</translation>
+    </message>
+</context>
+<context>
+    <name>LogPanel</name>
+    <message>
+        <source>Log</source>
+        <translation type="unfinished">Registro</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation type="unfinished">Todo</translation>
+    </message>
+    <message>
+        <source>Info</source>
+        <translation type="unfinished">Información</translation>
+    </message>
+    <message>
+        <source>Warn</source>
+        <translation type="unfinished">Aviso</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation type="unfinished">Error</translation>
+    </message>
+    <message>
+        <source>Copy Log</source>
+        <translation type="unfinished">Copiar registro</translation>
+    </message>
+    <message>
+        <source>Clear Log</source>
+        <translation type="unfinished">Borrar registro</translation>
+    </message>
+    <message>
+        <source>Collapse Log</source>
+        <translation type="unfinished">Contraer registro</translation>
+    </message>
+    <message>
+        <source>Latest 6 · wrapped</source>
+        <translation type="unfinished">Últimas 6 · ajuste</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation type="unfinished">En ejecución</translation>
+    </message>
+    <message>
+        <source>Expand Log</source>
+        <translation type="unfinished">Expandir registro</translation>
     </message>
 </context>
 <context>
@@ -584,7 +631,7 @@ La dirección IP asignada ahora no es válida; es posible que deba reiniciar el 
     </message>
     <message>
         <source>Preferences</source>
-        <translation type="obsolete">Preferencias</translation>
+        <translation type="unfinished">Preferencias</translation>
     </message>
     <message>
         <source>&amp;File</source>
@@ -722,6 +769,10 @@ Además, verifique que puede %1 el archivo de configuración del servidor: %2</t
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Show &amp;Log</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>No Updates</source>
         <translation type="unfinished"></translation>
     </message>
@@ -757,6 +808,18 @@ Además, verifique que puede %1 el archivo de configuración del servidor: %2</t
         <source>Port</source>
         <translation type="unfinished">Puerto</translation>
     </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ModeCard</name>
@@ -775,13 +838,6 @@ Además, verifique que puede %1 el archivo de configuración del servidor: %2</t
         <source>Unnamed</source>
         <extracomment>Used as the hostname. Translation may not contain spaces</extracomment>
         <translation type="unfinished">Sin-nombre</translation>
-    </message>
-</context>
-<context>
-    <name>PageHost</name>
-    <message>
-        <source>Back</source>
-        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1691,6 +1747,14 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
  %1</translation>
     </message>
     <message>
+        <source>TLS enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>TLS disabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>A new version v%1 is available</source>
         <translation type="obsolete">Ya está disponible una nueva versión v%1</translation>
     </message>
@@ -1712,11 +1776,11 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
     </message>
     <message>
         <source>%1 Encryption Enabled</source>
-        <translation type="unfinished">%1 Cifrado habilitado</translation>
+        <translation type="obsolete">%1 Cifrado habilitado</translation>
     </message>
     <message>
         <source>Encryption Disabled</source>
-        <translation type="unfinished">Cifrado deshabilitado</translation>
+        <translation type="obsolete">Cifrado deshabilitado</translation>
     </message>
 </context>
 <context>

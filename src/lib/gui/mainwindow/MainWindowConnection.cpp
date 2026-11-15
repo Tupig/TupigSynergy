@@ -27,7 +27,7 @@
 #include "gui/TlsUtility.h"
 #include "gui/core/CoreProcess.h"
 #include "gui/ipc/DaemonIpcClient.h"
-#include "gui/widgets/LogDock.h"
+#include "gui/widgets/LogPanel.h"
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
 #include "widgets/StatusBar.h"

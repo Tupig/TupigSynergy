@@ -27,7 +27,7 @@
 #include "gui/TlsUtility.h"
 #include "gui/core/CoreProcess.h"
 #include "gui/ipc/DaemonIpcClient.h"
-#include "gui/widgets/LogDock.h"
+#include "gui/widgets/LogPanel.h"
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
 #include "widgets/StatusBar.h"
@@ -89,7 +89,6 @@ void MainWindow::clearSettings()
     disconnect(&m_coreProcess, nullptr, this, nullptr);
     disconnect(m_guiDupeChecker, nullptr, this, nullptr);
     disconnect(m_trayIcon, nullptr, this, nullptr);
-    disconnect(m_logDock->toggleViewAction(), nullptr, this, nullptr);
 
     m_coreProcess.stop();
     m_coreProcess.clearSettings();

@@ -111,9 +111,10 @@ void LogWidget::updateVisibleHeight()
       height += m_textLog->document()->documentLayout()->blockBoundingRect(block).height();
     }
   }
-  height += (m_visibleLines - records) * m_textLog->fontMetrics().lineSpacing();
+  // 空态不预留六行空白；有记录时最多显示六条，超长记录仍在视口内滚动。
+  if (records == 0)
+    height = m_textLog->fontMetrics().lineSpacing();
   height += 2 * (m_textLog->document()->documentMargin() + m_textLog->frameWidth());
-  // 六条是记录数量而非无限高度；超长记录仍在文本视口内滚动。
   setFixedHeight(qMin(qCeil(height), 236));
 }
 

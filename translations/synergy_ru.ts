@@ -299,59 +299,59 @@ Do you want to connect to the server?
     <name>LogDock</name>
     <message>
         <source>Log</source>
-        <translation>Журнал</translation>
+        <translation type="vanished">Журнал</translation>
     </message>
     <message>
         <source>Collapse Log</source>
-        <translation>Свернуть журнал</translation>
+        <translation type="vanished">Свернуть журнал</translation>
     </message>
     <message>
         <source>Copy Log</source>
-        <translation>Копировать журнал</translation>
+        <translation type="vanished">Копировать журнал</translation>
     </message>
     <message>
         <source>Clear Log</source>
-        <translation>Очистить журнал</translation>
+        <translation type="vanished">Очистить журнал</translation>
     </message>
     <message>
         <source>Detach from window</source>
-        <translation>Открепить от окна</translation>
+        <translation type="vanished">Открепить от окна</translation>
     </message>
     <message>
         <source>Close Log</source>
-        <translation>Закрыть журнал</translation>
+        <translation type="vanished">Закрыть журнал</translation>
     </message>
     <message>
         <source>All</source>
-        <translation>Все</translation>
+        <translation type="vanished">Все</translation>
     </message>
     <message>
         <source>Info</source>
-        <translation>Информация</translation>
+        <translation type="vanished">Информация</translation>
     </message>
     <message>
         <source>Warn</source>
-        <translation>Предупреждение</translation>
+        <translation type="vanished">Предупреждение</translation>
     </message>
     <message>
         <source>Error</source>
-        <translation>Ошибка</translation>
+        <translation type="vanished">Ошибка</translation>
     </message>
     <message>
         <source>Expand Log</source>
-        <translation>Развернуть журнал</translation>
+        <translation type="vanished">Развернуть журнал</translation>
     </message>
     <message>
         <source>Latest 6 · wrapped</source>
-        <translation>Последние 6 · перенос</translation>
+        <translation type="vanished">Последние 6 · перенос</translation>
     </message>
     <message>
         <source>Info %1 · Warn %2 · Error %3</source>
-        <translation>Инфо %1 · Предупр. %2 · Ошибка %3</translation>
+        <translation type="vanished">Инфо %1 · Предупр. %2 · Ошибка %3</translation>
     </message>
     <message>
         <source>Attach to window</source>
-        <translation>Прикрепить к окну</translation>
+        <translation type="vanished">Прикрепить к окну</translation>
     </message>
     <message>
         <source>Running</source>
@@ -359,7 +359,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Search</source>
-        <translation>Поиск</translation>
+        <translation type="vanished">Поиск</translation>
     </message>
 </context>
 <context>
@@ -387,6 +387,53 @@ Do you want to connect to the server?
     <message>
         <source>Verbose</source>
         <translation type="unfinished">Многословный</translation>
+    </message>
+</context>
+<context>
+    <name>LogPanel</name>
+    <message>
+        <source>Log</source>
+        <translation type="unfinished">Журнал</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation type="unfinished">Все</translation>
+    </message>
+    <message>
+        <source>Info</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Warn</source>
+        <translation type="unfinished">Предупреждение</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation type="unfinished">Ошибка</translation>
+    </message>
+    <message>
+        <source>Copy Log</source>
+        <translation type="unfinished">Копировать журнал</translation>
+    </message>
+    <message>
+        <source>Clear Log</source>
+        <translation type="unfinished">Очистить журнал</translation>
+    </message>
+    <message>
+        <source>Collapse Log</source>
+        <translation type="unfinished">Свернуть журнал</translation>
+    </message>
+    <message>
+        <source>Latest 6 · wrapped</source>
+        <translation type="unfinished">Последние 6 · перенос</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation type="unfinished">Работает</translation>
+    </message>
+    <message>
+        <source>Expand Log</source>
+        <translation type="unfinished">Развернуть журнал</translation>
     </message>
 </context>
 <context>
@@ -531,7 +578,7 @@ A bound IP is now invalid, you may need to restart the server.</source>
     </message>
     <message>
         <source>Preferences</source>
-        <translation type="obsolete">Настройки</translation>
+        <translation type="unfinished">Настройки</translation>
     </message>
     <message>
         <source>&amp;File</source>
@@ -722,6 +769,10 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Show &amp;Log</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>No Updates</source>
         <translation type="unfinished"></translation>
     </message>
@@ -757,6 +808,18 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Port</source>
         <translation type="unfinished">Порт</translation>
     </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ModeCard</name>
@@ -775,13 +838,6 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Unnamed</source>
         <extracomment>Used as the hostname. Translation may not contain spaces</extracomment>
         <translation>Без_имени</translation>
-    </message>
-</context>
-<context>
-    <name>PageHost</name>
-    <message>
-        <source>Back</source>
-        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1690,6 +1746,14 @@ Enabling this setting will disable the server config GUI.</source>
  %1</translation>
     </message>
     <message>
+        <source>TLS enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>TLS disabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>A new version v%1 is available</source>
         <translation type="vanished">Доступна новая версия v%1</translation>
     </message>
@@ -1711,11 +1775,11 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>%1 Encryption Enabled</source>
-        <translation>Шифрование %1 включено</translation>
+        <translation type="vanished">Шифрование %1 включено</translation>
     </message>
     <message>
         <source>Encryption Disabled</source>
-        <translation>Шифрование отключено</translation>
+        <translation type="vanished">Шифрование отключено</translation>
     </message>
 </context>
 <context>

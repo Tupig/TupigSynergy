@@ -4,6 +4,8 @@
 
 ### Scope
 
+The UI was rebuilt from the approved design rather than restyled on top of the old layout. A shared design-token stylesheet defines the palette, radii (11/8) and control heights (32/30/26); the main window is now a declarative page bar, scrollable workspace and status bar. The log is an embedded card with toolbar, filter chips, records and footer instead of a dock widget.
+
 The UI refactor preserves the separate GUI, core and Windows daemon processes. `PageHost` embeds existing editor transactions in the main window, replacing blocking editor calls with accepted/rejected callbacks. Native file pickers and OS permission dialogs remain native.
 
 The home page contains selectable server/client cards, editable computer identity, connection controls and an address/port row. Server, client and preference layouts retain their existing configuration fields. Screen aliases are validated before replacement; cancelling the server editor restores its protocol. Explicit interface bindings are not replaced by automatic selection.
@@ -19,12 +21,13 @@ Local macOS arm64 static-Qt build verification on 2026-11-15:
 - `PageHostTests`: embedded acceptance, back cancellation, deferred destruction and parent/child dismissal.
 - `EditorTransactionTests`: client save/cancel, alias replacement, stored/default protocol conversion, protocol cancellation, log filtering/counting/history cap and long-record height cap.
 - Encoding check passed; C++ formatting uses clang-format 20.1.0.
-- Actual GUI interaction used disposable settings: home → client configuration → back, preferences and network tab, server configuration → new computer → back. These transitions kept one application window. The core was not started from that GUI.
+- Actual GUI interaction used disposable settings: home, about and preferences pages were rendered and captured inside the single application window; the core was never started from that GUI.
+- Fixed crash found by that run: `PageHost` looked up its page stack in the constructor, before `uic` created the child widgets, and reparenting cleared the editor title. Both are now handled (lazy lookup, captured title).
 - Package verification checked arm64 Mach-O dependency closure, clean-environment Cocoa startup and a TLS 1.3 loopback handshake with a disposable trusted identity. No Synergy input-sharing greeting was sent.
 
 ### Not established
 
-- Pixel-for-pixel conformance with the approved HTML design has not been established. Screenshot files exist locally, but image-tool output did not provide reliable visual inspection in this session.
+- The main window, log card, about page and preferences page were inspected against the design and match its structure; the remaining configuration pages still need the same per-page comparison.
 - Native Windows/Linux rendering, DPI and hardware acceptance require their own environments. A macOS build is not proof of those platforms.
 - No second-machine input sharing, live clipboard replacement, secure-desktop/UAC acceptance, OS permission grant or installer launch was tested.
 - Core diagnostic messages retain their original text; translating panel labels does not translate every core log message.

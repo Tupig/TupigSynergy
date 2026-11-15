@@ -6,17 +6,21 @@
 
 #pragma once
 
-#include <QStatusBar>
+#include <QWidget>
 
 #include "common/Enums.h"
 
 class QPushButton;
 class QLabel;
+class QTimer;
 
 using ProcessState = synergy::core::ProcessState;
 using ConnectionState = synergy::core::ConnectionState;
 
-class StatusBar : public QStatusBar
+/**
+ * @brief 设计稿的底部状态栏：左侧指纹按钮与连接状态，右侧安全提示。
+ */
+class StatusBar : public QWidget
 {
   Q_OBJECT
 public:
@@ -43,6 +47,7 @@ private:
   QPushButton *m_btnFingerprint = nullptr;
   QLabel *m_lblSecurityIcon = nullptr;
   QLabel *m_lblStatus = nullptr;
+  QLabel *m_lblSecurity = nullptr;
   bool m_encrypted = false;
   QString m_securityLevel;
   int m_connectionInterval = -1;
