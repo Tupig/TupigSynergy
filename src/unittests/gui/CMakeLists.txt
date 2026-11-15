@@ -22,6 +22,18 @@ if(UNIX AND NOT APPLE)
 endif()
 
 create_test(
+  NAME DialogRenderTests
+  DEPENDS gui
+  LIBS ${extra_libs}
+  SOURCE DialogRenderTests.cpp
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/gui"
+)
+target_include_directories(DialogRenderTests PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/gui)
+if(UNIX AND NOT APPLE)
+  set_property(TEST DialogRenderTests APPEND PROPERTY ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endif()
+
+create_test(
   NAME EditorTransactionTests
   DEPENDS gui
   LIBS ${extra_libs}

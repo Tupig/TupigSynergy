@@ -21,7 +21,8 @@ Local macOS arm64 static-Qt build verification on 2026-11-15:
 - `PageHostTests`: embedded acceptance, back cancellation, deferred destruction and parent/child dismissal.
 - `EditorTransactionTests`: client save/cancel, alias replacement, stored/default protocol conversion, protocol cancellation, log filtering/counting/history cap and long-record height cap.
 - Encoding check passed; C++ formatting uses clang-format 20.1.0.
-- Actual GUI interaction used disposable settings: home, about and preferences pages were rendered and captured inside the single application window; the core was never started from that GUI.
+- Actual GUI interaction used disposable settings: home, about, preferences (general/network/advanced/scope), server configuration (all four tabs), client configuration, screen settings, hotkey page and local fingerprint page were rendered and captured inside the single application window; the core was never started from that GUI.
+- `DialogRenderTests` renders the hotkey, action, update and fingerprint pages offscreen and writes PNGs to `$TMPDIR/tupig-dialog-render`, because macOS blocks synthetic key recording without granting Accessibility permission (which this project must not do automatically).
 - Fixed crash found by that run: `PageHost` looked up its page stack in the constructor, before `uic` created the child widgets, and reparenting cleared the editor title. Both are now handled (lazy lookup, captured title).
 - Package verification checked arm64 Mach-O dependency closure, clean-environment Cocoa startup and a TLS 1.3 loopback handshake with a disposable trusted identity. No Synergy input-sharing greeting was sent.
 
@@ -30,6 +31,7 @@ Local macOS arm64 static-Qt build verification on 2026-11-15:
 - The main window, log card, about page and preferences page were inspected against the design and match its structure; the remaining configuration pages still need the same per-page comparison.
 - Native Windows/Linux rendering, DPI and hardware acceptance require their own environments. A macOS build is not proof of those platforms.
 - No second-machine input sharing, live clipboard replacement, secure-desktop/UAC acceptance, OS permission grant or installer launch was tested.
+- Hotkey recording and the update download/install flow were not exercised end to end: the first needs real key capture, the second needs a published release.
 - Core diagnostic messages retain their original text; translating panel labels does not translate every core log message.
 - Remote CI results must be checked against the pushed commit, not a previous green run.
 
