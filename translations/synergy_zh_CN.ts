@@ -773,7 +773,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Show &amp;Log</source>
-        <translation type="unfinished"></translation>
+        <translation>显示日志(&amp;L)</translation>
     </message>
     <message>
         <source>No Updates</source>
@@ -817,11 +817,11 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Check for Updates</source>
-        <translation type="unfinished"></translation>
+        <translation>检查更新</translation>
     </message>
     <message>
         <source>About</source>
-        <translation type="unfinished"></translation>
+        <translation>关于</translation>
     </message>
 </context>
 <context>
