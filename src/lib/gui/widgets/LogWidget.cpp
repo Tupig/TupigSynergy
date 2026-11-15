@@ -12,25 +12,39 @@
 #include <QAbstractTextDocumentLayout>
 #include <QEvent>
 #include <QFontDatabase>
-#include <QPlainTextEdit>
 #include <QScrollBar>
 #include <QTextBlock>
+#include <QTextEdit>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QtMath>
 
 #include <utility>
 
-LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_textLog{new QPlainTextEdit(this)}
+namespace {
+constexpr int kHistoryLimit = 10000;
+// 历史可能很长，但只渲染最近的记录；更早的仍参与筛选与统计。
+constexpr int kRenderLimit = 500;
+
+QString levelColor(const QString &level)
 {
+  if (level == QStringLiteral("warn"))
+    return QStringLiteral("#e0a83c");
+  if (level == QStringLiteral("error"))
+    return QStringLiteral("#e0605f");
+  return QStringLiteral("#7aa2f7");
+}
+} // namespace
+
+LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_textLog{new QTextEdit(this)}
+{
+  m_textLog->setObjectName(QStringLiteral("logRecords"));
   m_textLog->setReadOnly(true);
   m_textLog->setUndoRedoEnabled(false);
   m_textLog->viewport()->installEventFilter(this);
-  // Wrap long lines instead of showing a horizontal scrollbar: log messages are
-  // sentences, and reading them normally beats scrolling sideways.
-  m_textLog->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+  // 记录按 时间 / 级别 / 消息 三列显示，长消息自动换行。
+  m_textLog->setLineWrapMode(QTextEdit::WidgetWidth);
 
-  // setup the log font
   if (synergy::platform::isWindows()) {
     QFont f = font();
     f.setFamilies({"Hack", "Liberation Mono", "Monospace", "Andale Mono"});
@@ -48,38 +62,53 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_textLog{new QPlainTex
   auto layout = new QVBoxLayout;
   layout->setContentsMargins(0, 0, 0, 0);
   layout->addWidget(m_textLog);
-
   setLayout(layout);
 
   connect(synergy::gui::Logger::instance(), &synergy::gui::Logger::newLine, this, &LogWidget::appendLine);
 }
 
+QString LogWidget::recordHtml(const QString &line)
+{
+  // "[2026-11-15T00:52:25.518] INFO: message"
+  QString time;
+  QString level = QStringLiteral("INFO");
+  QString message = line;
+  const auto close = line.indexOf(QLatin1String("] "));
+  if (close > 0 && line.startsWith(QLatin1Char('['))) {
+    time = line.mid(1, close - 1);
+    if (time.size() >= 19)
+      time = time.mid(11, 8);
+    const auto colon = line.indexOf(QLatin1Char(':'), close + 2);
+    if (colon > 0) {
+      level = line.mid(close + 2, colon - close - 2).trimmed();
+      message = line.mid(colon + 1).trimmed();
+    }
+  }
+  const auto color = levelColor(levelOf(line));
+  return QStringLiteral(
+             "<span style='color:#6f6f78'>%1</span>&nbsp;&nbsp;"
+             "<span style='color:%2'><b>%3</b></span>&nbsp;&nbsp;"
+             "<span style='color:#cfcfd6'>%4</span>"
+  )
+      .arg(
+          time.isEmpty() ? QStringLiteral("&nbsp;") : time.toHtmlEscaped(), color, level.toHtmlEscaped(),
+          message.toHtmlEscaped()
+      );
+}
+
 void LogWidget::appendLine(const QString &msg)
 {
-  constexpr size_t kHistoryLimit = 10000;
-  if (m_history.size() == kHistoryLimit) {
+  if (static_cast<int>(m_history.size()) == kHistoryLimit) {
     const auto &oldest = m_history.front();
     --m_counts[levelIndex(oldest)];
-    if (m_filter.isEmpty() || levelOf(oldest) == m_filter) {
-      const int blocks = m_visibleBlockCounts.front();
-      m_visibleBlockCounts.pop_front();
-      if (m_visibleBlockCounts.empty()) {
-        m_textLog->clear();
-        m_latestLine.clear();
-      } else {
-        QTextCursor cursor(m_textLog->document());
-        cursor.movePosition(QTextCursor::Start);
-        cursor.movePosition(QTextCursor::NextBlock, QTextCursor::KeepAnchor, blocks);
-        cursor.removeSelectedText();
-      }
-    }
+    if (m_filter.isEmpty() || levelOf(oldest) == m_filter)
+      m_textLog->clear();
     m_history.pop_front();
   }
   m_history.push_back(msg);
   ++m_counts[levelIndex(msg)];
   if (m_filter.isEmpty() || levelOf(msg) == m_filter) {
-    m_textLog->appendPlainText(msg);
-    m_visibleBlockCounts.push_back(msg.count(QLatin1Char('\n')) + 1);
+    m_textLog->append(recordHtml(msg));
     m_latestLine = msg;
   }
   updateVisibleHeight();
@@ -105,11 +134,10 @@ void LogWidget::updateVisibleHeight()
   auto block = m_textLog->document()->lastBlock();
   qreal height = 0;
   int records = 0;
-  for (auto it = m_visibleBlockCounts.rbegin(); it != m_visibleBlockCounts.rend() && records < m_visibleLines;
-       ++it, ++records) {
-    for (int i = 0; i < *it && block.isValid(); ++i, block = block.previous()) {
-      height += m_textLog->document()->documentLayout()->blockBoundingRect(block).height();
-    }
+  while (block.isValid() && records < m_visibleLines) {
+    height += m_textLog->document()->documentLayout()->blockBoundingRect(block).height();
+    ++records;
+    block = block.previous();
   }
   // 空态不预留六行空白；有记录时最多显示六条，超长记录仍在视口内滚动。
   if (records == 0)
@@ -121,7 +149,6 @@ void LogWidget::updateVisibleHeight()
 void LogWidget::setLevelFilter(const QString &level)
 {
   // Canonical, language-independent keys: "" (all) / "info" / "warn" / "error".
-  // Using the translated label here would break filtering in every non-Chinese UI.
   const auto next =
       (level == QStringLiteral("info") || level == QStringLiteral("warn") || level == QStringLiteral("error"))
           ? level
@@ -134,7 +161,6 @@ void LogWidget::setLevelFilter(const QString &level)
 
 QString LogWidget::levelOf(const QString &line)
 {
-  // "[2026-11-15T00:52:25.518] INFO: message"
   const auto close = line.indexOf(QLatin1String("] "));
   if (close < 0)
     return {};
@@ -160,15 +186,17 @@ int LogWidget::levelIndex(const QString &line)
 void LogWidget::rebuild()
 {
   m_textLog->clear();
-  m_visibleBlockCounts.clear();
   m_latestLine.clear();
-  for (const auto &line : std::as_const(m_history)) {
-    if (m_filter.isEmpty() || levelOf(line) == m_filter) {
-      m_textLog->appendPlainText(line);
-      m_visibleBlockCounts.push_back(line.count(QLatin1Char('\n')) + 1);
-      m_latestLine = line;
+  QString html;
+  int rendered = 0;
+  for (auto it = m_history.rbegin(); it != m_history.rend() && rendered < kRenderLimit; ++it) {
+    if (m_filter.isEmpty() || levelOf(*it) == m_filter) {
+      html.prepend(recordHtml(*it) + QStringLiteral("<br/>"));
+      m_latestLine = *it;
+      ++rendered;
     }
   }
+  m_textLog->setHtml(html);
   updateVisibleHeight();
   scrollToBottom();
   Q_EMIT historyChanged(m_latestLine);
@@ -177,7 +205,6 @@ void LogWidget::rebuild()
 void LogWidget::clear()
 {
   m_history.clear();
-  m_visibleBlockCounts.clear();
   m_latestLine.clear();
   m_counts = {0, 0, 0};
   m_textLog->clear();
@@ -199,7 +226,6 @@ void LogWidget::findNext(const QString &text)
 {
   if (text.isEmpty())
     return;
-
   if (!m_textLog->find(text)) {
     m_textLog->moveCursor(QTextCursor::Start);
     m_textLog->find(text);
@@ -210,7 +236,6 @@ void LogWidget::findPrevious(const QString &text)
 {
   if (text.isEmpty())
     return;
-
   if (!m_textLog->find(text, QTextDocument::FindBackward)) {
     m_textLog->moveCursor(QTextCursor::End);
     m_textLog->find(text, QTextDocument::FindBackward);
@@ -219,6 +244,6 @@ void LogWidget::findPrevious(const QString &text)
 
 void LogWidget::scrollToBottom() const
 {
-  auto sb = m_textLog->verticalScrollBar();
+  auto *sb = m_textLog->verticalScrollBar();
   sb->setValue(sb->maximum());
 }

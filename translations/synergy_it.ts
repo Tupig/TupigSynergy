@@ -412,6 +412,10 @@ Vuoi connetterti al server?
         <translation type="unfinished">Errore</translation>
     </message>
     <message>
+        <source>Search log</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Copy Log</source>
         <translation type="unfinished">Copia registro</translation>
     </message>
@@ -515,6 +519,10 @@ Vuoi connetterti al server?
         <translation>Ctrl+F</translation>
     </message>
     <message>
+        <source>Local IP</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>
 &lt;p&gt;%1 listens on all network interfaces because no IP is selected in the settings.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
@@ -589,11 +597,11 @@ Vuoi connetterti al server?
     </message>
     <message>
         <source>Using IP: </source>
-        <translation type="unfinished">Utilizzo dell&apos;indirizzo IP: </translation>
+        <translation type="obsolete">Utilizzo dell&apos;indirizzo IP: </translation>
     </message>
     <message>
         <source>Suggested IP: </source>
-        <translation type="unfinished">IP suggerito: </translation>
+        <translation type="obsolete">IP suggerito: </translation>
     </message>
     <message>
         <source>&lt;p&gt;If connecting via the hostname fails, try %1&lt;/p&gt;</source>
@@ -818,6 +826,14 @@ Inoltre, verifica di poter %1 il file di configurazione del server: %2</translat
     </message>
     <message>
         <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Restart</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

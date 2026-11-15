@@ -13,10 +13,11 @@
 #include <QStringList>
 #include <QWidget>
 
-class QPlainTextEdit;
-class QPushButton;
-class QTemporaryFile;
+class QTextEdit;
 
+/**
+ * @brief 设计稿的记录区：时间 / 级别 / 消息 三列，级别按颜色区分。
+ */
 class LogWidget : public QWidget
 {
   Q_OBJECT
@@ -45,12 +46,12 @@ protected:
 private:
   static QString levelOf(const QString &line);
   static int levelIndex(const QString &line);
+  static QString recordHtml(const QString &line);
   void rebuild();
   void updateVisibleHeight();
 
-  QPlainTextEdit *m_textLog = nullptr;
+  QTextEdit *m_textLog = nullptr;
   std::deque<QString> m_history;
-  std::deque<int> m_visibleBlockCounts;
   std::array<int, 3> m_counts{0, 0, 0};
   QString m_filter;
   QString m_latestLine;

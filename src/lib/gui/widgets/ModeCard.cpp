@@ -37,9 +37,9 @@ void ModeCard::paintEvent(QPaintEvent *)
   const QColor accent(QStringLiteral("#4cc38a"));
   QPainter painter(this);
   painter.setRenderHint(QPainter::Antialiasing);
-  painter.setPen(isChecked() ? QPen(accent, 1) : QPen(Qt::NoPen));
+  painter.setPen(isChecked() ? QPen(QColor(76, 195, 138, 140), 1) : QPen(Qt::NoPen));
   painter.setBrush(
-      isChecked() ? QColor(76, 195, 138, 38) : QColor(dark ? QStringLiteral("#2a2a2e") : QStringLiteral("#f0f0f3"))
+      isChecked() ? QColor(76, 195, 138, 38) : QColor(dark ? QStringLiteral("#28292e") : QStringLiteral("#f0f0f3"))
   );
   painter.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 9, 9);
   painter.setPen(isChecked() ? QPen(accent) : QPen(QColor(QStringLiteral("#777980"))));

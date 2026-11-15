@@ -7,7 +7,6 @@
 #include "LogPanel.h"
 
 #include "LogWidget.h"
-#include "SearchWidget.h"
 
 #include <QApplication>
 #include <QButtonGroup>
@@ -15,6 +14,7 @@
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
 
@@ -81,7 +81,10 @@ LogPanel::LogPanel(QWidget *parent) : QFrame(parent)
   toolbarLayout->addWidget(filter);
   toolbarLayout->addStretch(1);
 
-  m_search = new SearchWidget(toolbar);
+  // 设计稿：工具条右侧是固定宽度的搜索输入框，而不是折叠图标。
+  m_search = new QLineEdit(toolbar);
+  m_search->setPlaceholderText(tr("Search log"));
+  m_search->setMaximumWidth(104);
   toolbarLayout->addWidget(m_search);
 
   m_btnCopy = iconButton(toolbar, QStringLiteral("edit-copy"), tr("Copy Log"));
@@ -133,8 +136,7 @@ LogPanel::LogPanel(QWidget *parent) : QFrame(parent)
       m_records->setLevelFilter(chip->property("level").toString());
     });
   }
-  connect(m_search, &SearchWidget::findNext, m_records, &LogWidget::findNext);
-  connect(m_search, &SearchWidget::findPrevious, m_records, &LogWidget::findPrevious);
+  connect(m_search, &QLineEdit::returnPressed, this, [this] { m_records->findNext(m_search->text()); });
   connect(m_btnCopy, &QPushButton::clicked, this, [this] { QApplication::clipboard()->setText(m_records->allText()); });
   connect(m_btnClear, &QPushButton::clicked, this, [this] {
     m_records->clear();
@@ -201,6 +203,7 @@ void LogPanel::updateText()
   m_btnClear->setToolTip(tr("Clear Log"));
   m_btnCollapse->setToolTip(tr("Collapse Log"));
   m_btnExpand->setToolTip(tr("Expand Log"));
+  m_search->setPlaceholderText(tr("Search log"));
   const auto labels = QStringList{tr("All"), tr("Info"), tr("Warn"), tr("Error")};
   const auto buttons = m_levels->buttons();
   for (int i = 0; i < buttons.size() && i < labels.size(); ++i) {

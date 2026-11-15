@@ -102,12 +102,12 @@ MainWindow::MainWindow()
   m_statusBar = ui->statusBar;
   m_pageHost = ui->pageHost;
 
-  // 纯图标按钮：设计稿的页面条、编辑器与日志工具条。
-  for (auto *button :
-       {ui->btnBack, ui->btnEditName, ui->btnSaveServerConfig, ui->btnRestartCore, ui->btnSettingsShortcut,
-        ui->btnUpdatesShortcut, ui->btnAboutShortcut}) {
+  // 纯图标按钮：返回与导出；其余按钮使用设计稿的小号 26px 图标+文字。
+  for (auto *button : {ui->btnBack, ui->btnSaveServerConfig}) {
     button->setProperty("iconButton", true);
   }
+  // 主页没有上一级，只有子页面显示返回箭头。
+  ui->btnBack->setVisible(false);
 
   ui->spinPort->setValue(Settings::value(Settings::Core::Port).toInt());
   ui->spinPort->setEnabled(Settings::isWritable());
@@ -381,8 +381,6 @@ void MainWindow::connectSlots()
 
   connect(m_guiDupeChecker, &QLocalServer::newConnection, this, &MainWindow::showAndActivate);
 
-  // 名称编辑是纯图标按钮，交给全局样式收成 24px 方形。
-  ui->btnEditName->setProperty("iconButton", true);
   connect(ui->btnEditName, &QPushButton::clicked, this, &MainWindow::showHostNameEditor);
 
   connect(ui->lineEditName, &QLineEdit::editingFinished, this, &MainWindow::setHostName);
@@ -626,7 +624,7 @@ void MainWindow::updateIpLabel(const QStringList &addresses)
     return;
   }
 
-  QString labelText = fixedIP ? tr("Using IP: ") : tr("Suggested IP: ");
+  QString labelText = tr("Local IP") + QStringLiteral("  ");
   QString toolTipText = tr("<p>If connecting via the hostname fails, try %1</p>");
 
   const bool filterIpList = (serverStarted || fixedIP);

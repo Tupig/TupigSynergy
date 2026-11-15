@@ -34,20 +34,26 @@
        <item><spacer name="pageBarSpacer"><property name="orientation"><enum>Qt::Orientation::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>8</width><height>0</height></size></property></spacer></item>
        <item>
         <widget class="QPushButton" name="btnSettingsShortcut">
+         <property name="text"><string>Preferences</string></property>
          <property name="toolTip"><string>Preferences</string></property>
          <property name="icon"><iconset theme="configure"/></property>
+         <property name="small" stdset="0"><bool>true</bool></property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="btnUpdatesShortcut">
+         <property name="text"><string>Updates</string></property>
          <property name="toolTip"><string>Check for Updates</string></property>
          <property name="icon"><iconset theme="system-software-update"/></property>
+         <property name="small" stdset="0"><bool>true</bool></property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="btnAboutShortcut">
+         <property name="text"><string>About</string></property>
          <property name="toolTip"><string>About</string></property>
          <property name="icon"><iconset theme="help-about"/></property>
+         <property name="small" stdset="0"><bool>true</bool></property>
         </widget>
        </item>
       </layout>
@@ -210,6 +216,7 @@
                  <item>
                   <widget class="QPushButton" name="btnRestartCore">
                    <property name="enabled"><bool>false</bool></property>
+                   <property name="text"><string>&amp;Restart</string></property>
                    <property name="toolTip"><string>Restart</string></property>
                    <property name="icon"><iconset theme="view-refresh"/></property>
                   </widget>

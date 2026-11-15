@@ -56,6 +56,7 @@
 #include <QScreen>
 #include <QScrollBar>
 #include <QShowEvent>
+#include <QStyle>
 
 #include <memory>
 #include <thread>
@@ -204,6 +205,12 @@ void MainWindow::updateModeControlLabels()
     ui->btnToggleCore->setText(startText);
     ui->btnToggleCore->setIcon(startIcon);
   }
+
+  // 设计稿：运行中为红色「停止」，未运行为强调色「连接」（客户端）。
+  ui->btnToggleCore->setProperty("danger", isStarted && isServer);
+  ui->btnToggleCore->setProperty("primary", !isStarted && !isServer);
+  ui->btnToggleCore->style()->unpolish(ui->btnToggleCore);
+  ui->btnToggleCore->style()->polish(ui->btnToggleCore);
 }
 
 void MainWindow::applyConfig()

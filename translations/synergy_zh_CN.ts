@@ -414,6 +414,10 @@ Do you want to connect to the server?
         <translation type="unfinished">错误</translation>
     </message>
     <message>
+        <source>Search log</source>
+        <translation>搜索日志</translation>
+    </message>
+    <message>
         <source>Copy Log</source>
         <translation type="unfinished">复制日志</translation>
     </message>
@@ -466,7 +470,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>&amp;Configure Server</source>
-        <translation>配置服务器(&amp;C)</translation>
+        <translation>配置服务端(&amp;C)</translation>
     </message>
     <message>
         <source>Export server configuration</source>
@@ -553,8 +557,12 @@ Do you want to connect to the server?
         <translation>无法检测到 IP 地址。请检查您的网络连接是否正常。</translation>
     </message>
     <message>
+        <source>Local IP</source>
+        <translation>本机 IP</translation>
+    </message>
+    <message>
         <source>Using IP: </source>
-        <translation>使用 IP 地址： </translation>
+        <translation type="vanished">使用 IP 地址： </translation>
     </message>
     <message>
         <source>&lt;p&gt;If connecting via the hostname fails, try %1&lt;/p&gt;</source>
@@ -685,7 +693,7 @@ Valid names:
     </message>
     <message>
         <source>Suggested IP: </source>
-        <translation>建议 IP： </translation>
+        <translation type="vanished">建议 IP： </translation>
     </message>
     <message>
         <source>&amp;Configure Client</source>
@@ -822,6 +830,14 @@ Additionally, check you are able to %1 the server config file: %2</source>
     <message>
         <source>About</source>
         <translation>关于</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation>更新</translation>
+    </message>
+    <message>
+        <source>&amp;Restart</source>
+        <translation>重启(&amp;R)</translation>
     </message>
 </context>
 <context>

@@ -412,6 +412,10 @@ Do you want to connect to the server?
         <translation type="unfinished">오류</translation>
     </message>
     <message>
+        <source>Search log</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Copy Log</source>
         <translation type="unfinished">로그 복사</translation>
     </message>
@@ -552,7 +556,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Using IP: </source>
-        <translation type="unfinished">사용 중인 IP: </translation>
+        <translation type="obsolete">사용 중인 IP: </translation>
     </message>
     <message>
         <source>&lt;p&gt;If connecting via the hostname fails, try %1&lt;/p&gt;</source>
@@ -654,6 +658,10 @@ A bound IP is now invalid, you may need to restart the server.</source>
         <translation>Ctrl+Q</translation>
     </message>
     <message>
+        <source>Local IP</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>
 &lt;p&gt;%1 listens on all network interfaces because no IP is selected in the settings.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
@@ -686,7 +694,7 @@ Valid names:
     </message>
     <message>
         <source>Suggested IP: </source>
-        <translation type="unfinished">추천 IP: </translation>
+        <translation type="obsolete">추천 IP: </translation>
     </message>
     <message>
         <source>&amp;Configure Client</source>
@@ -818,6 +826,14 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&amp;Restart</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

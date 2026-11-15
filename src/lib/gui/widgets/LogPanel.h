@@ -12,7 +12,7 @@ class LogWidget;
 class QButtonGroup;
 class QLabel;
 class QPushButton;
-class SearchWidget;
+class QLineEdit;
 
 /**
  * @brief 设计稿中的日志卡片：工具条 + 记录区 + 统计脚注，收起时只留最新一条。
@@ -49,7 +49,7 @@ private:
   QPushButton *m_btnClear = nullptr;
   QPushButton *m_btnCollapse = nullptr;
   QPushButton *m_btnExpand = nullptr;
-  SearchWidget *m_search = nullptr;
+  QLineEdit *m_search = nullptr;
   QButtonGroup *m_levels = nullptr;
   bool m_collapsed = false;
 };

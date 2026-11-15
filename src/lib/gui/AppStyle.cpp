@@ -75,7 +75,7 @@ QString appStyleSheet()
 {
   const auto t = tokens(isDarkMode());
   return QStringLiteral(R"(
-    QWidget { color: %1; font-size: 13px; }
+    QWidget { color: %1; font-size: 13.5px; }
     QMainWindow, QDialog { background: %2; }
     QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; border: 0; }
 
@@ -144,7 +144,7 @@ QString appStyleSheet()
     ModeCard { background: transparent; }
 
     /* 日志面板 */
-    QFrame#logPanel { background: %17; border: 1px solid %7; border-radius: 9px; }
+    QFrame#logPanel { background: #212125; border: 1px solid #34353b; border-radius: 9px; }
     QLabel#logTitle { font-size: 12px; font-weight: 600; }
     QLabel#logBadge {
       font-size: 10.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
@@ -152,7 +152,7 @@ QString appStyleSheet()
     }
     QLabel#logTail { color: %4; font-size: 11px; }
     QLabel#logStats, QLabel#logHint { color: %4; font-size: 10.5px; }
-    QPlainTextEdit#logRecords {
+    QTextEdit#logRecords {
       background: transparent; border: 0; font-size: 11.5px;
     }
 
