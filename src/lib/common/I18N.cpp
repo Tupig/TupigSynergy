@@ -107,14 +107,15 @@ I18N::I18N(QObject *parent) : QObject{parent}
     return candidates;
   };
 
-  const auto loadTranslation = [&defaultCandidates](QTranslator *translator, const QString &prefix, const QString &path) {
-    for (const auto &locale : defaultCandidates()) {
-      if (translator->load(locale, prefix, s_prefix, path)) {
-        return true;
-      }
-    }
-    return false;
-  };
+  const auto loadTranslation =
+      [&defaultCandidates](QTranslator *translator, const QString &prefix, const QString &path) {
+        for (const auto &locale : defaultCandidates()) {
+          if (translator->load(locale, prefix, s_prefix, path)) {
+            return true;
+          }
+        }
+        return false;
+      };
 
   if (Settings::value(Settings::Core::Language).toString().isEmpty()) {
     auto appTranslator = new QTranslator(this);

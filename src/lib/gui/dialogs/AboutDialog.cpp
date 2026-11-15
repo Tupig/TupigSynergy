@@ -6,8 +6,8 @@
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
 
-#include "DialogStyle.h"
 #include "AboutDialog.h"
+#include "DialogStyle.h"
 #include "ui_AboutDialog.h"
 
 #include "common/Constants.h"

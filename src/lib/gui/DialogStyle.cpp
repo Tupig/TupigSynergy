@@ -46,11 +46,11 @@ void applyCompactDialogStyle(QDialog *dialog)
     QGroupBox { margin-top: %4px; padding-top: %5px; }
     QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; }
   )")
-                                .arg(kControlHeight)
-                                .arg(kControlHeight + 4)
-                                .arg(kGroupSpacing)
-                                .arg(kGroupSpacing)
-                                .arg(kGroupSpacing));
+                            .arg(kControlHeight)
+                            .arg(kControlHeight + 4)
+                            .arg(kGroupSpacing)
+                            .arg(kGroupSpacing)
+                            .arg(kGroupSpacing));
 
   if (auto *layout = dialog->layout(); layout != nullptr) {
     layout->setContentsMargins(kDialogMargin, kDialogMargin, kDialogMargin, kDialogMargin);
