@@ -94,6 +94,7 @@ MainWindow::MainWindow()
 {
   ui->setupUi(this);
   setMinimumWidth(600);
+  setMinimumHeight(660);
 
   setWindowIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
 

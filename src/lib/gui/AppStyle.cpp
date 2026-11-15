@@ -33,12 +33,13 @@ QString appStyleSheet()
 
     /* 卡片：分组框与主窗口配置区 */
     QGroupBox {
-      background: %3; border: 0; border-radius: 11px; padding: 14px; margin-top: 0;
+      background: %3; border: 0; border-radius: 11px; padding: 12px; margin-top: 0;
     }
     QGroupBox::title { color: %4; padding: 0 4px; }
 
     /* 模式选择做成可选卡片 */
-    QRadioButton { color: %1; spacing: 8px; padding: 8px 10px; border-radius: 9px; }
+    QRadioButton { color: %1; spacing: 8px; padding: 6px 10px; border-radius: 9px;
+                  min-height: 52px; max-height: 52px; }
     QRadioButton:checked { background: %5; }
 
     /* 按钮 32px / 圆角 8；主操作使用强调色 */
