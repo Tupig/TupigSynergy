@@ -26,6 +26,10 @@ Local macOS arm64 static-Qt build verification on 2026-11-15:
 - Fixed crash found by that run: `PageHost` looked up its page stack in the constructor, before `uic` created the child widgets, and reparenting cleared the editor title. Both are now handled (lazy lookup, captured title).
 - Package verification checked arm64 Mach-O dependency closure, clean-environment Cocoa startup and a TLS 1.3 loopback handshake with a disposable trusted identity. No Synergy input-sharing greeting was sent.
 
+### Platform scope
+
+Visual acceptance targets macOS and Windows only. Linux builds still run in CI to keep the shared code compiling, but no Linux visual or behavioural acceptance is claimed.
+
 ### Not established
 
 - The main window, log card, about page and preferences page were inspected against the design and match its structure; the remaining configuration pages still need the same per-page comparison.
@@ -67,6 +71,10 @@ Keep `SYNERGY_ENABLE_INTERACTIVE_TESTS=OFF` on the everyday host. Do not bypass 
 - 编码检查通过；C++ 使用 clang-format 20.1.0 格式化。
 - 使用一次性设置实际操作 GUI：主页→客户端配置→返回、首选项及网络页、服务端配置→新增计算机→返回，切换过程中保持一个应用窗口。未从该 GUI 启动 core。
 - 包验证覆盖 arm64 Mach-O 依赖闭包、干净环境 Cocoa 启动，以及使用临时可信身份的 TLS 1.3 回环握手。没有发送启用输入共享的 Synergy greeting。
+
+### 平台范围
+
+界面验收只针对 macOS 与 Windows。Linux 构建仍在 CI 中运行以保持共享代码可编译，但不声称任何 Linux 视觉或行为验收。
 
 ### 尚未证实
 
