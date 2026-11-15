@@ -69,12 +69,17 @@ void DialogRenderTests::rendersUpdateAndFingerprint()
   info.notes = QStringLiteral("- 修复日志面板高度\n- 新增卡片式配置页");
   info.releaseUrl = QUrl(QStringLiteral("https://github.com/Tupig/TupigSynergy/releases/tag/v1.22.0"));
   info.asset.name = QStringLiteral("synergy_1.22.0_mac_arm64.dmg");
+  const QString outputDir = QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"));
+  QDir().mkpath(outputDir);
+
   synergy::gui::update::UpdateDialog updateDialog(info, nullptr);
+  renderToFile(updateDialog, QDir(outputDir).filePath(QStringLiteral("update.png")));
   QVERIFY(updateDialog.width() > 0);
 
   Fingerprint local(QCryptographicHash::Sha256, QByteArray(32, '\x5a'));
   Fingerprint remote(QCryptographicHash::Sha256, QByteArray(32, '\x7e'));
   FingerprintDialog fingerprint(nullptr, local, FingerprintDialogMode::Server, remote);
+  renderToFile(fingerprint, QDir(outputDir).filePath(QStringLiteral("fingerprint.png")));
   QVERIFY(fingerprint.width() > 0);
 }
 
