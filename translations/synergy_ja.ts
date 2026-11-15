@@ -914,7 +914,17 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>&lt;p&gt;Great, the %1 server is now running.&lt;/p&gt;&lt;p&gt;Now you can connect your client computers to this server. You should see a prompt here on the server when a new client tries to connect.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;すばらしい、%1 サーバーが起動できました。&lt;/p&gt;&lt;p&gt;これでクライアントをこのサーバーに接続できます。新しいクライアントが接続する際にはここに通知が表示されます。&lt;/p&gt;</translation>
+        <translation type="vanished">&lt;p&gt;すばらしい、%1 サーバーが起動できました。&lt;/p&gt;&lt;p&gt;これでクライアントをこのサーバーに接続できます。新しいクライアントが接続する際にはここに通知が表示されます。&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>Great, the %1 server is now running.
+
+Now you can connect your client computers to this server. You should see a prompt here on the server when a new client tries to connect.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>&lt;p&gt;%1 is now connected!&lt;/p&gt;</source>

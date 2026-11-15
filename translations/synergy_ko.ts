@@ -912,7 +912,17 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>&lt;p&gt;Great, the %1 server is now running.&lt;/p&gt;&lt;p&gt;Now you can connect your client computers to this server. You should see a prompt here on the server when a new client tries to connect.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;%1 서버가 실행되었습니다.&lt;/p&gt;&lt;p&gt;이제 클라이언트 컴퓨터를 이 서버에 연결할 수 있습니다. 새 클라이언트가 연결을 시도하면 여기에 안내가 표시됩니다.&lt;/p&gt;</translation>
+        <translation type="vanished">&lt;p&gt;%1 서버가 실행되었습니다.&lt;/p&gt;&lt;p&gt;이제 클라이언트 컴퓨터를 이 서버에 연결할 수 있습니다. 새 클라이언트가 연결을 시도하면 여기에 안내가 표시됩니다.&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>Great, the %1 server is now running.
+
+Now you can connect your client computers to this server. You should see a prompt here on the server when a new client tries to connect.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>&lt;p&gt;%1 is now connected!&lt;/p&gt;</source>

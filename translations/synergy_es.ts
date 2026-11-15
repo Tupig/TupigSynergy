@@ -912,7 +912,17 @@ Además, verifique que puede %1 el archivo de configuración del servidor: %2</t
     </message>
     <message>
         <source>&lt;p&gt;Great, the %1 server is now running.&lt;/p&gt;&lt;p&gt;Now you can connect your client computers to this server. You should see a prompt here on the server when a new client tries to connect.&lt;/p&gt;</source>
-        <translation type="unfinished">&lt;p&gt;Genial, el servidor %1 ya está en funcionamiento.&lt;/p&gt;&lt;p&gt;Ahora puedes conectar tus equipos cliente a este servidor. Deberías ver un aviso aquí en el servidor cuando un nuevo cliente intente conectarse.&lt;/p&gt;</translation>
+        <translation type="obsolete">&lt;p&gt;Genial, el servidor %1 ya está en funcionamiento.&lt;/p&gt;&lt;p&gt;Ahora puedes conectar tus equipos cliente a este servidor. Deberías ver un aviso aquí en el servidor cuando un nuevo cliente intente conectarse.&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>Great, the %1 server is now running.
+
+Now you can connect your client computers to this server. You should see a prompt here on the server when a new client tries to connect.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>&lt;p&gt;%1 is now connected!&lt;/p&gt;</source>

@@ -7,6 +7,7 @@
 #include "Messages.h"
 
 #include "Logger.h"
+#include "widgets/MessagePage.h"
 #include "widgets/PageHost.h"
 
 #include "common/Settings.h"
@@ -146,18 +147,18 @@ void showCloseReminder(QWidget *parent)
 
 void showFirstServerStartMessage(QWidget *parent)
 {
-  PageHost::present(
-      parent, new QMessageBox(
-                  QMessageBox::Information, QObject::tr("%1 Server").arg(kAppName),
-                  QObject::tr(
-                      "<p>Great, the %1 server is now running.</p>"
-                      "<p>Now you can connect your client computers to this server. "
-                      "You should see a prompt here on the server when a new client tries to connect.</p>"
-                  )
-                      .arg(kAppName),
-                  QMessageBox::Ok, parent
-              )
+  auto *page = new MessagePage(
+      parent, MessagePage::Kind::Information, QObject::tr("%1 Server").arg(kAppName),
+      QObject::tr(
+          "Great, the %1 server is now running.\n\n"
+          "Now you can connect your client computers to this server. "
+          "You should see a prompt here on the server when a new client tries to connect."
+      )
+          .arg(kAppName)
   );
+  auto *ok = page->addButton(QObject::tr("OK"), true);
+  QObject::connect(ok, &QPushButton::clicked, page, &QDialog::accept);
+  PageHost::present(parent, page);
 }
 
 void showFirstConnectedMessage(QWidget *parent)
@@ -199,7 +200,10 @@ void showFirstConnectedMessage(QWidget *parent)
   }
 
   const auto title = QObject::tr("%1 Connected").arg(kAppName);
-  PageHost::present(parent, new QMessageBox(QMessageBox::Information, title, message, QMessageBox::Ok, parent));
+  auto *page = new MessagePage(parent, MessagePage::Kind::Information, title, message, true);
+  auto *ok = page->addButton(QObject::tr("OK"), true);
+  QObject::connect(ok, &QPushButton::clicked, page, &QDialog::accept);
+  PageHost::present(parent, page);
 }
 
 bool showNewClientPrompt(QWidget *parent, const QString &clientName)

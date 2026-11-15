@@ -84,6 +84,8 @@ void PageHost::push(QDialog *editor)
   auto *containerLayout = new QVBoxLayout(container);
   containerLayout->setContentsMargins(10, 10, 10, 10);
   containerLayout->addWidget(editor);
+  // 页面按内容高度贴顶，长页面再滚动。
+  containerLayout->addStretch(1);
   editor->setWindowFlags(Qt::Widget);
   editor->setWindowModality(Qt::NonModal);
   editor->setMinimumWidth(0);

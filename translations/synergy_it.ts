@@ -912,7 +912,17 @@ Inoltre, verifica di poter %1 il file di configurazione del server: %2</translat
     </message>
     <message>
         <source>&lt;p&gt;Great, the %1 server is now running.&lt;/p&gt;&lt;p&gt;Now you can connect your client computers to this server. You should see a prompt here on the server when a new client tries to connect.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;Ottimo, il server %1 è ora in esecuzione.&lt;/p&gt;&lt;p&gt;Ora puoi connettere i tuoi computer client a questo server. Dovresti vedere un prompt qui sul server quando un nuovo client tenta di connettersi.&lt;/p&gt;</translation>
+        <translation type="vanished">&lt;p&gt;Ottimo, il server %1 è ora in esecuzione.&lt;/p&gt;&lt;p&gt;Ora puoi connettere i tuoi computer client a questo server. Dovresti vedere un prompt qui sul server quando un nuovo client tenta di connettersi.&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>Great, the %1 server is now running.
+
+Now you can connect your client computers to this server. You should see a prompt here on the server when a new client tries to connect.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>&lt;p&gt;%1 is now connected!&lt;/p&gt;</source>

@@ -148,7 +148,7 @@ QString appStyleSheet()
     QLabel#logTitle { font-size: 12px; font-weight: 600; }
     QLabel#logBadge {
       font-size: 10.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
-      background: %18; color: %11; border: 1px solid %11;
+      background: %18; color: %11; border: 1px solid rgba(76,195,138,0.35);
     }
     QLabel#logTail { color: %4; font-size: 11px; }
     QLabel#logStats, QLabel#logHint { color: %4; font-size: 10.5px; }
