@@ -167,7 +167,7 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Scroll Modifiers</source>
-        <translation>滚动修饰符</translation>
+        <translation>滚动设置</translation>
     </message>
     <message>
         <source>Invert</source>
@@ -298,7 +298,7 @@ Do you want to connect to the server?
     <name>HotkeyDialog</name>
     <message>
         <source>Hotkey</source>
-        <translation>热键</translation>
+        <translation>快捷键</translation>
     </message>
     <message>
         <source>Enter the specification for the hotkey:</source>
@@ -1367,7 +1367,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Hotkeys</source>
-        <translation>热键</translation>
+        <translation>快捷键</translation>
     </message>
     <message>
         <source>&amp;Hotkeys</source>
@@ -1463,7 +1463,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>&amp;Network</source>
-        <translation>网络(&amp;N)</translation>
+        <translation>网络与安全(&amp;N)</translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables the network heartbeat to ping clients every &lt;span style=&quot; font-style:italic;&quot;&gt;n&lt;/span&gt; seconds. This may help to diagnose network problems by retrying the connection if the client becomes unresponsive.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
@@ -1719,11 +1719,11 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>&amp;General</source>
-        <translation>常规(&amp;G)</translation>
+        <translation>通用(&amp;G)</translation>
     </message>
     <message>
         <source>&amp;Network</source>
-        <translation>网络(&amp;N)</translation>
+        <translation>网络与安全(&amp;N)</translation>
     </message>
     <message>
         <source>&amp;Window</source>

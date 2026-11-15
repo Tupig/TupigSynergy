@@ -31,6 +31,7 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFormLayout>
+#include <QGridLayout>
 #include <QLabel>
 #include <QMessageBox>
 
@@ -92,6 +93,20 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
 
   setButtonBoxEnabledButtons();
   initConnections();
+
+  // 设计稿：标签列固定 120px，控件紧贴标签，剩余空间放到最右列。
+  for (auto *grid : findChildren<QGridLayout *>()) {
+    if (grid->columnCount() != 2)
+      continue;
+    grid->setColumnStretch(0, 0);
+    grid->setColumnStretch(1, 0);
+    for (int row = 0; row < grid->rowCount(); ++row) {
+      if (grid->itemAtPosition(row, 2) == nullptr)
+        grid->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Minimum), row, 2);
+    }
+    grid->setColumnStretch(2, 1);
+  }
+
 
 #ifdef SYNERGY_EXTRA_HEADER
   synergy::hooks::onSettings(this);
