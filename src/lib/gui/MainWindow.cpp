@@ -46,6 +46,7 @@
 #include <QLocalServer>
 #include <QLocalSocket>
 #include <QMenu>
+#include <QBoxLayout>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QNetworkInterface>
@@ -147,6 +148,34 @@ MainWindow::MainWindow()
   // In case of a previous crash remove first
   QLocalServer::removeServer(m_guiSocketName);
   m_guiDupeChecker->listen(m_guiSocketName);
+
+  // 设计稿的页面条：左侧页面标题，右侧「首选项 / 更新 / 关于」快捷入口。
+  if (auto *central = ui->topLevelWidget->layout(); central != nullptr) {
+    auto *pagebar = new QWidget(this);
+    pagebar->setObjectName(QStringLiteral("pageBar"));
+    auto *pageLayout = new QHBoxLayout(pagebar);
+    pageLayout->setContentsMargins(12, 8, 12, 0);
+    pageLayout->setSpacing(8);
+    auto *pageTitle = new QLabel(tr("Devices & Connection"), pagebar);
+    pageTitle->setObjectName(QStringLiteral("pageTitle"));
+    pageLayout->addWidget(pageTitle);
+    pageLayout->addStretch(1);
+    const auto addShortcut = [&](const QString &text, QAction *action) {
+      auto *button = new QPushButton(pagebar);
+      button->setObjectName(QStringLiteral("pageShortcut"));
+      button->setProperty("pageAction", text);
+      button->setMinimumHeight(26);
+      button->setIcon(action->icon());
+      connect(button, &QPushButton::clicked, action, &QAction::trigger);
+      pageLayout->addWidget(button);
+    };
+    addShortcut(QStringLiteral("settings"), m_actionSettings);
+    addShortcut(QStringLiteral("updates"), m_actionCheckForUpdates);
+    addShortcut(QStringLiteral("about"), m_actionAbout);
+    if (auto *box = qobject_cast<QBoxLayout *>(central)) {
+      box->insertWidget(0, pagebar);
+    }
+  }
 
   createMenuBar();
   setupControls();

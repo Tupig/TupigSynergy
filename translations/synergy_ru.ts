@@ -514,6 +514,14 @@ A bound IP is now invalid, you may need to restart the server.</source>
 Привязанный IP-адрес стал недействительным. Возможно требуется перезапуск сервера.</translation>
     </message>
     <message>
+        <source>Devices &amp; Connection</source>
+        <translation>Устройства и подключение</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation type="obsolete">Настройки</translation>
+    </message>
+    <message>
         <source>&amp;File</source>
         <translation>&amp;Файл</translation>
     </message>

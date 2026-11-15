@@ -77,6 +77,10 @@ QString appStyleSheet()
     QLabel#logStats, QLabel#logHint { color: %4; font-size: 10px; }
     QLabel#logTail { color: %4; font-size: 10px; }
     QLabel#logTitle { font-size: 12px; font-weight: 600; }
+    QLabel#pageTitle { font-size: 13px; font-weight: 600; }
+    QWidget#pageBar { background: transparent; }
+    /* 日志停靠窗口做成卡片：两侧留白 + 圆角 */
+    QDockWidget { margin: 0 12px 12px 12px; border: 0; border-radius: 11px; }
 
     /* 状态栏 / 菜单 */
     QStatusBar { background: %13; color: %1; }

@@ -514,6 +514,14 @@ A bound IP is now invalid, you may need to restart the server.</source>
 割り当て済みのIPアドレスが無効になりました。サーバーを再起動する必要があるかもしれません。</translation>
     </message>
     <message>
+        <source>Devices &amp; Connection</source>
+        <translation>デバイスと接続</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation type="obsolete">設定</translation>
+    </message>
+    <message>
         <source>&amp;File</source>
         <translation>ファイル(&amp;F)</translation>
     </message>

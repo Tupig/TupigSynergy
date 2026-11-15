@@ -516,6 +516,14 @@ A bound IP is now invalid, you may need to restart the server.</source>
 绑定的 IP 地址现在无效，您可能需要重启服务器。</translation>
     </message>
     <message>
+        <source>Devices &amp; Connection</source>
+        <translation>设备与连接</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation type="obsolete">首选项</translation>
+    </message>
+    <message>
         <source>&amp;File</source>
         <translation>文件(&amp;F)</translation>
     </message>

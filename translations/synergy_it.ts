@@ -555,6 +555,14 @@ A bound IP is now invalid, you may need to restart the server.</source>
 L&apos;indirizzo IP associato non è più valido, potrebbe essere necessario riavviare il server.</translation>
     </message>
     <message>
+        <source>Devices &amp; Connection</source>
+        <translation>Dispositivi e connessione</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation type="obsolete">Preferenze</translation>
+    </message>
+    <message>
         <source>&amp;File</source>
         <translation>&amp;File</translation>
     </message>

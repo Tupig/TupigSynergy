@@ -567,6 +567,14 @@ A bound IP is now invalid, you may need to restart the server.</source>
 La dirección IP asignada ahora no es válida; es posible que deba reiniciar el servidor.</translation>
     </message>
     <message>
+        <source>Devices &amp; Connection</source>
+        <translation>Dispositivos y conexión</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation type="obsolete">Preferencias</translation>
+    </message>
+    <message>
         <source>&amp;File</source>
         <translation type="unfinished">&amp;Archivo</translation>
     </message>

@@ -514,6 +514,14 @@ A bound IP is now invalid, you may need to restart the server.</source>
 연결된 IP가 이제 유효하지 않습니다. 서버를 재시작해야 합니다.</translation>
     </message>
     <message>
+        <source>Devices &amp; Connection</source>
+        <translation>장치 및 연결</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation type="obsolete">환경설정</translation>
+    </message>
+    <message>
         <source>&amp;File</source>
         <translation>파일(&amp;F)</translation>
     </message>
