@@ -1294,19 +1294,19 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Top-left</source>
-        <translation type="unfinished"></translation>
+        <translation>左上</translation>
     </message>
     <message>
         <source>Top-right</source>
-        <translation type="unfinished"></translation>
+        <translation>右上</translation>
     </message>
     <message>
         <source>Bottom-left</source>
-        <translation type="unfinished"></translation>
+        <translation>左下</translation>
     </message>
     <message>
         <source>Bottom-right</source>
-        <translation type="unfinished"></translation>
+        <translation>右下</translation>
     </message>
     <message>
         <source>Screen name is empty</source>
