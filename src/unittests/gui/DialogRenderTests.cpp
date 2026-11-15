@@ -6,8 +6,12 @@
 #include "gui/Hotkey.h"
 #include "gui/config/ServerConfig.h"
 #include "gui/dialogs/ActionDialog.h"
+#include "gui/dialogs/ClientConfigDialog.h"
 #include "gui/dialogs/FingerprintDialog.h"
 #include "gui/dialogs/HotkeyDialog.h"
+#include "gui/dialogs/ScreenSettingsDialog.h"
+#include "gui/dialogs/ServerConfigDialog.h"
+#include "gui/dialogs/SettingsDialog.h"
 #include "gui/update/UpdateChecker.h"
 #include "gui/update/UpdateDialog.h"
 #include "gui/widgets/KeySequenceWidget.h"
@@ -19,6 +23,7 @@
 #include <QListWidget>
 #include <QPixmap>
 #include <QProgressBar>
+#include <QTabWidget>
 #include <QtTest>
 
 namespace {
@@ -44,6 +49,7 @@ private Q_SLOTS:
   void recordsHotkeyWithSyntheticKeys();
   void downloadsUpdateFromLoopback();
   void rendersUpdateAndFingerprint();
+  void rendersConfigurationPages();
 };
 
 void DialogRenderTests::rendersHotkeyAndAction()
@@ -146,6 +152,38 @@ void DialogRenderTests::downloadsUpdateFromLoopback()
   QVERIFY(progress != nullptr);
   QCOMPARE(progress->value(), 100);
   // 只验证校验完成，不点击安装，避免启动系统安装器。
+}
+
+void DialogRenderTests::rendersConfigurationPages()
+{
+  const QString outputDir = QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"));
+  QDir().mkpath(outputDir);
+
+  synergy::gui::ServerConfig config;
+
+  ServerConfigDialog serverDialog(nullptr, config);
+  auto *tabs = serverDialog.findChild<QTabWidget *>();
+  QVERIFY(tabs != nullptr);
+  const QStringList names{
+      QStringLiteral("server-layout"), QStringLiteral("server-hotkeys"), QStringLiteral("server-sharing"),
+      QStringLiteral("server-config")
+  };
+  for (int index = 0; index < tabs->count() && index < names.size(); ++index) {
+    tabs->setCurrentIndex(index);
+    renderToFile(serverDialog, QDir(outputDir).filePath(names.at(index) + QStringLiteral(".png")));
+  }
+
+  ClientConfigDialog clientDialog(nullptr);
+  renderToFile(clientDialog, QDir(outputDir).filePath(QStringLiteral("client.png")));
+
+  SettingsDialog settingsDialog(nullptr, config);
+  renderToFile(settingsDialog, QDir(outputDir).filePath(QStringLiteral("preferences.png")));
+
+  synergy::gui::Screen screen(QStringLiteral("screen"));
+  synergy::gui::ScreenList screens;
+  screens.append(screen);
+  ScreenSettingsDialog screenDialog(nullptr, &screen, &screens);
+  renderToFile(screenDialog, QDir(outputDir).filePath(QStringLiteral("screen.png")));
 }
 
 QTEST_MAIN(DialogRenderTests)
