@@ -260,8 +260,8 @@ jobs:
   build-windows:
     needs: [get-version, lint-encoding]
     if: ${{ needs.get-version.outputs.build_windows == 'true' }}
-    name: ${{ matrix.target.name }}
-    runs-on: ${{ matrix.target.runs-on }}
+    name: windows-2022-x64
+    runs-on: windows-2022
     timeout-minutes: 60
     permissions:
       contents: read
@@ -274,12 +274,6 @@ jobs:
       # after the project is approved. Missing any of them leaves the package unsigned.
       WINDOWS_SIGNING: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.SIGNPATH_API_TOKEN != '' && vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_PROJECT_SLUG != '' }}
 
-    strategy:
-      fail-fast: false
-      matrix:
-        # Built by the plan step: release packaging excludes Windows arm64.
-        target: ${{ fromJSON(needs.get-version.outputs.windows_targets) }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -291,15 +285,15 @@ jobs:
       - name: Setup VC++ environment
         uses: TheMrMilchmann/setup-msvc-dev@368ef7d1ee4d1171b31d4a7f67f4d954f903f5a9 # v4.1.0
         with:
-          arch: ${{ matrix.target.arch }}
+          arch: amd64
           spectre: true
 
       - name: Install dependencies
         id: get-deps
         uses: ./.github/actions/install-dependencies
         with:
-          qt-version: ${{ matrix.target.qt-version }}
-          vcpkg-triplet: ${{ matrix.target.vcpkg-triplet }}
+          qt-version: 6.10.3
+          vcpkg-triplet: x64-windows-release
 
       - name: Update Windows Paths
         shell: cmd
@@ -404,7 +398,7 @@ jobs:
         id: upload-unsigned-exes
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: unsigned-signpath-exes-${{ matrix.target.name }}
+          name: unsigned-signpath-exes-windows-2022-x64
           path: ${{ runner.temp }}\sign-stage\in\*.exe
           retention-days: 1
           if-no-files-found: error
@@ -452,7 +446,7 @@ jobs:
         id: upload-unsigned-msi
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: unsigned-signpath-msi-${{ matrix.target.name }}
+          name: unsigned-signpath-msi-windows-2022-x64
           path: ${{ steps.locate-msi.outputs.path }}
           archive: false
           retention-days: 1
@@ -496,14 +490,14 @@ jobs:
       - name: Test packaged build
         uses: ./.github/actions/test-package
         with:
-          expected-arch: ${{ matrix.target.arch }}
+          expected-arch: x64
 
       - name: Upload package
         # 每次构建都上传产物，便于直接下载 GitHub 构建版本做验收。
         if: ${{ success() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
+          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-windows-2022-x64
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
           retention-days: 14
 
@@ -552,20 +546,14 @@ jobs:
   build-macos:
     needs: [build-windows]
     if: ${{ needs.get-version.outputs.build_macos == 'true' }}
-    name: ${{ matrix.target.name }}
-    runs-on: ${{ matrix.target.runs-on }}
-    timeout-minutes: ${{ matrix.target.timeout }}
+    name: macos-arm64
+    runs-on: macos-15
+    timeout-minutes: 20
 
     env:
       SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
       MAC_SIGNING: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID != '' }}
       MAC_CODESIGN_ID: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        # Built by the plan step: release packaging excludes macOS x64.
-        target: ${{ fromJSON(needs.get-version.outputs.macos_targets) }}
 
     steps:
       - name: Checkout
@@ -579,14 +567,14 @@ jobs:
         id: get-deps
         uses: ./.github/actions/install-dependencies
         with:
-          qt-version: ${{ matrix.target.qt-version }}
+          qt-version: 6.11.1
 
       - name: Configure
         shell: bash
         run: |
           set -euo pipefail
           openssl_root=$(brew --prefix openssl@3)
-          ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}" -DOPENSSL_ROOT_DIR="$openssl_root" -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
+          ${{ env.CMAKE_CONFIGURE }} -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}" -DOPENSSL_ROOT_DIR="$openssl_root" -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
 
       - name: Build
         shell: bash
@@ -735,14 +723,14 @@ jobs:
       - name: Test packaged build
         uses: ./.github/actions/test-package
         with:
-          expected-arch: ${{ matrix.target.expected-arch }}
+          expected-arch: arm64
 
       - name: Upload package
         # 每次构建都上传产物，便于直接下载 GitHub 构建版本做验收。
         if: ${{ success() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
+          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-windows-2022-x64
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
           retention-days: 14
 
