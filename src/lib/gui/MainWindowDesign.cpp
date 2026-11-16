@@ -181,12 +181,15 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   actions->setSpacing(kGap);
   serverOptions = new QWidget(card);
   serverOptions->setObjectName(QStringLiteral("serverOptions"));
+  serverOptions->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
   auto *serverLayout = new QHBoxLayout(serverOptions);
   serverLayout->setContentsMargins(0, 0, 0, 0);
   serverLayout->setSpacing(kGap);
   btnConfigureServer = new QPushButton(QObject::tr("&Configure Server"), serverOptions);
   btnConfigureServer->setObjectName(QStringLiteral("btnConfigureServer"));
   btnConfigureServer->setIcon(QIcon::fromTheme(QStringLiteral("configure")));
+  // 设计稿：按钮按文字取宽，不随行拉伸。
+  btnConfigureServer->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
   btnSaveServerConfig =
       iconButton(serverOptions, QStringLiteral("btnSaveServerConfig"), QStringLiteral("document-save-as"));
   btnSaveServerConfig->setToolTip(QObject::tr("Export server configuration"));
@@ -197,12 +200,14 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   btnConfigureClient = new QPushButton(QObject::tr("&Configure Client"), card);
   btnConfigureClient->setObjectName(QStringLiteral("btnConfigureClient"));
   btnConfigureClient->setIcon(QIcon::fromTheme(QStringLiteral("configure")));
+  btnConfigureClient->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
   actions->addWidget(btnConfigureClient);
   actions->addStretch(1);
 
   btnToggleCore = new QPushButton(QObject::tr("&Start"), card);
   btnToggleCore->setObjectName(QStringLiteral("btnToggleCore"));
   btnToggleCore->setEnabled(false);
+  btnToggleCore->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
   actions->addWidget(btnToggleCore);
 
   btnRestartCore = new QPushButton(QObject::tr("&Restart"), card);
@@ -210,6 +215,7 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   btnRestartCore->setIcon(QIcon::fromTheme(QStringLiteral("view-refresh")));
   btnRestartCore->setEnabled(false);
   btnRestartCore->setToolTip(QObject::tr("Restart"));
+  btnRestartCore->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
   actions->addWidget(btnRestartCore);
   cardLayout->addLayout(actions);
   workspaceLayout->addWidget(card);

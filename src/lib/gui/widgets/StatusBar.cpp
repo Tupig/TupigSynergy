@@ -12,6 +12,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QStyle>
 #include <QTimer>
 #include <QVariant>
 
@@ -31,7 +32,8 @@ StatusBar::StatusBar(QWidget *parent)
   layout->setSpacing(9);
 
   m_btnFingerprint->setProperty("iconButton", true);
-  m_btnFingerprint->setIcon(QIcon::fromTheme(QStringLiteral("fingerprint")));
+  // 设计稿：状态栏左侧是绿色对勾；点击仍可查看本地指纹。
+  m_btnFingerprint->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
   m_btnFingerprint->setIconSize(QSize(14, 14));
   connect(m_btnFingerprint, &QPushButton::clicked, this, &StatusBar::requestShowMyFingerprints);
 
