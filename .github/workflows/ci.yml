@@ -409,7 +409,29 @@ jobs:
 
       - name: Package
         shell: bash
-        run: cmake --build build --config Release -j8 --target package
+        run: |
+          set -euo pipefail
+          if cmake --build build --config Release -j8 --target package; then
+            exit 0
+          fi
+          # CPack 默认只打印日志路径；失败时保留真正的 WiX 诊断。
+          while IFS= read -r -d '' logfile; do
+            printf '\n--- %s ---\n' "$logfile"
+            cat "$logfile"
+          done < <(find build/_CPack_Packages -type f -name '*.log' -print0)
+          exit 1
+
+      - name: Upload package failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-x64-package-diagnostics
+          path: |
+            build/_CPack_Packages/**/*.log
+            build/_CPack_Packages/**/*.wxs
+            build/_CPack_Packages/**/*.wxl
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Locate MSI
         if: env.SYNERGY_VERSION_RELEASE == 'true' && env.WINDOWS_SIGNING == 'true'
