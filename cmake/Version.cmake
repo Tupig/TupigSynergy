@@ -12,7 +12,8 @@ set(SYNERGY_VERSION_MINOR 1)
 # committed value in sync with vcpkg.json for the consistency check.
 if(DEFINED ENV{SYNERGY_VERSION_PATCH} AND NOT "$ENV{SYNERGY_VERSION_PATCH}" STREQUAL "")
   set(SYNERGY_VERSION_PATCH $ENV{SYNERGY_VERSION_PATCH})
-elseif(NOT DEFINED SYNERGY_VERSION_PATCH)
+else()
+  # 文件是唯一真源；不要读取 CMake 缓存里上一次构建的补丁号。
   set(SYNERGY_VERSION_PATCH 1)
 endif()
 set(SYNERGY_VERSION_STAGE "")
