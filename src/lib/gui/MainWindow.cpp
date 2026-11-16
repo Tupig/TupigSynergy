@@ -125,12 +125,11 @@ MainWindow::MainWindow()
   });
 
   connect(ui->btnBack, &QPushButton::clicked, this, [this] {
-    if (auto *editor = ui->pageStack->currentWidget(); editor != ui->workspace) {
-      if (auto *area = qobject_cast<QScrollArea *>(editor)) {
-        if (auto *dialog = qobject_cast<QDialog *>(area->widget()))
-          dialog->reject();
-      }
-    }
+    // PageHost 把编辑器包在 QScrollArea 的容器里，必须按属性取回 QDialog。
+    auto *area = qobject_cast<QScrollArea *>(ui->pageStack->currentWidget());
+    auto *dialog = area ? area->property("pageEditor").value<QDialog *>() : nullptr;
+    if (dialog != nullptr)
+      dialog->reject();
   });
   connect(ui->pageHost, &PageHost::editorVisibilityChanged, this, [this](bool visible) {
     ui->btnBack->setVisible(visible);
