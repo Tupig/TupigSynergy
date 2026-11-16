@@ -95,7 +95,9 @@ void EditorTransactionTests::logsFilterCountAndBoundHistory()
   log.appendLine(QStringLiteral("[time] ERROR: third"));
   const std::array<int, 3> counts{1, 1, 1};
   QCOMPARE(log.levelCounts(), counts);
+  QSignalSpy history(&log, &LogWidget::historyChanged);
   log.setLevelFilter(QStringLiteral("warn"));
+  QCOMPARE(history.last().first().toString(), QStringLiteral("[time] WARNING: second"));
   QVERIFY(log.allText().contains(QStringLiteral("second")));
   QVERIFY(!log.allText().contains(QStringLiteral("first")));
   log.setLevelFilter(QString());

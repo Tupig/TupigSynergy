@@ -192,6 +192,13 @@ void CoreProcess::onProcessFinished(int exitCode, QProcess::ExitStatus)
     m_retryTimer.stop();
   }
 
+  // QProcess::close() 会终止进程；用户主动停止时不能把该退出误报为崩溃。
+  if (m_processState == Stopping) {
+    setProcessState(Stopped);
+    qInfo("core desktop process stopped");
+    return;
+  }
+
   if (exitCode != s_exitSuccess) {
     setProcessState(Stopped);
     if (exitCode == s_exitDuplicate) {

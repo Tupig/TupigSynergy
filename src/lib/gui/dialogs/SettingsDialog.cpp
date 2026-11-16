@@ -24,6 +24,7 @@
 #include "synergy/hooks/gui_hook.h"
 #endif
 
+#include <QAbstractItemView>
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QComboBox>
@@ -34,6 +35,7 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QLayoutItem>
+#include <QListView>
 #include <QMessageBox>
 #include <QVariant>
 
@@ -56,6 +58,14 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
   I18N::reDetectLanguages();
   ui->comboLanguage->addItems(I18N::detectedLanguages());
   ui->comboLanguage->setCurrentText(I18N::toNativeName(I18N::currentLanguage()));
+  // 使用可测量的 Qt 列表弹层，避免 macOS 原生弹层按窄控件宽度截断语言名称。
+  auto *languageView = new QListView(ui->comboLanguage);
+  languageView->setTextElideMode(Qt::ElideNone);
+  int popupWidth = 180;
+  for (const auto &language : I18N::detectedLanguages())
+    popupWidth = qMax(popupWidth, languageView->fontMetrics().horizontalAdvance(language) + 48);
+  languageView->setMinimumWidth(popupWidth);
+  ui->comboLanguage->setView(languageView);
 
   updateText();
 

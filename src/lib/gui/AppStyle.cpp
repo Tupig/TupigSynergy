@@ -103,6 +103,10 @@ QString appStyleSheet()
       border: 1px solid %7; background: %8; color: %1; font-size: 13px;
     }
     QPushButton:hover { background: %9; }
+    QPushButton:pressed { background: %10; border-color: %11; padding-top: 1px; }
+    QPushButton[primary="true"]:pressed { background: #269f69; }
+    QPushButton[danger="true"]:pressed { background: #582d2d; }
+    QToolTip { color: %1; background: %5; border: 1px solid %7; padding: 6px 8px; }
     QPushButton:disabled { color: %4; }
     QPushButton[small="true"] {
       min-height: 26px; max-height: 26px; padding: 0 9px; font-size: 12px; border-radius: 7px;

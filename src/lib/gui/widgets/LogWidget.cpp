@@ -43,6 +43,8 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_table{new QTableWidge
   m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
   m_table->setFocusPolicy(Qt::NoFocus);
   m_table->setWordWrap(true);
+  m_table->setTextElideMode(Qt::ElideNone);
+  m_table->verticalHeader()->setMinimumSectionSize(0);
   m_table->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   m_table->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
   m_table->horizontalHeader()->hide();
@@ -142,9 +144,15 @@ bool LogWidget::eventFilter(QObject *watched, QEvent *event)
 
 void LogWidget::updateVisibleHeight()
 {
-  // 设计稿：最多六条记录，空态不占高度；超长记录在视口内滚动。
-  const int rows = qMin(m_table->rowCount(), m_visibleLines);
-  const int height = rows == 0 ? 0 : rows * rowHeight() + 2;
+  // 根据实际列宽重算换行高度，不能只打开 wordWrap 后仍固定单行高度。
+  const int count = m_table->rowCount();
+  int height = 0;
+  for (int row = qMax(0, count - m_visibleLines); row < count; ++row) {
+    m_table->resizeRowToContents(row);
+    height += qMax(rowHeight(), m_table->rowHeight(row));
+  }
+  const int rows = qMin(count, m_visibleLines);
+  height = rows == 0 ? 0 : qMin(height + 2, 236);
   // 空态完全隐藏记录区，避免留下一条边框线。
   m_table->setVisible(rows > 0);
   m_table->setFixedHeight(height);
@@ -191,19 +199,13 @@ void LogWidget::rebuild()
 {
   m_table->setRowCount(0);
   m_latestLine.clear();
-  int rendered = 0;
-  for (auto it = m_history.rbegin(); it != m_history.rend() && rendered < kRenderLimit; ++it) {
-    if (!m_filter.isEmpty() && levelOf(*it) != m_filter)
-      continue;
-    m_latestLine = *it;
-    ++rendered;
-  }
-
   QList<QString> visible;
   for (const auto &line : m_history) {
     if (m_filter.isEmpty() || levelOf(line) == m_filter)
       visible.append(line);
   }
+  if (!visible.isEmpty())
+    m_latestLine = visible.last();
   const int start = qMax(0, visible.size() - kRenderLimit);
   m_table->setRowCount(visible.size() - start);
   for (int index = start; index < visible.size(); ++index) {
@@ -265,6 +267,7 @@ void LogWidget::findNext(const QString &text)
   for (int offset = 1; offset <= m_table->rowCount(); ++offset) {
     const int row = (qMax(0, current) + offset) % m_table->rowCount();
     if (m_table->item(row, 2) && m_table->item(row, 2)->text().contains(text)) {
+      m_table->setCurrentCell(row, 2);
       m_table->scrollToItem(m_table->item(row, 2));
       return;
     }
@@ -279,6 +282,7 @@ void LogWidget::findPrevious(const QString &text)
   for (int offset = 1; offset <= m_table->rowCount(); ++offset) {
     const int row = (current - offset + m_table->rowCount() * 2) % m_table->rowCount();
     if (m_table->item(row, 2) && m_table->item(row, 2)->text().contains(text)) {
+      m_table->setCurrentCell(row, 2);
       m_table->scrollToItem(m_table->item(row, 2));
       return;
     }
