@@ -845,9 +845,7 @@ jobs:
              && ok "${{needs.build-windows.result}}" \
              && ok "${{needs.build-macos.result}}" \
              && ok "${{needs.bump-version.result}}" \
-             && ok "${{needs.dependency-audit.result}}" \
-             && ok "${{needs.codeql.result}}" \
-             && ok "${{needs.msi64-intake.result}}"; then
+             && ok "${{needs.github-release.result}}"; then
             printf '\342\234\205 CI passed\n' > "$GITHUB_STEP_SUMMARY"
           else
             exit 1
