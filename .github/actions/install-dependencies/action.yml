@@ -279,22 +279,7 @@ runs:
         # versions. Revisit if a vcpkg-action release ever ships a breaking input.
         revision: master
 
-    - name: Cache Chocolatey
-      id: cache-choco
-      if: (runner.os == 'Windows')
-      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
-      with:
-        path: |
-            C:/ProgramData/chocolatey/bin/
-            C:/ProgramData/chocolatey/lib/doxygen.install
-            C:/Program*/doxygen/
-        key: cache-chocolatey${{ matrix.target.arch }}-doxygen
-
-    - name: Install doxygen (windows)
-      if: ((runner.os == 'Windows') && (steps.cache-choco.outputs.cache-hit != 'true'))
-      shell: bash
-      run: choco install doxygen.install
-
+    # 产品与安装包构建不生成 Doxygen 文档，不下载无关安装程序。
     - name: Install Wix
       if: ${{ runner.os == 'Windows' }}
       shell: cmd
