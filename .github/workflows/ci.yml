@@ -486,7 +486,8 @@ jobs:
           expected-arch: ${{ matrix.target.arch }}
 
       - name: Upload package
-        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
+        # 每次构建都上传产物，便于直接下载 GitHub 构建版本做验收。
+        if: ${{ success() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
@@ -724,7 +725,8 @@ jobs:
           expected-arch: ${{ matrix.target.expected-arch }}
 
       - name: Upload package
-        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
+        # 每次构建都上传产物，便于直接下载 GitHub 构建版本做验收。
+        if: ${{ success() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
@@ -1071,7 +1073,8 @@ jobs:
           like: ${{ matrix.target.like }}
 
       - name: Upload package
-        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
+        # 每次构建都上传产物，便于直接下载 GitHub 构建版本做验收。
+        if: ${{ success() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
@@ -1140,7 +1143,8 @@ jobs:
           scripts/ci/package-flatpak-offline.sh repo "${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_linux_${{ matrix.flatpak.arch }}-flatpak-offline.tar.zst" "${{ matrix.flatpak.arch }}"
 
       - name: Upload package
-        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
+        # 每次构建都上传产物，便于直接下载 GitHub 构建版本做验收。
+        if: ${{ success() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-flatpak-${{matrix.flatpak.arch}}
