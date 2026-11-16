@@ -167,6 +167,12 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
       page->layout()->setAlignment(Qt::AlignTop);
   }
 
+  if (auto *scope = findChild<QComboBox *>(QStringLiteral("comboSettingsScope"))) {
+    connect(
+        scope, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SettingsDialog::setButtonBoxEnabledButtons
+    );
+    scope->setEnabled(Settings::isWritable());
+  }
   // Align independently nested form rows, and recompute when translated labels change.
   updateText();
 }
@@ -411,6 +417,8 @@ void SettingsDialog::accept()
 
 void SettingsDialog::loadFromConfig()
 {
+  if (auto *scope = findChild<QComboBox *>(QStringLiteral("comboSettingsScope")))
+    scope->setCurrentIndex(scope->property("originalScopeIndex").toInt());
   ui->sbPort->setValue(Settings::value(Settings::Core::Port).toInt());
   ui->comboLogLevel->setCurrentIndex(
       ui->comboLogLevel->findData(Settings::logLevelText(), Qt::UserRole, Qt::MatchFixedString)
@@ -606,6 +614,8 @@ bool SettingsDialog::isModified() const
       (I18N::nativeTo639Name(ui->comboLanguage->currentText()) != Settings::value(Settings::Core::Language).toString());
 
   modified = modified || (m_checkForUpdates->isChecked() != Settings::value(Settings::Gui::CheckForUpdates).toBool());
+  if (auto *scope = findChild<QComboBox *>(QStringLiteral("comboSettingsScope")))
+    modified = modified || scope->currentIndex() != scope->property("originalScopeIndex").toInt();
 
   if (!ignoreInterface)
     modified = modified || ui->comboInterface->currentText() != Settings::value(Settings::Core::Interface).toString();

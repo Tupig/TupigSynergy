@@ -36,6 +36,7 @@
 #include <QDialogButtonBox>
 #include <QFileInfo>
 #include <QGridLayout>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLocale>
@@ -47,8 +48,10 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QTabWidget>
 #include <QVBoxLayout>
+#include <QVariant>
 #include <QWidget>
 
 using namespace synergy::gui;
@@ -229,6 +232,37 @@ void FeatureHandler::addScopeTab(QDialog *parent) const
   auto *tabWidget = parent->findChild<QTabWidget *>();
   if (tabWidget == nullptr) {
     qWarning("scope tab: no QTabWidget in settings dialog, skipping");
+    return;
+  }
+
+  // 作用域作为通用设置的下拉项呈现，不再额外占用一个页签。
+  auto *generalCard = parent->findChild<QGroupBox *>(QStringLiteral("generalCard"));
+  auto *generalForm = parent->findChild<QGridLayout *>(QStringLiteral("generalForm"));
+  if (generalCard && generalForm) {
+    auto *label = new QLabel(QObject::tr("Scope"), generalCard);
+    label->setObjectName(QStringLiteral("scopeLabel"));
+    label->setMinimumWidth(120);
+    auto *selector = new QComboBox(generalCard);
+    selector->setObjectName(QStringLiteral("comboSettingsScope"));
+    selector->addItem(QObject::tr("Current user"), false);
+    selector->addItem(QObject::tr("All users"), true);
+    selector->setMaximumWidth(180);
+    const bool system = Settings::settingsFile() == Settings::SystemSettingFile;
+    selector->setCurrentIndex(system ? 1 : 0);
+    selector->setProperty("originalScopeIndex", system ? 1 : 0);
+    selector->setToolTip(
+        QObject::tr("Choose where %1 stores its settings. Changes take effect when %1 restarts.")
+            .arg(QApplication::applicationName())
+    );
+    const int row = generalForm->rowCount();
+    generalForm->addWidget(label, row, 0, Qt::AlignLeft | Qt::AlignVCenter);
+    generalForm->addWidget(selector, row, 1, Qt::AlignLeft | Qt::AlignVCenter);
+    // 修改先留在编辑器草稿，只有保存后才执行作用域切换；取消不触碰配置。
+    QObject::connect(parent, &QDialog::accepted, parent, [parent, selector, system] {
+      const bool toSystem = selector->currentIndex() == 1;
+      if (toSystem != system)
+        SettingsScope::switchTo(parent, toSystem);
+    });
     return;
   }
 
