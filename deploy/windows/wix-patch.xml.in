@@ -43,7 +43,7 @@
            Value="RunApp"
            Condition= "WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed" />
        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
-       <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Run @CMAKE_PROJECT_PROPER_NAME@ when finished" />
+       <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="!(loc.LaunchAfterInstall)" />
     </UI>
 
     <CustomAction

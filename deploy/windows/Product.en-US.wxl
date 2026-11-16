@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
+SPDX-License-Identifier: MIT
+-->
+<WixLocalization Culture="en-us" Codepage="1252" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <String Id="LaunchAfterInstall" Value="Run [ProductName] when finished" />
+</WixLocalization>
