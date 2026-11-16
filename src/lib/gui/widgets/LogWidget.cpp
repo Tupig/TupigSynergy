@@ -15,7 +15,11 @@
 #include <QScrollBar>
 #include <QTableWidget>
 #include <QTableWidgetItem>
+#include <QTextLayout>
+#include <QTextOption>
+#include <QTimer>
 #include <QVBoxLayout>
+#include <QtMath>
 
 #include <utility>
 
@@ -54,6 +58,10 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_table{new QTableWidge
   m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
   m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
   m_table->viewport()->installEventFilter(this);
+  connect(m_table->horizontalHeader(), &QHeaderView::sectionResized, this, [this](int column, int, int) {
+    if (column == 2)
+      QTimer::singleShot(0, this, [this] { updateVisibleHeight(); });
+  });
 
   QFont font = synergy::platform::isWindows() ? QFont(QStringLiteral("Consolas"))
                                               : QFontDatabase::systemFont(QFontDatabase::FixedFont);
@@ -148,8 +156,33 @@ void LogWidget::updateVisibleHeight()
   const int count = m_table->rowCount();
   int height = 0;
   for (int row = qMax(0, count - m_visibleLines); row < count; ++row) {
-    m_table->resizeRowToContents(row);
-    height += qMax(rowHeight(), m_table->rowHeight(row));
+    const auto *item = m_table->item(row, 2);
+    if (!item)
+      continue;
+    // Qt 的表格 sizeHint 在不同平台会忽略长单词换行，显式按消息列宽排版。
+    const int width = qMax(1, m_table->columnWidth(2) - 16);
+    qreal textHeight = 0;
+    const auto paragraphs = item->text().split(QLatin1Char('\n'));
+    for (const auto &paragraph : paragraphs) {
+      QTextLayout layout(paragraph, m_table->font());
+      QTextOption option;
+      option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+      layout.setTextOption(option);
+      layout.beginLayout();
+      while (true) {
+        auto line = layout.createLine();
+        if (!line.isValid())
+          break;
+        line.setLineWidth(width);
+        textHeight += line.height();
+      }
+      layout.endLayout();
+      if (paragraph.isEmpty())
+        textHeight += m_table->fontMetrics().height();
+    }
+    const int measured = qMax(rowHeight(), qCeil(textHeight) + 8);
+    m_table->setRowHeight(row, qMin(measured, 65535));
+    height += m_table->rowHeight(row);
   }
   const int rows = qMin(count, m_visibleLines);
   height = rows == 0 ? 0 : qMin(height + 2, 236);
