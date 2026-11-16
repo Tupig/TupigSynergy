@@ -54,6 +54,9 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
   ui->lineCommandEnter->setEnabled(false);
   ui->lineCommandExit->setEnabled(false);
 
+  // 语言可即时预览，但取消必须恢复原显示语言和“跟随系统”的空配置。
+  m_originalLanguage = I18N::currentLanguage();
+  m_originalLanguageSetting = Settings::value(Settings::Core::Language).toString();
   // set up the language combo
   I18N::reDetectLanguages();
   ui->comboLanguage->addItems(I18N::detectedLanguages());
@@ -695,6 +698,14 @@ void SettingsDialog::setButtonBoxEnabledButtons() const
   ui->buttonBox->button(QDialogButtonBox::Save)->setEnabled(writable && modified);
   ui->buttonBox->button(QDialogButtonBox::Reset)->setEnabled(writable && modified);
   ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(writable && !isDefault());
+}
+
+void SettingsDialog::reject()
+{
+  if (I18N::currentLanguage() != m_originalLanguage)
+    I18N::setLanguage(m_originalLanguage);
+  Settings::setValue(Settings::Core::Language, m_originalLanguageSetting);
+  QDialog::reject();
 }
 
 SettingsDialog::~SettingsDialog() = default;

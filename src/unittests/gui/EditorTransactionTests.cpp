@@ -2,6 +2,7 @@
  * SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
+#include "common/I18N.h"
 #include "common/NetworkProtocol.h"
 #include "common/Settings.h"
 #include "gui/config/Screen.h"
@@ -33,6 +34,7 @@ private Q_SLOTS:
   void protocolValuesSupportStoredAndDefaultTypes();
   void traySelectorCancelDoesNotWrite();
   void traySelectorSaveWrites();
+  void cancelPreservesSystemLanguageSetting();
 };
 
 void EditorTransactionTests::clientCancelDoesNotWrite()
@@ -143,6 +145,18 @@ void EditorTransactionTests::traySelectorSaveWrites()
   buttons->button(QDialogButtonBox::Save)->click();
   QCOMPARE(editor.result(), static_cast<int>(QDialog::Accepted));
   QVERIFY(Settings::value(Settings::Gui::SymbolicTrayIcon).toBool());
+}
+
+void EditorTransactionTests::cancelPreservesSystemLanguageSetting()
+{
+  Settings::setValue(Settings::Core::Language, QString());
+  const auto originalLanguage = I18N::currentLanguage();
+  synergy::gui::ServerConfig config;
+  SettingsDialog editor(nullptr, config);
+  Settings::setValue(Settings::Core::Language, QStringLiteral("en"));
+  editor.reject();
+  QVERIFY(Settings::value(Settings::Core::Language).toString().isEmpty());
+  QCOMPARE(I18N::currentLanguage(), originalLanguage);
 }
 
 int main(int argc, char **argv)

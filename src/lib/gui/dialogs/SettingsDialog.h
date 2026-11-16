@@ -25,6 +25,7 @@ public:
   void extracted();
   SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig &serverConfig);
   ~SettingsDialog() override;
+  void reject() override;
 
 Q_SIGNALS:
   void shown();
@@ -84,6 +85,8 @@ private:
    */
   void setButtonBoxEnabledButtons() const;
 
+  QString m_originalLanguage;
+  QString m_originalLanguageSetting;
   bool m_interfaceSetOnLoad = false;
   std::unique_ptr<Ui::SettingsDialog> ui;
   QCheckBox *m_checkForUpdates = nullptr;
