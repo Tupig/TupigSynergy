@@ -8,6 +8,12 @@
 
 #include "StyleUtils.h"
 
+#include <QApplication>
+#include <QEvent>
+#include <QPainter>
+#include <QPushButton>
+#include <QVariantAnimation>
+
 namespace synergy::gui {
 
 namespace {
@@ -29,6 +35,85 @@ struct Tokens
   QString accentSoft;
   QString danger;
   QString dangerText;
+};
+
+// 仅绘制透明叠层，不替换按钮样式或改变点击/键盘/辅助功能语义。
+class ButtonHighlight final : public QWidget
+{
+public:
+  explicit ButtonHighlight(QPushButton *button) : QWidget(button), m_animation(this)
+  {
+    setAttribute(Qt::WA_TransparentForMouseEvents);
+    setAttribute(Qt::WA_NoSystemBackground);
+    setFocusPolicy(Qt::NoFocus);
+    setGeometry(button->rect());
+    connect(&m_animation, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+      m_opacity = value.toReal();
+      update();
+    });
+    show();
+  }
+
+  void transition(qreal opacity)
+  {
+    m_animation.stop();
+    m_animation.setStartValue(m_opacity);
+    m_animation.setEndValue(opacity);
+    m_animation.setDuration(110);
+    m_animation.setEasingCurve(QEasingCurve::OutCubic);
+    m_animation.start();
+  }
+
+protected:
+  void paintEvent(QPaintEvent *) override
+  {
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(255, 255, 255, qRound(255 * m_opacity)));
+    painter.drawRoundedRect(QRectF(rect()).adjusted(1, 1, -1, -1), 7, 7);
+  }
+
+private:
+  QVariantAnimation m_animation;
+  qreal m_opacity = 0;
+};
+
+class ButtonFeedback final : public QObject
+{
+public:
+  explicit ButtonFeedback(QObject *parent) : QObject(parent)
+  {
+  }
+
+protected:
+  bool eventFilter(QObject *object, QEvent *event) override
+  {
+    auto *button = qobject_cast<QPushButton *>(object);
+    if (!button)
+      return false;
+    auto *highlight = dynamic_cast<ButtonHighlight *>(
+        button->findChild<QWidget *>(QStringLiteral("buttonFeedbackOverlay"), Qt::FindDirectChildrenOnly)
+    );
+    const auto type = event->type();
+    if (type == QEvent::Enter || type == QEvent::MouseButtonPress || type == QEvent::MouseButtonRelease ||
+        type == QEvent::Leave || type == QEvent::EnabledChange || type == QEvent::Resize) {
+      if (!highlight && button->isEnabled() && type != QEvent::Resize) {
+        highlight = new ButtonHighlight(button);
+        highlight->setObjectName(QStringLiteral("buttonFeedbackOverlay"));
+      }
+      if (highlight) {
+        highlight->setGeometry(button->rect());
+        highlight->raise();
+        const qreal target = !button->isEnabled() || type == QEvent::Leave ? 0.0
+                             : type == QEvent::MouseButtonPress            ? 0.15
+                             : button->underMouse()                        ? 0.06
+                                                                           : 0.0;
+        highlight->transition(target);
+      }
+    }
+    return false;
+  }
 };
 
 Tokens tokens(bool dark)
@@ -70,6 +155,15 @@ Tokens tokens(bool dark)
 }
 
 } // namespace
+
+void installButtonFeedback()
+{
+  if (!qApp || qApp->findChild<QObject *>(QStringLiteral("buttonFeedbackController")))
+    return;
+  auto *feedback = new ButtonFeedback(qApp);
+  feedback->setObjectName(QStringLiteral("buttonFeedbackController"));
+  qApp->installEventFilter(feedback);
+}
 
 QString appStyleSheet()
 {

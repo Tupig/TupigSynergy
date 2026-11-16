@@ -25,6 +25,8 @@
 #include <QListWidget>
 #include <QPixmap>
 #include <QProgressBar>
+#include <QPushButton>
+#include <QSignalSpy>
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -53,6 +55,7 @@ private Q_SLOTS:
   void downloadsUpdateFromLoopback();
   void rendersUpdateAndFingerprint();
   void rendersConfigurationPages();
+  void animatedButtonStillDeliversClick();
 };
 
 void DialogRenderTests::rendersHotkeyAndAction()
@@ -187,6 +190,21 @@ void DialogRenderTests::rendersConfigurationPages()
   screens.append(screen);
   ScreenSettingsDialog screenDialog(nullptr, &screen, &screens);
   renderToFile(screenDialog, QDir(outputDir).filePath(QStringLiteral("screen.png")));
+}
+
+void DialogRenderTests::animatedButtonStillDeliversClick()
+{
+  synergy::gui::installButtonFeedback();
+  QPushButton button(QStringLiteral("Test"));
+  button.resize(100, 32);
+  QSignalSpy clicked(&button, &QPushButton::clicked);
+  QTest::mouseClick(&button, Qt::LeftButton);
+  QCOMPARE(clicked.count(), 1);
+  auto *overlay = button.findChild<QWidget *>(QStringLiteral("buttonFeedbackOverlay"));
+  QVERIFY(overlay != nullptr);
+  QVERIFY(overlay->testAttribute(Qt::WA_TransparentForMouseEvents));
+  QTest::mouseClick(&button, Qt::LeftButton);
+  QCOMPARE(clicked.count(), 2);
 }
 
 int main(int argc, char **argv)

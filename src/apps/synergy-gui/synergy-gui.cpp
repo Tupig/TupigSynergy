@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
     app.setFont(font);
   }
   app.setStyleSheet(synergy::gui::appStyleSheet());
+  synergy::gui::installButtonFeedback();
 
 #ifdef SYNERGY_EXTRA_HEADER
   synergy::hooks::onPreInit();
