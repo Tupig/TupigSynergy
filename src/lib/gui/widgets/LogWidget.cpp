@@ -23,8 +23,6 @@ namespace {
 constexpr int kHistoryLimit = 10000;
 // 历史可能很长，但只渲染最近的记录；更早的仍参与筛选与统计。
 constexpr int kRenderLimit = 500;
-constexpr int kTimeColumn = 74;
-constexpr int kLevelColumn = 46;
 
 QColor levelColor(const QString &level)
 {
@@ -49,11 +47,10 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_table{new QTableWidge
   m_table->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
   m_table->horizontalHeader()->hide();
   m_table->verticalHeader()->hide();
-  m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
-  m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
+  // 时间与级别按内容取宽，避免等宽字体下的省略号；消息列占满剩余宽度。
+  m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+  m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
   m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-  m_table->setColumnWidth(0, kTimeColumn);
-  m_table->setColumnWidth(1, kLevelColumn);
   m_table->viewport()->installEventFilter(this);
 
   QFont font = synergy::platform::isWindows() ? QFont(QStringLiteral("Consolas"))
