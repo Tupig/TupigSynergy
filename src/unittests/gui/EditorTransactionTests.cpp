@@ -19,6 +19,7 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QTableWidget>
 #include <QTemporaryDir>
 #include <QtTest>
 
@@ -118,6 +119,13 @@ void EditorTransactionTests::logsFilterCountAndBoundHistory()
   QVERIFY(log.allText().isEmpty());
   log.appendLine(QStringLiteral("[time] ERROR: ") + QString(20000, QLatin1Char('x')));
   QVERIFY(log.maximumHeight() <= 236);
+  log.resize(320, 236);
+  log.show();
+  QCoreApplication::processEvents();
+  auto *table = log.findChild<QTableWidget *>();
+  QVERIFY(table != nullptr);
+  QCOMPARE(table->textElideMode(), Qt::ElideNone);
+  QVERIFY(table->rowHeight(table->rowCount() - 1) > table->fontMetrics().height() * 2);
 }
 
 void EditorTransactionTests::traySelectorCancelDoesNotWrite()

@@ -223,7 +223,9 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   logPanel = new LogPanel(workspaceContents);
   logPanel->setObjectName(QStringLiteral("logPanel"));
   workspaceLayout->addWidget(logPanel);
-  workspaceLayout->addStretch(1);
+  // 内容高度来自卡片本身，不用 expanding spacer 把状态栏推向窗口底部。
+  workspaceLayout->setAlignment(Qt::AlignTop);
+  workspaceContents->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 
   statusBar = new StatusBar(topLevelWidget);
   statusBar->setObjectName(QStringLiteral("statusBar"));
