@@ -2,7 +2,9 @@
  * SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
+#include "common/Settings.h"
 #include "gui/Action.h"
+#include "gui/AppStyle.h"
 #include "gui/Hotkey.h"
 #include "gui/config/ServerConfig.h"
 #include "gui/dialogs/ActionDialog.h"
@@ -24,6 +26,7 @@
 #include <QPixmap>
 #include <QProgressBar>
 #include <QTabWidget>
+#include <QTemporaryDir>
 #include <QtTest>
 
 namespace {
@@ -186,5 +189,19 @@ void DialogRenderTests::rendersConfigurationPages()
   renderToFile(screenDialog, QDir(outputDir).filePath(QStringLiteral("screen.png")));
 }
 
-QTEST_MAIN(DialogRenderTests)
+int main(int argc, char **argv)
+{
+  // 构造任何读取 Settings 的对话框之前隔离设置，避免测试碰到日常配置。
+  QTemporaryDir directory;
+  if (!directory.isValid())
+    return 1;
+  qputenv("XDG_CONFIG_HOME", directory.path().toUtf8());
+  qputenv("XDG_STATE_HOME", directory.path().toUtf8());
+  QApplication app(argc, argv);
+  Settings::setSettingsFile(directory.filePath(QStringLiteral("render.conf")));
+  Settings::setStateFile(directory.filePath(QStringLiteral("render.state")));
+  app.setStyleSheet(synergy::gui::appStyleSheet());
+  DialogRenderTests tests;
+  return QTest::qExec(&tests, argc, argv);
+}
 #include "DialogRenderTests.moc"
