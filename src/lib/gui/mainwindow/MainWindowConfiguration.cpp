@@ -8,7 +8,7 @@
  */
 
 #include "MainWindow.h"
-#include "ui_MainWindow.h"
+#include "MainWindowDesign.h"
 
 #include "Diagnostic.h"
 #include "StyleUtils.h"

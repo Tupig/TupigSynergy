@@ -462,7 +462,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Edit Computer Name</source>
-        <translation>编辑计算机名称</translation>
+        <translation type="vanished">编辑计算机名称</translation>
     </message>
     <message>
         <source>Use this computer&apos;s keyboard and mouse
@@ -478,15 +478,15 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>&amp;Configure Server</source>
-        <translation>配置服务端(&amp;C)</translation>
+        <translation type="vanished">配置服务端(&amp;C)</translation>
     </message>
     <message>
         <source>Export server configuration</source>
-        <translation>导出服务器配置</translation>
+        <translation type="vanished">导出服务器配置</translation>
     </message>
     <message>
         <source>You must select a mode</source>
-        <translation>您必须选择一种模式</translation>
+        <translation type="vanished">您必须选择一种模式</translation>
     </message>
     <message>
         <source>&amp;Start</source>
@@ -494,7 +494,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Restart</source>
-        <translation>重启</translation>
+        <translation type="vanished">重启</translation>
     </message>
     <message>
         <source>Your current TLS key is smaller than the minimum allowed size, A new key 2048-bit key will be generated.</source>
@@ -596,7 +596,7 @@ A bound IP is now invalid, you may need to restart the server.</source>
     </message>
     <message>
         <source>Preferences</source>
-        <translation type="unfinished">首选项</translation>
+        <translation type="obsolete">首选项</translation>
     </message>
     <message>
         <source>&amp;File</source>
@@ -705,11 +705,11 @@ Valid names:
     </message>
     <message>
         <source>&amp;Configure Client</source>
-        <translation>配置客户端(&amp;C)</translation>
+        <translation type="vanished">配置客户端(&amp;C)</translation>
     </message>
     <message>
         <source>Connect to:</source>
-        <translation>连接到：</translation>
+        <translation type="vanished">连接到：</translation>
     </message>
     <message>
         <source>&lt;html&gt;Hostname or IP address of the server computer.&lt;br/&gt;May contain a comma seperated list.&lt;/html&gt;</source>
@@ -813,47 +813,8 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Use Enter to save the name change.</source>
-        <translation>按 Enter 保存名称修改。</translation>
+        <translation type="vanished">按 Enter 保存名称修改。</translation>
     </message>
-    <message>
-        <source>Server</source>
-        <translation>服务端</translation>
-    </message>
-    <message>
-        <source>Client</source>
-        <translation>客户端</translation>
-    </message>
-    <message>
-        <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
-        <translation>服务端计算机的主机名或 IP 地址，可填写逗号分隔的列表。</translation>
-    </message>
-    <message>
-        <source>Port</source>
-        <translation>端口</translation>
-    </message>
-    <message>
-        <source>Back</source>
-        <translation type="unfinished">返回</translation>
-    </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation>检查更新</translation>
-    </message>
-    <message>
-        <source>About</source>
-        <translation>关于</translation>
-    </message>
-    <message>
-        <source>Updates</source>
-        <translation>更新</translation>
-    </message>
-    <message>
-        <source>&amp;Restart</source>
-        <translation>重启(&amp;R)</translation>
-    </message>
-</context>
-<context>
-    <name>ModeCard</name>
     <message>
         <source>Server</source>
         <translation type="vanished">服务端</translation>
@@ -861,6 +822,45 @@ Additionally, check you are able to %1 the server config file: %2</source>
     <message>
         <source>Client</source>
         <translation type="vanished">客户端</translation>
+    </message>
+    <message>
+        <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
+        <translation type="vanished">服务端计算机的主机名或 IP 地址，可填写逗号分隔的列表。</translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation type="vanished">端口</translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation type="obsolete">返回</translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation type="vanished">检查更新</translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation type="vanished">关于</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="vanished">更新</translation>
+    </message>
+    <message>
+        <source>&amp;Restart</source>
+        <translation type="vanished">重启(&amp;R)</translation>
+    </message>
+</context>
+<context>
+    <name>ModeCard</name>
+    <message>
+        <source>Server</source>
+        <translation>服务端</translation>
+    </message>
+    <message>
+        <source>Client</source>
+        <translation>客户端</translation>
     </message>
     <message>
         <source>Share this computer&apos;s keyboard and mouse</source>
@@ -1184,6 +1184,78 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>Accessibility permission is still not granted. Enable %1 in System Settings, then quit and relaunch it.</source>
         <translation type="vanished">仍未获得“辅助功能”权限。请在“系统设置”中启用 %1，然后退出并重新启动。</translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished">返回</translation>
+    </message>
+    <message>
+        <source>Devices &amp; Connection</source>
+        <translation type="unfinished">设备与连接</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation type="unfinished">首选项</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished">更新</translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation type="unfinished">关于</translation>
+    </message>
+    <message>
+        <source>Use Enter to save the name change.</source>
+        <translation type="unfinished">按 Enter 保存名称修改。</translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation>编辑</translation>
+    </message>
+    <message>
+        <source>Edit Computer Name</source>
+        <translation type="unfinished">编辑计算机名称</translation>
+    </message>
+    <message>
+        <source>Connect to:</source>
+        <translation type="unfinished">连接到：</translation>
+    </message>
+    <message>
+        <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
+        <translation type="unfinished">服务端计算机的主机名或 IP 地址，可填写逗号分隔的列表。</translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation type="unfinished">端口</translation>
+    </message>
+    <message>
+        <source>You must select a mode</source>
+        <translation type="unfinished">您必须选择一种模式</translation>
+    </message>
+    <message>
+        <source>&amp;Configure Server</source>
+        <translation type="unfinished">配置服务端(&amp;C)</translation>
+    </message>
+    <message>
+        <source>Export server configuration</source>
+        <translation type="unfinished">导出服务器配置</translation>
+    </message>
+    <message>
+        <source>&amp;Configure Client</source>
+        <translation type="unfinished">配置客户端(&amp;C)</translation>
+    </message>
+    <message>
+        <source>&amp;Start</source>
+        <translation type="unfinished">启动(&amp;S)</translation>
+    </message>
+    <message>
+        <source>&amp;Restart</source>
+        <translation type="unfinished">重启(&amp;R)</translation>
+    </message>
+    <message>
+        <source>Restart</source>
+        <translation type="unfinished">重启</translation>
     </message>
 </context>
 <context>

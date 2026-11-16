@@ -12,6 +12,7 @@
 ModeCard::ModeCard(QWidget *parent) : QRadioButton(parent)
 {
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  setFixedHeight(66);
   setCursor(Qt::PointingHandCursor);
   setAttribute(Qt::WA_Hover);
 }

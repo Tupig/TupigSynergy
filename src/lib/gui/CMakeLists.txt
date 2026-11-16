@@ -35,7 +35,8 @@ add_library(${target} STATIC
   mainwindow/MainWindowConnection.cpp
   mainwindow/MainWindowWindow.cpp
   MainWindow.h
-  MainWindow.ui
+  MainWindowDesign.cpp
+  MainWindowDesign.h
   Messages.cpp
   Messages.h
   ScreenSetupModel.cpp

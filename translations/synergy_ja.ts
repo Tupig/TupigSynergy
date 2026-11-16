@@ -460,7 +460,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Edit Computer Name</source>
-        <translation>コンピューター名を編集</translation>
+        <translation type="vanished">コンピューター名を編集</translation>
     </message>
     <message>
         <source>Use this computer&apos;s keyboard and mouse
@@ -476,15 +476,15 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>&amp;Configure Server</source>
-        <translation>サーバー設定(&amp;C)</translation>
+        <translation type="vanished">サーバー設定(&amp;C)</translation>
     </message>
     <message>
         <source>Export server configuration</source>
-        <translation>サーバー設定をエクスポート</translation>
+        <translation type="vanished">サーバー設定をエクスポート</translation>
     </message>
     <message>
         <source>You must select a mode</source>
-        <translation>動作モードを選択してください</translation>
+        <translation type="vanished">動作モードを選択してください</translation>
     </message>
     <message>
         <source>&amp;Start</source>
@@ -492,7 +492,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Restart</source>
-        <translation>再起動</translation>
+        <translation type="vanished">再起動</translation>
     </message>
     <message>
         <source>Your current TLS key is smaller than the minimum allowed size, A new key 2048-bit key will be generated.</source>
@@ -590,7 +590,7 @@ A bound IP is now invalid, you may need to restart the server.</source>
     </message>
     <message>
         <source>Preferences</source>
-        <translation type="unfinished">設定</translation>
+        <translation type="obsolete">設定</translation>
     </message>
     <message>
         <source>&amp;File</source>
@@ -706,11 +706,11 @@ Valid names:
     </message>
     <message>
         <source>&amp;Configure Client</source>
-        <translation>クライアント設定 (&amp;C)</translation>
+        <translation type="vanished">クライアント設定 (&amp;C)</translation>
     </message>
     <message>
         <source>Connect to:</source>
-        <translation>接続先:</translation>
+        <translation type="vanished">接続先:</translation>
     </message>
     <message>
         <source>&lt;html&gt;Hostname or IP address of the server computer.&lt;br/&gt;May contain a comma seperated list.&lt;/html&gt;</source>
@@ -809,44 +809,8 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Use Enter to save the name change.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Server</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Client</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Port</source>
-        <translation type="unfinished">ポート</translation>
-    </message>
-    <message>
-        <source>Back</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>About</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Updates</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>&amp;Restart</source>
-        <translation type="unfinished"></translation>
+        <translation type="obsolete">ポート</translation>
     </message>
 </context>
 <context>
@@ -857,6 +821,14 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Use another computer&apos;s keyboard and mouse</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Client</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1148,6 +1120,78 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>Later</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Devices &amp; Connection</source>
+        <translation type="unfinished">デバイスと接続</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation type="unfinished">設定</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use Enter to save the name change.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit Computer Name</source>
+        <translation type="unfinished">コンピューター名を編集</translation>
+    </message>
+    <message>
+        <source>Connect to:</source>
+        <translation type="unfinished">接続先:</translation>
+    </message>
+    <message>
+        <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation type="unfinished">ポート</translation>
+    </message>
+    <message>
+        <source>You must select a mode</source>
+        <translation type="unfinished">動作モードを選択してください</translation>
+    </message>
+    <message>
+        <source>&amp;Configure Server</source>
+        <translation type="unfinished">サーバー設定(&amp;C)</translation>
+    </message>
+    <message>
+        <source>Export server configuration</source>
+        <translation type="unfinished">サーバー設定をエクスポート</translation>
+    </message>
+    <message>
+        <source>&amp;Configure Client</source>
+        <translation type="unfinished">クライアント設定 (&amp;C)</translation>
+    </message>
+    <message>
+        <source>&amp;Start</source>
+        <translation type="unfinished">起動(&amp;S)</translation>
+    </message>
+    <message>
+        <source>&amp;Restart</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restart</source>
+        <translation type="unfinished">再起動</translation>
     </message>
 </context>
 <context>

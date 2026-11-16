@@ -456,19 +456,19 @@ Vuoi connetterti al server?
     </message>
     <message>
         <source>Edit Computer Name</source>
-        <translation>Modifica nome computer</translation>
+        <translation type="vanished">Modifica nome computer</translation>
     </message>
     <message>
         <source>&amp;Configure Server</source>
-        <translation>&amp;Configura Server</translation>
+        <translation type="vanished">&amp;Configura Server</translation>
     </message>
     <message>
         <source>Export server configuration</source>
-        <translation>Esporta configurazione server</translation>
+        <translation type="vanished">Esporta configurazione server</translation>
     </message>
     <message>
         <source>You must select a mode</source>
-        <translation>Devi selezionare una modalità</translation>
+        <translation type="vanished">Devi selezionare una modalità</translation>
     </message>
     <message>
         <source>&amp;Start</source>
@@ -476,7 +476,7 @@ Vuoi connetterti al server?
     </message>
     <message>
         <source>Restart</source>
-        <translation>Riavvia</translation>
+        <translation type="vanished">Riavvia</translation>
     </message>
     <message>
         <source>Clear settings</source>
@@ -635,7 +635,7 @@ L&apos;indirizzo IP associato non è più valido, potrebbe essere necessario ria
     </message>
     <message>
         <source>Preferences</source>
-        <translation type="unfinished">Preferenze</translation>
+        <translation type="obsolete">Preferenze</translation>
     </message>
     <message>
         <source>&amp;File</source>
@@ -706,11 +706,11 @@ Nomi validi:
     </message>
     <message>
         <source>&amp;Configure Client</source>
-        <translation type="unfinished">&amp;Configurare il client</translation>
+        <translation type="obsolete">&amp;Configurare il client</translation>
     </message>
     <message>
         <source>Connect to:</source>
-        <translation type="unfinished">Connettiti a:</translation>
+        <translation type="obsolete">Connettiti a:</translation>
     </message>
     <message>
         <source>&lt;html&gt;Hostname or IP address of the server computer.&lt;br/&gt;May contain a comma seperated list.&lt;/html&gt;</source>
@@ -809,44 +809,8 @@ Inoltre, verifica di poter %1 il file di configurazione del server: %2</translat
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Use Enter to save the name change.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Server</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Client</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Port</source>
-        <translation type="unfinished">Porta</translation>
-    </message>
-    <message>
-        <source>Back</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>About</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Updates</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>&amp;Restart</source>
-        <translation type="unfinished"></translation>
+        <translation type="obsolete">Porta</translation>
     </message>
 </context>
 <context>
@@ -857,6 +821,14 @@ Inoltre, verifica di poter %1 il file di configurazione del server: %2</translat
     </message>
     <message>
         <source>Use another computer&apos;s keyboard and mouse</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Client</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1146,6 +1118,78 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>Later</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Devices &amp; Connection</source>
+        <translation type="unfinished">Dispositivi e connessione</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation type="unfinished">Preferenze</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use Enter to save the name change.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit Computer Name</source>
+        <translation type="unfinished">Modifica nome computer</translation>
+    </message>
+    <message>
+        <source>Connect to:</source>
+        <translation type="unfinished">Connettiti a:</translation>
+    </message>
+    <message>
+        <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation type="unfinished">Porta</translation>
+    </message>
+    <message>
+        <source>You must select a mode</source>
+        <translation type="unfinished">Devi selezionare una modalità</translation>
+    </message>
+    <message>
+        <source>&amp;Configure Server</source>
+        <translation type="unfinished">&amp;Configura Server</translation>
+    </message>
+    <message>
+        <source>Export server configuration</source>
+        <translation type="unfinished">Esporta configurazione server</translation>
+    </message>
+    <message>
+        <source>&amp;Configure Client</source>
+        <translation type="unfinished">&amp;Configurare il client</translation>
+    </message>
+    <message>
+        <source>&amp;Start</source>
+        <translation type="unfinished">&amp;Avvia</translation>
+    </message>
+    <message>
+        <source>&amp;Restart</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restart</source>
+        <translation type="unfinished">Riavvia</translation>
     </message>
 </context>
 <context>
