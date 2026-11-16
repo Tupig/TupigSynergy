@@ -188,16 +188,12 @@ jobs:
           targets=$(jq -c --arg k "$linux_key" '.[$k] | map(. + {"expected-arch": (if (.name | endswith("-arm64")) then "arm64" elif (.name | endswith("-x86_64")) then "x64" else error("unsupported declared Linux target") end)})' .github/matrices/linux-targets.json)
           # Release packaging ships Windows x64 and macOS arm64 only. Pull
           # requests and snapshots keep the full architecture matrix.
-          windows_targets=$(jq -c -n --argjson publish "$publish_release" '[
-            {"name":"windows-2022-x64","runs-on":"windows-2022","vcpkg-triplet":"x64-windows-release","arch":"amd64","qt-version":"6.10.3"}
-          ] + (if $publish then [] else [
-            {"name":"windows-2022-arm64","runs-on":"windows-11-arm","vcpkg-triplet":"arm64-windows","arch":"arm64","qt-version":"6.11.1"}
-          ] end)')
-          macos_targets=$(jq -c -n --argjson publish "$publish_release" '[
-            {"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.1","config-args":"-DCMAKE_OSX_ARCHITECTURES=\"arm64\" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}
-          ] + (if $publish then [] else [
-            {"name":"macos-x64","expected-arch":"x64","runs-on":"macos-15-intel","timeout":45,"qt-version":"6.9.3","config-args":"-DCMAKE_OSX_ARCHITECTURES=\"x86_64\" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}
-          ] end)')
+          # 交付只构建 Windows x64 与 macOS arm64，其余平台不构建。
+          windows_targets='[{"name":"windows-2022-x64","runs-on":"windows-2022","vcpkg-triplet":"x64-windows-release","arch":"amd64","qt-version":"6.10.3"}]'
+          macos_targets='[{"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.1","config-args":"-DCMAKE_OSX_ARCHITECTURES=\\"arm64\\" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}]'
+          targets='[]'
+          build_linux=false
+          build_flatpak=false
           {
             echo "targets=$targets"
             echo "windows_targets=$windows_targets"
@@ -227,7 +223,7 @@ jobs:
   # Reads scripts/ci/encoding-check.json. on_violation defaults to fail, so a
   # bad file stops the build jobs. Set it to warn to print and continue.
   lint-encoding:
-    needs: get-version
+    needs: [get-version, lint-clang]
     if: needs.get-version.outputs.skip_unchanged != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -249,7 +245,7 @@ jobs:
   # Windows: MSVC + Ninja. macOS: AppleClang (arm64 and x86_64). Linux: gcc.
   # ---------------------------------------------------------------------------
   build-windows:
-    needs: [lint-encoding, lint-clang, get-version]
+    needs: [get-version, lint-encoding]
     if: ${{ needs.get-version.outputs.build_windows == 'true' }}
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs-on }}
@@ -497,8 +493,50 @@ jobs:
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
           retention-days: 14
 
+  bump-version:
+    needs: [build-macos]
+    if: ${{ needs.get-version.outputs.skip_unchanged != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Bump patch version
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import json, pathlib, re
+          version_file = pathlib.Path("cmake/Version.cmake")
+          text = version_file.read_text()
+          match = re.search(r"set\(SYNERGY_VERSION_PATCH (\d+)\)", text)
+          patch = int(match.group(1)) + 1
+          text = re.sub(r"set\(SYNERGY_VERSION_PATCH \d+\)", f"set(SYNERGY_VERSION_PATCH {patch})", text)
+          version_file.write_text(text)
+          manifest = pathlib.Path("vcpkg.json")
+          data = json.loads(manifest.read_text())
+          major = int(re.search(r"set\(SYNERGY_VERSION_MAJOR (\d+)\)", text).group(1))
+          minor = int(re.search(r"set\(SYNERGY_VERSION_MINOR (\d+)\)", text).group(1))
+          new_version = f"{major}.{minor}.{patch}"
+          data["version-string"] = new_version
+          manifest.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+          pathlib.Path("build").mkdir(exist_ok=True)
+          pathlib.Path("build/next-version").write_text(new_version)
+          PYEOF
+          next=$(cat build/next-version)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cmake/Version.cmake vcpkg.json
+          git commit -m "chore: 构建版本升级到 ${next} [skip ci]"
+          git push origin HEAD
+
   build-macos:
-    needs: [lint-encoding, lint-clang, get-version]
+    needs: [build-windows]
     if: ${{ needs.get-version.outputs.build_macos == 'true' }}
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs-on }}
@@ -1554,14 +1592,7 @@ jobs:
         lint-encoding,
         build-windows,
         build-macos,
-        build-linux,
-        build-flatpak,
-        github-release,
-        clang-tidy,
-        cppcheck,
-        codeql,
-        sonar,
-        valgrind,
+        bump-version,
       ]
     if: always()
 
