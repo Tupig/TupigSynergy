@@ -11,6 +11,7 @@
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPainter>
 #include <QPushButton>
 #include <QStyle>
 #include <QTimer>
@@ -33,7 +34,15 @@ StatusBar::StatusBar(QWidget *parent)
 
   m_btnFingerprint->setProperty("iconButton", true);
   // 设计稿：状态栏左侧是绿色对勾；点击仍可查看本地指纹。
-  m_btnFingerprint->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
+  // 系统主题的对勾在 macOS 上是红色取消符号，这里直接绘制品牌绿色对勾。
+  QPixmap check(14, 14);
+  check.fill(Qt::transparent);
+  QPainter painter(&check);
+  painter.setRenderHint(QPainter::Antialiasing);
+  painter.setPen(QPen(QColor(QStringLiteral("#4cc38a")), 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+  painter.drawPolyline(QPolygonF({QPointF(2.5, 7.5), QPointF(6, 11), QPointF(11.5, 3.5)}));
+  painter.end();
+  m_btnFingerprint->setIcon(QIcon(check));
   m_btnFingerprint->setIconSize(QSize(14, 14));
   connect(m_btnFingerprint, &QPushButton::clicked, this, &StatusBar::requestShowMyFingerprints);
 

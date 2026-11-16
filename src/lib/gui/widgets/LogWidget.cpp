@@ -23,8 +23,8 @@ namespace {
 constexpr int kHistoryLimit = 10000;
 // 历史可能很长，但只渲染最近的记录；更早的仍参与筛选与统计。
 constexpr int kRenderLimit = 500;
-constexpr int kTimeColumn = 70;
-constexpr int kLevelColumn = 34;
+constexpr int kTimeColumn = 74;
+constexpr int kLevelColumn = 46;
 
 QColor levelColor(const QString &level)
 {
