@@ -394,7 +394,10 @@ void SettingsDialog::accept()
   Settings::setValue(Settings::Gui::CloseToTray, ui->rbCloseToTray->isChecked());
   Settings::setValue(Settings::Gui::SymbolicTrayIcon, ui->rbIconMono->isChecked());
   Settings::setValue(Settings::Security::CheckPeers, ui->cbRequireClientCert->isChecked());
-  Settings::setValue(Settings::Core::Language, I18N::nativeTo639Name(ui->comboLanguage->currentText()));
+  const auto selectedLanguage = I18N::nativeTo639Name(ui->comboLanguage->currentText());
+  Settings::setValue(
+      Settings::Core::Language, selectedLanguage == m_originalLanguage ? m_originalLanguageSetting : selectedLanguage
+  );
   Settings::setValue(Settings::Log::GuiDebug, ui->cbGuiDebug->isChecked());
   Settings::setValue(Settings::Gui::ShowVersionInTitle, ui->cbShowVersion->isChecked());
   if (m_checkForUpdates != nullptr) {
@@ -611,7 +614,7 @@ bool SettingsDialog::isModified() const
       (ui->cbRunExitCommand->isChecked() != Settings::value(Settings::Core::EnableExitCommand).toBool()) ||
       (ui->lineCommandEnter->text() != Settings::value(Settings::Core::ScreenEnterCommand).toString()) ||
       (ui->lineCommandExit->text() != Settings::value(Settings::Core::ScreenExitCommand).toString()) ||
-      (I18N::nativeTo639Name(ui->comboLanguage->currentText()) != Settings::value(Settings::Core::Language).toString());
+      (I18N::nativeTo639Name(ui->comboLanguage->currentText()) != m_originalLanguage);
 
   modified = modified || (m_checkForUpdates->isChecked() != Settings::value(Settings::Gui::CheckForUpdates).toBool());
   if (auto *scope = findChild<QComboBox *>(QStringLiteral("comboSettingsScope")))

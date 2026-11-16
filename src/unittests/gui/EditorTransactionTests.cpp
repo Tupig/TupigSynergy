@@ -36,6 +36,7 @@ private Q_SLOTS:
   void traySelectorCancelDoesNotWrite();
   void traySelectorSaveWrites();
   void cancelPreservesSystemLanguageSetting();
+  void saveOtherSettingPreservesSystemLanguage();
 };
 
 void EditorTransactionTests::clientCancelDoesNotWrite()
@@ -165,6 +166,18 @@ void EditorTransactionTests::cancelPreservesSystemLanguageSetting()
   editor.reject();
   QVERIFY(Settings::value(Settings::Core::Language).toString().isEmpty());
   QCOMPARE(I18N::currentLanguage(), originalLanguage);
+}
+
+void EditorTransactionTests::saveOtherSettingPreservesSystemLanguage()
+{
+  Settings::setValue(Settings::Core::Language, QString());
+  Settings::setValue(Settings::Gui::SymbolicTrayIcon, false);
+  synergy::gui::ServerConfig config;
+  SettingsDialog editor(nullptr, config);
+  editor.findChild<QComboBox *>(QStringLiteral("comboTrayIcon"))->setCurrentIndex(1);
+  editor.findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Save)->click();
+  QCOMPARE(editor.result(), static_cast<int>(QDialog::Accepted));
+  QVERIFY(Settings::value(Settings::Core::Language).toString().isEmpty());
 }
 
 int main(int argc, char **argv)
