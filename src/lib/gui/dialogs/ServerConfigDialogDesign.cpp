@@ -89,7 +89,7 @@ QGridLayout *createGrid(const QString &name, int column1Stretch, int column2Stre
 void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
 {
   dialog->setObjectName(QStringLiteral("ServerConfigDialog"));
-  dialog->resize(600, 600);
+  dialog->resize(560, 420);
   dialog->setMinimumSize(0, 0);
 
   auto *dialogLayout = new QVBoxLayout(dialog);
@@ -108,19 +108,9 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   computerPageLayout->setSpacing(8);
   computerPageLayout->setContentsMargins(0, 0, 0, 0);
 
-  computersScrollArea = new QScrollArea(tabComputers);
-  computersScrollArea->setObjectName(QStringLiteral("computersScrollArea"));
-  computersScrollArea->setWidgetResizable(true);
-  computersScrollArea->setFrameShape(QFrame::NoFrame);
-  computersScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  computersScrollContents = new QWidget;
-  computersScrollContents->setObjectName(QStringLiteral("computersScrollContents"));
-  auto *computersScrollLayout = new QVBoxLayout(computersScrollContents);
-  computersScrollLayout->setObjectName(QStringLiteral("computersScrollLayout"));
-  computersScrollLayout->setSpacing(8);
-  computersScrollLayout->setContentsMargins(0, 0, 0, 0);
-
-  groupComputerLayout = new QGroupBox(computersScrollContents);
+  // 计算机布局直接放入页签，不再套第二层滚动区。
+  // 页面宿主只在窗口小到无法容纳操作栏时提供整体滚动兜底。
+  groupComputerLayout = new QGroupBox(tabComputers);
   groupComputerLayout->setObjectName(QStringLiteral("groupComputerLayout"));
   groupComputerLayout->setTitle(QString());
   auto *computerCardLayout = new QVBoxLayout(groupComputerLayout);
@@ -172,9 +162,7 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   layoutComputers->addWidget(lblNewScreen);
   computerCardLayout->addLayout(layoutComputers);
 
-  computersScrollLayout->addWidget(groupComputerLayout);
-  computersScrollArea->setWidget(computersScrollContents);
-  computerPageLayout->addWidget(computersScrollArea);
+  computerPageLayout->addWidget(groupComputerLayout, 1);
   tabWidget->addTab(tabComputers, QString());
 
   // Hotkeys

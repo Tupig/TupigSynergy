@@ -84,9 +84,12 @@ void PageHost::push(QDialog *editor)
   auto *containerLayout = new QVBoxLayout(container);
   containerLayout->setContentsMargins(10, 10, 10, 10);
   containerLayout->addWidget(editor);
-  // 页面按内容高度贴顶，长页面再滚动。
-  containerLayout->addStretch(1);
+  // 有页签的编辑器使用整个内容区，使网格/列表获得真正的可用高度。
+  // 简短消息页仍按内容贴顶，不拉伸卡片。
+  if (editor->findChild<QTabWidget *>() == nullptr)
+    containerLayout->addStretch(1);
   editor->setWindowFlags(Qt::Widget);
+  editor->setWindowTitle(pageTitle);
   editor->setWindowModality(Qt::NonModal);
   editor->setMinimumWidth(0);
   editor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
@@ -134,7 +137,8 @@ void PageHost::updateNavigation()
   }
   auto *pages = stack();
   if (auto *area = pages ? qobject_cast<QScrollArea *>(pages->currentWidget()) : nullptr) {
-    Q_EMIT titleChanged(area->widget()->windowTitle());
+    auto *editor = area->property("pageEditor").value<QDialog *>();
+    Q_EMIT titleChanged(editor ? editor->windowTitle() : QString());
   } else
     Q_EMIT titleChanged(QString());
 }

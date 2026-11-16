@@ -34,8 +34,6 @@ public:
 
   QTabWidget *tabWidget = nullptr;
   QWidget *tabComputers = nullptr;
-  QScrollArea *computersScrollArea = nullptr;
-  QWidget *computersScrollContents = nullptr;
   QGroupBox *groupComputerLayout = nullptr;
   QLabel *label_2 = nullptr;
   ScreenSetupView *screenSetupView = nullptr;

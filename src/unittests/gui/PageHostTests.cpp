@@ -60,6 +60,9 @@ void PageHostTests::backRejectsOnlyChild()
   makeHost(host, &home);
   auto *parent = new QDialog;
   auto *child = new QDialog;
+  parent->setWindowTitle(QStringLiteral("Server configuration"));
+  child->setWindowTitle(QStringLiteral("Computer settings"));
+  QSignalSpy titles(&host, &PageHost::titleChanged);
   QSignalSpy parentRejected(parent, &QDialog::rejected);
   QSignalSpy childRejected(child, &QDialog::rejected);
   host.push(parent);
@@ -69,6 +72,7 @@ void PageHostTests::backRejectsOnlyChild()
   QCOMPARE(childRejected.count(), 1);
   QCOMPARE(parentRejected.count(), 0);
   QVERIFY(host.hasEditor());
+  QCOMPARE(titles.last().first().toString(), QStringLiteral("Server configuration"));
   parent->reject();
   QVERIFY(!host.hasEditor());
 }

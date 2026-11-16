@@ -69,9 +69,13 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConf
     corner->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     corner->setMinimumWidth(corner->fontMetrics().horizontalAdvance(corner->text()) + 32);
   }
-  // 设计稿的网格按内容高度，工具行紧随其下，不能被拉伸挤出视口。
-  ui->screenSetupView->setMinimumHeight(180);
+  // 网格随页签可用高度伸缩；为说明、拖拽工具和底部操作保留空间。
+  ui->screenSetupView->setMinimumHeight(120);
   ui->screenSetupView->setMaximumHeight(260);
+  ui->lblRemoveScreen->setFixedSize(32, 32);
+  ui->lblRemoveScreen->setScaledContents(true);
+  ui->lblNewScreen->setFixedSize(32, 32);
+  ui->lblNewScreen->setScaledContents(true);
 
   connect(ui->btnNewHotkey, &QPushButton::clicked, this, &ServerConfigDialog::addHotkey);
   connect(ui->btnEditHotkey, &QPushButton::clicked, this, &ServerConfigDialog::editHotkey);
