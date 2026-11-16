@@ -7,7 +7,7 @@
  */
 
 #include "ActionDialog.h"
-#include "ui_ActionDialog.h"
+#include "ActionDialogDesign.h"
 
 #include "Action.h"
 #include "Hotkey.h"

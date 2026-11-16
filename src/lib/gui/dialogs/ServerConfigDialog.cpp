@@ -7,7 +7,7 @@
  */
 
 #include "ServerConfigDialog.h"
-#include "ui_ServerConfigDialog.h"
+#include "ServerConfigDialogDesign.h"
 
 #include "common/Constants.h"
 #include "common/NetworkProtocol.h"

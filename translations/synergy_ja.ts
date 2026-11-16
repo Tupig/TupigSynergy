@@ -157,31 +157,31 @@ Session: %1 (%2)</source>
     <name>ClientConfigDialog</name>
     <message>
         <source>Client Configuration</source>
-        <translation>クライアント設定</translation>
+        <translation type="vanished">クライアント設定</translation>
     </message>
     <message>
         <source>Use server&apos;s keyboard language on this computer</source>
-        <translation>サーバー側のキーボード言語をこのコンピューターで使用する</translation>
+        <translation type="vanished">サーバー側のキーボード言語をこのコンピューターで使用する</translation>
     </message>
     <message>
         <source>Scroll Modifiers</source>
-        <translation>スクロール設定</translation>
+        <translation type="vanished">スクロール設定</translation>
     </message>
     <message>
         <source>Invert</source>
-        <translation>反転</translation>
+        <translation type="vanished">反転</translation>
     </message>
     <message>
         <source>Horizontal Scroll</source>
-        <translation>水平スクロール</translation>
+        <translation type="vanished">水平スクロール</translation>
     </message>
     <message>
         <source>Vertical Scroll</source>
-        <translation>垂直スクロール</translation>
+        <translation type="vanished">垂直スクロール</translation>
     </message>
     <message>
         <source>Scale</source>
-        <translation>倍率</translation>
+        <translation type="vanished">倍率</translation>
     </message>
     <message>
         <source>Close and save changes</source>
@@ -201,15 +201,11 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Allow the client to slow the rate it attempts to reconnect to the server when connections attempts are failing. The delay between connection attempts will  start at 1 second intervals and can be a maxium of 5 minutes between connection attempts.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;接続試行が失敗している場合、クライアントがサーバーへの再接続を試みる頻度を徐々に落とせるようにします。接続試行の間隔は当初1秒から開始され、最大で5分まで延長されます。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation type="obsolete">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;接続試行が失敗している場合、クライアントがサーバーへの再接続を試みる頻度を徐々に落とせるようにします。接続試行の間隔は当初1秒から開始され、最大で5分まで延長されます。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>Use dynamic reconnection time based on connection attempts</source>
-        <translation type="unfinished">接続試行回数に基づき、再接続時間を動的に調整する</translation>
-    </message>
-    <message>
-        <source>Connection Behaviour</source>
-        <translation type="unfinished"></translation>
+        <translation type="obsolete">接続試行回数に基づき、再接続時間を動的に調整する</translation>
     </message>
 </context>
 <context>
@@ -1198,119 +1194,119 @@ Now you can connect your client computers to this server. You should see a promp
     <name>ScreenSettingsDialog</name>
     <message>
         <source>Computer settings</source>
-        <translation>コンピューター設定</translation>
+        <translation type="vanished">コンピューター設定</translation>
     </message>
     <message>
         <source>Computer Info</source>
-        <translation>コンピューター情報</translation>
+        <translation type="vanished">コンピューター情報</translation>
     </message>
     <message>
         <source>Name</source>
-        <translation>名前</translation>
+        <translation type="vanished">名前</translation>
     </message>
     <message>
         <source>Modifier Keys</source>
-        <translation>修飾キー</translation>
+        <translation type="vanished">修飾キー</translation>
     </message>
     <message>
         <source>M&amp;eta</source>
-        <translation>M&amp;eta</translation>
+        <translation type="vanished">M&amp;eta</translation>
     </message>
     <message>
         <source>&amp;Ctrl</source>
-        <translation>&amp;Ctrl</translation>
+        <translation type="vanished">&amp;Ctrl</translation>
     </message>
     <message>
         <source>S&amp;uper</source>
-        <translation>S&amp;uper</translation>
+        <translation type="vanished">S&amp;uper</translation>
     </message>
     <message>
         <source>Al&amp;t</source>
-        <translation>Al&amp;t</translation>
+        <translation type="vanished">Al&amp;t</translation>
     </message>
     <message>
         <source>Shift</source>
-        <translation>Shift</translation>
+        <translation type="vanished">Shift</translation>
     </message>
     <message>
         <source>Ctrl</source>
-        <translation>Ctrl</translation>
+        <translation type="vanished">Ctrl</translation>
     </message>
     <message>
         <source>Alt</source>
-        <translation>Alt</translation>
+        <translation type="vanished">Alt</translation>
     </message>
     <message>
         <source>Meta</source>
-        <translation>Meta</translation>
+        <translation type="vanished">Meta</translation>
     </message>
     <message>
         <source>Super</source>
-        <translation>Super</translation>
+        <translation type="vanished">Super</translation>
     </message>
     <message>
         <source>None</source>
-        <translation>なし</translation>
+        <translation type="vanished">なし</translation>
     </message>
     <message>
         <source>&amp;Shift</source>
-        <translation>&amp;Shift</translation>
+        <translation type="vanished">&amp;Shift</translation>
     </message>
     <message>
         <source>Dead Corners</source>
-        <translation>無効領域</translation>
+        <translation type="vanished">無効領域</translation>
     </message>
     <message>
         <source>Top Left</source>
-        <translation>左上</translation>
+        <translation type="vanished">左上</translation>
     </message>
     <message>
         <source>Top Right</source>
-        <translation>右上</translation>
+        <translation type="vanished">右上</translation>
     </message>
     <message>
         <source>Corner si&amp;ze</source>
-        <translation>大きさ(&amp;Z)</translation>
+        <translation type="vanished">大きさ(&amp;Z)</translation>
     </message>
     <message>
         <source>Bottom Left</source>
-        <translation>左下</translation>
+        <translation type="vanished">左下</translation>
     </message>
     <message>
         <source>Bottom Right</source>
-        <translation>右下</translation>
+        <translation type="vanished">右下</translation>
     </message>
     <message>
         <source>Fixes</source>
-        <translation>修正</translation>
+        <translation type="vanished">修正</translation>
     </message>
     <message>
         <source>SCROLL LOCK key</source>
-        <translation>SCROLL LOCK キー</translation>
+        <translation type="vanished">SCROLL LOCK キー</translation>
     </message>
     <message>
         <source>CAPS LOCK key</source>
-        <translation>CAPS LOCK キー</translation>
+        <translation type="vanished">CAPS LOCK キー</translation>
     </message>
     <message>
         <source>NUM LOCK key</source>
-        <translation>NUM LOCK キー</translation>
+        <translation type="vanished">NUM LOCK キー</translation>
     </message>
     <message>
         <source>XTest for Xinerama</source>
-        <translation>Xinerama での XTest</translation>
+        <translation type="vanished">Xinerama での XTest</translation>
     </message>
     <message>
         <source>Aliases</source>
-        <translation>別名</translation>
+        <translation type="vanished">別名</translation>
     </message>
     <message>
         <source>&amp;Add</source>
-        <translation>追加(&amp;A)</translation>
+        <translation type="vanished">追加(&amp;A)</translation>
     </message>
     <message>
         <source>&amp;Remove</source>
-        <translation>削除(&amp;R)</translation>
+        <translation type="vanished">削除(&amp;R)</translation>
     </message>
     <message>
         <source>Top-left</source>
@@ -1343,14 +1339,6 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>The screen name cannot be the same as an alias. Please either remove the alias or change the screen name.</source>
         <translation>コンピューター名は別名と同じにできません。別名を削除するか、コンピューター名を変更してください。</translation>
-    </message>
-    <message>
-        <source>Alt Gr</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Alt &amp;Gr</source>
-        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

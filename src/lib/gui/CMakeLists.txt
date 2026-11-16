@@ -66,27 +66,34 @@ add_library(${target} STATIC
   core/NetworkMonitor.h
   dialogs/AboutDialog.cpp
   dialogs/AboutDialog.h
-  dialogs/AboutDialog.ui
+  dialogs/AboutDialogDesign.cpp
+  dialogs/AboutDialogDesign.h
   dialogs/ActionDialog.cpp
   dialogs/ActionDialog.h
-  dialogs/ActionDialog.ui
+  dialogs/ActionDialogDesign.cpp
+  dialogs/ActionDialogDesign.h
   dialogs/ClientConfigDialog.h
   dialogs/ClientConfigDialog.cpp
-  dialogs/ClientConfigDialog.ui
+  dialogs/ClientConfigDialogDesign.h
+  dialogs/ClientConfigDialogDesign.cpp
   dialogs/FingerprintDialog.cpp
   dialogs/FingerprintDialog.h
   dialogs/HotkeyDialog.cpp
   dialogs/HotkeyDialog.h
-  dialogs/HotkeyDialog.ui
+  dialogs/HotkeyDialogDesign.cpp
+  dialogs/HotkeyDialogDesign.h
   dialogs/ScreenSettingsDialog.cpp
   dialogs/ScreenSettingsDialog.h
-  dialogs/ScreenSettingsDialog.ui
+  dialogs/ScreenSettingsDialogDesign.cpp
+  dialogs/ScreenSettingsDialogDesign.h
   dialogs/ServerConfigDialog.cpp
   dialogs/ServerConfigDialog.h
-  dialogs/ServerConfigDialog.ui
+  dialogs/ServerConfigDialogDesign.cpp
+  dialogs/ServerConfigDialogDesign.h
   dialogs/SettingsDialog.cpp
   dialogs/SettingsDialog.h
-  dialogs/SettingsDialog.ui
+  dialogs/SettingsDialogDesign.cpp
+  dialogs/SettingsDialogDesign.h
   ipc/IpcClient.cpp
   ipc/IpcClient.h
   ipc/DaemonIpcClient.cpp

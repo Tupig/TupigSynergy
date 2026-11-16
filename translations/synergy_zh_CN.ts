@@ -159,31 +159,31 @@ Session: %1 (%2)</source>
     <name>ClientConfigDialog</name>
     <message>
         <source>Client Configuration</source>
-        <translation>客户端配置</translation>
+        <translation type="vanished">客户端配置</translation>
     </message>
     <message>
         <source>Use server&apos;s keyboard language on this computer</source>
-        <translation>在此计算机上使用服务器的键盘语言</translation>
+        <translation type="vanished">在此计算机上使用服务器的键盘语言</translation>
     </message>
     <message>
         <source>Scroll Modifiers</source>
-        <translation>滚动设置</translation>
+        <translation type="vanished">滚动设置</translation>
     </message>
     <message>
         <source>Invert</source>
-        <translation>反转</translation>
+        <translation type="vanished">反转</translation>
     </message>
     <message>
         <source>Horizontal Scroll</source>
-        <translation>水平滚动</translation>
+        <translation type="vanished">水平滚动</translation>
     </message>
     <message>
         <source>Vertical Scroll</source>
-        <translation>垂直滚动</translation>
+        <translation type="vanished">垂直滚动</translation>
     </message>
     <message>
         <source>Scale</source>
-        <translation>缩放</translation>
+        <translation type="vanished">缩放</translation>
     </message>
     <message>
         <source>Close and save changes</source>
@@ -203,15 +203,15 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Allow the client to slow the rate it attempts to reconnect to the server when connections attempts are failing. The delay between connection attempts will  start at 1 second intervals and can be a maxium of 5 minutes between connection attempts.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;允许客户端在连接尝试失败时，降低其重连服务器的频率。连接尝试之间的间隔将从 1 秒开始，最长可达 5 分钟。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation type="vanished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;允许客户端在连接尝试失败时，降低其重连服务器的频率。连接尝试之间的间隔将从 1 秒开始，最长可达 5 分钟。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>Use dynamic reconnection time based on connection attempts</source>
-        <translation>根据连接尝试次数，采用动态重连时间</translation>
+        <translation type="vanished">根据连接尝试次数，采用动态重连时间</translation>
     </message>
     <message>
         <source>Connection Behaviour</source>
-        <translation>连接行为</translation>
+        <translation type="vanished">连接行为</translation>
     </message>
 </context>
 <context>
@@ -1262,119 +1262,119 @@ Now you can connect your client computers to this server. You should see a promp
     <name>ScreenSettingsDialog</name>
     <message>
         <source>Computer settings</source>
-        <translation>计算机设置</translation>
+        <translation type="vanished">计算机设置</translation>
     </message>
     <message>
         <source>Computer Info</source>
-        <translation>计算机信息</translation>
+        <translation type="vanished">计算机信息</translation>
     </message>
     <message>
         <source>Name</source>
-        <translation>名称</translation>
+        <translation type="vanished">名称</translation>
     </message>
     <message>
         <source>Modifier Keys</source>
-        <translation>修饰键</translation>
+        <translation type="vanished">修饰键</translation>
     </message>
     <message>
         <source>M&amp;eta</source>
-        <translation>M&amp;eta</translation>
+        <translation type="vanished">M&amp;eta</translation>
     </message>
     <message>
         <source>&amp;Ctrl</source>
-        <translation>&amp;Ctrl</translation>
+        <translation type="vanished">&amp;Ctrl</translation>
     </message>
     <message>
         <source>S&amp;uper</source>
-        <translation>S&amp;uper</translation>
+        <translation type="vanished">S&amp;uper</translation>
     </message>
     <message>
         <source>Al&amp;t</source>
-        <translation>Al&amp;t</translation>
+        <translation type="vanished">Al&amp;t</translation>
     </message>
     <message>
         <source>Shift</source>
-        <translation>Shift</translation>
+        <translation type="vanished">Shift</translation>
     </message>
     <message>
         <source>Ctrl</source>
-        <translation>Ctrl</translation>
+        <translation type="vanished">Ctrl</translation>
     </message>
     <message>
         <source>Alt</source>
-        <translation>Alt</translation>
+        <translation type="vanished">Alt</translation>
     </message>
     <message>
         <source>Meta</source>
-        <translation>Meta</translation>
+        <translation type="vanished">Meta</translation>
     </message>
     <message>
         <source>Super</source>
-        <translation>Super</translation>
+        <translation type="vanished">Super</translation>
     </message>
     <message>
         <source>None</source>
-        <translation>无</translation>
+        <translation type="vanished">无</translation>
     </message>
     <message>
         <source>&amp;Shift</source>
-        <translation>&amp;Shift</translation>
+        <translation type="vanished">&amp;Shift</translation>
     </message>
     <message>
         <source>Dead Corners</source>
-        <translation>屏幕死角</translation>
+        <translation type="vanished">屏幕死角</translation>
     </message>
     <message>
         <source>Top Left</source>
-        <translation>左上</translation>
+        <translation type="vanished">左上</translation>
     </message>
     <message>
         <source>Top Right</source>
-        <translation>右上</translation>
+        <translation type="vanished">右上</translation>
     </message>
     <message>
         <source>Corner si&amp;ze</source>
-        <translation>角落大小(&amp;Z)</translation>
+        <translation type="vanished">角落大小(&amp;Z)</translation>
     </message>
     <message>
         <source>Bottom Left</source>
-        <translation>左下</translation>
+        <translation type="vanished">左下</translation>
     </message>
     <message>
         <source>Bottom Right</source>
-        <translation>右下</translation>
+        <translation type="vanished">右下</translation>
     </message>
     <message>
         <source>Fixes</source>
-        <translation>修正</translation>
+        <translation type="vanished">修正</translation>
     </message>
     <message>
         <source>SCROLL LOCK key</source>
-        <translation>SCROLL LOCK 键</translation>
+        <translation type="vanished">SCROLL LOCK 键</translation>
     </message>
     <message>
         <source>CAPS LOCK key</source>
-        <translation>CAPS LOCK 键</translation>
+        <translation type="vanished">CAPS LOCK 键</translation>
     </message>
     <message>
         <source>NUM LOCK key</source>
-        <translation>NUM LOCK 键</translation>
+        <translation type="vanished">NUM LOCK 键</translation>
     </message>
     <message>
         <source>XTest for Xinerama</source>
-        <translation>用于 Xinerama 的 XTest</translation>
+        <translation type="vanished">用于 Xinerama 的 XTest</translation>
     </message>
     <message>
         <source>Aliases</source>
-        <translation>别名</translation>
+        <translation type="vanished">别名</translation>
     </message>
     <message>
         <source>&amp;Add</source>
-        <translation>添加(&amp;A)</translation>
+        <translation type="vanished">添加(&amp;A)</translation>
     </message>
     <message>
         <source>&amp;Remove</source>
-        <translation>移除(&amp;R)</translation>
+        <translation type="vanished">移除(&amp;R)</translation>
     </message>
     <message>
         <source>Top-left</source>
@@ -1410,11 +1410,11 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Alt Gr</source>
-        <translation>Alt Gr</translation>
+        <translation type="vanished">Alt Gr</translation>
     </message>
     <message>
         <source>Alt &amp;Gr</source>
-        <translation>Alt &amp;Gr</translation>
+        <translation type="vanished">Alt &amp;Gr</translation>
     </message>
 </context>
 <context>

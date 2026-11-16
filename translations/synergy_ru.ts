@@ -157,31 +157,31 @@ Session: %1 (%2)</source>
     <name>ClientConfigDialog</name>
     <message>
         <source>Client Configuration</source>
-        <translation type="unfinished">Конфигурация клиента</translation>
+        <translation type="obsolete">Конфигурация клиента</translation>
     </message>
     <message>
         <source>Use server&apos;s keyboard language on this computer</source>
-        <translation type="unfinished">Использовать язык клавиатуры сервера на этом компьютере</translation>
+        <translation type="obsolete">Использовать язык клавиатуры сервера на этом компьютере</translation>
     </message>
     <message>
         <source>Scroll Modifiers</source>
-        <translation type="unfinished">Модификаторы прокрутки</translation>
+        <translation type="obsolete">Модификаторы прокрутки</translation>
     </message>
     <message>
         <source>Invert</source>
-        <translation type="unfinished">Инвертировать</translation>
+        <translation type="obsolete">Инвертировать</translation>
     </message>
     <message>
         <source>Horizontal Scroll</source>
-        <translation type="unfinished">Горизонтальная прокрутка</translation>
+        <translation type="obsolete">Горизонтальная прокрутка</translation>
     </message>
     <message>
         <source>Vertical Scroll</source>
-        <translation type="unfinished">Вертикальная прокрутка</translation>
+        <translation type="obsolete">Вертикальная прокрутка</translation>
     </message>
     <message>
         <source>Scale</source>
-        <translation type="unfinished">Шкала</translation>
+        <translation type="obsolete">Шкала</translation>
     </message>
     <message>
         <source>Close and save changes</source>
@@ -201,15 +201,11 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Allow the client to slow the rate it attempts to reconnect to the server when connections attempts are failing. The delay between connection attempts will  start at 1 second intervals and can be a maxium of 5 minutes between connection attempts.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Позволить клиенту замедлять частоту попыток повторного подключения к серверу в случае неудачных попыток соединения. Интервал между попытками подключения будет начинаться с 1 секунды и может достигать максимума в 5 минут.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation type="obsolete">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Позволить клиенту замедлять частоту попыток повторного подключения к серверу в случае неудачных попыток соединения. Интервал между попытками подключения будет начинаться с 1 секунды и может достигать максимума в 5 минут.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>Use dynamic reconnection time based on connection attempts</source>
-        <translation type="unfinished">Использовать динамическое время переподключения в зависимости от попыток подключения</translation>
-    </message>
-    <message>
-        <source>Connection Behaviour</source>
-        <translation type="unfinished"></translation>
+        <translation type="obsolete">Использовать динамическое время переподключения в зависимости от попыток подключения</translation>
     </message>
 </context>
 <context>
@@ -1196,119 +1192,119 @@ Now you can connect your client computers to this server. You should see a promp
     <name>ScreenSettingsDialog</name>
     <message>
         <source>Computer settings</source>
-        <translation>Настройки компьютера</translation>
+        <translation type="vanished">Настройки компьютера</translation>
     </message>
     <message>
         <source>Computer Info</source>
-        <translation>Информация о компьютере</translation>
+        <translation type="vanished">Информация о компьютере</translation>
     </message>
     <message>
         <source>Name</source>
-        <translation>Имя</translation>
+        <translation type="vanished">Имя</translation>
     </message>
     <message>
         <source>Modifier Keys</source>
-        <translation>Клавиши-модификаторы</translation>
+        <translation type="vanished">Клавиши-модификаторы</translation>
     </message>
     <message>
         <source>M&amp;eta</source>
-        <translation>M&amp;eta</translation>
+        <translation type="vanished">M&amp;eta</translation>
     </message>
     <message>
         <source>&amp;Ctrl</source>
-        <translation>&amp;Ctrl</translation>
+        <translation type="vanished">&amp;Ctrl</translation>
     </message>
     <message>
         <source>S&amp;uper</source>
-        <translation>S&amp;uper</translation>
+        <translation type="vanished">S&amp;uper</translation>
     </message>
     <message>
         <source>Al&amp;t</source>
-        <translation>Al&amp;t</translation>
+        <translation type="vanished">Al&amp;t</translation>
     </message>
     <message>
         <source>Shift</source>
-        <translation>Shift</translation>
+        <translation type="vanished">Shift</translation>
     </message>
     <message>
         <source>Ctrl</source>
-        <translation>Ctrl</translation>
+        <translation type="vanished">Ctrl</translation>
     </message>
     <message>
         <source>Alt</source>
-        <translation>Alt</translation>
+        <translation type="vanished">Alt</translation>
     </message>
     <message>
         <source>Meta</source>
-        <translation>Meta</translation>
+        <translation type="vanished">Meta</translation>
     </message>
     <message>
         <source>Super</source>
-        <translation>Super</translation>
+        <translation type="vanished">Super</translation>
     </message>
     <message>
         <source>None</source>
-        <translation>Нет</translation>
+        <translation type="vanished">Нет</translation>
     </message>
     <message>
         <source>&amp;Shift</source>
-        <translation>&amp;Shift</translation>
+        <translation type="vanished">&amp;Shift</translation>
     </message>
     <message>
         <source>Dead Corners</source>
-        <translation>Мертвые зоны в углах</translation>
+        <translation type="vanished">Мертвые зоны в углах</translation>
     </message>
     <message>
         <source>Top Left</source>
-        <translation>Сверху слева</translation>
+        <translation type="vanished">Сверху слева</translation>
     </message>
     <message>
         <source>Top Right</source>
-        <translation>Сверху справа</translation>
+        <translation type="vanished">Сверху справа</translation>
     </message>
     <message>
         <source>Corner si&amp;ze</source>
-        <translation>Разм&amp;ер угла</translation>
+        <translation type="vanished">Разм&amp;ер угла</translation>
     </message>
     <message>
         <source>Bottom Left</source>
-        <translation>Снизу слева</translation>
+        <translation type="vanished">Снизу слева</translation>
     </message>
     <message>
         <source>Bottom Right</source>
-        <translation>Снизу справа</translation>
+        <translation type="vanished">Снизу справа</translation>
     </message>
     <message>
         <source>Fixes</source>
-        <translation>Исправления</translation>
+        <translation type="vanished">Исправления</translation>
     </message>
     <message>
         <source>SCROLL LOCK key</source>
-        <translation>Клавиша SCROLL LOCK</translation>
+        <translation type="vanished">Клавиша SCROLL LOCK</translation>
     </message>
     <message>
         <source>CAPS LOCK key</source>
-        <translation>Клавиша CAPS LOCK</translation>
+        <translation type="vanished">Клавиша CAPS LOCK</translation>
     </message>
     <message>
         <source>NUM LOCK key</source>
-        <translation>Клавиша NUM LOCK</translation>
+        <translation type="vanished">Клавиша NUM LOCK</translation>
     </message>
     <message>
         <source>XTest for Xinerama</source>
-        <translation>XTest для Xinerama</translation>
+        <translation type="vanished">XTest для Xinerama</translation>
     </message>
     <message>
         <source>Aliases</source>
-        <translation>Псевдонимы</translation>
+        <translation type="vanished">Псевдонимы</translation>
     </message>
     <message>
         <source>&amp;Add</source>
-        <translation>&amp;Добавить</translation>
+        <translation type="vanished">&amp;Добавить</translation>
     </message>
     <message>
         <source>&amp;Remove</source>
-        <translation>&amp;Удалить</translation>
+        <translation type="vanished">&amp;Удалить</translation>
     </message>
     <message>
         <source>Top-left</source>
@@ -1341,14 +1337,6 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>The screen name cannot be the same as an alias. Please either remove the alias or change the screen name.</source>
         <translation>Имя экрана не может совпадать с псевдонимом. Удалите псевдоним или измените имя экрана.</translation>
-    </message>
-    <message>
-        <source>Alt Gr</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Alt &amp;Gr</source>
-        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>

@@ -5,7 +5,7 @@
  */
 
 #include "ClientConfigDialog.h"
-#include "ui_ClientConfigDialog.h"
+#include "ClientConfigDialogDesign.h"
 
 #include "common/Settings.h"
 

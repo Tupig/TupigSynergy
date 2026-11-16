@@ -6,7 +6,7 @@
  */
 
 #include "HotkeyDialog.h"
-#include "ui_HotkeyDialog.h"
+#include "HotkeyDialogDesign.h"
 
 HotkeyDialog::HotkeyDialog(QWidget *parent, Hotkey &hotkey)
     : QDialog(parent, Qt::WindowTitleHint | Qt::WindowSystemMenuHint),

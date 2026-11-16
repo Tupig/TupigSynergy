@@ -7,7 +7,7 @@
  */
 
 #include "AboutDialog.h"
-#include "ui_AboutDialog.h"
+#include "AboutDialogDesign.h"
 
 #include "common/Constants.h"
 #include "common/Settings.h"

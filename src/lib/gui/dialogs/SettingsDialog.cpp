@@ -7,9 +7,9 @@
  */
 
 #include "SettingsDialog.h"
+#include "SettingsDialogDesign.h"
 #include "common/LogLevel.h"
 #include "common/PlatformInfo.h"
-#include "ui_SettingsDialog.h"
 #include "widgets/PageHost.h"
 
 #include "common/Constants.h"

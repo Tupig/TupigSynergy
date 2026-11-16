@@ -6,7 +6,7 @@
  */
 
 #include "ScreenSettingsDialog.h"
-#include "ui_ScreenSettingsDialog.h"
+#include "ScreenSettingsDialogDesign.h"
 #include "widgets/PageHost.h"
 
 #include "gui/config/Screen.h"

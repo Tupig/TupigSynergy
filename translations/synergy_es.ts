@@ -157,31 +157,31 @@ Session: %1 (%2)</source>
     <name>ClientConfigDialog</name>
     <message>
         <source>Client Configuration</source>
-        <translation type="unfinished">Configuración del cliente</translation>
+        <translation type="obsolete">Configuración del cliente</translation>
     </message>
     <message>
         <source>Use server&apos;s keyboard language on this computer</source>
-        <translation type="unfinished">Utilice el idioma del teclado del servidor en esta computadora</translation>
+        <translation type="obsolete">Utilice el idioma del teclado del servidor en esta computadora</translation>
     </message>
     <message>
         <source>Scroll Modifiers</source>
-        <translation type="unfinished">Modificadores de desplazamiento</translation>
+        <translation type="obsolete">Modificadores de desplazamiento</translation>
     </message>
     <message>
         <source>Invert</source>
-        <translation type="unfinished">Invertir</translation>
+        <translation type="obsolete">Invertir</translation>
     </message>
     <message>
         <source>Horizontal Scroll</source>
-        <translation type="unfinished">Desplazamiento horizontal</translation>
+        <translation type="obsolete">Desplazamiento horizontal</translation>
     </message>
     <message>
         <source>Vertical Scroll</source>
-        <translation type="unfinished">Desplazamiento vertical</translation>
+        <translation type="obsolete">Desplazamiento vertical</translation>
     </message>
     <message>
         <source>Scale</source>
-        <translation type="unfinished">Escala</translation>
+        <translation type="obsolete">Escala</translation>
     </message>
     <message>
         <source>Close and save changes</source>
@@ -201,15 +201,11 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Allow the client to slow the rate it attempts to reconnect to the server when connections attempts are failing. The delay between connection attempts will  start at 1 second intervals and can be a maxium of 5 minutes between connection attempts.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Permite que el cliente reduzca la frecuencia con la que intenta reconectarse al servidor cuando los intentos de conexión fallan. El intervalo entre intentos de conexión comenzará en 1 segundo y podrá alcanzar un máximo de 5 minutos.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation type="obsolete">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Permite que el cliente reduzca la frecuencia con la que intenta reconectarse al servidor cuando los intentos de conexión fallan. El intervalo entre intentos de conexión comenzará en 1 segundo y podrá alcanzar un máximo de 5 minutos.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>Use dynamic reconnection time based on connection attempts</source>
-        <translation type="unfinished">Utilizar un tiempo de reconexión dinámico basado en los intentos de conexión</translation>
-    </message>
-    <message>
-        <source>Connection Behaviour</source>
-        <translation type="unfinished"></translation>
+        <translation type="obsolete">Utilizar un tiempo de reconexión dinámico basado en los intentos de conexión</translation>
     </message>
 </context>
 <context>
@@ -1196,119 +1192,119 @@ Now you can connect your client computers to this server. You should see a promp
     <name>ScreenSettingsDialog</name>
     <message>
         <source>Computer settings</source>
-        <translation type="unfinished">Información de la computadora</translation>
+        <translation type="obsolete">Información de la computadora</translation>
     </message>
     <message>
         <source>Computer Info</source>
-        <translation type="unfinished">Información de la computadora</translation>
+        <translation type="obsolete">Información de la computadora</translation>
     </message>
     <message>
         <source>Name</source>
-        <translation type="unfinished">Nombre</translation>
+        <translation type="obsolete">Nombre</translation>
     </message>
     <message>
         <source>Modifier Keys</source>
-        <translation type="unfinished">Teclas modificadoras</translation>
+        <translation type="obsolete">Teclas modificadoras</translation>
     </message>
     <message>
         <source>M&amp;eta</source>
-        <translation type="unfinished">M&amp;eta</translation>
+        <translation type="obsolete">M&amp;eta</translation>
     </message>
     <message>
         <source>&amp;Ctrl</source>
-        <translation type="unfinished">&amp;Ctrl</translation>
+        <translation type="obsolete">&amp;Ctrl</translation>
     </message>
     <message>
         <source>S&amp;uper</source>
-        <translation type="unfinished">S&amp;úper</translation>
+        <translation type="obsolete">S&amp;úper</translation>
     </message>
     <message>
         <source>Al&amp;t</source>
-        <translation type="unfinished">Al&amp;t</translation>
+        <translation type="obsolete">Al&amp;t</translation>
     </message>
     <message>
         <source>Shift</source>
-        <translation type="unfinished">Shift</translation>
+        <translation type="obsolete">Shift</translation>
     </message>
     <message>
         <source>Ctrl</source>
-        <translation type="unfinished">Ctrl</translation>
+        <translation type="obsolete">Ctrl</translation>
     </message>
     <message>
         <source>Alt</source>
-        <translation type="unfinished">Alt</translation>
+        <translation type="obsolete">Alt</translation>
     </message>
     <message>
         <source>Meta</source>
-        <translation type="unfinished">Meta</translation>
+        <translation type="obsolete">Meta</translation>
     </message>
     <message>
         <source>Super</source>
-        <translation type="unfinished">Súper</translation>
+        <translation type="obsolete">Súper</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="unfinished">Ninguno</translation>
+        <translation type="obsolete">Ninguno</translation>
     </message>
     <message>
         <source>&amp;Shift</source>
-        <translation type="unfinished">&amp;Shift</translation>
+        <translation type="obsolete">&amp;Shift</translation>
     </message>
     <message>
         <source>Dead Corners</source>
-        <translation type="unfinished">Esquinas muertas</translation>
+        <translation type="obsolete">Esquinas muertas</translation>
     </message>
     <message>
         <source>Top Left</source>
-        <translation type="unfinished">Arriba a la izquierda</translation>
+        <translation type="obsolete">Arriba a la izquierda</translation>
     </message>
     <message>
         <source>Top Right</source>
-        <translation type="unfinished">Arriba a la derecha</translation>
+        <translation type="obsolete">Arriba a la derecha</translation>
     </message>
     <message>
         <source>Corner si&amp;ze</source>
-        <translation type="unfinished">Tamaño de la e&amp;squina</translation>
+        <translation type="obsolete">Tamaño de la e&amp;squina</translation>
     </message>
     <message>
         <source>Bottom Left</source>
-        <translation type="unfinished">Abajo a la izquierda</translation>
+        <translation type="obsolete">Abajo a la izquierda</translation>
     </message>
     <message>
         <source>Bottom Right</source>
-        <translation type="unfinished">Abajo a la derecha</translation>
+        <translation type="obsolete">Abajo a la derecha</translation>
     </message>
     <message>
         <source>Fixes</source>
-        <translation type="unfinished">Correcciones</translation>
+        <translation type="obsolete">Correcciones</translation>
     </message>
     <message>
         <source>SCROLL LOCK key</source>
-        <translation type="unfinished">Tecla BLOQ DESPLAZAMIENTO</translation>
+        <translation type="obsolete">Tecla BLOQ DESPLAZAMIENTO</translation>
     </message>
     <message>
         <source>CAPS LOCK key</source>
-        <translation type="unfinished">Tecla BLOQ MAYÚS</translation>
+        <translation type="obsolete">Tecla BLOQ MAYÚS</translation>
     </message>
     <message>
         <source>NUM LOCK key</source>
-        <translation type="unfinished">Tecla BLOQ NUM</translation>
+        <translation type="obsolete">Tecla BLOQ NUM</translation>
     </message>
     <message>
         <source>XTest for Xinerama</source>
-        <translation type="unfinished">XTest para Xinerama</translation>
+        <translation type="obsolete">XTest para Xinerama</translation>
     </message>
     <message>
         <source>Aliases</source>
-        <translation type="unfinished">Alias</translation>
+        <translation type="obsolete">Alias</translation>
     </message>
     <message>
         <source>&amp;Add</source>
-        <translation type="unfinished">&amp;Agregar</translation>
+        <translation type="obsolete">&amp;Agregar</translation>
     </message>
     <message>
         <source>&amp;Remove</source>
-        <translation type="unfinished">Elimina&amp;r</translation>
+        <translation type="obsolete">Elimina&amp;r</translation>
     </message>
     <message>
         <source>Top-left</source>
@@ -1341,14 +1337,6 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>The screen name cannot be the same as an alias. Please either remove the alias or change the screen name.</source>
         <translation type="unfinished">El nombre de usuario no puede ser el mismo que un alias. Elimine el alias o cambie el nombre de usuario.</translation>
-    </message>
-    <message>
-        <source>Alt Gr</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Alt &amp;Gr</source>
-        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
