@@ -198,6 +198,9 @@ int main(int argc, char **argv)
   qputenv("XDG_CONFIG_HOME", directory.path().toUtf8());
   qputenv("XDG_STATE_HOME", directory.path().toUtf8());
   QApplication app(argc, argv);
+  auto font = app.font();
+  font.setPixelSize(13);
+  app.setFont(font);
   Settings::setSettingsFile(directory.filePath(QStringLiteral("render.conf")));
   Settings::setStateFile(directory.filePath(QStringLiteral("render.state")));
   app.setStyleSheet(synergy::gui::appStyleSheet());
