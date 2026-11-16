@@ -98,7 +98,19 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
     ui->comboInterface->addItem(interface, interface);
   }
 
+  connect(ui->comboTrayIcon, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
+    ui->rbIconMono->setChecked(index == 1);
+    ui->rbIconColorful->setChecked(index == 0);
+  });
+  connect(ui->rbIconMono, &QRadioButton::toggled, this, [this](bool mono) {
+    ui->comboTrayIcon->setCurrentIndex(mono ? 1 : 0);
+  });
+  connect(ui->rbIconColorful, &QRadioButton::toggled, this, [this](bool colorful) {
+    if (colorful)
+      ui->comboTrayIcon->setCurrentIndex(0);
+  });
   loadFromConfig();
+  ui->comboTrayIcon->setCurrentIndex(ui->rbIconMono->isChecked() ? 1 : 0);
   logLevelChanged();
 
   adjustSize();
@@ -522,6 +534,7 @@ void SettingsDialog::updateControls()
   ui->cbPreventSleep->setEnabled(writable);
   m_checkForUpdates->setEnabled(writable);
   ui->comboLanguage->setEnabled(writable);
+  ui->comboTrayIcon->setEnabled(writable);
   ui->rbIconMono->setEnabled(writable);
   ui->rbIconColorful->setEnabled(writable);
   ui->cbShowVersion->setEnabled(writable);

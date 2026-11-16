@@ -106,8 +106,8 @@ QGridLayout *createForm(const QString &name)
 void Ui::SettingsDialog::setupUi(QDialog *dialog)
 {
   dialog->setObjectName(QStringLiteral("SettingsDialog"));
-  dialog->resize(560, 600);
-  dialog->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+  dialog->resize(560, 420);
+  dialog->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
   dialog->setModal(true);
 
   auto *verticalLayout_3 = new QVBoxLayout(dialog);
@@ -168,7 +168,10 @@ void Ui::SettingsDialog::setupUi(QDialog *dialog)
   trayIconOptionsLayout->addWidget(rbIconMono);
   rbIconColorful = createRadioButton(trayIconOptions, QStringLiteral("rbIconColorful"));
   trayIconOptionsLayout->addWidget(rbIconColorful);
-  generalForm->addWidget(trayIconOptions, 1, 1);
+  // 保留旧单选按钮作为设置绑定，不参与可见布局；呈现使用设计稿下拉框。
+  trayIconOptions->hide();
+  comboTrayIcon = createComboBox(generalCard, QStringLiteral("comboTrayIcon"), 2);
+  generalForm->addWidget(comboTrayIcon, 1, 1);
   generalCardLayout->addLayout(generalForm);
 
   generalScrollLayout->addWidget(generalCard, 0, Qt::AlignTop);
@@ -524,6 +527,8 @@ void Ui::SettingsDialog::retranslateUi(QDialog *dialog)
   lblTrayIconStyle->setText(QCoreApplication::translate("SettingsDialog", "Tray icon style", nullptr));
   rbIconMono->setText(QCoreApplication::translate("SettingsDialog", "Monocolor", nullptr));
   rbIconColorful->setText(QCoreApplication::translate("SettingsDialog", "Colorful", nullptr));
+  comboTrayIcon->setItemText(0, QCoreApplication::translate("SettingsDialog", "Colorful", nullptr));
+  comboTrayIcon->setItemText(1, QCoreApplication::translate("SettingsDialog", "Monocolor", nullptr));
 
   windowCard->setTitle(QString());
   label_3->setText(QCoreApplication::translate("SettingsDialog", "When the application starts", nullptr));

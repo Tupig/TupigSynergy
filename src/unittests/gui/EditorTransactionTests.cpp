@@ -9,9 +9,11 @@
 #include "gui/dialogs/ClientConfigDialog.h"
 #include "gui/dialogs/ScreenSettingsDialog.h"
 #include "gui/dialogs/ServerConfigDialog.h"
+#include "gui/dialogs/SettingsDialog.h"
 #include "gui/widgets/LogWidget.h"
 #include <QApplication>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QListWidget>
 #include <QPushButton>
@@ -29,6 +31,8 @@ private Q_SLOTS:
   void logsFilterCountAndBoundHistory();
   void serverCancelRestoresProtocol();
   void protocolValuesSupportStoredAndDefaultTypes();
+  void traySelectorCancelDoesNotWrite();
+  void traySelectorSaveWrites();
 };
 
 void EditorTransactionTests::clientCancelDoesNotWrite()
@@ -112,6 +116,33 @@ void EditorTransactionTests::logsFilterCountAndBoundHistory()
   QVERIFY(log.allText().isEmpty());
   log.appendLine(QStringLiteral("[time] ERROR: ") + QString(20000, QLatin1Char('x')));
   QVERIFY(log.maximumHeight() <= 236);
+}
+
+void EditorTransactionTests::traySelectorCancelDoesNotWrite()
+{
+  Settings::setValue(Settings::Gui::SymbolicTrayIcon, false);
+  synergy::gui::ServerConfig config;
+  SettingsDialog editor(nullptr, config);
+  auto *selector = editor.findChild<QComboBox *>(QStringLiteral("comboTrayIcon"));
+  QVERIFY(selector != nullptr);
+  QCOMPARE(selector->currentIndex(), 0);
+  selector->setCurrentIndex(1);
+  QVERIFY(editor.findChild<QRadioButton *>(QStringLiteral("rbIconMono"))->isChecked());
+  editor.reject();
+  QVERIFY(!Settings::value(Settings::Gui::SymbolicTrayIcon).toBool());
+}
+
+void EditorTransactionTests::traySelectorSaveWrites()
+{
+  Settings::setValue(Settings::Gui::SymbolicTrayIcon, false);
+  synergy::gui::ServerConfig config;
+  SettingsDialog editor(nullptr, config);
+  editor.findChild<QComboBox *>(QStringLiteral("comboTrayIcon"))->setCurrentIndex(1);
+  auto *buttons = editor.findChild<QDialogButtonBox *>();
+  QVERIFY(buttons->button(QDialogButtonBox::Save)->isEnabled());
+  buttons->button(QDialogButtonBox::Save)->click();
+  QCOMPARE(editor.result(), static_cast<int>(QDialog::Accepted));
+  QVERIFY(Settings::value(Settings::Gui::SymbolicTrayIcon).toBool());
 }
 
 int main(int argc, char **argv)

@@ -38,6 +38,7 @@ public:
   QLabel *lblLanguage = nullptr;
   QComboBox *comboLanguage = nullptr;
   QLabel *lblTrayIconStyle = nullptr;
+  QComboBox *comboTrayIcon = nullptr;
   QWidget *trayIconOptions = nullptr;
   QRadioButton *rbIconMono = nullptr;
   QRadioButton *rbIconColorful = nullptr;
