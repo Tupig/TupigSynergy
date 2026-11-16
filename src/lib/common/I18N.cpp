@@ -86,25 +86,36 @@ I18N::I18N(QObject *parent) : QObject{parent}
 
   static const auto s_prefix = QStringLiteral("_");
 
-  // Qt matches catalogues by the full locale (zh_HK, zh_SG, ...), but the
-  // project ships Simplified (zh_CN) and Traditional (zh_TW) Chinese only.
-  // Without this fallback a Chinese system whose region is not China/HK/Taiwan
-  // starts in English even though a Chinese catalogue exists.
-  const auto loadTranslation = [](QTranslator *translator, const QString &prefix, const QString &path) {
-    QList<QLocale> candidates{QLocale()};
-    if (QLocale().language() == QLocale::Chinese) {
-      if (QLocale().script() == QLocale::TraditionalChineseScript) {
+  // Default language rule (see docs/configuration.md):
+  //   * a Chinese system starts in Chinese - Traditional for zh-Hant, otherwise
+  //     Simplified (zh_CN), because the project ships those two catalogues;
+  //   * every other system starts in English, including Japanese, Korean,
+  //     Russian, Spanish and Italian. Those catalogues still exist and can be
+  //     picked explicitly, but the product default is Chinese or English.
+  const auto defaultCandidates = []() {
+    QList<QLocale> candidates;
+    const auto system = QLocale();
+    if (system.language() == QLocale::Chinese) {
+      if (system.script() == QLocale::TraditionalChineseScript) {
         candidates.append(QLocale(QLocale::Chinese, QLocale::Taiwan));
       }
       candidates.append(QLocale(QLocale::Chinese, QLocale::China));
     }
-    for (const auto &locale : std::as_const(candidates)) {
-      if (translator->load(locale, prefix, s_prefix, path)) {
-        return true;
-      }
-    }
-    return false;
+    // English is the fallback for every non-Chinese system and for a Chinese
+    // system whose catalogue is missing from the installation.
+    candidates.append(QLocale(QLocale::English));
+    return candidates;
   };
+
+  const auto loadTranslation =
+      [&defaultCandidates](QTranslator *translator, const QString &prefix, const QString &path) {
+        for (const auto &locale : defaultCandidates()) {
+          if (translator->load(locale, prefix, s_prefix, path)) {
+            return true;
+          }
+        }
+        return false;
+      };
 
   if (Settings::value(Settings::Core::Language).toString().isEmpty()) {
     auto appTranslator = new QTranslator(this);

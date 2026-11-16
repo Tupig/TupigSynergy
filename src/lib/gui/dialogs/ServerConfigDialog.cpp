@@ -7,7 +7,7 @@
  */
 
 #include "ServerConfigDialog.h"
-#include "ui_ServerConfigDialog.h"
+#include "ServerConfigDialogDesign.h"
 
 #include "common/Constants.h"
 #include "common/NetworkProtocol.h"
@@ -16,10 +16,14 @@
 #include "dialogs/ActionDialog.h"
 #include "dialogs/HotkeyDialog.h"
 #include "dialogs/ScreenSettingsDialog.h"
+#include "widgets/PageHost.h"
 
 #include <QDebug>
 #include <QFileDialog>
+#include <QHBoxLayout>
 #include <QMessageBox>
+#include <QTimer>
+#include <QVBoxLayout>
 
 using enum synergy::gui::ScreenConfig::SwitchCorner;
 
@@ -33,10 +37,11 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConf
       m_screenSetupModel(m_serverConfig.screens(), m_serverConfig.numColumns(), m_serverConfig.numRows())
 {
   ui->setupUi(this);
+  setMinimumWidth(560);
 
   ui->labelProtocol->setWhatsThis(ui->labelProtocol->whatsThis().arg(kAppName));
 
-  m_originalProtocol = Settings::value(Settings::Server::Protocol).value<NetworkProtocol>();
+  m_originalProtocol = networkProtocolFromValue(Settings::value(Settings::Server::Protocol));
   connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &ServerConfigDialog::accept);
   connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &ServerConfigDialog::reject);
 
@@ -44,7 +49,29 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConf
   connect(ui->lblRemoveScreen, &TrashScreenWidget::screenRemoved, this, &ServerConfigDialog::onScreenRemoved);
 
   ui->lblNewScreen->setEnabled(!model().isFull());
+  auto *computerActions = new QHBoxLayout;
+  auto *addComputerButton = new QPushButton(tr("Add computer"), ui->tabComputers);
+  addComputerButton->setObjectName(QStringLiteral("addComputerButton"));
+  addComputerButton->setIcon(QIcon::fromTheme(QStringLiteral("list-add")));
+  addComputerButton->setEnabled(!model().isFull());
+  connect(addComputerButton, &QPushButton::clicked, this, [this] { addClient(); });
+  connect(&m_screenSetupModel, &ScreenSetupModel::screensChanged, addComputerButton, [this, addComputerButton] {
+    addComputerButton->setEnabled(!model().isFull());
+  });
+  computerActions->addWidget(addComputerButton);
+  computerActions->addStretch();
+  if (auto *layout = qobject_cast<QVBoxLayout *>(ui->tabComputers->layout()))
+    layout->addLayout(computerActions);
   ui->lblNewScreen->setPixmap(QIcon::fromTheme("video-display").pixmap(QSize(64, 64)));
+
+  // 死角复选框按标签宽度收缩，避免网格拉伸后只剩指示框。
+  for (auto *corner : {ui->cbCornerTopLeft, ui->cbCornerTopRight, ui->cbCornerBottomLeft, ui->cbCornerBottomRight}) {
+    corner->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    corner->setMinimumWidth(corner->fontMetrics().horizontalAdvance(corner->text()) + 32);
+  }
+  // 设计稿的网格按内容高度，工具行紧随其下，不能被拉伸挤出视口。
+  ui->screenSetupView->setMinimumHeight(180);
+  ui->screenSetupView->setMaximumHeight(260);
 
   connect(ui->btnNewHotkey, &QPushButton::clicked, this, &ServerConfigDialog::addHotkey);
   connect(ui->btnEditHotkey, &QPushButton::clicked, this, &ServerConfigDialog::editHotkey);
@@ -189,13 +216,19 @@ void ServerConfigDialog::accept()
 {
   if (ui->groupExternalConfig->isChecked() && !QFile::exists(ui->lineConfigFile->text())) {
 
-    auto selectedButton = QMessageBox::warning(
-        this, "Filename invalid", "Please select a valid configuration file.", QMessageBox::Ok | QMessageBox::Ignore
+    auto *prompt = new QMessageBox(
+        QMessageBox::Warning, tr("Filename invalid"), tr("Please select a valid configuration file."),
+        QMessageBox::Ok | QMessageBox::Ignore, this
     );
-
-    if (selectedButton != QMessageBox::Ok || !browseConfigFile()) {
-      return;
-    }
+    connect(prompt, &QDialog::finished, this, [this](int result) {
+      if (result == QMessageBox::Ok)
+        QTimer::singleShot(0, this, [this] {
+          if (browseConfigFile())
+            accept();
+        });
+    });
+    PageHost::present(this, prompt);
+    return;
   }
 
   // now that the dialog has been accepted, copy the new server config to the
@@ -209,19 +242,22 @@ void ServerConfigDialog::reject()
 {
   serverConfig().setUseExternalConfig(m_originalServerConfigIsExternal);
   serverConfig().setConfigFile(m_originalServerConfigUsesExternalFile);
+  serverConfig().setProtocol(m_originalProtocol);
+  Settings::setValue(Settings::Server::Protocol, networkProtocolToOption(m_originalProtocol));
 
   QDialog::reject();
 }
 
 void ServerConfigDialog::addHotkey()
 {
-  Hotkey hotkey;
-  HotkeyDialog dlg(this, hotkey);
-  if (dlg.exec() == QDialog::Accepted) {
-    serverConfig().hotkeys().append(hotkey);
-    ui->listHotkeys->addItem(hotkey.text());
+  auto hotkey = std::make_shared<Hotkey>();
+  auto *dialog = new HotkeyDialog(this, *hotkey);
+  connect(dialog, &QDialog::accepted, this, [this, hotkey] {
+    serverConfig().hotkeys().append(*hotkey);
+    ui->listHotkeys->addItem(hotkey->text());
     onChange();
-  }
+  });
+  PageHost::present(this, dialog);
 }
 
 void ServerConfigDialog::editHotkey()
@@ -232,12 +268,14 @@ void ServerConfigDialog::editHotkey()
     return;
   }
 
-  Hotkey &hotkey = serverConfig().hotkeys()[row];
-  HotkeyDialog dlg(this, hotkey);
-  if (dlg.exec() == QDialog::Accepted) {
-    ui->listHotkeys->currentItem()->setText(hotkey.text());
+  auto hotkey = std::make_shared<Hotkey>(serverConfig().hotkeys()[row]);
+  auto *dialog = new HotkeyDialog(this, *hotkey);
+  connect(dialog, &QDialog::accepted, this, [this, hotkey, row] {
+    serverConfig().hotkeys()[row] = *hotkey;
+    ui->listHotkeys->item(row)->setText(hotkey->text());
     onChange();
-  }
+  });
+  PageHost::present(this, dialog);
 }
 
 void ServerConfigDialog::removeHotkey()
@@ -277,14 +315,15 @@ void ServerConfigDialog::addAction()
     return;
   }
 
-  Hotkey &hotkey = serverConfig().hotkeys()[row];
-  Action action;
-  ActionDialog dlg(this, serverConfig(), hotkey, action);
-  if (dlg.exec() == QDialog::Accepted) {
-    hotkey.actions().append(action);
-    ui->listActions->addItem(action.text());
+  auto hotkey = std::make_shared<Hotkey>(serverConfig().hotkeys()[row]);
+  auto action = std::make_shared<Action>();
+  auto *dialog = new ActionDialog(this, serverConfig(), *hotkey, *action);
+  connect(dialog, &QDialog::accepted, this, [this, row, hotkey, action] {
+    serverConfig().hotkeys()[row].actions().append(*action);
+    ui->listActions->addItem(action->text());
     onChange();
-  }
+  });
+  PageHost::present(this, dialog);
 }
 
 void ServerConfigDialog::editAction()
@@ -301,13 +340,15 @@ void ServerConfigDialog::editAction()
     qDebug() << "Attempt to remove out of bounds action row: " << actionRow;
     return;
   }
-  Action &action = hotkey.actions()[actionRow];
-
-  ActionDialog dlg(this, serverConfig(), hotkey, action);
-  if (dlg.exec() == QDialog::Accepted) {
-    ui->listActions->currentItem()->setText(action.text());
+  auto hotkeyDraft = std::make_shared<Hotkey>(hotkey);
+  auto action = std::make_shared<Action>(hotkey.actions()[actionRow]);
+  auto *dialog = new ActionDialog(this, serverConfig(), *hotkeyDraft, *action);
+  connect(dialog, &QDialog::accepted, this, [this, hotkeyRow, actionRow, hotkeyDraft, action] {
+    serverConfig().hotkeys()[hotkeyRow].actions()[actionRow] = *action;
+    ui->listActions->item(actionRow)->setText(action->text());
     onChange();
-  }
+  });
+  PageHost::present(this, dialog);
 }
 
 void ServerConfigDialog::removeAction()
@@ -497,16 +538,19 @@ bool ServerConfigDialog::browseConfigFile()
 
 bool ServerConfigDialog::addComputer(const QString &clientName, bool doSilent)
 {
-  bool isAccepted = false;
-  synergy::gui::Screen newScreen(clientName);
-
-  if (ScreenSettingsDialog dlg(this, &newScreen, &model().m_Screens); doSilent || dlg.exec() == QDialog::Accepted) {
-    model().addScreen(newScreen);
-    isAccepted = true;
+  auto screen = std::make_shared<synergy::gui::Screen>(clientName);
+  if (doSilent) {
+    model().addScreen(*screen);
+    ui->lblNewScreen->setEnabled(!model().isFull());
+    return true;
   }
-
-  ui->lblNewScreen->setEnabled(!model().isFull());
-  return isAccepted;
+  auto *dialog = new ScreenSettingsDialog(this, screen.get(), &model().m_Screens);
+  connect(dialog, &QDialog::accepted, this, [this, screen] {
+    model().addScreen(*screen);
+    ui->lblNewScreen->setEnabled(!model().isFull());
+  });
+  PageHost::present(this, dialog);
+  return false;
 }
 
 void ServerConfigDialog::onChange()
@@ -514,7 +558,7 @@ void ServerConfigDialog::onChange()
   bool isAppConfigDataEqual =
       m_originalServerConfigIsExternal == serverConfig().useExternalConfig() &&
       m_originalServerConfigUsesExternalFile == serverConfig().configFile() &&
-      m_originalProtocol == Settings::value(Settings::Server::Protocol).value<NetworkProtocol>();
+      m_originalProtocol == networkProtocolFromValue(Settings::value(Settings::Server::Protocol));
   ui->buttonBox->button(QDialogButtonBox::Ok)
       ->setEnabled(!isAppConfigDataEqual || !(m_originalServerConfig == m_serverConfig));
 }

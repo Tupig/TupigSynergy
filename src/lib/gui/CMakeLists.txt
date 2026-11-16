@@ -8,6 +8,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 if(APPLE)
   set (platform_sources
+    OSXAccessibility.cpp
     OSXHelpers.h
     OSXHelpers.mm
   )
@@ -17,6 +18,8 @@ add_library(${target} STATIC
   ${platform_sources}
   Action.cpp
   Action.h
+  AppStyle.cpp
+  AppStyle.h
   Diagnostic.cpp
   Diagnostic.h
   FileTail.cpp
@@ -32,7 +35,8 @@ add_library(${target} STATIC
   mainwindow/MainWindowConnection.cpp
   mainwindow/MainWindowWindow.cpp
   MainWindow.h
-  MainWindow.ui
+  MainWindowDesign.cpp
+  MainWindowDesign.h
   Messages.cpp
   Messages.h
   ScreenSetupModel.cpp
@@ -62,27 +66,34 @@ add_library(${target} STATIC
   core/NetworkMonitor.h
   dialogs/AboutDialog.cpp
   dialogs/AboutDialog.h
-  dialogs/AboutDialog.ui
+  dialogs/AboutDialogDesign.cpp
+  dialogs/AboutDialogDesign.h
   dialogs/ActionDialog.cpp
   dialogs/ActionDialog.h
-  dialogs/ActionDialog.ui
+  dialogs/ActionDialogDesign.cpp
+  dialogs/ActionDialogDesign.h
   dialogs/ClientConfigDialog.h
   dialogs/ClientConfigDialog.cpp
-  dialogs/ClientConfigDialog.ui
+  dialogs/ClientConfigDialogDesign.h
+  dialogs/ClientConfigDialogDesign.cpp
   dialogs/FingerprintDialog.cpp
   dialogs/FingerprintDialog.h
   dialogs/HotkeyDialog.cpp
   dialogs/HotkeyDialog.h
-  dialogs/HotkeyDialog.ui
+  dialogs/HotkeyDialogDesign.cpp
+  dialogs/HotkeyDialogDesign.h
   dialogs/ScreenSettingsDialog.cpp
   dialogs/ScreenSettingsDialog.h
-  dialogs/ScreenSettingsDialog.ui
+  dialogs/ScreenSettingsDialogDesign.cpp
+  dialogs/ScreenSettingsDialogDesign.h
   dialogs/ServerConfigDialog.cpp
   dialogs/ServerConfigDialog.h
-  dialogs/ServerConfigDialog.ui
+  dialogs/ServerConfigDialogDesign.cpp
+  dialogs/ServerConfigDialogDesign.h
   dialogs/SettingsDialog.cpp
   dialogs/SettingsDialog.h
-  dialogs/SettingsDialog.ui
+  dialogs/SettingsDialogDesign.cpp
+  dialogs/SettingsDialogDesign.h
   ipc/IpcClient.cpp
   ipc/IpcClient.h
   ipc/DaemonIpcClient.cpp
@@ -113,10 +124,16 @@ add_library(${target} STATIC
   widgets/FingerprintPreview.h
   widgets/KeySequenceWidget.cpp
   widgets/KeySequenceWidget.h
-  widgets/LogDock.cpp
-  widgets/LogDock.h
+  widgets/LogPanel.cpp
+  widgets/LogPanel.h
   widgets/LogWidget.h
   widgets/LogWidget.cpp
+  widgets/MessagePage.cpp
+  widgets/MessagePage.h
+  widgets/ModeCard.cpp
+  widgets/ModeCard.h
+  widgets/PageHost.cpp
+  widgets/PageHost.h
   widgets/NewScreenWidget.cpp
   widgets/NewScreenWidget.h
   widgets/ScreenSetupView.cpp

@@ -9,42 +9,62 @@
 #include "common/Settings.h"
 
 #include <QEvent>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QPainter>
 #include <QPushButton>
+#include <QStyle>
 #include <QTimer>
+#include <QVariant>
 
 StatusBar::StatusBar(QWidget *parent)
-    : QStatusBar{parent},
+    : QWidget{parent},
       m_btnFingerprint{new QPushButton(this)},
       m_lblSecurityIcon{new QLabel(this)},
       m_lblStatus{new QLabel(this)},
+      m_lblSecurity{new QLabel(this)},
       m_retryTimer{new QTimer(this)}
 {
-  static const auto btnHeight = height() - 2;
-  static const auto btnSize = QSize(btnHeight, btnHeight);
-  static const auto iconSize = QSize(fontMetrics().height() + 2, fontMetrics().height() + 2);
+  setObjectName(QStringLiteral("statusBar"));
+  setFixedHeight(32);
 
-  m_btnFingerprint->setFlat(true);
-  m_btnFingerprint->setIcon(QIcon::fromTheme(QStringLiteral("fingerprint")));
-  m_btnFingerprint->setFixedSize(btnSize);
-  m_btnFingerprint->setIconSize(iconSize);
-  insertPermanentWidget(0, m_btnFingerprint);
+  auto *layout = new QHBoxLayout(this);
+  layout->setContentsMargins(12, 0, 12, 0);
+  layout->setSpacing(9);
+
+  m_btnFingerprint->setProperty("iconButton", true);
+  // 设计稿：状态栏左侧是绿色对勾；点击仍可查看本地指纹。
+  // 系统主题的对勾在 macOS 上是红色取消符号，这里直接绘制品牌绿色对勾。
+  QPixmap check(14, 14);
+  check.fill(Qt::transparent);
+  QPainter painter(&check);
+  painter.setRenderHint(QPainter::Antialiasing);
+  painter.setPen(QPen(QColor(QStringLiteral("#4cc38a")), 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+  painter.drawPolyline(QPolygonF({QPointF(2.5, 7.5), QPointF(6, 11), QPointF(11.5, 3.5)}));
+  painter.end();
+  m_btnFingerprint->setIcon(QIcon(check));
+  m_btnFingerprint->setIconSize(QSize(14, 14));
   connect(m_btnFingerprint, &QPushButton::clicked, this, &StatusBar::requestShowMyFingerprints);
 
   m_lblSecurityIcon->setVisible(false);
-  m_lblSecurityIcon->setFixedSize(iconSize);
+  m_lblSecurityIcon->setFixedSize(14, 14);
   m_lblSecurityIcon->setScaledContents(true);
-  insertPermanentWidget(1, m_lblSecurityIcon);
 
+  m_lblStatus->setObjectName(QStringLiteral("statusText"));
   m_lblStatus->setText(tr("%1 is not running").arg(kAppName));
-  insertPermanentWidget(2, m_lblStatus, 1);
+
+  m_lblSecurity->setObjectName(QStringLiteral("statusRight"));
+
+  layout->addWidget(m_btnFingerprint);
+  layout->addWidget(m_lblSecurityIcon);
+  layout->addWidget(m_lblStatus, 1);
+  layout->addWidget(m_lblSecurity);
 
   m_retryTimer->setInterval(1000);
   m_retryTimer->setSingleShot(false);
   connect(m_retryTimer, &QTimer::timeout, this, &StatusBar::updateTimerLabel);
 
   updateText();
-  adjustSize();
 }
 
 // clang-format off
@@ -66,7 +86,7 @@ void StatusBar::setStatus(ConnectionState connectionState, ProcessState processS
       break;
 
     case Stopping:
-        m_connectionInterval = -1;
+      m_connectionInterval = -1;
       m_lblStatus->setText(tr("%1 is stopping...").arg(kAppName));
       break;
 
@@ -155,7 +175,7 @@ void StatusBar::setBtnFingerprintVisible(bool visible)
 
 void StatusBar::changeEvent(QEvent *e)
 {
-  QStatusBar::changeEvent(e);
+  QWidget::changeEvent(e);
   if (e->type() == QEvent::LanguageChange)
     updateText();
 }
@@ -178,6 +198,11 @@ void StatusBar::updateTimerLabel()
   m_lblStatus->setText(text);
 }
 
+void StatusBar::updateSecurityInfo(bool encrypted)
+{
+  setSecurityIcon(encrypted);
+}
+
 void StatusBar::setSecurityIcon(bool encrypted)
 {
   const auto icon = QIcon::fromTheme(encrypted ? QStringLiteral("security-high") : QStringLiteral("security-low"));
@@ -189,6 +214,7 @@ void StatusBar::setSecurityIcon(bool encrypted)
 void StatusBar::setSecurityLevel(const QString &securityLevel)
 {
   m_securityLevel = securityLevel;
-  const auto txt = m_encrypted ? tr("%1 Encryption Enabled").arg(m_securityLevel) : tr("Encryption Disabled");
+  const auto txt = m_encrypted ? tr("TLS enabled") : tr("TLS disabled");
   m_lblSecurityIcon->setToolTip(txt);
+  m_lblSecurity->setText(securityLevel.isEmpty() ? txt : securityLevel);
 }

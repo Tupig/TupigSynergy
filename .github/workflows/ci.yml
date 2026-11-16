@@ -48,10 +48,23 @@ on:
           - "all"
           - windows
           - macos
-          - linux
-          - flatpak
       analyze:
         description: "Also run clang-tidy, cppcheck, CodeQL, SonarCloud and Valgrind. Does not change which platforms build."
+        required: false
+        default: false
+        type: boolean
+      run-audit:
+        description: "按需运行依赖漏洞审计（cve-bin-tool）。"
+        required: false
+        default: false
+        type: boolean
+      run-codeql:
+        description: "按需运行 CodeQL 安全分析。"
+        required: false
+        default: false
+        type: boolean
+      run-msi:
+        description: "按需运行 MSI64 intake 测试。"
         required: false
         default: false
         type: boolean
@@ -188,16 +201,12 @@ jobs:
           targets=$(jq -c --arg k "$linux_key" '.[$k] | map(. + {"expected-arch": (if (.name | endswith("-arm64")) then "arm64" elif (.name | endswith("-x86_64")) then "x64" else error("unsupported declared Linux target") end)})' .github/matrices/linux-targets.json)
           # Release packaging ships Windows x64 and macOS arm64 only. Pull
           # requests and snapshots keep the full architecture matrix.
-          windows_targets=$(jq -c -n --argjson publish "$publish_release" '[
-            {"name":"windows-2022-x64","runs-on":"windows-2022","vcpkg-triplet":"x64-windows-release","arch":"amd64","qt-version":"6.10.3"}
-          ] + (if $publish then [] else [
-            {"name":"windows-2022-arm64","runs-on":"windows-11-arm","vcpkg-triplet":"arm64-windows","arch":"arm64","qt-version":"6.11.1"}
-          ] end)')
-          macos_targets=$(jq -c -n --argjson publish "$publish_release" '[
-            {"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.1","config-args":"-DCMAKE_OSX_ARCHITECTURES=\"arm64\" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}
-          ] + (if $publish then [] else [
-            {"name":"macos-x64","expected-arch":"x64","runs-on":"macos-15-intel","timeout":45,"qt-version":"6.9.3","config-args":"-DCMAKE_OSX_ARCHITECTURES=\"x86_64\" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}
-          ] end)')
+          # 交付只构建 Windows x64 与 macOS arm64，其余平台不构建。
+          windows_targets='[{"name":"windows-2022-x64","runs-on":"windows-2022","vcpkg-triplet":"x64-windows-release","arch":"amd64","qt-version":"6.10.3"}]'
+          macos_targets='[{"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.1","config-args":"-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}]'
+          targets='[]'
+          build_linux=false
+          build_flatpak=false
           {
             echo "targets=$targets"
             echo "windows_targets=$windows_targets"
@@ -227,7 +236,7 @@ jobs:
   # Reads scripts/ci/encoding-check.json. on_violation defaults to fail, so a
   # bad file stops the build jobs. Set it to warn to print and continue.
   lint-encoding:
-    needs: get-version
+    needs: [get-version, lint-clang]
     if: needs.get-version.outputs.skip_unchanged != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -249,10 +258,10 @@ jobs:
   # Windows: MSVC + Ninja. macOS: AppleClang (arm64 and x86_64). Linux: gcc.
   # ---------------------------------------------------------------------------
   build-windows:
-    needs: [lint-encoding, lint-clang, get-version]
+    needs: [get-version, lint-encoding]
     if: ${{ needs.get-version.outputs.build_windows == 'true' }}
-    name: ${{ matrix.target.name }}
-    runs-on: ${{ matrix.target.runs-on }}
+    name: windows-2022-x64
+    runs-on: windows-2022
     timeout-minutes: 60
     permissions:
       contents: read
@@ -265,12 +274,6 @@ jobs:
       # after the project is approved. Missing any of them leaves the package unsigned.
       WINDOWS_SIGNING: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.SIGNPATH_API_TOKEN != '' && vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_PROJECT_SLUG != '' }}
 
-    strategy:
-      fail-fast: false
-      matrix:
-        # Built by the plan step: release packaging excludes Windows arm64.
-        target: ${{ fromJSON(needs.get-version.outputs.windows_targets) }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -282,15 +285,15 @@ jobs:
       - name: Setup VC++ environment
         uses: TheMrMilchmann/setup-msvc-dev@368ef7d1ee4d1171b31d4a7f67f4d954f903f5a9 # v4.1.0
         with:
-          arch: ${{ matrix.target.arch }}
+          arch: amd64
           spectre: true
 
       - name: Install dependencies
         id: get-deps
         uses: ./.github/actions/install-dependencies
         with:
-          qt-version: ${{ matrix.target.qt-version }}
-          vcpkg-triplet: ${{ matrix.target.vcpkg-triplet }}
+          qt-version: 6.10.3
+          vcpkg-triplet: x64-windows-release
 
       - name: Update Windows Paths
         shell: cmd
@@ -395,7 +398,7 @@ jobs:
         id: upload-unsigned-exes
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: unsigned-signpath-exes-${{ matrix.target.name }}
+          name: unsigned-signpath-exes-windows-2022-x64
           path: ${{ runner.temp }}\sign-stage\in\*.exe
           retention-days: 1
           if-no-files-found: error
@@ -443,7 +446,7 @@ jobs:
         id: upload-unsigned-msi
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: unsigned-signpath-msi-${{ matrix.target.name }}
+          name: unsigned-signpath-msi-windows-2022-x64
           path: ${{ steps.locate-msi.outputs.path }}
           archive: false
           retention-days: 1
@@ -487,33 +490,70 @@ jobs:
       - name: Test packaged build
         uses: ./.github/actions/test-package
         with:
-          expected-arch: ${{ matrix.target.arch }}
+          expected-arch: x64
 
       - name: Upload package
-        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
+        # 每次构建都上传产物，便于直接下载 GitHub 构建版本做验收。
+        if: ${{ success() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
+          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-windows-2022-x64
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
           retention-days: 14
 
+  bump-version:
+    needs: [build-macos]
+    if: ${{ needs.get-version.outputs.skip_unchanged != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Bump patch version
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import json, pathlib, re
+          version_file = pathlib.Path("cmake/Version.cmake")
+          text = version_file.read_text()
+          match = re.search(r"set\(SYNERGY_VERSION_PATCH (\d+)\)", text)
+          patch = int(match.group(1)) + 1
+          text = re.sub(r"set\(SYNERGY_VERSION_PATCH \d+\)", f"set(SYNERGY_VERSION_PATCH {patch})", text)
+          version_file.write_text(text)
+          manifest = pathlib.Path("vcpkg.json")
+          data = json.loads(manifest.read_text())
+          major = int(re.search(r"set\(SYNERGY_VERSION_MAJOR (\d+)\)", text).group(1))
+          minor = int(re.search(r"set\(SYNERGY_VERSION_MINOR (\d+)\)", text).group(1))
+          new_version = f"{major}.{minor}.{patch}"
+          data["version-string"] = new_version
+          manifest.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+          pathlib.Path("build").mkdir(exist_ok=True)
+          pathlib.Path("build/next-version").write_text(new_version)
+          PYEOF
+          next=$(cat build/next-version)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cmake/Version.cmake vcpkg.json
+          git commit -m "chore: 构建版本升级到 ${next} [skip ci]"
+          git push origin HEAD
+
   build-macos:
-    needs: [lint-encoding, lint-clang, get-version]
+    needs: [get-version, build-windows]
     if: ${{ needs.get-version.outputs.build_macos == 'true' }}
-    name: ${{ matrix.target.name }}
-    runs-on: ${{ matrix.target.runs-on }}
-    timeout-minutes: ${{ matrix.target.timeout }}
+    name: macos-arm64
+    runs-on: macos-15
+    timeout-minutes: 20
 
     env:
       SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
       MAC_SIGNING: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID != '' }}
       MAC_CODESIGN_ID: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        # Built by the plan step: release packaging excludes macOS x64.
-        target: ${{ fromJSON(needs.get-version.outputs.macos_targets) }}
 
     steps:
       - name: Checkout
@@ -527,14 +567,14 @@ jobs:
         id: get-deps
         uses: ./.github/actions/install-dependencies
         with:
-          qt-version: ${{ matrix.target.qt-version }}
+          qt-version: 6.11.1
 
       - name: Configure
         shell: bash
         run: |
           set -euo pipefail
           openssl_root=$(brew --prefix openssl@3)
-          ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}" -DOPENSSL_ROOT_DIR="$openssl_root" -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
+          ${{ env.CMAKE_CONFIGURE }} -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}" -DOPENSSL_ROOT_DIR="$openssl_root" -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
 
       - name: Build
         shell: bash
@@ -683,442 +723,20 @@ jobs:
       - name: Test packaged build
         uses: ./.github/actions/test-package
         with:
-          expected-arch: ${{ matrix.target.expected-arch }}
+          expected-arch: arm64
 
       - name: Upload package
-        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
+        # 每次构建都上传产物，便于直接下载 GitHub 构建版本做验收。
+        if: ${{ success() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
+          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-macos-arm64
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
           retention-days: 14
 
-  build-linux:
-    needs: [lint-encoding, lint-clang, get-version]
-    if: ${{ needs.get-version.outputs.build_linux == 'true' }}
-    name: ${{ matrix.target.name }}
-    runs-on: ${{ matrix.target.runs-on }}
-    container:
-      image: ${{ matrix.target.container }}
-      volumes:
-        - /etc/ssl/certs/ca-certificates.crt:/run/synergy-ci/host-ca-certificates.crt:ro
-    timeout-minutes: 20
-    env:
-      SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # free or full, chosen by the plan step in get-version.
-        target: ${{ fromJSON(needs.get-version.outputs.linux_targets) }}
-
-    steps:
-      # Stage: container toolchain. The image has no git, and it runs as root.
-      # Containers don't ship git; everything else needs it for checkout + describe.
-      # This pre-checkout step runs at the workspace root, which always exists.
-      - name: Install Git on Container
-        shell: bash
-        run: |
-          # BEGIN SYNERGY_CI_APT_BOOTSTRAP
-          synergy_ci_bootstrap_debian() {
-            local apt_root="$1" ca_path="$2" os_release_path="$3"
-            local os_id source_file source_format newline_count temporary
-            os_id=$(awk -F '=' '
-              $1 == "ID" {
-                value = substr($0, 4)
-                quote = substr(value, 1, 1)
-                if ((quote == "\"" || quote == sprintf("%c", 39)) &&
-                    substr(value, length(value), 1) == quote)
-                  value = substr(value, 2, length(value) - 2)
-                print value
-                exit
-              }
-            ' "$os_release_path") || return $?
-            if [ "$os_id" != "ubuntu" ]; then
-              apt-get update -qqq > /dev/null && apt-get install -qqq git devscripts > /dev/null
-              return $?
-            fi
-            if [ ! -f "$ca_path" ] || [ ! -r "$ca_path" ] || [ ! -s "$ca_path" ]; then
-              printf '%s\n' 'Ubuntu APT bootstrap requires a readable, nonempty public CA file.' >&2
-              return 1
-            fi
-            for source_file in "$apt_root/sources.list" "$apt_root"/sources.list.d/*.list "$apt_root"/sources.list.d/*.sources; do
-              [ -f "$source_file" ] || continue
-              if [ -L "$source_file" ]; then
-                printf '%s\n' 'Ubuntu APT bootstrap refuses a linked source file.' >&2
-                return 1
-              fi
-              case "$source_file" in
-                *.sources) source_format=deb822 ;;
-                *) source_format=list ;;
-              esac
-              newline_count=$(wc -l < "$source_file") || return $?
-              temporary=$(mktemp) || return $?
-              if ! awk -v format="$source_format" -v newlines="$newline_count" '
-                function uri(value) {
-                  if (value ~ /^http:\/\/(archive\.ubuntu\.com|security\.ubuntu\.com)\/ubuntu\/?$/ ||
-                      value ~ /^http:\/\/ports\.ubuntu\.com\/ubuntu-ports\/?$/)
-                    return "https" substr(value, 5)
-                  return value
-                }
-                function values(text, result, token) {
-                  result = ""
-                  while (length(text)) {
-                    if (match(text, /^[ \t]+/)) {
-                      result = result substr(text, 1, RLENGTH)
-                    } else {
-                      if (substr(text, 1, 1) == "#")
-                        return result text
-                      match(text, /^[^ \t]+/)
-                      token = substr(text, 1, RLENGTH)
-                      result = result uri(token)
-                    }
-                    text = substr(text, RLENGTH + 1)
-                  }
-                  return result
-                }
-                function legacy(text, position, rest, token) {
-                  if (!match(text, /^[ \t]*(deb|deb-src)[ \t]+/))
-                    return text
-                  position = RLENGTH + 1
-                  rest = substr(text, position)
-                  if (substr(rest, 1, 1) == "[") {
-                    if (!match(rest, /^\[[^]]*\][ \t]+/))
-                      return text
-                    position += RLENGTH
-                  }
-                  if (!match(substr(text, position), /^[^ \t]+/))
-                    return text
-                  token = substr(text, position, RLENGTH)
-                  return substr(text, 1, position - 1) uri(token) substr(text, position + length(token))
-                }
-                function stanza(first, last, i, text, colon, field, value, active) {
-                  for (i = first; i <= last; i++) {
-                    text = lines[i]
-                    if (tolower(substr(text, 1, 8)) == "enabled:") {
-                      value = substr(text, 9)
-                      gsub(/^[ \t]+|[ \t]+$/, "", value)
-                      if (tolower(value) == "no")
-                        return
-                    }
-                  }
-                  active = 0
-                  for (i = first; i <= last; i++) {
-                    text = lines[i]
-                    if (text ~ /^[ \t]*#/)
-                      continue
-                    if (text ~ /^[^ \t:]+:/) {
-                      colon = index(text, ":")
-                      field = tolower(substr(text, 1, colon - 1))
-                      active = field == "uris"
-                      if (active)
-                        lines[i] = substr(text, 1, colon) values(substr(text, colon + 1))
-                    } else if (text ~ /^[ \t]/ && active) {
-                      lines[i] = values(text)
-                    } else {
-                      active = 0
-                    }
-                  }
-                }
-                { lines[NR] = $0 }
-                END {
-                  if (format == "deb822") {
-                    first = 1
-                    for (last = 1; last <= NR + 1; last++) {
-                      if (last > NR || lines[last] ~ /^[ \t]*$/) {
-                        stanza(first, last - 1)
-                        first = last + 1
-                      }
-                    }
-                  } else {
-                    for (i = 1; i <= NR; i++)
-                      lines[i] = legacy(lines[i])
-                  }
-                  for (i = 1; i <= NR; i++) {
-                    printf "%s", lines[i]
-                    if (i <= newlines)
-                      printf "\n"
-                  }
-                }
-              ' "$source_file" > "$temporary"; then
-                rm -f "$temporary"
-                return 1
-              fi
-              if ! cat "$temporary" > "$source_file"; then
-                rm -f "$temporary"
-                return 1
-              fi
-              rm -f "$temporary" || return $?
-            done
-            printf '%s\n' 'Ubuntu APT bootstrap: update using verified HTTPS.'
-            apt-get update -o "Acquire::https::CAInfo=$ca_path" || return $?
-            printf '%s\n' 'Ubuntu APT bootstrap: install system CA certificates and Git tools.'
-            apt-get install -y -o "Acquire::https::CAInfo=$ca_path" ca-certificates git devscripts || return $?
-          }
-          # END SYNERGY_CI_APT_BOOTSTRAP
-          if [ "${{ matrix.target.like }}" == "debian" ]; then
-            synergy_ci_bootstrap_debian /etc/apt /run/synergy-ci/host-ca-certificates.crt /etc/os-release
-          elif [ "${{ matrix.target.like }}" == "fedora" ]; then
-            dnf install -y git
-          elif [ "${{ matrix.target.like }}" == "suse" ]; then
-            zypper refresh
-            zypper install -y --force-resolution git
-          elif [ "${{ matrix.target.like }}" == "arch" ]; then
-            pacman -Syu --noconfirm git
-          elif [ "${{ matrix.target.like }}" == "rhel" ]; then
-            dnf install -y git
-          else
-            echo "Unknown: ${{ matrix.target.like }}"
-          fi
-
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      # The container runs as root over a host-owned workspace, so git rejects it as
-      # dubious-owned and the Configure step's `git describe` degrades the rev count
-      # to 0, naming packages +r0 while non-container builds use the real count.
-      - name: Trust workspace for git
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Install dependencies
-        uses: ./.github/actions/install-dependencies
-        with:
-          like: ${{ matrix.target.like }}
-
-      # 24.04's system libportal (0.7.x) lacks the input-capture portal the code needs
-      # (>= 0.8.0), and that LTS's libs are frozen. Build a newer libportal and static-link
-      # it so the shipped binary carries no runtime dependency on a >= 0.8 system libportal
-      # (libei from the system is fine). The code uses no xdp_parent, so no GUI backend is
-      # needed, and removing the system .so makes `-lportal` resolve to the static archive.
-      - name: Build newer libportal (Ubuntu 24.04)
-        if: startsWith(matrix.target.name, 'ubuntu-24.04')
-        shell: bash
-        run: |
-          apt-get install -y -qq meson pkg-config
-          git clone --depth 1 --branch 0.9.1 https://github.com/flatpak/libportal.git /tmp/libportal
-          portal_commit=$(git -C /tmp/libportal rev-parse HEAD)
-          test "$portal_commit" = 8f5dc8d192f6e31dafe69e35219e3b707bde71ce
-          meson setup /tmp/libportal/_build /tmp/libportal --prefix=/usr --libdir="lib/$(gcc -dumpmachine)" \
-            --default-library=static \
-            -Dbackend-gtk3=disabled -Dbackend-gtk4=disabled -Dbackend-qt5=disabled -Dbackend-qt6=disabled \
-            -Ddocs=false -Dintrospection=false -Dvapi=false -Dtests=false
-          meson install -C /tmp/libportal/_build
-          license_dir=/usr/share/licenses/tupig-build/libportal
-          mkdir -p "$license_dir"
-          python3 - "$license_dir" "$portal_commit" <<'PY'
-          import importlib.util
-          import sys
-          spec = importlib.util.spec_from_file_location("runtime_notices", "scripts/ci/prepare-runtime-notices.py")
-          notices = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(notices)
-          payload = notices.download_runtime_source("libportal", "0.9.1")
-          notices.prepare("libportal", "0.9.1", payload, ["libportal.so.1"], sys.argv[1],
-                          "static source build libportal 0.9.1 gitcommit " + sys.argv[2])
-          PY
-          rm -f "/usr/lib/$(gcc -dumpmachine)"/libportal.so*
-          ldconfig
-
-      # Stage: compile and package. Arch uses makepkg; every other distro uses CPack.
-      - name: Configure
-        shell: bash
-        env:
-          TARGET_NAME: ${{ matrix.target.name }}
-        run: |
-          license_args=()
-          source_license_map=""
-          notice_root="$PWD/build/ci-runtime-notices"
-          providers=()
-          case "$TARGET_NAME" in
-            fedora-*) providers=(libdrm xcb-util-keysyms) ;;
-            rocky-*) providers=(libdrm xcb-util-keysyms) ;;
-            opensuse-*) providers=(libdrm libX11 libXext libXi libXinerama libXrandr libXrender libXtst
-                                   brotli e2fsprogs gcc graphite2 krb5 icu mtdev libproxy tslib libxcb
-                                   xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms
-                                   xcb-util-renderutil xcb-util) ;;
-            archlinux-*) providers=(e2fsprogs glib libgudev libidn2 keyutils libportal libproxy systemd tslib libunistring) ;;
-          esac
-          for provider in "${providers[@]}"; do
-            provider_map=$(python3 scripts/ci/prepare-runtime-notices.py \
-              --provider "$provider" --destination "$notice_root")
-            test -n "$provider_map"
-            IFS=';' read -r -a provider_entries <<< "$provider_map"
-            for entry in "${provider_entries[@]}"; do
-              soname=${entry%%=*}
-              if [[ ";$source_license_map;" == *";$soname="* ]]; then
-                echo "ERROR: Duplicate runtime notice SONAME: $soname" >&2
-                exit 1
-              fi
-            done
-            source_license_map+="${source_license_map:+;}$provider_map"
-          done
-          if [[ "$TARGET_NAME" == ubuntu-24.04* ]]; then
-            license_args=(-DSYNERGY_EXTRA_LICENSE_DIRS=/usr/share/licenses/tupig-build)
-            source_license_map=libportal.so.1=/usr/share/licenses/tupig-build/libportal
-          fi
-          if [[ -n "$source_license_map" ]]; then
-            license_args+=("-DSYNERGY_SOURCE_LICENSE_MAP=$source_license_map")
-          fi
-          ${{ env.CMAKE_CONFIGURE }} ${{ matrix.target.config-args }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} "${license_args[@]}"
-
-      - name: Build
-        shell: bash
-        run: cmake --build build --config Release -j8
-
-      - name: GUI configuration tests
-        env:
-          QT_QPA_PLATFORM: offscreen
-        shell: bash
-        run: |
-          set -euo pipefail
-          cache=build/CMakeCache.txt
-          test -f "$cache" || { echo 'Missing configured CMake cache'; exit 1; }
-          value() { sed -n "s/^$1:[^=]*=//p" "$cache"; }
-          build_tests=$(value BUILD_TESTS)
-          skip_build_tests=$(value SKIP_BUILD_TESTS)
-          qt_dir=$(value QT_DIR)
-          case "$build_tests:$skip_build_tests" in
-            ON:ON|ON:OFF|OFF:ON|OFF:OFF) ;;
-            *) echo 'Unknown or conflicting test configuration'; exit 1 ;;
-          esac
-          qt_major=unknown
-          if [ -f "$qt_dir/Qt5Config.cmake" ] && [ ! -f "$qt_dir/Qt6Config.cmake" ]; then
-            qt_major=5
-          elif [ -f "$qt_dir/Qt6Config.cmake" ] && [ ! -f "$qt_dir/Qt5Config.cmake" ]; then
-            qt_major=6
-          else
-            echo 'Unknown or conflicting selected Qt configuration'; exit 1
-          fi
-          printf 'GUI configuration: BUILD_TESTS=%s SKIP_BUILD_TESTS=%s QT_DIR=%s QT_VERSION_MAJOR=%s\n' "$build_tests" "$skip_build_tests" "$qt_dir" "$qt_major"
-          if [ "$RUNNER_OS" = Linux ] && { [ "$build_tests" = OFF ] || [ "$qt_major" = 5 ]; }; then
-            echo 'Not Run: GUI configuration tests disabled by recorded CMake/Qt configuration'
-            exit 0
-          fi
-          if [ "$build_tests" != ON ] || [ "$qt_major" != 6 ]; then
-            echo 'Required native GUI configuration tests are unavailable'; exit 1
-          fi
-          test -d build/src/unittests || { echo 'Missing required Qt6 test directory'; exit 1; }
-          for suite in ScreenTests ScreenSetupModelTests ValidatorTests; do
-            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error -R "^${suite}$"
-          done
-
-      - name: Package
-        shell: bash
-        run: |
-          if [[ "${{ matrix.target.like }}" == "arch" ]]; then
-            useradd -m build
-            sudo chown -R build build
-            cd build
-            sudo -u build makepkg -s
-            OSNAME=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"')
-            [ "$OSNAME" = "arch" ] && OSNAME="arch-linux"
-            ARCH=$(uname -m)
-            mv ./*.pkg.tar.zst "${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_${OSNAME}_${ARCH}.pkg.tar.zst"
-            cd ..
-          else
-            cmake --build build --config Release -j8 --target package
-          fi
-
-      # Stage: test, then upload. RHEL skips the unit tests (Qt5 leg).
-      - name: Unit tests
-        if: ${{ matrix.target.like != 'rhel' }}
-        uses: ./.github/actions/run-tests
-        timeout-minutes: 2
-
-      - name: Test packaged build
-        uses: ./.github/actions/test-package
-        with:
-          expected-arch: ${{ matrix.target.expected-arch }}
-          like: ${{ matrix.target.like }}
-
-      - name: Upload package
-        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-${{ matrix.target.name }}
-          path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
-          retention-days: 14
-
-  build-flatpak:
-    needs: [lint-encoding, lint-clang, get-version]
-    if: ${{ needs.get-version.outputs.build_flatpak == 'true' }}
-    name: flatpak-${{matrix.flatpak.arch}}
-    runs-on: ${{matrix.flatpak.runs-on}}
-    timeout-minutes: 90
-    env:
-      SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
-    container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
-      options: --privileged
-    strategy:
-      fail-fast: false
-      matrix:
-        flatpak:
-          - runs-on: ubuntu-latest
-            arch: x86_64
-          - runs-on: ubuntu-24.04-arm
-            arch: aarch64
-    steps:
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - run: git config --global protocol.file.allow always
-
-      # Stage: lint the metadata, build the bundle, then upload it.
-      - name: Lint AppStream
-        run: flatpak-builder-lint appstream deploy/linux/com.tupig.synergy.metainfo.xml
-
-      # appid-url-not-reachable: the linter probes https://tupig.com (app-id
-      # namespace), which fails TLS from CI - same class as A-39 (#63). Covered by
-      # ci-build-lint-exceptions.json; without --exceptions this step hard-fails.
-      - name: Lint manifest
-        run: flatpak-builder-lint --exceptions --user-exceptions deploy/linux/flatpak/ci-build-lint-exceptions.json manifest deploy/linux/flatpak/com.tupig.synergy.yml
-
-      # uses: steps resolve relative paths from GITHUB_WORKSPACE (the repo root).
-      # The builder reads the manifest from deploy/ and writes repo/,
-      # .flatpak-builder/ and the bundle at the workspace root; Validate/Upload
-      # must anchor there too.
-      - name: Build
-        uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6
-        with:
-          bundle: ${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_linux_${{ matrix.flatpak.arch }}.flatpak
-          manifest-path: deploy/linux/flatpak/com.tupig.synergy.yml
-          cache-key: flatpak-builder-${{matrix.flatpak.arch}}-2.0
-          arch: ${{matrix.flatpak.arch}}
-          upload-artifact: false
-          restore-cache: true
-          save-cache: false
-
-      - name: Validate build
-        run: flatpak-builder-lint --exceptions --user-exceptions deploy/linux/flatpak/ci-build-lint-exceptions.json repo repo
-
-      - name: Export and verify complete offline repository
-        shell: bash
-        run: |
-          scripts/ci/package-flatpak-offline.sh repo "${{ env.PACKAGE_PREFIX }}_${{ needs.get-version.outputs.version }}_linux_${{ matrix.flatpak.arch }}-flatpak-offline.tar.zst" "${{ matrix.flatpak.arch }}"
-
-      - name: Upload package
-        if: ${{ needs.get-version.outputs.publish_release == 'true' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-flatpak-${{matrix.flatpak.arch}}
-          path: ${{github.workspace}}/${{ env.PACKAGE_PREFIX }}[-_]*-flatpak-offline.tar.zst
-          retention-days: 14
-
-  # Attach the CPack/Flatpak packages to the GitHub Release v<X.Y.Z>. Actions
-  # artifacts expire; the Release page is what people download. Push and PR
-  # skip this job. A failed distro does not drop packages that did build.
-  # ---------------------------------------------------------------------------
-  # 3. Publish. Release builds attach packages to the GitHub Release and,
-  # when AWS secrets exist, copy them to S3. report runs only after a failure.
-  # ---------------------------------------------------------------------------
   github-release:
-    needs: [get-version, build-windows, build-macos, build-linux, build-flatpak]
-    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.publish_release == 'true' && (needs.build-windows.result == 'success' || needs.build-macos.result == 'success' || needs.build-linux.result == 'success' || needs.build-flatpak.result == 'success') }}
+    needs: [get-version, build-windows, build-macos]
+    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.publish_release == 'true' && (needs.build-windows.result == 'success' || needs.build-macos.result == 'success') }}
     runs-on: ubuntu-latest
     # contents:write uploads the Release. id-token and attestations mint the
     # Sigstore provenance for those same bytes. Job permissions replace the
@@ -1218,7 +836,7 @@ jobs:
   # there), so gate each AWS step individually: when secrets are unset the
   # job still runs but every upload step is skipped - job stays green (A-30 (#54)).
   s3-upload:
-    needs: [get-version, build-windows, build-macos, build-linux, build-flatpak]
+    needs: [get-version, build-windows, build-macos]
     # Publication only: push, pull request and snapshot runs never upload to S3.
     if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.skip_unchanged != 'true' && needs.get-version.outputs.publish_release == 'true' && (github.event_name == 'workflow_dispatch' || github.event_name == 'release') }}
     runs-on: ubuntu-latest
@@ -1275,7 +893,7 @@ jobs:
           aws s3 cp ./dist/ "$url" --recursive
 
   report:
-    needs: [get-version, build-windows, build-macos, build-linux, build-flatpak, s3-upload]
+    needs: [get-version, build-windows, build-macos, s3-upload]
     if: ${{ !cancelled() && needs.get-version.outputs.publish_release == 'true' && github.event_name != 'pull_request' && contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -1292,8 +910,6 @@ jobs:
             printf '\342\235\214 Synergy CI failed\n'
             [ "${{ needs.build-windows.result }}" = "failure" ] && printf '\342\200\242 Windows build failed\n'
             [ "${{ needs.build-macos.result }}" = "failure" ] && printf '\342\200\242 macOS build failed\n'
-            [ "${{ needs.build-linux.result }}" = "failure" ] && printf '\342\200\242 Linux build failed\n'
-            [ "${{ needs.build-flatpak.result }}" = "failure" ] && printf '\342\200\242 Flatpak build failed\n'
             [ "${{ needs.s3-upload.result }}" = "failure" ] && printf '\342\200\242 S3 upload failed\n'
             echo "<$link|View workflow>"
             echo "EOF"
@@ -1406,7 +1022,8 @@ jobs:
           if-no-files-found: ignore
 
   codeql:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.analyze }}
+    needs: [dependency-audit]
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && (inputs.analyze || inputs.run-codeql) }}
     permissions:
       actions: read
       contents: read
@@ -1545,6 +1162,77 @@ jobs:
   # 5. Gate. Branch protection watches this job. A skipped job counts as
   # success: platform filters and analyze=false skip work on purpose.
   # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # 按需分析：依赖审计 → CodeQL → MSI64 intake（手动触发，顺序执行）
+  # ---------------------------------------------------------------------------
+  dependency-audit:
+    needs: [bump-version]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run-audit }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      NO_EXIT_CVE_NUM: "1"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Bootstrap vcpkg at the pinned baseline
+        run: ./scripts/bootstrap-vcpkg.sh
+      - name: Resolve locked dependency versions (dry run)
+        run: |
+          ./vendor/vcpkg/vcpkg install --dry-run --triplet=x64-linux | tee vcpkg-plan.txt
+          grep -q "@" vcpkg-plan.txt
+      - name: Generate CycloneDX SBOM
+        run: python3 scripts/ci/generate-vcpkg-sbom.py vcpkg-plan.txt synergy-deps.cdx.json
+      - name: Install cve-bin-tool
+        run: python3 -m pip install --disable-pip-version-check "git+https://github.com/intel/cve-bin-tool@b3176d820559d7ec30bd7a99b62cf0535fc16e00"
+      - name: Self-test with a known vulnerable fixture
+        run: |
+          cve-bin-tool --disable-version-check -n json-mirror \
+            --disable-data-source GAD,REDHAT,EPSS,CURL,OSV \
+            --sbom cyclonedx --sbom-file scripts/ci/testdata/known-vulnerable.cdx.json \
+            --format json2 --output-file selftest-report.json
+          python3 scripts/ci/check-cve-report.py selftest-report.json \
+            --expect-any CVE-2016-9840,CVE-2016-9841,CVE-2016-9842,CVE-2016-9843
+      - name: Scan the resolved dependency SBOM
+        run: |
+          cve-bin-tool --disable-version-check -n json-mirror \
+            --disable-data-source GAD,REDHAT,EPSS,CURL,OSV \
+            --sbom cyclonedx --sbom-file synergy-deps.cdx.json \
+            --format json2 --output-file cve-report.json
+          test -s cve-report.json
+      - name: Gate on critical findings
+        if: always()
+        run: python3 scripts/ci/check-cve-report.py cve-report.json --fail-severity critical --exceptions scripts/ci/cve-exceptions.json
+
+  msi64-intake:
+    needs: [codeql]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run-msi }}
+    runs-on: windows-2022
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: cmd
+        working-directory: msi intake!
+    steps:
+      - name: Checkout frozen intake sources
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          path: msi intake!
+          persist-credentials: false
+      - name: Setup native VC++ environment
+        uses: TheMrMilchmann/setup-msvc-dev@368ef7d1ee4d1171b31d4a7f67f4d954f903f5a9 # v4.1.0
+        with:
+          arch: amd64
+      - name: Install exact WiX tool
+        run: dotnet tool install --global wix --version 5.0.2
+      - name: Intake through cmd
+        run: |
+          call ".\scripts\ci\test-msi64-intake.bat" "x64" run-cmd paired
+          exit /b %ERRORLEVEL%
+      - name: Intake through PowerShell caller
+        run: |
+          pwsh -NoLogo -NoProfile -NonInteractive -Command "$ErrorActionPreference = 'Stop'; $PSNativeCommandUseErrorActionPreference = $false; try { & '.\scripts\ci\test-msi64-intake.bat' 'x64' 'run-pwsh' 'paired'; $msiIntakeExit = $LASTEXITCODE; if ($null -eq $msiIntakeExit) { exit 2 }; exit $msiIntakeExit } catch { [Console]::Error.WriteLine([string]$_); exit 2 }"
+          exit /b %ERRORLEVEL%
+
   ci-passed:
     runs-on: ubuntu-latest
     needs:
@@ -1554,14 +1242,10 @@ jobs:
         lint-encoding,
         build-windows,
         build-macos,
-        build-linux,
-        build-flatpak,
-        github-release,
-        clang-tidy,
-        cppcheck,
+        bump-version,
+        dependency-audit,
         codeql,
-        sonar,
-        valgrind,
+        msi64-intake,
       ]
     if: always()
 
@@ -1584,14 +1268,10 @@ jobs:
              && ok "${{needs.lint-encoding.result}}" \
              && ok "${{needs.build-windows.result}}" \
              && ok "${{needs.build-macos.result}}" \
-             && ok "${{needs.build-linux.result}}" \
-             && ok "${{needs.build-flatpak.result}}" \
-             && ok "${{needs.github-release.result}}" \
-             && ok "${{needs.clang-tidy.result}}" \
-             && ok "${{needs.cppcheck.result}}" \
+             && ok "${{needs.bump-version.result}}" \
+             && ok "${{needs.dependency-audit.result}}" \
              && ok "${{needs.codeql.result}}" \
-             && ok "${{needs.sonar.result}}" \
-             && ok "${{needs.valgrind.result}}"; then
+             && ok "${{needs.msi64-intake.result}}"; then
             printf '\342\234\205 CI passed\n' > "$GITHUB_STEP_SUMMARY"
           else
             exit 1

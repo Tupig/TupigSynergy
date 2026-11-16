@@ -29,7 +29,9 @@ class QAction;
 class QMenu;
 class QLocalServer;
 
-class LogDock;
+class LogPanel;
+class PageHost;
+class QDialog;
 class StatusBar;
 
 namespace Ui {
@@ -82,6 +84,8 @@ private:
    * @brief updateText Update all text not in the UI
    */
   void updateText();
+  void showPage(QDialog *editor);
+  PageHost *m_pageHost = nullptr;
   void toggleLogVisible(bool visible);
 
   void settingsChanged(const QString &key = QString());
@@ -190,7 +194,7 @@ private:
   QLocalServer *m_guiDupeChecker = nullptr;
   synergy::gui::ipc::DaemonIpcClient *m_daemonIpcClient = nullptr;
 
-  LogDock *m_logDock;
+  LogPanel *m_logDock;
   StatusBar *m_statusBar = nullptr;
 
   // Window Menu

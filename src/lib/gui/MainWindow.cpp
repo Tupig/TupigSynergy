@@ -8,7 +8,7 @@
  */
 
 #include "MainWindow.h"
-#include "ui_MainWindow.h"
+#include "MainWindowDesign.h"
 
 #include "Diagnostic.h"
 #include "StyleUtils.h"
@@ -27,9 +27,10 @@
 #include "gui/TlsUtility.h"
 #include "gui/core/CoreProcess.h"
 #include "gui/ipc/DaemonIpcClient.h"
-#include "gui/widgets/LogDock.h"
+#include "gui/widgets/LogPanel.h"
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
+#include "widgets/PageHost.h"
 #include "widgets/StatusBar.h"
 
 #ifdef SYNERGY_EXTRA_HEADER
@@ -37,6 +38,7 @@
 #endif
 
 #include <QApplication>
+#include <QBoxLayout>
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QDebug>
@@ -56,6 +58,7 @@
 #include <QScreen>
 #include <QScrollBar>
 #include <QShowEvent>
+#include <QVariant>
 
 #include <memory>
 #include <thread>
@@ -72,8 +75,6 @@ MainWindow::MainWindow()
       m_trayIcon{new QSystemTrayIcon(this)},
       m_guiDupeChecker{new QLocalServer(this)},
       m_daemonIpcClient{new ipc::DaemonIpcClient(this)},
-      m_logDock{new LogDock(this)},
-      m_statusBar{new StatusBar(this)},
       m_menuFile{new QMenu(this)},
       m_menuEdit{new QMenu(this)},
       m_menuView{new QMenu(this)},
@@ -93,10 +94,54 @@ MainWindow::MainWindow()
       m_networkMonitor{new NetworkMonitor(this)}
 {
   ui->setupUi(this);
+  setMinimumWidth(600);
+  setMinimumHeight(360);
 
-  setWindowIcon(QIcon::fromTheme(kRevFqdnName, QIcon(QStringLiteral(":/image/logo-dark.png"))));
+  setWindowIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
 
-  addDockWidget(Qt::BottomDockWidgetArea, m_logDock);
+  m_logDock = ui->logPanel;
+  m_statusBar = ui->statusBar;
+  m_pageHost = ui->pageHost;
+
+  // 纯图标按钮：返回与导出；其余按钮使用设计稿的小号 26px 图标+文字。
+  for (auto *button : {ui->btnBack, ui->btnSaveServerConfig}) {
+    button->setProperty("iconButton", true);
+  }
+  // 主页没有上一级，只有子页面显示返回箭头。
+  ui->btnBack->setVisible(false);
+
+  ui->spinPort->setValue(Settings::value(Settings::Core::Port).toInt());
+  ui->spinPort->setEnabled(Settings::isWritable());
+  connect(ui->spinPort, &QSpinBox::editingFinished, this, [this] {
+    if (!Settings::isWritable())
+      return;
+    const int port = ui->spinPort->value();
+    if (port == Settings::value(Settings::Core::Port).toInt())
+      return;
+    Settings::setValue(Settings::Core::Port, port);
+    Settings::save();
+    if (m_coreProcess.isStarted())
+      m_coreProcess.restart();
+  });
+
+  connect(ui->btnBack, &QPushButton::clicked, this, [this] {
+    if (auto *editor = ui->pageStack->currentWidget(); editor != ui->workspace) {
+      if (auto *area = qobject_cast<QScrollArea *>(editor)) {
+        if (auto *dialog = qobject_cast<QDialog *>(area->widget()))
+          dialog->reject();
+      }
+    }
+  });
+  connect(ui->pageHost, &PageHost::editorVisibilityChanged, this, [this](bool visible) {
+    ui->btnBack->setVisible(visible);
+    ui->logPanel->setVisible(!visible);
+  });
+  connect(ui->pageHost, &PageHost::titleChanged, this, [this](const QString &title) {
+    ui->pageTitle->setText(title.isEmpty() ? tr("Devices & Connection") : title);
+  });
+  connect(ui->btnSettingsShortcut, &QPushButton::clicked, this, [this] { m_actionSettings->trigger(); });
+  connect(ui->btnUpdatesShortcut, &QPushButton::clicked, this, [this] { m_actionCheckForUpdates->trigger(); });
+  connect(ui->btnAboutShortcut, &QPushButton::clicked, this, [this] { m_actionAbout->trigger(); });
 
   // Setup Actions
   m_actionAbout->setMenuRole(QAction::AboutRole);
@@ -117,10 +162,13 @@ MainWindow::MainWindow()
   m_actionTrayQuit->setMenuRole(QAction::NoRole);
 
   m_actionClearSettings->setIcon(QIcon::fromTheme(QStringLiteral("edit-clear-all")));
-  m_actionClearSettings->setMenuRole(QAction::NoRole);
+  // ApplicationSpecificRole is macOS-only: Qt merges these actions into the
+  // application menu (updates and maintenance belong next to "Preferences").
+  // Other platforms ignore the role and keep them in the Help menu.
+  m_actionClearSettings->setMenuRole(QAction::ApplicationSpecificRole);
 
   m_actionCheckForUpdates->setIcon(QIcon::fromTheme(QStringLiteral("system-software-update")));
-  m_actionCheckForUpdates->setMenuRole(QAction::NoRole);
+  m_actionCheckForUpdates->setMenuRole(QAction::ApplicationSpecificRole);
 
   m_actionSettings->setIcon(QIcon::fromTheme(QStringLiteral("configure")));
   m_actionSettings->setMenuRole(QAction::PreferencesRole);
@@ -155,10 +203,14 @@ MainWindow::MainWindow()
   // Force generation of a certificate on the host
   if (TlsUtility::isEnabled()) {
     if (Settings::value(Settings::Security::KeySize).toInt() < kMinimumRsaBits) {
-      QMessageBox::information(
-          this, kAppName,
-          tr("Your current TLS key is smaller than the minimum allowed size, A new key 2048-bit key will be generated.")
-      );
+      QTimer::singleShot(0, this, [this] {
+        showPage(new QMessageBox(
+            QMessageBox::Information, kAppName,
+            tr("Your current TLS key is smaller than the minimum allowed size, A new key 2048-bit key will be "
+               "generated."),
+            QMessageBox::Ok, this
+        ));
+      });
       Settings::setValue(Settings::Security::KeySize, kMinimumRsaBits);
     }
     if (!TlsUtility::isCertValid()) {
@@ -224,9 +276,7 @@ void MainWindow::setupControls()
     Settings::setValue(Settings::Core::LastVersion, kVersion);
   }
 
-  if (!Settings::value(Settings::Gui::LogExpanded).toBool()) {
-    m_logDock->hide();
-  }
+  m_logDock->setCollapsed(!Settings::value(Settings::Gui::LogExpanded).toBool());
 
   ui->serverOptions->setVisible(false);
   ui->clientOptions->setVisible(false);
@@ -246,7 +296,6 @@ void MainWindow::setupControls()
   } else {
     ui->btnSaveServerConfig->setIconSize(QSize(22, 22));
   }
-  setStatusBar(m_statusBar);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -324,7 +373,10 @@ void MainWindow::connectSlots()
   connect(ui->rbModeServer, &QRadioButton::toggled, this, &MainWindow::coreModeToggled);
   connect(ui->rbModeClient, &QRadioButton::toggled, this, &MainWindow::coreModeToggled);
 
-  connect(m_logDock->toggleViewAction(), &QAction::toggled, this, &MainWindow::toggleLogVisible);
+  connect(m_logDock, &LogPanel::collapsedChanged, this, [this](bool collapsed) {
+    Settings::setValue(Settings::Gui::LogExpanded, !collapsed);
+    Settings::setValue(Settings::Gui::WindowGeometry, geometry());
+  });
 
   connect(m_statusBar, &StatusBar::requestShowMyFingerprints, this, &MainWindow::showMyFingerprint);
 
@@ -339,34 +391,8 @@ void MainWindow::connectSlots()
 
 void MainWindow::toggleLogVisible(bool visible)
 {
-  // When the main window is hidden e.g. close to tray / minimized), this also triggers the log visibility toggle,
-  // but we don't want to hide the log in this case since we would need to un-hide it when the window is shown again.
-  if (!isVisible() || isMinimized()) {
-    qDebug() << "not toggling log, window not visible";
-    return;
-  }
-
-  // Keep the window resizable: the QMainWindow dock splitter can only move
-  // while the window itself is allowed to change height. Locking the size
-  // here made the log area impossible to drag.
-  setMinimumSize(minimumSizeHint());
-  Settings::setValue(Settings::Gui::LogExpanded, visible);
-  if (visible) {
-    if (m_logDock->isFloating()) {
-      adjustSize();
-    } else {
-      QTimer::singleShot(15, this, [&] { resize(m_expandedSize); });
-    }
-  } else {
-    if (!m_logDock->isFloating()) {
-      m_expandedSize = geometry().size();
-    }
-    m_logDock->hide();
-    if (!m_logDock->isFloating()) {
-      adjustSize();
-    }
-  }
-  Settings::setValue(Settings::Gui::WindowGeometry, geometry());
+  // 视图菜单与工具条共用同一折叠状态；收起时只保留最新一条。
+  m_logDock->setCollapsed(!visible);
 }
 
 void MainWindow::settingsChanged(const QString &key)
@@ -397,10 +423,15 @@ void MainWindow::trayIconActivated(QSystemTrayIcon::ActivationReason reason)
   isVisible() ? hide() : showAndActivate();
 }
 
+void MainWindow::showPage(QDialog *editor)
+{
+  m_pageHost->push(editor);
+  showAndActivate();
+}
+
 void MainWindow::openAboutDialog()
 {
-  AboutDialog about(this);
-  about.exec();
+  showPage(new AboutDialog(this));
 }
 
 void MainWindow::openHelpUrl() const
@@ -410,17 +441,19 @@ void MainWindow::openHelpUrl() const
 
 void MainWindow::openSettings()
 {
-  auto dialog = SettingsDialog(this, m_serverConfig);
-
-  if (dialog.exec() == QDialog::Accepted) {
-    Settings::save();
-
-    applyConfig();
-
-    if (m_coreProcess.isStarted()) {
-      m_coreProcess.restart();
-    }
+  if (m_pageHost->activateEditor(SettingsDialog::staticMetaObject)) {
+    showAndActivate();
+    return;
   }
+  auto *dialog = new SettingsDialog(this, m_serverConfig);
+  connect(dialog, &QDialog::accepted, this, [this] {
+    Settings::save();
+    applyConfig();
+    ui->spinPort->setValue(Settings::value(Settings::Core::Port).toInt());
+    if (m_coreProcess.isStarted())
+      m_coreProcess.restart();
+  });
+  showPage(dialog);
 }
 
 void MainWindow::resetCore()
@@ -436,8 +469,7 @@ void MainWindow::resetCore()
 
 void MainWindow::showMyFingerprint()
 {
-  FingerprintDialog fingerprintDialog(this, m_fingerprint);
-  fingerprintDialog.exec();
+  showPage(new FingerprintDialog(this, m_fingerprint));
 }
 
 void MainWindow::updateSecurityIcon(bool visible)
@@ -463,12 +495,17 @@ void MainWindow::updateNetworkInfo()
 
 void MainWindow::serverConnectionConfigureClient(const QString &clientName)
 {
-  m_serverConfigDialogVisible = true;
-  ServerConfigDialog dialog(this, m_serverConfig);
-  if (dialog.addClient(clientName) && dialog.exec() == QDialog::Accepted) {
-    m_coreProcess.restart();
+  if (m_serverConfigDialogVisible)
+    return;
+  auto *dialog = new ServerConfigDialog(this, m_serverConfig);
+  if (!dialog->addClient(clientName)) {
+    dialog->deleteLater();
+    return;
   }
-  m_serverConfigDialogVisible = false;
+  m_serverConfigDialogVisible = true;
+  connect(dialog, &QDialog::accepted, this, [this] { m_coreProcess.restart(); });
+  connect(dialog, &QDialog::finished, this, [this] { m_serverConfigDialogVisible = false; });
+  showPage(dialog);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -523,7 +560,15 @@ void MainWindow::updateText()
   m_menuFile->setTitle(tr("&File"));
   m_menuEdit->setTitle(tr("&Edit"));
   m_menuView->setTitle(tr("&View"));
+#if defined(Q_OS_MACOS)
+  // AppKit injects a search field into the menu titled "Help" every time it
+  // opens. It drives the system help index, which this application does not
+  // ship, and it alone makes the menu several times wider than its single
+  // item. A different title keeps the menu as wide as its contents.
+  m_menuHelp->setTitle(tr("&Support"));
+#else
   m_menuHelp->setTitle(tr("&Help"));
+#endif
 
   m_actionClearSettings->setText(tr("Clear settings"));
   m_actionCheckForUpdates->setText(tr("Check for &Updates"));
@@ -580,7 +625,7 @@ void MainWindow::updateIpLabel(const QStringList &addresses)
     return;
   }
 
-  QString labelText = fixedIP ? tr("Using IP: ") : tr("Suggested IP: ");
+  QString labelText = tr("Local IP") + QStringLiteral("  ");
   QString toolTipText = tr("<p>If connecting via the hostname fails, try %1</p>");
 
   const bool filterIpList = (serverStarted || fixedIP);

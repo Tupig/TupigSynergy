@@ -55,7 +55,7 @@ inline constexpr int16_t kProtocolMinorVersion = 8;
  *
  * @since Protocol version 1.0
  */
-inline constexpr uint16_t kDefaultPort = 24800;
+inline constexpr uint16_t kDefaultPort = 22211;
 
 /**
  * @brief Maximum length for client greeting message

@@ -17,6 +17,31 @@
 #include <QRect>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QSysInfo>
+
+#if defined(Q_OS_MACOS)
+#include <SystemConfiguration/SystemConfiguration.h>
+#endif
+
+namespace {
+// QSysInfo::machineHostName() reports the kernel hostname. macOS derives that
+// from DHCP, so on many networks the "hostname" is just the IP address (the
+// computer name then reads 192.168.x.y). Prefer the human-readable Computer
+// Name from System Settings > Sharing, which is what every other macOS app shows.
+QString defaultComputerName()
+{
+#if defined(Q_OS_MACOS)
+  if (CFStringRef name = SCDynamicStoreCopyComputerName(nullptr, nullptr)) {
+    const QString computerName = QString::fromCFString(name);
+    CFRelease(name);
+    if (!computerName.isEmpty()) {
+      return computerName;
+    }
+  }
+#endif
+  return QSysInfo::machineHostName();
+}
+} // namespace
 
 Settings *Settings::instance()
 {
@@ -147,7 +172,7 @@ void Settings::cleanStateSettings()
 void Settings::setupComputerName()
 {
   if (m_settings->value(Settings::Core::ComputerName).toString().isEmpty())
-    m_settings->setValue(Settings::Core::ComputerName, cleanComputerName(QSysInfo::machineHostName()));
+    m_settings->setValue(Settings::Core::ComputerName, cleanComputerName(defaultComputerName()));
 }
 
 QString Settings::cleanComputerName(const QString &name)

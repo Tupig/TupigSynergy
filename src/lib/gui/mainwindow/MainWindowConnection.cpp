@@ -8,7 +8,7 @@
  */
 
 #include "MainWindow.h"
-#include "ui_MainWindow.h"
+#include "MainWindowDesign.h"
 
 #include "Diagnostic.h"
 #include "StyleUtils.h"
@@ -27,7 +27,7 @@
 #include "gui/TlsUtility.h"
 #include "gui/core/CoreProcess.h"
 #include "gui/ipc/DaemonIpcClient.h"
-#include "gui/widgets/LogDock.h"
+#include "gui/widgets/LogPanel.h"
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
 #include "widgets/StatusBar.h"
@@ -58,6 +58,7 @@
 #include <QScreen>
 #include <QScrollBar>
 #include <QShowEvent>
+#include <QVariant>
 
 #include <memory>
 #include <thread>
@@ -92,9 +93,10 @@ void setBusyCursor()
 void MainWindow::coreProcessError(CoreProcess::Error error)
 {
   if (error == CoreProcess::Error::AddressMissing) {
-    QMessageBox::warning(
-        this, tr("Address missing"), tr("Please enter the hostname or IP address of the other computer.")
-    );
+    showPage(new QMessageBox(
+        QMessageBox::Warning, tr("Address missing"),
+        tr("Please enter the hostname or IP address of the other computer."), QMessageBox::Ok, this
+    ));
   } else if (error == CoreProcess::Error::StartFailed) {
     show();
     auto message = tr("The Core executable could not be started.\n"
@@ -107,16 +109,34 @@ void MainWindow::coreProcessError(CoreProcess::Error error)
       message.append(tr("\nAdditionally, check you are able to %1 the server config file: %2")
                          .arg(mode, Settings::serverConfigFile()));
     }
-    QMessageBox::warning(this, kAppName, message);
+    showPage(new QMessageBox(QMessageBox::Warning, kAppName, message, QMessageBox::Ok, this));
   }
 }
 
 void MainWindow::startCore()
 {
+  // The core exits immediately when macOS does not trust this app for the
+  // accessibility API. Check before spawning so the user sees the permission
+  // reminder instead of a process that dies one frame later.
+#if defined(Q_OS_MACOS)
+  if (!checkOSXAccessibilityPermission(this)) {
+    return;
+  }
+#endif
+
   // Save current IP state when server starts
   if (m_coreProcess.mode() == CoreMode::Server && Settings::value(Settings::Core::Interface).toString().isEmpty()) {
     m_serverStartIPs = NetworkMonitor::validAddresses();
     m_serverStartSuggestedIP = m_serverStartIPs.isEmpty() ? "" : m_serverStartIPs.first();
+  }
+
+  if (m_coreProcess.mode() == CoreMode::Server) {
+    // 仅空配置自动选实际接口；显式地址（含所有接口）或暂时离线的绑定不可被静默覆盖。
+    const auto addresses = NetworkMonitor::validAddresses();
+    const auto stored = Settings::value(Settings::Core::Interface).toString();
+    if (!addresses.isEmpty() && stored.isEmpty()) {
+      Settings::setValue(Settings::Core::Interface, addresses.first());
+    }
   }
 
 #ifdef SYNERGY_EXTRA_HEADER
@@ -162,15 +182,38 @@ void MainWindow::handleUnrecognisedClient(const QString &clientName)
 
   m_newClientPromptShowing = true;
 
-  showAndActivate();
-
-  if (synergy::gui::messages::showNewClientPrompt(this, clientName)) {
-    serverConnectionConfigureClient(clientName);
+  const bool authenticated = Settings::value(Settings::Security::TlsEnabled).toBool() &&
+                             Settings::value(Settings::Security::CheckPeers).toBool();
+  auto *prompt = new QMessageBox(this);
+  prompt->setWindowTitle(tr("%1 - New Client").arg(kAppName));
+  prompt->setTextFormat(Qt::PlainText);
+  if (authenticated) {
+    prompt->setText(
+        tr("A new client called '%1' has been accepted. You'll need to add it to your server's screen layout.")
+            .arg(clientName)
+    );
+    prompt->setStandardButtons(QMessageBox::Ok);
   } else {
-    m_ignoredClients.insert(clientName);
+    prompt->setText(tr("A new client called '%1' wants to connect").arg(clientName));
+    prompt->addButton(tr("Ignore"), QMessageBox::RejectRole);
+    prompt->addButton(tr("Add client"), QMessageBox::AcceptRole);
   }
-
-  m_newClientPromptShowing = false;
+  connect(prompt, &QDialog::finished, this, [this, prompt, clientName, authenticated](int result) {
+    const bool accepted = authenticated ? result == QMessageBox::Ok
+                                        : prompt->buttonRole(prompt->clickedButton()) == QMessageBox::AcceptRole;
+    if (accepted) {
+      QTimer::singleShot(0, this, [this, clientName] {
+        m_newClientPromptShowing = false;
+        if (m_coreProcess.mode() == CoreMode::Server && !m_serverConfig.screenExists(clientName) &&
+            !m_serverConfig.isFull() && !Settings::value(Settings::Server::ExternalConfig).toBool())
+          serverConnectionConfigureClient(clientName);
+      });
+    } else {
+      m_newClientPromptShowing = false;
+      m_ignoredClients.insert(clientName);
+    }
+  });
+  showPage(prompt);
 }
 
 void MainWindow::handleConnectionRefused(synergy::core::ConnectionRefusal reason)
@@ -185,16 +228,17 @@ void MainWindow::handleConnectionRefused(synergy::core::ConnectionRefusal reason
   showAndActivate();
 
   const auto address = Settings::value(Settings::Client::RemoteHost).toString();
-  QMessageBox::warning(
-      this, tr("%1 Connection Error").arg(kAppName),
+  auto *message = new QMessageBox(
+      QMessageBox::Warning, tr("%1 Connection Error").arg(kAppName),
       tr("<p>Failed to connect to the server '%1'.</p>"
          "<p>A Client with your name is already connected to the server.</p>"
          "Please ensure that you're using a unique name and that only a "
          "single instance of the client process is running.</p>")
-          .arg(address)
+          .arg(address.toHtmlEscaped()),
+      QMessageBox::Ok, this
   );
-
-  m_clientErrorVisible = false;
+  connect(message, &QDialog::finished, this, [this] { m_clientErrorVisible = false; });
+  showPage(message);
 }
 
 void MainWindow::handleMissingKeyboardLayouts(const QString &layouts)
@@ -202,22 +246,22 @@ void MainWindow::handleMissingKeyboardLayouts(const QString &layouts)
   if (Settings::value(Settings::Gui::IgnoreMissingKeyboardLayouts).toBool())
     return;
 
-  QMessageBox msgBox(this);
-  msgBox.setIcon(QMessageBox::Warning);
-  msgBox.setWindowTitle(tr("Missing Keyboard Layouts"));
-  msgBox.setText(tr("<p>Keyboard layout support requires matching layouts on all computers. "
-                    "The following layouts from the other computer are not installed on this computer:</p>"
-                    "<p><b>%1</b></p>"
-                    "<p>Please install them to enable support for these layouts.</p>")
-                     .arg(layouts));
+  auto *msgBox = new QMessageBox(this);
+  msgBox->setIcon(QMessageBox::Warning);
+  msgBox->setWindowTitle(tr("Missing Keyboard Layouts"));
+  msgBox->setText(tr("<p>Keyboard layout support requires matching layouts on all computers. "
+                     "The following layouts from the other computer are not installed on this computer:</p>"
+                     "<p><b>%1</b></p>"
+                     "<p>Please install them to enable support for these layouts.</p>")
+                      .arg(layouts.toHtmlEscaped()));
 
-  auto *checkBox = new QCheckBox(tr("Don't show this again"), &msgBox);
-  msgBox.setCheckBox(checkBox);
-  msgBox.exec();
-
-  if (checkBox->isChecked()) {
-    Settings::setValue(Settings::Gui::IgnoreMissingKeyboardLayouts, true);
-  }
+  auto *checkBox = new QCheckBox(tr("Don't show this again"), msgBox);
+  msgBox->setCheckBox(checkBox);
+  connect(msgBox, &QDialog::finished, this, [checkBox] {
+    if (checkBox->isChecked())
+      Settings::setValue(Settings::Gui::IgnoreMissingKeyboardLayouts, true);
+  });
+  showPage(msgBox);
 }
 
 void MainWindow::handlePeerFingerprint(const QString &fingerprint)
@@ -246,23 +290,30 @@ void MainWindow::handlePeerFingerprint(const QString &fingerprint)
     m_checkedClients.append(sha256Text);
   }
 
-  auto mode = isClient ? FingerprintDialogMode::Client : FingerprintDialogMode::Server;
-  FingerprintDialog fingerprintDialog(this, m_fingerprint, mode, sha256);
-
-  if (fingerprintDialog.exec() == QDialog::Accepted) {
-    db.addTrusted(sha256);
-    if (!db.write(trustedFingerprintDatabase())) {
-      qCritical().noquote() << "unable to write fingerprint to db:" << trustedFingerprintDatabase();
+  const auto mode = isClient ? FingerprintDialogMode::Client : FingerprintDialogMode::Server;
+  const auto databasePath = trustedFingerprintDatabase();
+  const auto remoteHost = Settings::value(Settings::Client::RemoteHost).toString();
+  auto *dialog = new FingerprintDialog(this, m_fingerprint, mode, sha256);
+  connect(dialog, &QDialog::accepted, this, [this, sha256, sha256Text, isClient, databasePath, remoteHost] {
+    // 绑定显示时的信任库；并重新读取以免覆盖另一条已确认的指纹。
+    FingerprintDatabase current;
+    current.read(databasePath);
+    current.addTrusted(sha256);
+    if (!current.write(databasePath)) {
+      qCritical().noquote() << "unable to write fingerprint to db:" << databasePath;
       m_coreProcess.stop();
       return;
     }
     if (isClient) {
       m_checkedServers.removeAll(sha256Text);
-      m_coreProcess.start();
+      if (m_coreProcess.mode() == CoreMode::Client &&
+          Settings::value(Settings::Client::RemoteHost).toString() == remoteHost)
+        m_coreProcess.start();
     } else {
       m_checkedClients.removeAll(sha256Text);
     }
-  }
+  });
+  showPage(dialog);
 }
 
 void MainWindow::updateStatus()
@@ -404,7 +455,29 @@ void MainWindow::serverClientsChanged(const QStringList &clients)
 
 void MainWindow::daemonIpcClientConnectionFailed()
 {
-  if (synergy::gui::messages::showDaemonOffline(this)) {
-    m_coreProcess.retryDaemon();
-  }
+  if (property("daemonNoticeVisible").toBool())
+    return;
+  setProperty("daemonNoticeVisible", true);
+  auto *message = new QMessageBox(this);
+  message->setIcon(QMessageBox::Warning);
+  message->setWindowTitle(tr("Background service offline"));
+  auto *retry = message->addButton(tr("Retry"), QMessageBox::AcceptRole);
+  message->addButton(tr("Ignore"), QMessageBox::RejectRole);
+  auto *disable = message->addButton(tr("Disable"), QMessageBox::NoRole);
+  message->setText(
+      tr("<p>There was a problem finding the %1 background service (daemon).</p>"
+         "<p>The background service makes %1 work with UAC prompts and the login screen.</p>"
+         "<p>If %1 is installed, the service may have stopped. Restart it from Windows Services, then retry.</p>"
+         "<p>If it was never installed, install %1 using its installer.</p>"
+         "<p>Disable stops using the background service.</p>")
+          .arg(kAppName)
+  );
+  connect(message, &QDialog::finished, this, [this, message, retry, disable] {
+    setProperty("daemonNoticeVisible", false);
+    if (message->clickedButton() == retry)
+      m_coreProcess.retryDaemon();
+    else if (message->clickedButton() == disable)
+      Settings::setValue(Settings::Core::ProcessMode, Settings::ProcessMode::Desktop);
+  });
+  showPage(message);
 }

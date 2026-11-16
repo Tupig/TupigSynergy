@@ -22,6 +22,10 @@ import tempfile
 import time
 from pathlib import Path
 
+# LaunchServices database tool: unregisters the disposable verification copy.
+LSREGISTER = ('/System/Library/Frameworks/CoreServices.framework/Frameworks/'
+              'LaunchServices.framework/Support/lsregister')
+
 
 def run(args, **kwargs):
     return subprocess.run(args, check=True, text=True, capture_output=True, **kwargs).stdout
@@ -560,8 +564,16 @@ def main():
         finally:
             if mounted:
                 run(['/usr/bin/hdiutil', 'detach', str(mount)])
-        gui, core = audit(app, expected)
-        launch(gui, core, root)
+        try:
+            gui, core = audit(app, expected)
+            launch(gui, core, root)
+        finally:
+            # Launching the disposable copy registers it with LaunchServices.
+            # Left behind, every run adds another Dock "recent applications"
+            # icon that points at a deleted temporary bundle. Unregister it
+            # while the copy still exists; a missing entry is not an error.
+            subprocess.run([LSREGISTER, '-u', str(app)], check=False,
+                           text=True, capture_output=True)
 
 
 try:

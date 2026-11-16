@@ -7,7 +7,7 @@
  */
 
 #include "AboutDialog.h"
-#include "ui_AboutDialog.h"
+#include "AboutDialogDesign.h"
 
 #include "common/Constants.h"
 #include "common/Settings.h"
@@ -28,7 +28,6 @@ AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique
   ui->lblIcon->hide();
   ui->lblName->setPixmap(QPixmap(QStringLiteral(":/image/logo-%1.png").arg(synergy::gui::iconMode())));
   ui->lblName->setContentsMargins(0, 0, 0, 10);
-  ui->linkContributors->hide();
 
   const int px = (fontMetrics().height() * 6);
   const QSize pixmapSize(px, px);
@@ -51,11 +50,13 @@ AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique
     devsNbsp.append(withNbsp.replace(" ", QStringLiteral("&nbsp;")));
   }
 
-  ui->lblImportantDevs->setTextFormat(Qt::RichText);
-  ui->lblImportantDevs->setText(QStringLiteral("%1\n").arg(devsNbsp.join(", ")));
+  // 标题保留在 lblImportantDevs，贡献者名单放在下一行。
+  ui->linkContributors->setTextFormat(Qt::RichText);
+  ui->linkContributors->setText(devsNbsp.join(QStringLiteral(", ")));
 
   ui->btnOk->setDefault(true);
-  connect(ui->btnOk, &QPushButton::clicked, this, &AboutDialog::close);
+  // 嵌入页面宿主时 close() 不会发出 finished，必须使用 reject 才能返回上一页。
+  connect(ui->btnOk, &QPushButton::clicked, this, &QDialog::reject);
 
 #ifdef SYNERGY_EXTRA_HEADER
   synergy::hooks::onAbout(this);

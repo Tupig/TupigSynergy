@@ -6,13 +6,16 @@
  */
 
 #include "ScreenSettingsDialog.h"
-#include "ui_ScreenSettingsDialog.h"
+#include "ScreenSettingsDialogDesign.h"
+#include "widgets/PageHost.h"
 
 #include "gui/config/Screen.h"
 #include "validators/AliasValidator.h"
 #include "validators/ScreenNameValidator.h"
 #include "validators/ValidationError.h"
 
+#include <QCheckBox>
+#include <QFormLayout>
 #include <QMessageBox>
 
 using enum synergy::gui::ScreenConfig::Modifier;
@@ -30,7 +33,39 @@ ScreenSettingsDialog::ScreenSettingsDialog(
 {
 
   ui->setupUi(this);
+  ui->listAliases->setMaximumHeight(100);
+  for (auto *form : findChildren<QFormLayout *>()) {
+    int labelWidth = 120;
+    for (int row = 0; row < form->rowCount(); ++row) {
+      if (auto *item = form->itemAt(row, QFormLayout::LabelRole)) {
+        if (auto *label = qobject_cast<QLabel *>(item->widget()))
+          labelWidth = qMax(labelWidth, label->fontMetrics().horizontalAdvance(label->text()));
+      }
+    }
+    for (int row = 0; row < form->rowCount(); ++row) {
+      if (auto *item = form->itemAt(row, QFormLayout::LabelRole)) {
+        if (auto *label = qobject_cast<QLabel *>(item->widget())) {
+          label->setMaximumWidth(QWIDGETSIZE_MAX);
+          label->setMinimumWidth(labelWidth);
+          label->setWordWrap(false);
+        }
+      }
+    }
+  }
   ui->buttonBox->button(QDialogButtonBox::Cancel)->setFocus();
+
+  // 设计稿：四个死角复选框显示方位文字，宽度按文字取最小。
+  const QList<QPair<QCheckBox *, QString>> corners{
+      {ui->chkDeadTopLeft, tr("Top-left")},
+      {ui->chkDeadTopRight, tr("Top-right")},
+      {ui->chkDeadBottomLeft, tr("Bottom-left")},
+      {ui->chkDeadBottomRight, tr("Bottom-right")},
+  };
+  for (const auto &[checkBox, text] : corners) {
+    checkBox->setText(text);
+    checkBox->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    checkBox->setMinimumWidth(checkBox->fontMetrics().horizontalAdvance(text) + 32);
+  }
 
   ui->lineNameEdit->setText(m_screen->name());
 
@@ -74,10 +109,13 @@ ScreenSettingsDialog::ScreenSettingsDialog(
 void ScreenSettingsDialog::accept()
 {
   if (ui->lineNameEdit->text().isEmpty()) {
-    QMessageBox::warning(
-        this, tr("Screen name is empty"),
-        tr("The screen name cannot be empty. "
-           "Please either fill in a name or cancel the dialog.")
+    PageHost::present(
+        this, new QMessageBox(
+                  QMessageBox::Warning, tr("Screen name is empty"),
+                  tr("The screen name cannot be empty. "
+                     "Please either fill in a name or cancel the dialog."),
+                  QMessageBox::Ok, this
+              )
     );
     return;
   }
@@ -85,20 +123,25 @@ void ScreenSettingsDialog::accept()
     return;
   }
 
-  m_screen->setName(ui->lineNameEdit->text());
-
+  QStringList aliases;
   for (int i = 0; i < ui->listAliases->count(); i++) {
     QString alias(ui->listAliases->item(i)->text());
     if (alias == ui->lineNameEdit->text()) {
-      QMessageBox::warning(
-          this, tr("Screen name matches alias"),
-          tr("The screen name cannot be the same as an alias. "
-             "Please either remove the alias or change the screen name.")
+      PageHost::present(
+          this, new QMessageBox(
+                    QMessageBox::Warning, tr("Screen name matches alias"),
+                    tr("The screen name cannot be the same as an alias. "
+                       "Please either remove the alias or change the screen name."),
+                    QMessageBox::Ok, this
+                )
       );
       return;
     }
-    m_screen->addAlias(alias);
+    aliases.append(alias);
   }
+  // 全部校验通过再一次性提交；删除别名和反复保存不会留下旧项或重复项。
+  m_screen->setName(ui->lineNameEdit->text());
+  m_screen->aliases() = aliases;
 
   m_screen->setModifier(Shift, ui->comboShift->currentIndex());
   m_screen->setModifier(Ctrl, ui->comboCtrl->currentIndex());

@@ -80,16 +80,21 @@ Comments start with `#` or `;`. Only non-default values are written.
 | `display` | int | auto | X11 display number (Linux) |
 | `interface` | IP | auto | Bind address (`0.0.0.0` = all) |
 | `lastVersion` | string | — | Last run version |
-| `port` | int | `24800` | TCP port |
+| `port` | int | `22211` | TCP port |
 | `preventSleep` | bool | `false` | Inhibit system sleep |
 | `processMode` | int | `0` on an installed Windows build, `1` otherwise | `0` = Service, `1` = Desktop |
 | `computerName` | string | hostname | Unique computer identifier |
 | `useHooks` | bool | `true` | Windows: use hooks vs raw input |
-| `language` | ISO 639 | `en` | UI language code |
+| `language` | ISO 639 | empty = follow system | UI language code. **Empty follows the system**: a Chinese system (any `zh-*`) uses Chinese (Traditional for `zh-Hant`, otherwise Simplified), every other system — English, Japanese, Korean, Russian, Spanish, Italian — uses English. Picking a language in Preferences stores it here and overrides the default. |
 | `enableEnterCommand` | bool | `false` | Run command on screen enter |
 | `enterCommand` | string | — | Command to run on enter |
 | `enableExitCommand` | bool | `false` | Run command on screen leave |
 | `exitCommand` | string | — | Command to run on leave |
+
+> **Default language rule.** An unset `language` follows the system: Chinese systems start in Chinese, all
+> other systems start in English. Japanese, Korean, Russian, Spanish and Italian catalogues still ship and
+> can be selected explicitly; they are simply not the default. The rule lives in
+> `src/lib/common/I18N.cpp` (`defaultCandidates`), so the GUI and the core always agree.
 
 #### `[daemon]` — Windows Daemon
 
@@ -470,16 +475,20 @@ key=value
 | `display` | int | 自动 | X11 显示编号 (Linux) |
 | `interface` | IP | 自动 | 绑定地址 (`0.0.0.0`=所有) |
 | `lastVersion` | string | — | 上次运行版本 |
-| `port` | int | `24800` | TCP 端口 |
+| `port` | int | `22211` | TCP 端口 |
 | `preventSleep` | bool | `false` | 阻止系统休眠 |
 | `processMode` | int | 已安装的 Windows 为 `0`，其余为 `1` | `0`=服务，`1`=桌面 |
 | `computerName` | string | 主机名 | 唯一计算机标识 |
 | `useHooks` | bool | `true` | Windows: 钩子 vs 原始输入 |
-| `language` | ISO 639 | `en` | UI 语言代码 |
+| `language` | ISO 639 | 空 = 跟随系统 | UI 语言代码。**留空表示跟随系统**：中文系统（任意 `zh-*`）使用中文（`zh-Hant` 用繁体，其余用简体），其它系统——英文、日文、韩文、俄文、西班牙文、意大利文——一律使用英文。在首选项中主动选择语言会写入此项并覆盖默认值。 |
 | `enableEnterCommand` | bool | `false` | 进屏时运行命令 |
 | `enterCommand` | string | — | 进屏执行命令 |
 | `enableExitCommand` | bool | `false` | 离屏时运行命令 |
 | `exitCommand` | string | — | 离屏执行命令 |
+
+> **默认语言规则。** `language` 未设置时跟随系统：中文系统显示中文，其它系统显示英文。日文、韩文、俄文、
+> 西班牙文、意大利文语言包仍随包提供，可在首选项中显式选择，只是不作为默认。该规则实现在
+> `src/lib/common/I18N.cpp` 的 `defaultCandidates`，GUI 与 core 保持一致。
 
 #### `[daemon]` — Windows 守护进程
 

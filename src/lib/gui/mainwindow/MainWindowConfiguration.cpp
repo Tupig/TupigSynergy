@@ -8,7 +8,7 @@
  */
 
 #include "MainWindow.h"
-#include "ui_MainWindow.h"
+#include "MainWindowDesign.h"
 
 #include "Diagnostic.h"
 #include "StyleUtils.h"
@@ -27,7 +27,7 @@
 #include "gui/TlsUtility.h"
 #include "gui/core/CoreProcess.h"
 #include "gui/ipc/DaemonIpcClient.h"
-#include "gui/widgets/LogDock.h"
+#include "gui/widgets/LogPanel.h"
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
 #include "widgets/StatusBar.h"
@@ -56,6 +56,8 @@
 #include <QScreen>
 #include <QScrollBar>
 #include <QShowEvent>
+#include <QStyle>
+#include <QVariant>
 
 #include <memory>
 #include <thread>
@@ -73,23 +75,30 @@ void MainWindow::serverConfigSaving()
 
 void MainWindow::clearSettings()
 {
-  if (!messages::showClearSettings(this)) {
-    qDebug() << "clear settings cancelled";
-    return;
-  }
+  auto *prompt = new QMessageBox(
+      QMessageBox::Question, tr("%1 Clear Settings").arg(kAppName),
+      tr("<p>Are you sure you want to clear all settings and restart %1?</p>"
+         "<p>This action cannot be undone.</p>")
+          .arg(kAppName),
+      QMessageBox::Yes | QMessageBox::No, this
+  );
+  prompt->setDefaultButton(QMessageBox::No);
+  connect(prompt, &QDialog::finished, this, [this](int result) {
+    if (result != QMessageBox::Yes)
+      return;
+    m_networkMonitor->stopMonitoring();
 
-  m_networkMonitor->stopMonitoring();
+    disconnect(&m_coreProcess, nullptr, this, nullptr);
+    disconnect(m_guiDupeChecker, nullptr, this, nullptr);
+    disconnect(m_trayIcon, nullptr, this, nullptr);
 
-  disconnect(&m_coreProcess, nullptr, this, nullptr);
-  disconnect(m_guiDupeChecker, nullptr, this, nullptr);
-  disconnect(m_trayIcon, nullptr, this, nullptr);
-  disconnect(m_logDock->toggleViewAction(), nullptr, this, nullptr);
+    m_coreProcess.stop();
+    m_coreProcess.clearSettings();
 
-  m_coreProcess.stop();
-  m_coreProcess.clearSettings();
-
-  m_saveOnExit = false;
-  diagnostic::clearSettings(true);
+    m_saveOnExit = false;
+    diagnostic::clearSettings(true);
+  });
+  showPage(prompt);
 }
 
 bool MainWindow::saveServerConfig()
@@ -97,7 +106,10 @@ bool MainWindow::saveServerConfig()
   QString fileName = QFileDialog::getSaveFileName(this, tr("Save server configuration as..."));
 
   if (!fileName.isEmpty() && !m_serverConfig.save(fileName)) {
-    QMessageBox::warning(this, tr("Save failed"), tr("Could not save server configuration to file."));
+    showPage(new QMessageBox(
+        QMessageBox::Warning, tr("Save failed"), tr("Could not save server configuration to file."), QMessageBox::Ok,
+        this
+    ));
     return true;
   }
 
@@ -139,6 +151,7 @@ void MainWindow::updateModeControls()
 
   ui->serverOptions->setVisible(isServer);
   ui->clientOptions->setVisible(isClient);
+  ui->btnConfigureClient->setVisible(isClient);
   ui->lblNoMode->setVisible(!isServer && !isClient);
   toggleCanRunCore(canRunCore());
 
@@ -193,6 +206,12 @@ void MainWindow::updateModeControlLabels()
     ui->btnToggleCore->setText(startText);
     ui->btnToggleCore->setIcon(startIcon);
   }
+
+  // 设计稿：运行中为红色「停止」，未运行为强调色「连接」（客户端）。
+  ui->btnToggleCore->setProperty("danger", isStarted && isServer);
+  ui->btnToggleCore->setProperty("primary", !isStarted && !isServer);
+  ui->btnToggleCore->style()->unpolish(ui->btnToggleCore);
+  ui->btnToggleCore->style()->polish(ui->btnToggleCore);
 }
 
 void MainWindow::applyConfig()
@@ -234,19 +253,27 @@ void MainWindow::saveSettings() const
 
 void MainWindow::showConfigureServer(const QString &message)
 {
-  ServerConfigDialog dialog(this, serverConfig());
-  dialog.message(message);
-  if ((dialog.exec() == QDialog::Accepted) && m_coreProcess.isStarted()) {
-    m_coreProcess.restart();
-  }
+  if (m_serverConfigDialogVisible)
+    return;
+  m_serverConfigDialogVisible = true;
+  auto *dialog = new ServerConfigDialog(this, serverConfig());
+  dialog->message(message);
+  connect(dialog, &QDialog::accepted, this, [this] {
+    if (m_coreProcess.isStarted())
+      m_coreProcess.restart();
+  });
+  connect(dialog, &QDialog::finished, this, [this] { m_serverConfigDialogVisible = false; });
+  showPage(dialog);
 }
 
 void MainWindow::showConfigureClient()
 {
-  ClientConfigDialog dialog(this);
-  if ((dialog.exec() == QDialog::Accepted) && m_coreProcess.isStarted()) {
-    m_coreProcess.restart();
-  }
+  auto *dialog = new ClientConfigDialog(this);
+  connect(dialog, &QDialog::accepted, this, [this] {
+    if (m_coreProcess.isStarted())
+      m_coreProcess.restart();
+  });
+  showPage(dialog);
 }
 
 void MainWindow::secureSocket(bool secureSocket)
@@ -307,7 +334,7 @@ void MainWindow::setHostName()
              "• May also use _ or -\n"
              "• Are between 1 and 255 characters");
     }
-    QMessageBox::information(this, title, body);
+    showPage(new QMessageBox(QMessageBox::Information, title, body, QMessageBox::Ok, this));
     return;
   }
 

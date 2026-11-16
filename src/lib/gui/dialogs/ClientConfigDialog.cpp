@@ -5,7 +5,7 @@
  */
 
 #include "ClientConfigDialog.h"
-#include "ui_ClientConfigDialog.h"
+#include "ClientConfigDialogDesign.h"
 
 #include "common/Settings.h"
 
@@ -14,6 +14,20 @@
 ClientConfigDialog::ClientConfigDialog(QWidget *parent) : QDialog(parent), ui(new Ui::ClientConfigDialog)
 {
   ui->setupUi(this);
+  setMinimumWidth(560);
+  // 设计稿：反转复选框保留完整文字，缩放控件固定 76px。
+  for (auto *checkBox : {ui->cbXScrollInvert, ui->cbYScrollInvert}) {
+    checkBox->setMinimumWidth(checkBox->fontMetrics().horizontalAdvance(checkBox->text()) + 28);
+  }
+  for (auto *spinBox : {ui->sbXScrollScale, ui->sbYScrollScale}) {
+    spinBox->setFixedWidth(76);
+  }
+  // 标签 + 反转 + 缩放 必须完整放在一行，控件容器按内容取最小宽度。
+  for (auto *field : {ui->scrollHorizontalField, ui->scrollVerticalField}) {
+    field->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    field->layout()->activate();
+    field->setMinimumWidth(field->layout()->sizeHint().width());
+  }
   updateText();
   initConnections();
   load();

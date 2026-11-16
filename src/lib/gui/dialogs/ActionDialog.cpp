@@ -7,13 +7,14 @@
  */
 
 #include "ActionDialog.h"
-#include "ui_ActionDialog.h"
+#include "ActionDialogDesign.h"
 
 #include "Action.h"
 #include "Hotkey.h"
 #include "KeySequence.h"
 #include "config/ServerConfig.h"
 
+#include <QComboBox>
 #include <QTimer>
 
 ActionDialog::ActionDialog(QWidget *parent, const synergy::gui::ServerConfig &config, Hotkey &hotkey, Action &action)
@@ -23,6 +24,16 @@ ActionDialog::ActionDialog(QWidget *parent, const synergy::gui::ServerConfig &co
       m_action(action)
 {
   ui->setupUi(this);
+  setMinimumWidth(560);
+
+  // 设计稿：触发方式与动作类型下拉按最长文案取宽，避免省略。
+  for (auto *combo : {ui->comboTriggerOn, ui->comboActionType}) {
+    combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    int width = 0;
+    for (int index = 0; index < combo->count(); ++index)
+      width = qMax(width, combo->fontMetrics().horizontalAdvance(combo->itemText(index)));
+    combo->setMinimumWidth(width + 40);
+  }
   connect(ui->keySequenceWidget, &KeySequenceWidget::keySequenceChanged, this, &ActionDialog::keySequenceChanged);
   connect(
       ui->comboActionType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &ActionDialog::actionTypeChanged

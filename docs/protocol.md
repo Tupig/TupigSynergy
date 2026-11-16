@@ -13,7 +13,7 @@ The TuPig Synergy protocol enables keyboard and mouse sharing between multiple c
 | Role | Description |
 |------|-------------|
 | **Network Role** | Connection architecture |
-| • **Server** | Listens on TCP port 24800 |
+| • **Server** | Listens on TCP port 22211 |
 | • **Client** | Initiates connection to Server |
 | **Control Role** | Input flow direction |
 | • **Primary** | Shares keyboard/mouse (controls others) |
@@ -170,7 +170,7 @@ Client                                    Server
 | Keep-alive Interval | 3.0 s | `kKeepAliveRate` |
 | Client Timeout | 9.0 s (3×keepalive) | — |
 | Handshake Timeout | 30 s | — |
-| Default Port | 24800 | — |
+| Default Port | 22211 | — |
 
 ---
 
@@ -208,7 +208,7 @@ TLS is on by default (`security/tlsEnabled`). Peer fingerprint checks are also o
 
 #### Basic Client
 
-- [ ] TCP connect to port 24800
+- [ ] TCP connect to port 22211
 - [ ] Hello/HelloBack handshake
 - [ ] Version negotiation
 - [ ] Keep-alive response
@@ -235,7 +235,7 @@ TuPig Synergy 协议实现多台计算机间通过 TCP/IP 共享键盘和鼠标�
 | 角色 | 说明 |
 |------|------|
 | **网络角色** | 连接架构 |
-| • **Server（服务端）** | 监听 TCP 端口 24800 |
+| • **Server（服务端）** | 监听 TCP 端口 22211 |
 | • **Client（客户端）** | 主动连接服务端 |
 | **控制角色** | 输入流向 |
 | • **Primary（主控端）** | 共享键鼠（控制其他机器） |
@@ -392,7 +392,7 @@ Client                                    Server
 | 保活间隔 | 3.0 秒 | `kKeepAliveRate` |
 | 客户端超时 | 9.0 秒 (3×保活) | — |
 | 握手超时 | 30 秒 | — |
-| 默认端口 | 24800 | — |
+| 默认端口 | 22211 | — |
 
 ---
 
@@ -430,7 +430,7 @@ TLS 默认开启（`security/tlsEnabled`）。对端指纹校验也默认开启�
 
 #### 基础客户端
 
-- [ ] TCP 连接端口 24800
+- [ ] TCP 连接端口 22211
 - [ ] Hello/HelloBack 握手
 - [ ] 版本协商
 - [ ] 保活响应

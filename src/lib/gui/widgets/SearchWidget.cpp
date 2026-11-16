@@ -50,6 +50,8 @@ SearchWidget::SearchWidget(QWidget *parent)
   setText();
 
   auto mainLayout = new QHBoxLayout;
+  mainLayout->setContentsMargins(0, 0, 0, 0);
+  mainLayout->setSpacing(4);
   mainLayout->addWidget(m_btnToggle);
   mainLayout->addWidget(m_searchLine);
   mainLayout->addWidget(m_btnNext);

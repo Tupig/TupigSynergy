@@ -8,7 +8,7 @@
  */
 
 #include "MainWindow.h"
-#include "ui_MainWindow.h"
+#include "MainWindowDesign.h"
 
 #include "Diagnostic.h"
 #include "StyleUtils.h"
@@ -29,7 +29,8 @@
 #include "gui/ipc/DaemonIpcClient.h"
 #include "gui/update/UpdateChecker.h"
 #include "gui/update/UpdateDialog.h"
-#include "gui/widgets/LogDock.h"
+#include "gui/widgets/LogPanel.h"
+#include "gui/widgets/MessagePage.h"
 
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
@@ -79,19 +80,41 @@ void MainWindow::createMenuBar()
   m_menuFile->addSeparator();
   m_menuFile->addAction(m_actionQuit);
 
-  m_menuEdit->addAction(m_actionSettings);
+  auto *logAction = new QAction(tr("Show &Log"), this);
+  logAction->setCheckable(true);
+  logAction->setChecked(Settings::value(Settings::Gui::LogExpanded).toBool());
+  connect(logAction, &QAction::toggled, this, &MainWindow::toggleLogVisible);
+  connect(m_logDock, &LogPanel::collapsedChanged, logAction, [logAction](bool collapsed) {
+    QSignalBlocker blocker(logAction);
+    logAction->setChecked(!collapsed);
+  });
+  m_menuView->addAction(logAction);
 
-  m_menuView->addAction(m_logDock->toggleViewAction());
-
-  m_menuHelp->addAction(m_actionCheckForUpdates);
-  m_menuHelp->addAction(m_actionAbout);
-  m_menuHelp->addAction(m_actionReportBug);
-  m_menuHelp->addSeparator();
-  m_menuHelp->addAction(m_actionClearSettings);
+  // macOS moves actions that carry a menu role into the application menu.
+  // A menu holding only such actions renders empty, so macOS gets no Edit
+  // menu at all; its Preferences action rides on the Help menu and is merged
+  // out, leaving "Get help" as the only remaining Help item. Qt prepends each
+  // merged action, hence the reversed order: the application menu shows
+  // "Check for Updates" above "Clear settings".
+  if (synergy::platform::isMac()) {
+    m_menuHelp->addAction(m_actionReportBug);
+    m_menuHelp->addAction(m_actionSettings);
+    m_menuHelp->addAction(m_actionAbout);
+    m_menuHelp->addAction(m_actionClearSettings);
+    m_menuHelp->addAction(m_actionCheckForUpdates);
+  } else {
+    m_menuEdit->addAction(m_actionSettings);
+    m_menuHelp->addAction(m_actionCheckForUpdates);
+    m_menuHelp->addAction(m_actionAbout);
+    m_menuHelp->addAction(m_actionReportBug);
+    m_menuHelp->addSeparator();
+    m_menuHelp->addAction(m_actionClearSettings);
+  }
 
   auto menuBar = new QMenuBar(this);
   menuBar->addMenu(m_menuFile);
-  menuBar->addMenu(m_menuEdit);
+  if (!synergy::platform::isMac())
+    menuBar->addMenu(m_menuEdit);
   menuBar->addMenu(m_menuView);
   menuBar->addMenu(m_menuHelp);
 
@@ -106,8 +129,7 @@ void MainWindow::checkForUpdates(bool manual)
   connect(
       checker, &synergy::gui::update::UpdateChecker::updateAvailable, this,
       [this, release](const synergy::gui::update::UpdateInfo &info) {
-        synergy::gui::update::UpdateDialog dialog(info, this);
-        dialog.exec();
+        showPage(new synergy::gui::update::UpdateDialog(info, this));
         release();
       }
   );
@@ -115,14 +137,20 @@ void MainWindow::checkForUpdates(bool manual)
       checker, &synergy::gui::update::UpdateChecker::noUpdate, this,
       [this, manual, release](const QString &version) {
         if (manual) {
-          QMessageBox::information(this, tr("No Updates"), tr("You are running the latest version (%1).").arg(version));
+          showPage(new QMessageBox(
+              QMessageBox::Information, tr("No Updates"), tr("You are running the latest version (%1).").arg(version),
+              QMessageBox::Ok, this
+          ));
         }
         release();
       }
   );
   connect(checker, &synergy::gui::update::UpdateChecker::failed, this, [this, manual, release](const QString &reason) {
     if (manual) {
-      QMessageBox::warning(this, tr("Update Check Failed"), reason);
+      auto *page = new MessagePage(this, MessagePage::Kind::Warning, tr("Update Check Failed"), reason);
+      auto *ok = page->addButton(tr("OK"), true);
+      connect(ok, &QPushButton::clicked, page, &QDialog::accept);
+      showPage(page);
     } else {
       qWarning().noquote() << "update check failed:" << reason;
     }
@@ -150,20 +178,23 @@ void MainWindow::setTrayIcon()
 {
   static const auto fallbackPath = QStringLiteral(":/icons/%1-%2/apps/64/%3");
 
+  if (synergy::platform::isMac()) {
+    // macOS has no freedesktop icon theme, and the bundle ships the SVG icon
+    // engine but not the qsvg image plugin, so fromTheme() and every SVG
+    // fallback below are null; QSystemTrayIcon then logs "No Icon set" and
+    // stays invisible. Use the bundled square app icon: the logo-*.png
+    // wordmarks are 304x74, so scaling one into the menu bar renders a tiny
+    // mark followed by the word "Synergy" instead of a square icon.
+    m_trayIcon->setIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
+    return;
+  }
+
   QString themeIcon = kRevFqdnName;
   if (!Settings::value(Settings::Gui::SymbolicTrayIcon).toBool()) {
-    if (synergy::platform::isMac()) {
-      // macOS has no freedesktop icon theme, so fromTheme() returns a null
-      // icon and QSystemTrayIcon logs "No Icon set" and stays invisible.
-      // Fall back to the bundled brand icon.
-      // The bundle ships the SVG icon engine but not the qsvg image plugin,
-      // so QIcon("*.svg") is null; use the PNG brand asset as the fallback.
-      m_trayIcon->setIcon(QIcon::fromTheme(themeIcon, QIcon(QStringLiteral(":/image/logo-dark.png"))));
-    } else
 #ifdef SYNERGY_EXTRA_HEADER
-      m_trayIcon->setIcon(synergy::hooks::trayIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
+    m_trayIcon->setIcon(synergy::hooks::trayIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
 #else
-      m_trayIcon->setIcon(QIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
+    m_trayIcon->setIcon(QIcon(fallbackPath.arg(kAppId, QStringLiteral("dark"), themeIcon)));
 #endif
     return;
   }
@@ -213,8 +244,19 @@ void MainWindow::closeEvent(QCloseEvent *event)
 {
   if (Settings::value(Settings::Gui::CloseToTray).toBool() && event->spontaneous()) {
     if (Settings::value(Settings::Gui::CloseReminder).toBool()) {
-      messages::showCloseReminder(this);
+      event->ignore();
       Settings::setValue(Settings::Gui::CloseReminder, false);
+      auto *message = new QMessageBox(
+          QMessageBox::Information, kAppName,
+          tr("%1 will continue to run in the background. Use the tray icon to reopen the window.").arg(kAppName),
+          QMessageBox::Ok, this
+      );
+      connect(message, &QDialog::finished, this, [this] {
+        Settings::setValue(Settings::Gui::WindowGeometry, geometry());
+        hide();
+      });
+      showPage(message);
+      return;
     }
     Settings::setValue(Settings::Gui::WindowGeometry, geometry());
     qDebug() << "hiding to tray";
@@ -228,10 +270,6 @@ void MainWindow::closeEvent(QCloseEvent *event)
     Settings::setValue(Settings::Gui::AutoStartCore, m_coreProcess.isStarted());
   }
   qDebug() << "quitting application";
-
-  // any connected dock view acitons will be triggered
-  // disconnect them before accepting the event
-  disconnect(m_logDock->toggleViewAction(), &QAction::toggled, nullptr, nullptr);
 
   event->accept();
   QApplication::quit();
@@ -253,7 +291,7 @@ void MainWindow::changeEvent(QEvent *e)
   QMainWindow::changeEvent(e);
   if (e->type() == QEvent::PaletteChange) {
     updateIconTheme();
-    setWindowIcon(QIcon::fromTheme(kRevFqdnName, QIcon(QStringLiteral(":/image/logo-dark.png"))));
+    setWindowIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
     setTrayIcon();
   } else if (e->type() == QEvent::LanguageChange) {
     ui->retranslateUi(this);

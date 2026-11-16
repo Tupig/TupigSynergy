@@ -9,71 +9,284 @@
 
 #include <gui/Logger.h>
 
-#include <QPlainTextEdit>
+#include <QEvent>
+#include <QFontDatabase>
+#include <QHeaderView>
 #include <QScrollBar>
+#include <QTableWidget>
+#include <QTableWidgetItem>
 #include <QVBoxLayout>
 
-LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_textLog{new QPlainTextEdit(this)}
+#include <utility>
+
+namespace {
+constexpr int kHistoryLimit = 10000;
+// 历史可能很长，但只渲染最近的记录；更早的仍参与筛选与统计。
+constexpr int kRenderLimit = 500;
+
+QColor levelColor(const QString &level)
 {
-  m_textLog->setReadOnly(true);
-  m_textLog->setMaximumBlockCount(10000);
-  m_textLog->setLineWrapMode(QPlainTextEdit::NoWrap);
+  if (level == QStringLiteral("warn"))
+    return QColor(QStringLiteral("#e0a83c"));
+  if (level == QStringLiteral("error"))
+    return QColor(QStringLiteral("#e0605f"));
+  return QColor(QStringLiteral("#7aa2f7"));
+}
+} // namespace
 
-  // setup the log font
-  if (synergy::platform::isWindows()) {
-    QFont f = font();
-    f.setFamilies({"Hack", "Liberation Mono", "Monospace", "Andale Mono"});
-    f.setStyleHint(QFont::Monospace);
-    m_textLog->setFont(f);
-  } else {
-    m_textLog->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-    if (synergy::platform::isMac()) {
-      auto f = m_textLog->font();
-      f.setPixelSize(12);
-      m_textLog->setFont(f);
-    }
-  }
+LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_table{new QTableWidget(this)}
+{
+  m_table->setObjectName(QStringLiteral("logRecords"));
+  m_table->setColumnCount(3);
+  m_table->setShowGrid(false);
+  m_table->setSelectionMode(QAbstractItemView::NoSelection);
+  m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+  m_table->setFocusPolicy(Qt::NoFocus);
+  m_table->setWordWrap(true);
+  m_table->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  m_table->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+  m_table->horizontalHeader()->hide();
+  m_table->verticalHeader()->hide();
+  // 时间与级别按内容取宽，避免等宽字体下的省略号；消息列占满剩余宽度。
+  m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+  m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+  m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+  m_table->viewport()->installEventFilter(this);
 
-  auto layout = new QVBoxLayout;
+  QFont font = synergy::platform::isWindows() ? QFont(QStringLiteral("Consolas"))
+                                              : QFontDatabase::systemFont(QFontDatabase::FixedFont);
+  font.setPixelSize(12);
+  m_table->setFont(font);
+
+  auto *layout = new QVBoxLayout;
   layout->setContentsMargins(0, 0, 0, 0);
-  layout->addWidget(m_textLog);
-
+  layout->addWidget(m_table);
   setLayout(layout);
 
-  connect(
-      synergy::gui::Logger::instance(), &synergy::gui::Logger::newLine, m_textLog, &QPlainTextEdit::appendPlainText
-  );
+  connect(synergy::gui::Logger::instance(), &synergy::gui::Logger::newLine, this, &LogWidget::appendLine);
+}
+
+int LogWidget::rowHeight() const
+{
+  // 设计稿行高 1.55：字号 12 时约 19px。
+  return qRound(m_table->fontMetrics().height() * 1.55);
+}
+
+LogWidget::Record LogWidget::parse(const QString &line)
+{
+  // "[2026-11-15T00:52:25.518] INFO: message"
+  Record record;
+  record.message = line;
+  const auto close = line.indexOf(QLatin1String("] "));
+  if (close > 0 && line.startsWith(QLatin1Char('['))) {
+    record.time = line.mid(1, close - 1);
+    if (record.time.size() >= 19)
+      record.time = record.time.mid(11, 8);
+    const auto colon = line.indexOf(QLatin1Char(':'), close + 2);
+    if (colon > 0) {
+      record.level = line.mid(close + 2, colon - close - 2).trimmed();
+      record.message = line.mid(colon + 1).trimmed();
+    }
+  }
+  return record;
 }
 
 void LogWidget::appendLine(const QString &msg)
 {
-  m_textLog->appendPlainText(msg);
+  if (static_cast<int>(m_history.size()) == kHistoryLimit) {
+    const auto &oldest = m_history.front();
+    --m_counts[levelIndex(oldest)];
+    if (m_filter.isEmpty() || levelOf(oldest) == m_filter)
+      m_table->removeRow(0);
+    m_history.pop_front();
+  }
+  m_history.push_back(msg);
+  ++m_counts[levelIndex(msg)];
+  if (m_filter.isEmpty() || levelOf(msg) == m_filter) {
+    const auto record = parse(msg);
+    const int row = m_table->rowCount();
+    m_table->insertRow(row);
+    m_table->setRowHeight(row, rowHeight());
+
+    auto *time = new QTableWidgetItem(record.time);
+    time->setForeground(QColor(QStringLiteral("#6f6f78")));
+    auto *level = new QTableWidgetItem(record.level);
+    level->setForeground(levelColor(levelOf(msg)));
+    QFont levelFont = m_table->font();
+    levelFont.setBold(true);
+    levelFont.setPixelSize(11);
+    level->setFont(levelFont);
+    auto *message = new QTableWidgetItem(record.message);
+    message->setForeground(QColor(QStringLiteral("#cfcfd6")));
+    m_table->setItem(row, 0, time);
+    m_table->setItem(row, 1, level);
+    m_table->setItem(row, 2, message);
+    m_latestLine = msg;
+  }
+  updateVisibleHeight();
+  Q_EMIT historyChanged(m_latestLine);
+}
+
+void LogWidget::setVisibleLines(int lines)
+{
+  m_visibleLines = qMax(1, lines);
+  updateVisibleHeight();
+}
+
+bool LogWidget::eventFilter(QObject *watched, QEvent *event)
+{
+  if (watched == m_table->viewport() && event->type() == QEvent::Resize)
+    updateVisibleHeight();
+  return QWidget::eventFilter(watched, event);
+}
+
+void LogWidget::updateVisibleHeight()
+{
+  // 设计稿：最多六条记录，空态不占高度；超长记录在视口内滚动。
+  const int rows = qMin(m_table->rowCount(), m_visibleLines);
+  const int height = rows == 0 ? 0 : rows * rowHeight() + 2;
+  // 空态完全隐藏记录区，避免留下一条边框线。
+  m_table->setVisible(rows > 0);
+  m_table->setFixedHeight(height);
+  setFixedHeight(height);
+}
+
+void LogWidget::setLevelFilter(const QString &level)
+{
+  const auto next =
+      (level == QStringLiteral("info") || level == QStringLiteral("warn") || level == QStringLiteral("error"))
+          ? level
+          : QString();
+  if (next == m_filter)
+    return;
+  m_filter = next;
+  rebuild();
+}
+
+QString LogWidget::levelOf(const QString &line)
+{
+  const auto close = line.indexOf(QLatin1String("] "));
+  if (close < 0)
+    return {};
+  const auto start = close + 2;
+  const auto colon = line.indexOf(QLatin1Char(':'), start);
+  if (colon < 0)
+    return {};
+  const auto level = line.mid(start, colon - start).trimmed();
+  if (level.startsWith(QLatin1String("WARN")))
+    return QStringLiteral("warn");
+  if (level.startsWith(QLatin1String("ERR")) || level.startsWith(QLatin1String("CRIT")) ||
+      level.startsWith(QLatin1String("FATAL")))
+    return QStringLiteral("error");
+  return QStringLiteral("info");
+}
+
+int LogWidget::levelIndex(const QString &line)
+{
+  const auto level = levelOf(line);
+  return level == QStringLiteral("warn") ? 1 : level == QStringLiteral("error") ? 2 : 0;
+}
+
+void LogWidget::rebuild()
+{
+  m_table->setRowCount(0);
+  m_latestLine.clear();
+  int rendered = 0;
+  for (auto it = m_history.rbegin(); it != m_history.rend() && rendered < kRenderLimit; ++it) {
+    if (!m_filter.isEmpty() && levelOf(*it) != m_filter)
+      continue;
+    m_latestLine = *it;
+    ++rendered;
+  }
+
+  QList<QString> visible;
+  for (const auto &line : m_history) {
+    if (m_filter.isEmpty() || levelOf(line) == m_filter)
+      visible.append(line);
+  }
+  const int start = qMax(0, visible.size() - kRenderLimit);
+  m_table->setRowCount(visible.size() - start);
+  for (int index = start; index < visible.size(); ++index) {
+    const auto record = parse(visible.at(index));
+    const int row = index - start;
+    m_table->setRowHeight(row, rowHeight());
+    auto *time = new QTableWidgetItem(record.time);
+    time->setForeground(QColor(QStringLiteral("#6f6f78")));
+    auto *level = new QTableWidgetItem(record.level);
+    level->setForeground(levelColor(levelOf(visible.at(index))));
+    QFont levelFont = m_table->font();
+    levelFont.setBold(true);
+    levelFont.setPixelSize(11);
+    level->setFont(levelFont);
+    auto *message = new QTableWidgetItem(record.message);
+    message->setForeground(QColor(QStringLiteral("#cfcfd6")));
+    m_table->setItem(row, 0, time);
+    m_table->setItem(row, 1, level);
+    m_table->setItem(row, 2, message);
+  }
+  updateVisibleHeight();
+  scrollToBottom();
+  Q_EMIT historyChanged(m_latestLine);
+}
+
+void LogWidget::clear()
+{
+  m_history.clear();
+  m_latestLine.clear();
+  m_counts = {0, 0, 0};
+  m_table->setRowCount(0);
+  updateVisibleHeight();
+  Q_EMIT historyChanged(m_latestLine);
+}
+
+QString LogWidget::allText() const
+{
+  QStringList lines;
+  lines.reserve(m_table->rowCount());
+  for (int row = 0; row < m_table->rowCount(); ++row) {
+    const auto time = m_table->item(row, 0) ? m_table->item(row, 0)->text() : QString();
+    const auto level = m_table->item(row, 1) ? m_table->item(row, 1)->text() : QString();
+    const auto message = m_table->item(row, 2) ? m_table->item(row, 2)->text() : QString();
+    lines.append(QStringLiteral("[%1] %2: %3").arg(time, level, message));
+  }
+  return lines.join(QLatin1Char('\n'));
+}
+
+std::array<int, 3> LogWidget::levelCounts() const
+{
+  return m_counts;
 }
 
 void LogWidget::findNext(const QString &text)
 {
-  if (text.isEmpty())
+  if (text.isEmpty() || m_table->rowCount() == 0)
     return;
-
-  if (!m_textLog->find(text)) {
-    m_textLog->moveCursor(QTextCursor::Start);
-    m_textLog->find(text);
+  const int current = m_table->currentRow();
+  for (int offset = 1; offset <= m_table->rowCount(); ++offset) {
+    const int row = (qMax(0, current) + offset) % m_table->rowCount();
+    if (m_table->item(row, 2) && m_table->item(row, 2)->text().contains(text)) {
+      m_table->scrollToItem(m_table->item(row, 2));
+      return;
+    }
   }
 }
 
 void LogWidget::findPrevious(const QString &text)
 {
-  if (text.isEmpty())
+  if (text.isEmpty() || m_table->rowCount() == 0)
     return;
-
-  if (!m_textLog->find(text, QTextDocument::FindBackward)) {
-    m_textLog->moveCursor(QTextCursor::End);
-    m_textLog->find(text, QTextDocument::FindBackward);
+  const int current = qMax(0, m_table->currentRow());
+  for (int offset = 1; offset <= m_table->rowCount(); ++offset) {
+    const int row = (current - offset + m_table->rowCount() * 2) % m_table->rowCount();
+    if (m_table->item(row, 2) && m_table->item(row, 2)->text().contains(text)) {
+      m_table->scrollToItem(m_table->item(row, 2));
+      return;
+    }
   }
 }
 
 void LogWidget::scrollToBottom() const
 {
-  auto sb = m_textLog->verticalScrollBar();
-  sb->setValue(sb->maximum());
+  auto *bar = m_table->verticalScrollBar();
+  bar->setValue(bar->maximum());
 }

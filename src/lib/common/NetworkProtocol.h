@@ -7,6 +7,7 @@
 #pragma once
 #include <QObject>
 #include <QString>
+#include <QVariant>
 
 inline static const auto kSynergyProtocolOption = "synergy";
 inline static const auto kBarrierProtocolOption = "barrier";
@@ -51,4 +52,11 @@ inline NetworkProtocol networkProtocolFromString(const QString &proto)
   if (proto.compare(kSynergyProtocolOption, Qt::CaseInsensitive) == 0)
     return Synergy;
   return Unknown;
+}
+
+inline NetworkProtocol networkProtocolFromValue(const QVariant &value)
+{
+  if (value.userType() == qMetaTypeId<NetworkProtocol>())
+    return value.value<NetworkProtocol>();
+  return networkProtocolFromString(value.toString());
 }

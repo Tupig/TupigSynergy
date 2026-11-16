@@ -8,8 +8,10 @@
 
 #include "ScreenSetupView.h"
 
+#include "PageHost.h"
 #include "ScreenSetupModel.h"
 #include "dialogs/ScreenSettingsDialog.h"
+#include <memory>
 
 #include <QDrag>
 #include <QDragEnterEvent>
@@ -46,9 +48,13 @@ ScreenSetupModel *ScreenSetupView::model() const
 
 void ScreenSetupView::showScreenConfig(int col, int row)
 {
-  ScreenSettingsDialog dlg(this, &model()->screen(col, row), &model()->m_Screens);
-  dlg.exec();
-  Q_EMIT model()->screensChanged();
+  auto screen = std::make_shared<synergy::gui::Screen>(model()->screen(col, row));
+  auto *dialog = new ScreenSettingsDialog(this, screen.get(), &model()->m_Screens);
+  connect(dialog, &QDialog::accepted, this, [this, screen, col, row] {
+    model()->screen(col, row) = *screen;
+    Q_EMIT model()->screensChanged();
+  });
+  PageHost::present(this, dialog);
 }
 
 void ScreenSetupView::setTableSize()

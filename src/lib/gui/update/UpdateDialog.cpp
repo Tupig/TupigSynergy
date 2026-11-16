@@ -8,6 +8,7 @@
 
 #include "UpdateDownloader.h"
 #include "common/VersionInfo.h"
+#include "gui/widgets/PageHost.h"
 #include "platform/UpdateInstaller.h"
 
 #include <QCoreApplication>
@@ -22,18 +23,21 @@
 #include <QStandardPaths>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <QVariant>
 
 namespace synergy::gui::update {
 
-UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent)
+UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const DownloadPolicy &policy)
     : QDialog(parent),
       m_info(info),
-      m_downloader(new UpdateDownloader(this))
+      m_downloader(new UpdateDownloader(this, policy))
 {
   setWindowTitle(tr("Update Available"));
   setMinimumWidth(520);
 
   auto *layout = new QVBoxLayout(this);
+  layout->setContentsMargins(12, 12, 12, 12);
+  layout->setSpacing(8);
 
   m_summary = new QLabel(
       tr("A newer version is available.\n\nCurrent version: %1\nLatest version: %2\nPackage: %3")
@@ -47,6 +51,11 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent)
     m_notes = new QPlainTextEdit(info.notes, this);
     m_notes->setReadOnly(true);
     m_notes->setMaximumHeight(200);
+    auto *toggleNotes = new QPushButton(tr("Release Notes"), this);
+    toggleNotes->setCheckable(true);
+    toggleNotes->setChecked(true);
+    connect(toggleNotes, &QPushButton::toggled, m_notes, &QWidget::setVisible);
+    layout->addWidget(toggleNotes);
     layout->addWidget(m_notes);
   }
 
@@ -73,14 +82,72 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent)
   buttonLayout->addWidget(m_later);
 
   m_install = new QPushButton(tr("Download and Install"), buttons);
+  m_install->setProperty("primary", true);
   m_install->setDefault(true);
-  connect(m_install, &QPushButton::clicked, this, &UpdateDialog::startDownload);
+  connect(m_install, &QPushButton::clicked, this, [this] {
+    if (m_downloadedPath.isEmpty())
+      startDownload();
+    else
+      installDownloaded(m_downloadedPath);
+  });
   buttonLayout->addWidget(m_install);
 
   layout->addWidget(buttons);
+
+  connect(m_downloader, &UpdateDownloader::progress, this, [this](qint64 received, qint64 total) {
+    if (total > 0) {
+      m_progress->setRange(0, 100);
+      m_progress->setValue(static_cast<int>(qBound(0.0, 100.0 * received / total, 100.0)));
+    }
+    const auto elapsed = m_downloadTimer.elapsed();
+    const auto speed = elapsed > 0 ? static_cast<double>(received) * 1000.0 / static_cast<double>(elapsed) : 0.0;
+    if (total > 0) {
+      const auto remaining =
+          speed > 0 ? QString::number(qMax(0.0, (total - received) / speed), 'f', 0) : QStringLiteral("—");
+      m_progressText->setText(tr("%1 / %2 MB — %3 MB/s — %4% — %5 s remaining")
+                                  .arg(received / 1048576.0, 0, 'f', 1)
+                                  .arg(total / 1048576.0, 0, 'f', 1)
+                                  .arg(speed / 1048576.0, 0, 'f', 1)
+                                  .arg(m_progress->value())
+                                  .arg(remaining));
+    } else {
+      m_progressText->setText(
+          tr("%1 MB — %2 MB/s").arg(received / 1048576.0, 0, 'f', 1).arg(speed / 1048576.0, 0, 'f', 1)
+      );
+    }
+  });
+  // 信号只在构造时连接一次，失败重试不会重复交付进度或错误。
+  connect(m_downloader, &UpdateDownloader::finished, this, [this](const QString &path) {
+    m_downloadedPath = path;
+    setBusy(false);
+    m_progress->setVisible(true);
+    m_progress->setRange(0, 100);
+    m_progress->setValue(100);
+    m_progressText->setVisible(true);
+    m_progressText->setText(tr("Download verified. Ready to install."));
+    m_install->setText(tr("Install Now"));
+  });
+  connect(m_downloader, &UpdateDownloader::failed, this, [this](const QString &reason) {
+    setBusy(false);
+    auto *message = new QMessageBox(QMessageBox::Critical, tr("Update Failed"), reason, QMessageBox::Ok, this);
+    message->setTextFormat(Qt::PlainText);
+    PageHost::present(this, message);
+  });
 }
 
-UpdateDialog::~UpdateDialog() = default;
+UpdateDialog::~UpdateDialog()
+{
+  delete m_downloader;
+  m_downloader = nullptr;
+}
+
+void UpdateDialog::reject()
+{
+  // 返回立即中止下载，不能等 deleteLater 后再阻止安装回调。
+  delete m_downloader;
+  m_downloader = nullptr;
+  QDialog::reject();
+}
 
 void UpdateDialog::setBusy(bool busy)
 {
@@ -94,42 +161,15 @@ void UpdateDialog::startDownload()
 {
   setBusy(true);
   m_downloadTimer.start();
+  m_progress->setRange(0, 0);
   m_progressText->setText(tr("Downloading…"));
-
-  auto directory = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
-  directory.mkpath(QStringLiteral("synergy-update"));
-
-  connect(m_downloader, &UpdateDownloader::progress, this, [this](qint64 received, qint64 total) {
-    if (total > 0) {
-      m_progress->setRange(0, static_cast<int>(total));
-      m_progress->setValue(static_cast<int>(received));
-    }
-    const auto elapsed = m_downloadTimer.elapsed();
-    const auto speed = elapsed > 0 ? static_cast<double>(received) * 1000.0 / static_cast<double>(elapsed) : 0.0;
-    if (total > 0) {
-      m_progressText->setText(tr("%1 / %2 MB — %3 MB/s")
-                                  .arg(received / 1048576.0, 0, 'f', 1)
-                                  .arg(total / 1048576.0, 0, 'f', 1)
-                                  .arg(speed / 1048576.0, 0, 'f', 1));
-    } else {
-      m_progressText->setText(
-          tr("%1 MB — %2 MB/s").arg(received / 1048576.0, 0, 'f', 1).arg(speed / 1048576.0, 0, 'f', 1)
-      );
-    }
-  });
-  // Qt::UniqueConnection is only valid for member-function slots; with lambdas
-  // Qt logs "unique connections require a pointer to member function" and
-  // rejects the connection, so progress and failure were never delivered.
-  // The install button is disabled after the first click, so a single
-  // connection per dialog is enough.
-  connect(m_downloader, &UpdateDownloader::finished, this, &UpdateDialog::installDownloaded, Qt::UniqueConnection);
-  connect(m_downloader, &UpdateDownloader::failed, this, [this](const QString &reason) {
+  if (!m_downloadDirectory.isValid()) {
     setBusy(false);
-    QMessageBox::critical(this, tr("Update Failed"), reason);
-  });
-
-  // Start last: start() can fail synchronously.
-  m_downloader->start(m_info.asset, directory.filePath(QStringLiteral("synergy-update")));
+    m_progressText->setText(tr("Could not create a temporary download directory."));
+    m_progressText->show();
+    return;
+  }
+  m_downloader->start(m_info.asset, m_downloadDirectory.path());
 }
 
 void UpdateDialog::installDownloaded(const QString &filePath)
@@ -137,15 +177,19 @@ void UpdateDialog::installDownloaded(const QString &filePath)
   QString error;
   const auto result = synergy::platform::launchUpdateInstaller(filePath, &error);
   if (result == synergy::platform::UpdateInstallResult::Launched) {
-    // The OS installer takes over; the running GUI and core must exit.
+    // 安装器异步读取包；交接后保留独立临时目录，避免退出时删除安装源。
+    m_downloadDirectory.setAutoRemove(false);
     QCoreApplication::quit();
     return;
   }
 
   setBusy(false);
-  QMessageBox::critical(
-      this, tr("Update Failed"), error.isEmpty() ? tr("The system installer could not be started.") : error
+  auto *message = new QMessageBox(
+      QMessageBox::Critical, tr("Update Failed"),
+      error.isEmpty() ? tr("The system installer could not be started.") : error, QMessageBox::Ok, this
   );
+  message->setTextFormat(Qt::PlainText);
+  PageHost::present(this, message);
 }
 
 void UpdateDialog::openReleasePage()
