@@ -190,7 +190,7 @@ jobs:
           # requests and snapshots keep the full architecture matrix.
           # 交付只构建 Windows x64 与 macOS arm64，其余平台不构建。
           windows_targets='[{"name":"windows-2022-x64","runs-on":"windows-2022","vcpkg-triplet":"x64-windows-release","arch":"amd64","qt-version":"6.10.3"}]'
-          macos_targets='[{"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.1","config-args":"-DCMAKE_OSX_ARCHITECTURES=\\"arm64\\" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}]'
+          macos_targets='[{"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.1","config-args":"-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}]'
           targets='[]'
           build_linux=false
           build_flatpak=false
