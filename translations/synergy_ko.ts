@@ -165,11 +165,11 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Scroll Modifiers</source>
-        <translation type="vanished">스크롤 제어자</translation>
+        <translation>스크롤 제어자</translation>
     </message>
     <message>
         <source>Invert</source>
-        <translation type="vanished">반전</translation>
+        <translation>반전</translation>
     </message>
     <message>
         <source>Horizontal Scroll</source>
@@ -1192,119 +1192,119 @@ Now you can connect your client computers to this server. You should see a promp
     <name>ScreenSettingsDialog</name>
     <message>
         <source>Computer settings</source>
-        <translation type="vanished">컴퓨터 설정</translation>
+        <translation>컴퓨터 설정</translation>
     </message>
     <message>
         <source>Computer Info</source>
-        <translation type="vanished">컴퓨터 정보</translation>
+        <translation>컴퓨터 정보</translation>
     </message>
     <message>
         <source>Name</source>
-        <translation type="vanished">이름</translation>
+        <translation>이름</translation>
     </message>
     <message>
         <source>Modifier Keys</source>
-        <translation type="vanished">수정 키</translation>
+        <translation>수정 키</translation>
     </message>
     <message>
         <source>M&amp;eta</source>
-        <translation type="vanished">M&amp;eta</translation>
+        <translation>M&amp;eta</translation>
     </message>
     <message>
         <source>&amp;Ctrl</source>
-        <translation type="vanished">&amp;Ctrl</translation>
+        <translation>&amp;Ctrl</translation>
     </message>
     <message>
         <source>S&amp;uper</source>
-        <translation type="vanished">S&amp;uper</translation>
+        <translation>S&amp;uper</translation>
     </message>
     <message>
         <source>Al&amp;t</source>
-        <translation type="vanished">Al&amp;t</translation>
+        <translation>Al&amp;t</translation>
     </message>
     <message>
         <source>Shift</source>
-        <translation type="vanished">Shift</translation>
+        <translation>Shift</translation>
     </message>
     <message>
         <source>Ctrl</source>
-        <translation type="vanished">Ctrl</translation>
+        <translation>Ctrl</translation>
     </message>
     <message>
         <source>Alt</source>
-        <translation type="vanished">Alt</translation>
+        <translation>Alt</translation>
     </message>
     <message>
         <source>Meta</source>
-        <translation type="vanished">Meta</translation>
+        <translation>Meta</translation>
     </message>
     <message>
         <source>Super</source>
-        <translation type="vanished">Super</translation>
+        <translation>Super</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="vanished">없음</translation>
+        <translation>없음</translation>
     </message>
     <message>
         <source>&amp;Shift</source>
-        <translation type="vanished">&amp;Shift</translation>
+        <translation>&amp;Shift</translation>
     </message>
     <message>
         <source>Dead Corners</source>
-        <translation type="vanished">화면 걸림 방지</translation>
+        <translation>화면 걸림 방지</translation>
     </message>
     <message>
         <source>Top Left</source>
-        <translation type="vanished">왼쪽 위</translation>
+        <translation>왼쪽 위</translation>
     </message>
     <message>
         <source>Top Right</source>
-        <translation type="vanished">오른쪽 위</translation>
+        <translation>오른쪽 위</translation>
     </message>
     <message>
         <source>Corner si&amp;ze</source>
-        <translation type="vanished">모서리 크기(&amp;Z)</translation>
+        <translation>모서리 크기(&amp;Z)</translation>
     </message>
     <message>
         <source>Bottom Left</source>
-        <translation type="vanished">왼쪽 아래</translation>
+        <translation>왼쪽 아래</translation>
     </message>
     <message>
         <source>Bottom Right</source>
-        <translation type="vanished">오른쪽 아래</translation>
+        <translation>오른쪽 아래</translation>
     </message>
     <message>
         <source>Fixes</source>
-        <translation type="vanished">수정</translation>
+        <translation>수정</translation>
     </message>
     <message>
         <source>SCROLL LOCK key</source>
-        <translation type="vanished">SCROLL LOCK 키</translation>
+        <translation>SCROLL LOCK 키</translation>
     </message>
     <message>
         <source>CAPS LOCK key</source>
-        <translation type="vanished">CAPS LOCK 키</translation>
+        <translation>CAPS LOCK 키</translation>
     </message>
     <message>
         <source>NUM LOCK key</source>
-        <translation type="vanished">NUM LOCK 키</translation>
+        <translation>NUM LOCK 키</translation>
     </message>
     <message>
         <source>XTest for Xinerama</source>
-        <translation type="vanished">Xinerama용 XTest</translation>
+        <translation>Xinerama용 XTest</translation>
     </message>
     <message>
         <source>Aliases</source>
-        <translation type="vanished">별칭</translation>
+        <translation>별칭</translation>
     </message>
     <message>
         <source>&amp;Add</source>
-        <translation type="vanished">추가(&amp;A)</translation>
+        <translation>추가(&amp;A)</translation>
     </message>
     <message>
         <source>&amp;Remove</source>
-        <translation type="vanished">삭제(&amp;R)</translation>
+        <translation>삭제(&amp;R)</translation>
     </message>
     <message>
         <source>Top-left</source>

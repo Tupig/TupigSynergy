@@ -1192,119 +1192,119 @@ Now you can connect your client computers to this server. You should see a promp
     <name>ScreenSettingsDialog</name>
     <message>
         <source>Computer settings</source>
-        <translation type="vanished">Impostazioni computer</translation>
+        <translation>Impostazioni computer</translation>
     </message>
     <message>
         <source>Computer Info</source>
-        <translation type="vanished">Informazioni computer</translation>
+        <translation>Informazioni computer</translation>
     </message>
     <message>
         <source>Name</source>
-        <translation type="vanished">Nome</translation>
+        <translation>Nome</translation>
     </message>
     <message>
         <source>Modifier Keys</source>
-        <translation type="vanished">Tasti modificatori</translation>
+        <translation>Tasti modificatori</translation>
     </message>
     <message>
         <source>M&amp;eta</source>
-        <translation type="vanished">M&amp;eta</translation>
+        <translation>M&amp;eta</translation>
     </message>
     <message>
         <source>&amp;Ctrl</source>
-        <translation type="vanished">&amp;Ctrl</translation>
+        <translation>&amp;Ctrl</translation>
     </message>
     <message>
         <source>S&amp;uper</source>
-        <translation type="vanished">S&amp;uper</translation>
+        <translation>S&amp;uper</translation>
     </message>
     <message>
         <source>Al&amp;t</source>
-        <translation type="vanished">Al&amp;t</translation>
+        <translation>Al&amp;t</translation>
     </message>
     <message>
         <source>Shift</source>
-        <translation type="vanished">Shift</translation>
+        <translation>Shift</translation>
     </message>
     <message>
         <source>Ctrl</source>
-        <translation type="vanished">Ctrl</translation>
+        <translation>Ctrl</translation>
     </message>
     <message>
         <source>Alt</source>
-        <translation type="vanished">Alt</translation>
+        <translation>Alt</translation>
     </message>
     <message>
         <source>Meta</source>
-        <translation type="vanished">Meta</translation>
+        <translation>Meta</translation>
     </message>
     <message>
         <source>Super</source>
-        <translation type="vanished">Super</translation>
+        <translation>Super</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="vanished">Nessuno</translation>
+        <translation>Nessuno</translation>
     </message>
     <message>
         <source>&amp;Shift</source>
-        <translation type="vanished">&amp;Shift</translation>
+        <translation>&amp;Shift</translation>
     </message>
     <message>
         <source>Dead Corners</source>
-        <translation type="vanished">Angoli morti</translation>
+        <translation>Angoli morti</translation>
     </message>
     <message>
         <source>Top Left</source>
-        <translation type="vanished">In alto a sinistra</translation>
+        <translation>In alto a sinistra</translation>
     </message>
     <message>
         <source>Top Right</source>
-        <translation type="vanished">In alto a destra</translation>
+        <translation>In alto a destra</translation>
     </message>
     <message>
         <source>Corner si&amp;ze</source>
-        <translation type="vanished">Di&amp;mensioni angolo</translation>
+        <translation>Di&amp;mensioni angolo</translation>
     </message>
     <message>
         <source>Bottom Left</source>
-        <translation type="vanished">In basso a sinistra</translation>
+        <translation>In basso a sinistra</translation>
     </message>
     <message>
         <source>Bottom Right</source>
-        <translation type="vanished">In basso a destra</translation>
+        <translation>In basso a destra</translation>
     </message>
     <message>
         <source>Fixes</source>
-        <translation type="vanished">Correzioni</translation>
+        <translation>Correzioni</translation>
     </message>
     <message>
         <source>SCROLL LOCK key</source>
-        <translation type="vanished">Tasto BLOC SCORR</translation>
+        <translation>Tasto BLOC SCORR</translation>
     </message>
     <message>
         <source>CAPS LOCK key</source>
-        <translation type="vanished">Tasto BLOC MAIUSC</translation>
+        <translation>Tasto BLOC MAIUSC</translation>
     </message>
     <message>
         <source>NUM LOCK key</source>
-        <translation type="vanished">Tasto BLOC NUM</translation>
+        <translation>Tasto BLOC NUM</translation>
     </message>
     <message>
         <source>XTest for Xinerama</source>
-        <translation type="vanished">XTest per Xinerama</translation>
+        <translation>XTest per Xinerama</translation>
     </message>
     <message>
         <source>Aliases</source>
-        <translation type="vanished">Alias</translation>
+        <translation>Alias</translation>
     </message>
     <message>
         <source>&amp;Add</source>
-        <translation type="vanished">&amp;Aggiungi</translation>
+        <translation>&amp;Aggiungi</translation>
     </message>
     <message>
         <source>&amp;Remove</source>
-        <translation type="vanished">&amp;Rimuovi</translation>
+        <translation>&amp;Rimuovi</translation>
     </message>
     <message>
         <source>Top-left</source>

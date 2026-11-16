@@ -157,31 +157,31 @@ Session: %1 (%2)</source>
     <name>ClientConfigDialog</name>
     <message>
         <source>Client Configuration</source>
-        <translation type="vanished">クライアント設定</translation>
+        <translation>クライアント設定</translation>
     </message>
     <message>
         <source>Use server&apos;s keyboard language on this computer</source>
-        <translation type="vanished">サーバー側のキーボード言語をこのコンピューターで使用する</translation>
+        <translation>サーバー側のキーボード言語をこのコンピューターで使用する</translation>
     </message>
     <message>
         <source>Scroll Modifiers</source>
-        <translation type="vanished">スクロール設定</translation>
+        <translation>スクロール設定</translation>
     </message>
     <message>
         <source>Invert</source>
-        <translation type="vanished">反転</translation>
+        <translation>反転</translation>
     </message>
     <message>
         <source>Horizontal Scroll</source>
-        <translation type="vanished">水平スクロール</translation>
+        <translation>水平スクロール</translation>
     </message>
     <message>
         <source>Vertical Scroll</source>
-        <translation type="vanished">垂直スクロール</translation>
+        <translation>垂直スクロール</translation>
     </message>
     <message>
         <source>Scale</source>
-        <translation type="vanished">倍率</translation>
+        <translation>倍率</translation>
     </message>
     <message>
         <source>Close and save changes</source>
@@ -1194,119 +1194,119 @@ Now you can connect your client computers to this server. You should see a promp
     <name>ScreenSettingsDialog</name>
     <message>
         <source>Computer settings</source>
-        <translation type="vanished">コンピューター設定</translation>
+        <translation>コンピューター設定</translation>
     </message>
     <message>
         <source>Computer Info</source>
-        <translation type="vanished">コンピューター情報</translation>
+        <translation>コンピューター情報</translation>
     </message>
     <message>
         <source>Name</source>
-        <translation type="vanished">名前</translation>
+        <translation>名前</translation>
     </message>
     <message>
         <source>Modifier Keys</source>
-        <translation type="vanished">修飾キー</translation>
+        <translation>修飾キー</translation>
     </message>
     <message>
         <source>M&amp;eta</source>
-        <translation type="vanished">M&amp;eta</translation>
+        <translation>M&amp;eta</translation>
     </message>
     <message>
         <source>&amp;Ctrl</source>
-        <translation type="vanished">&amp;Ctrl</translation>
+        <translation>&amp;Ctrl</translation>
     </message>
     <message>
         <source>S&amp;uper</source>
-        <translation type="vanished">S&amp;uper</translation>
+        <translation>S&amp;uper</translation>
     </message>
     <message>
         <source>Al&amp;t</source>
-        <translation type="vanished">Al&amp;t</translation>
+        <translation>Al&amp;t</translation>
     </message>
     <message>
         <source>Shift</source>
-        <translation type="vanished">Shift</translation>
+        <translation>Shift</translation>
     </message>
     <message>
         <source>Ctrl</source>
-        <translation type="vanished">Ctrl</translation>
+        <translation>Ctrl</translation>
     </message>
     <message>
         <source>Alt</source>
-        <translation type="vanished">Alt</translation>
+        <translation>Alt</translation>
     </message>
     <message>
         <source>Meta</source>
-        <translation type="vanished">Meta</translation>
+        <translation>Meta</translation>
     </message>
     <message>
         <source>Super</source>
-        <translation type="vanished">Super</translation>
+        <translation>Super</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="vanished">なし</translation>
+        <translation>なし</translation>
     </message>
     <message>
         <source>&amp;Shift</source>
-        <translation type="vanished">&amp;Shift</translation>
+        <translation>&amp;Shift</translation>
     </message>
     <message>
         <source>Dead Corners</source>
-        <translation type="vanished">無効領域</translation>
+        <translation>無効領域</translation>
     </message>
     <message>
         <source>Top Left</source>
-        <translation type="vanished">左上</translation>
+        <translation>左上</translation>
     </message>
     <message>
         <source>Top Right</source>
-        <translation type="vanished">右上</translation>
+        <translation>右上</translation>
     </message>
     <message>
         <source>Corner si&amp;ze</source>
-        <translation type="vanished">大きさ(&amp;Z)</translation>
+        <translation>大きさ(&amp;Z)</translation>
     </message>
     <message>
         <source>Bottom Left</source>
-        <translation type="vanished">左下</translation>
+        <translation>左下</translation>
     </message>
     <message>
         <source>Bottom Right</source>
-        <translation type="vanished">右下</translation>
+        <translation>右下</translation>
     </message>
     <message>
         <source>Fixes</source>
-        <translation type="vanished">修正</translation>
+        <translation>修正</translation>
     </message>
     <message>
         <source>SCROLL LOCK key</source>
-        <translation type="vanished">SCROLL LOCK キー</translation>
+        <translation>SCROLL LOCK キー</translation>
     </message>
     <message>
         <source>CAPS LOCK key</source>
-        <translation type="vanished">CAPS LOCK キー</translation>
+        <translation>CAPS LOCK キー</translation>
     </message>
     <message>
         <source>NUM LOCK key</source>
-        <translation type="vanished">NUM LOCK キー</translation>
+        <translation>NUM LOCK キー</translation>
     </message>
     <message>
         <source>XTest for Xinerama</source>
-        <translation type="vanished">Xinerama での XTest</translation>
+        <translation>Xinerama での XTest</translation>
     </message>
     <message>
         <source>Aliases</source>
-        <translation type="vanished">別名</translation>
+        <translation>別名</translation>
     </message>
     <message>
         <source>&amp;Add</source>
-        <translation type="vanished">追加(&amp;A)</translation>
+        <translation>追加(&amp;A)</translation>
     </message>
     <message>
         <source>&amp;Remove</source>
-        <translation type="vanished">削除(&amp;R)</translation>
+        <translation>削除(&amp;R)</translation>
     </message>
     <message>
         <source>Top-left</source>

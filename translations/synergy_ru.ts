@@ -1192,119 +1192,119 @@ Now you can connect your client computers to this server. You should see a promp
     <name>ScreenSettingsDialog</name>
     <message>
         <source>Computer settings</source>
-        <translation type="vanished">Настройки компьютера</translation>
+        <translation>Настройки компьютера</translation>
     </message>
     <message>
         <source>Computer Info</source>
-        <translation type="vanished">Информация о компьютере</translation>
+        <translation>Информация о компьютере</translation>
     </message>
     <message>
         <source>Name</source>
-        <translation type="vanished">Имя</translation>
+        <translation>Имя</translation>
     </message>
     <message>
         <source>Modifier Keys</source>
-        <translation type="vanished">Клавиши-модификаторы</translation>
+        <translation>Клавиши-модификаторы</translation>
     </message>
     <message>
         <source>M&amp;eta</source>
-        <translation type="vanished">M&amp;eta</translation>
+        <translation>M&amp;eta</translation>
     </message>
     <message>
         <source>&amp;Ctrl</source>
-        <translation type="vanished">&amp;Ctrl</translation>
+        <translation>&amp;Ctrl</translation>
     </message>
     <message>
         <source>S&amp;uper</source>
-        <translation type="vanished">S&amp;uper</translation>
+        <translation>S&amp;uper</translation>
     </message>
     <message>
         <source>Al&amp;t</source>
-        <translation type="vanished">Al&amp;t</translation>
+        <translation>Al&amp;t</translation>
     </message>
     <message>
         <source>Shift</source>
-        <translation type="vanished">Shift</translation>
+        <translation>Shift</translation>
     </message>
     <message>
         <source>Ctrl</source>
-        <translation type="vanished">Ctrl</translation>
+        <translation>Ctrl</translation>
     </message>
     <message>
         <source>Alt</source>
-        <translation type="vanished">Alt</translation>
+        <translation>Alt</translation>
     </message>
     <message>
         <source>Meta</source>
-        <translation type="vanished">Meta</translation>
+        <translation>Meta</translation>
     </message>
     <message>
         <source>Super</source>
-        <translation type="vanished">Super</translation>
+        <translation>Super</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="vanished">Нет</translation>
+        <translation>Нет</translation>
     </message>
     <message>
         <source>&amp;Shift</source>
-        <translation type="vanished">&amp;Shift</translation>
+        <translation>&amp;Shift</translation>
     </message>
     <message>
         <source>Dead Corners</source>
-        <translation type="vanished">Мертвые зоны в углах</translation>
+        <translation>Мертвые зоны в углах</translation>
     </message>
     <message>
         <source>Top Left</source>
-        <translation type="vanished">Сверху слева</translation>
+        <translation>Сверху слева</translation>
     </message>
     <message>
         <source>Top Right</source>
-        <translation type="vanished">Сверху справа</translation>
+        <translation>Сверху справа</translation>
     </message>
     <message>
         <source>Corner si&amp;ze</source>
-        <translation type="vanished">Разм&amp;ер угла</translation>
+        <translation>Разм&amp;ер угла</translation>
     </message>
     <message>
         <source>Bottom Left</source>
-        <translation type="vanished">Снизу слева</translation>
+        <translation>Снизу слева</translation>
     </message>
     <message>
         <source>Bottom Right</source>
-        <translation type="vanished">Снизу справа</translation>
+        <translation>Снизу справа</translation>
     </message>
     <message>
         <source>Fixes</source>
-        <translation type="vanished">Исправления</translation>
+        <translation>Исправления</translation>
     </message>
     <message>
         <source>SCROLL LOCK key</source>
-        <translation type="vanished">Клавиша SCROLL LOCK</translation>
+        <translation>Клавиша SCROLL LOCK</translation>
     </message>
     <message>
         <source>CAPS LOCK key</source>
-        <translation type="vanished">Клавиша CAPS LOCK</translation>
+        <translation>Клавиша CAPS LOCK</translation>
     </message>
     <message>
         <source>NUM LOCK key</source>
-        <translation type="vanished">Клавиша NUM LOCK</translation>
+        <translation>Клавиша NUM LOCK</translation>
     </message>
     <message>
         <source>XTest for Xinerama</source>
-        <translation type="vanished">XTest для Xinerama</translation>
+        <translation>XTest для Xinerama</translation>
     </message>
     <message>
         <source>Aliases</source>
-        <translation type="vanished">Псевдонимы</translation>
+        <translation>Псевдонимы</translation>
     </message>
     <message>
         <source>&amp;Add</source>
-        <translation type="vanished">&amp;Добавить</translation>
+        <translation>&amp;Добавить</translation>
     </message>
     <message>
         <source>&amp;Remove</source>
-        <translation type="vanished">&amp;Удалить</translation>
+        <translation>&amp;Удалить</translation>
     </message>
     <message>
         <source>Top-left</source>

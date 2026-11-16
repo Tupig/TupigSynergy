@@ -11,11 +11,6 @@
 
 namespace {
 
-QString translate(const char *text)
-{
-  return QCoreApplication::translate("ScreenSettingsDialog", text);
-}
-
 void configureFormLayout(QFormLayout *form)
 {
   form->setHorizontalSpacing(10);
@@ -368,22 +363,27 @@ void Ui::ScreenSettingsDialog::setupUi(QDialog *dialog)
 
 void Ui::ScreenSettingsDialog::retranslateUi(QDialog *dialog)
 {
-  dialog->setWindowTitle(translate("Computer settings"));
+  dialog->setWindowTitle(QCoreApplication::translate("ScreenSettingsDialog", "Computer settings"));
 
-  groupComputerName->setTitle(translate("Computer Info"));
-  label_7->setText(translate("Name"));
+  groupComputerName->setTitle(QCoreApplication::translate("ScreenSettingsDialog", "Computer Info"));
+  label_7->setText(QCoreApplication::translate("ScreenSettingsDialog", "Name"));
 
-  groupModifers->setTitle(translate("Modifier Keys"));
-  label_2->setText(translate("&Shift"));
-  label_3->setText(translate("&Ctrl"));
-  label_4->setText(translate("Al&t"));
-  label_5->setText(translate("M&eta"));
-  label_6->setText(translate("S&uper"));
-  labelAltGr->setText(translate("Alt &Gr"));
+  groupModifers->setTitle(QCoreApplication::translate("ScreenSettingsDialog", "Modifier Keys"));
+  label_2->setText(QCoreApplication::translate("ScreenSettingsDialog", "&Shift"));
+  label_3->setText(QCoreApplication::translate("ScreenSettingsDialog", "&Ctrl"));
+  label_4->setText(QCoreApplication::translate("ScreenSettingsDialog", "Al&t"));
+  label_5->setText(QCoreApplication::translate("ScreenSettingsDialog", "M&eta"));
+  label_6->setText(QCoreApplication::translate("ScreenSettingsDialog", "S&uper"));
+  labelAltGr->setText(QCoreApplication::translate("ScreenSettingsDialog", "Alt &Gr"));
 
   const QStringList modifiers{
-      translate("Shift"), translate("Ctrl"),   translate("Alt"),  translate("Meta"),
-      translate("Super"), translate("Alt Gr"), translate("None"),
+      QCoreApplication::translate("ScreenSettingsDialog", "Shift"),
+      QCoreApplication::translate("ScreenSettingsDialog", "Ctrl"),
+      QCoreApplication::translate("ScreenSettingsDialog", "Alt"),
+      QCoreApplication::translate("ScreenSettingsDialog", "Meta"),
+      QCoreApplication::translate("ScreenSettingsDialog", "Super"),
+      QCoreApplication::translate("ScreenSettingsDialog", "Alt Gr"),
+      QCoreApplication::translate("ScreenSettingsDialog", "None"),
   };
   for (auto *combo : {comboShift, comboCtrl, comboAlt, comboMeta, comboSuper, comboAltGr}) {
     for (int i = 0; i < modifiers.size(); ++i) {
@@ -391,20 +391,20 @@ void Ui::ScreenSettingsDialog::retranslateUi(QDialog *dialog)
     }
   }
 
-  groupDeadCorners->setTitle(translate("Dead Corners"));
-  chkDeadTopLeft->setToolTip(translate("Top Left"));
-  chkDeadTopRight->setToolTip(translate("Top Right"));
-  label->setText(translate("Corner si&ze"));
-  chkDeadBottomLeft->setToolTip(translate("Bottom Left"));
-  chkDeadBottomRight->setToolTip(translate("Bottom Right"));
+  groupDeadCorners->setTitle(QCoreApplication::translate("ScreenSettingsDialog", "Dead Corners"));
+  chkDeadTopLeft->setToolTip(QCoreApplication::translate("ScreenSettingsDialog", "Top Left"));
+  chkDeadTopRight->setToolTip(QCoreApplication::translate("ScreenSettingsDialog", "Top Right"));
+  label->setText(QCoreApplication::translate("ScreenSettingsDialog", "Corner si&ze"));
+  chkDeadBottomLeft->setToolTip(QCoreApplication::translate("ScreenSettingsDialog", "Bottom Left"));
+  chkDeadBottomRight->setToolTip(QCoreApplication::translate("ScreenSettingsDialog", "Bottom Right"));
 
-  groupFixes->setTitle(translate("Fixes"));
-  chkFixScrollLock->setText(translate("SCROLL LOCK key"));
-  chkFixCapsLock->setText(translate("CAPS LOCK key"));
-  chkFixNumLock->setText(translate("NUM LOCK key"));
-  chkFixXTest->setText(translate("XTest for Xinerama"));
+  groupFixes->setTitle(QCoreApplication::translate("ScreenSettingsDialog", "Fixes"));
+  chkFixScrollLock->setText(QCoreApplication::translate("ScreenSettingsDialog", "SCROLL LOCK key"));
+  chkFixCapsLock->setText(QCoreApplication::translate("ScreenSettingsDialog", "CAPS LOCK key"));
+  chkFixNumLock->setText(QCoreApplication::translate("ScreenSettingsDialog", "NUM LOCK key"));
+  chkFixXTest->setText(QCoreApplication::translate("ScreenSettingsDialog", "XTest for Xinerama"));
 
-  groupAliases->setTitle(translate("Aliases"));
-  btnAddAlias->setText(translate("&Add"));
-  btnRemoveAlias->setText(translate("&Remove"));
+  groupAliases->setTitle(QCoreApplication::translate("ScreenSettingsDialog", "Aliases"));
+  btnAddAlias->setText(QCoreApplication::translate("ScreenSettingsDialog", "&Add"));
+  btnRemoveAlias->setText(QCoreApplication::translate("ScreenSettingsDialog", "&Remove"));
 }
