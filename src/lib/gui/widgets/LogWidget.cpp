@@ -21,8 +21,8 @@
 
 namespace {
 constexpr int kHistoryLimit = 10000;
-// 历史可能很长，但只渲染最近的记录；更早的仍参与筛选与统计。
-constexpr int kRenderLimit = 500;
+// 筛选后仍保留完整的有界历史，避免搜索或复制静默丢失早期记录。
+constexpr int kRenderLimit = kHistoryLimit;
 
 QColor levelColor(const QString &level)
 {

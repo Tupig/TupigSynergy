@@ -242,7 +242,7 @@ QString appStyleSheet()
     ModeCard { background: transparent; }
 
     /* 日志面板 */
-    QFrame#logPanel { background: #212125; border: 1px solid #34353b; border-radius: 9px; }
+    QFrame#logPanel { background: %17; border: 1px solid %7; border-radius: 9px; }
     QLabel#logTitle { font-size: 12px; font-weight: 600; }
     QLabel#logBadge {
       font-size: 10.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
@@ -283,25 +283,25 @@ QString appStyleSheet()
     QLabel#statusText { font-size: 12px; }
     QLabel#statusRight { font-size: 11px; color: %4; }
   )")
-      .arg(t.text)          // 1
-      .arg(t.app)           // 2
-      .arg(t.textSecondary) // 3
-      .arg(t.muted)         // 4
-      .arg(t.panel)         // 5
-      .arg(t.textSecondary) // 6
-      .arg(t.line)          // 7
-      .arg(t.panelAlt)      // 8
-      .arg(t.controlHover)  // 9
-      .arg(t.panelAlt)      // 10
-      .arg(t.accent)        // 11
-      .arg(t.accentInk)     // 12
-      .arg(t.danger)        // 13
-      .arg(t.dangerText)    // 14
-      .arg(t.panelAlt)      // 15
-      .arg(t.control)       // 16
-      .arg(t.panelAlt)      // 17
-      .arg(t.accentSoft)    // 18
-      .arg(t.panelAlt);     // 19
+      .arg(t.text)                                             // 1
+      .arg(t.app)                                              // 2
+      .arg(t.textSecondary)                                    // 3
+      .arg(t.muted)                                            // 4
+      .arg(t.panel)                                            // 5
+      .arg(t.textSecondary)                                    // 6
+      .arg(t.line)                                             // 7
+      .arg(t.panelAlt)                                         // 8
+      .arg(t.controlHover)                                     // 9
+      .arg(t.panelAlt)                                         // 10
+      .arg(t.accent)                                           // 11
+      .arg(t.accentInk)                                        // 12
+      .arg(t.danger)                                           // 13
+      .arg(t.dangerText)                                       // 14
+      .arg(t.panelAlt)                                         // 15
+      .arg(t.control)                                          // 16
+      .arg(isDarkMode() ? QStringLiteral("#212125") : t.panel) // 17
+      .arg(t.accentSoft)                                       // 18
+      .arg(t.panelAlt);                                        // 19
 }
 
 } // namespace synergy::gui
