@@ -179,12 +179,11 @@ void Ui::ClientConfigDialog::retranslateUi(QDialog *dialog)
   dialog->setWindowTitle(translate("Client Configuration"));
   connectionBehaviorGroup->setTitle(translate("Connection Behaviour"));
   cbDynamicConnectTime->setText(translate("Use dynamic reconnection time based on connection attempts"));
-  // 单行字面量：lupdate 才能把整段 tooltip 当作一个可翻译源串。
-  cbDynamicConnectTime->setToolTip(translate(
-      "<html><head/><body><p>Allow the client to slow the rate it attempts to reconnect to the server when connections "
-      "attempts are failing. The delay between connection attempts will  start at 1 second intervals and can be a "
-      "maxium of 5 minutes between connection attempts.</p></body></html>"
-  ));
+  // 单行字面量：lupdate 才能把整段 tooltip 当作一个可翻译源串；
+  // 禁止 clang-format 折行，否则提取出的源串会被截断。
+  // clang-format off
+  cbDynamicConnectTime->setToolTip(translate("<html><head/><body><p>Allow the client to slow the rate it attempts to reconnect to the server when connections attempts are failing. The delay between connection attempts will  start at 1 second intervals and can be a maxium of 5 minutes between connection attempts.</p></body></html>"));
+  // clang-format on
   cbLanguageSync->setText(translate("Use server's keyboard language on this computer"));
   groupBox->setTitle(translate("Scroll Modifiers"));
   lblHScroll->setText(translate("Horizontal Scroll"));
