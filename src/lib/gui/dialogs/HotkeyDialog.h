@@ -12,6 +12,9 @@
 #include <QDialog>
 
 class KeySequenceWidget;
+namespace synergy::gui {
+class ServerConfig;
+}
 
 namespace Ui {
 class HotkeyDialog;
@@ -22,7 +25,7 @@ class HotkeyDialog : public QDialog
   Q_OBJECT
 
 public:
-  HotkeyDialog(QWidget *parent, Hotkey &hotkey);
+  HotkeyDialog(QWidget *parent, Hotkey &hotkey, const synergy::gui::ServerConfig *config = nullptr);
   ~HotkeyDialog() override;
 
   const Hotkey &hotkey() const
@@ -42,6 +45,10 @@ protected:
   }
 
 private:
+  void refreshActions();
+  void configureAction(bool create);
   std::unique_ptr<Ui::HotkeyDialog> ui;
   Hotkey &m_Hotkey;
+  Hotkey m_draft;
+  const synergy::gui::ServerConfig *m_serverConfig;
 };

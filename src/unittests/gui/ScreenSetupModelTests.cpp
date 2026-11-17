@@ -63,4 +63,21 @@ void ScreenSetupModelTests::inRangeIndexesHaveNames()
   QCOMPARE(model.data(model.index(2, 2)).toString(), QStringLiteral("screen8"));
 }
 
+// Additive M-C02 keyboard/empty-cell contract; occupied drag behavior retained.
+void ScreenSetupModelTests::emptyCellsAreSelectableDropTargetsWithoutDrag()
+{
+  synergy::gui::ScreenList screens;
+  for (int i = 0; i < 9; ++i)
+    screens.append(i == 0 ? synergy::gui::Screen(QStringLiteral("Primary-Fixture")) : synergy::gui::Screen());
+  ScreenSetupModel model(screens, 3, 3);
+  const auto empty = model.flags(model.index(0, 1));
+  QVERIFY(empty.testFlag(Qt::ItemIsEnabled));
+  QVERIFY(empty.testFlag(Qt::ItemIsSelectable));
+  QVERIFY(empty.testFlag(Qt::ItemIsDropEnabled));
+  QVERIFY(!empty.testFlag(Qt::ItemIsDragEnabled));
+  const auto occupied = model.flags(model.index(0, 0));
+  QVERIFY(occupied.testFlag(Qt::ItemIsDragEnabled));
+  QCOMPARE(model.flags(QModelIndex()), Qt::NoItemFlags);
+}
+
 QTEST_MAIN(ScreenSetupModelTests)

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QGroupBox>
@@ -74,6 +75,7 @@ public:
   QCheckBox *cbHeartbeat = nullptr;
   QSpinBox *sbHeartbeat = nullptr;
   QLabel *labelProtocol = nullptr;
+  QComboBox *comboProtocol = nullptr;
   QRadioButton *rbProtocolSynergy = nullptr;
   QRadioButton *rbProtocolBarrier = nullptr;
   QGroupBox *groupSwitch = nullptr;
@@ -88,6 +90,7 @@ public:
   QLabel *label_5 = nullptr;
   QLabel *label_6 = nullptr;
   QGroupBox *groupExternalConfig = nullptr;
+  QCheckBox *cbExternalConfig = nullptr;
   QWidget *widgetExternalConfigControls = nullptr;
   QLabel *labelConfigFile = nullptr;
   QLineEdit *lineConfigFile = nullptr;

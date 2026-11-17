@@ -19,6 +19,7 @@
 #include "TestSettings.h"
 
 #include "common/Constants.h"
+#include "common/RuntimeContext.h"
 #include "common/Settings.h"
 
 #include <QCoreApplication>
@@ -33,8 +34,11 @@ namespace {
 
 QString resolveFileName()
 {
+  const auto isolated = synergy::runtime::runtimeTestSettingsFile();
+  if (!isolated.isEmpty())
+    return isolated;
   const auto name = QStringLiteral("%1.test.conf").arg(kAppName);
-  const auto fallback = QStringLiteral("%1/%2").arg(Settings::UserDir, name);
+  const auto fallback = QStringLiteral("%1/%2").arg(Settings::userDir(), name);
 
   // applicationDirPath() warns if called before the app object exists
   if (QCoreApplication::instance() == nullptr) {

@@ -4,6 +4,7 @@
  */
 #include "common/I18N.h"
 #include "common/NetworkProtocol.h"
+#include "common/RuntimeContext.h"
 #include "common/Settings.h"
 #include "gui/config/Screen.h"
 #include "gui/config/ScreenList.h"
@@ -16,11 +17,13 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QFileInfo>
 #include <QListWidget>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QUuid>
 #include <QtTest>
 
 class EditorTransactionTests : public QObject
@@ -186,6 +189,14 @@ int main(int argc, char **argv)
   QTemporaryDir directory;
   if (!directory.isValid())
     return 1;
+  // COMPLETE-R1 isolation lineage: preserve all inherited assertions and fixtures.
+  QString isolationError;
+  if (!synergy::runtime::configureIsolatedRuntime(
+          {QFileInfo(directory.path()).canonicalFilePath(),
+           "ts-complete-" + QUuid::createUuid().toString(QUuid::WithoutBraces)},
+          &isolationError
+      ))
+    return 2;
   qputenv("XDG_CONFIG_HOME", directory.path().toUtf8());
   qputenv("XDG_STATE_HOME", directory.path().toUtf8());
   QApplication app(argc, argv);

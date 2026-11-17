@@ -1,0 +1,335 @@
+/*
+ * SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
+ * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
+ */
+#include "common/RuntimeContext.h"
+#include "common/Settings.h"
+#include "gui/AppStyle.h"
+#include "gui/Motion.h"
+#include "gui/config/ServerConfig.h"
+#include "gui/dialogs/ActionDialog.h"
+#include "gui/dialogs/SettingsDialog.h"
+#include "gui/widgets/PageHost.h"
+#include <QAccessible>
+#include <QApplication>
+#include <QComboBox>
+#include <QDialog>
+#include <QDir>
+#include <QElapsedTimer>
+#include <QFileInfo>
+#include <QImage>
+#include <QLabel>
+#include <QPointer>
+#include <QPushButton>
+#include <QSignalSpy>
+#include <QStackedWidget>
+#include <QTabWidget>
+#include <QTemporaryDir>
+#include <QUuid>
+#include <QVBoxLayout>
+#include <QVariantAnimation>
+#include <QtTest>
+#include <memory>
+
+namespace {
+QStackedWidget *prepareHost(PageHost &host)
+{
+  auto *stack = new QStackedWidget(&host);
+  stack->setObjectName("pageStack");
+  auto *home = new QWidget;
+  home->setStyleSheet("background: #112244;");
+  stack->addWidget(home);
+  auto *layout = new QVBoxLayout(&host);
+  layout->addWidget(stack);
+  host.resize(600, 460);
+  host.setAttribute(Qt::WA_DontShowOnScreen);
+  host.show();
+  QCoreApplication::processEvents();
+  return stack;
+}
+QDialog *page(const QString &color)
+{
+  auto *dialog = new QDialog;
+  auto *layout = new QVBoxLayout(dialog);
+  auto *label = new QLabel("Motion fixture content");
+  label->setMinimumHeight(140);
+  layout->addWidget(label);
+  dialog->setStyleSheet("background:" + color + ";");
+  return dialog;
+}
+QList<QImage> collectFrames(QWidget &widget, int milliseconds = 240)
+{
+  QList<QImage> result;
+  result << widget.grab().toImage();
+  for (int elapsed = 0; elapsed < milliseconds; elapsed += 15) {
+    QTest::qWait(15);
+    result << widget.grab().toImage();
+  }
+  return result;
+}
+bool hasIntermediate(const QList<QImage> &frames)
+{
+  if (frames.size() < 3)
+    return false;
+  for (int i = 1; i + 1 < frames.size(); ++i)
+    if (frames[i] != frames.first() && frames[i] != frames.last())
+      return true;
+  return false;
+}
+void saveFrames(const QList<QImage> &frames, const QString &name)
+{
+  const auto path = qEnvironmentVariable("SYNERGY_R3_EVIDENCE_DIR");
+  if (path.isEmpty())
+    return;
+  QDir().mkpath(path + "/motion");
+  for (int i = 0; i < frames.size(); ++i)
+    frames[i].save(path + "/motion/" + name + QStringLiteral("-%1.png").arg(i, 2, 10, QLatin1Char('0')));
+}
+} // namespace
+class R3MotionContractTests : public QObject
+{
+  Q_OBJECT
+private Q_SLOTS:
+  void init()
+  {
+    synergy::gui::setMotionModeForTesting(synergy::gui::MotionMode::Animated);
+  }
+  void cleanup()
+  {
+    synergy::gui::setMotionModeForTesting(synergy::gui::MotionMode::Reduced);
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+  }
+  void pagePushAndBackHaveNonEndpointFrames();
+  void buttonStandardActivation_data();
+  void buttonStandardActivation();
+  void tabAndOptionTransitionsPaint();
+  void interruptionResizeBackAndDestruction();
+  void reducedMotionSettlesImmediately();
+};
+void R3MotionContractTests::pagePushAndBackHaveNonEndpointFrames()
+{
+  PageHost host;
+  auto *stack = prepareHost(host);
+  const auto geometry = host.geometry();
+  auto *editor = page("#aa4422");
+  host.push(editor);
+  auto *animation = host.findChild<QVariantAnimation *>("contentTransitionAnimation");
+  QVERIFY(animation);
+  QCOMPARE(animation->duration(), 160);
+  auto *overlay = host.findChild<QWidget *>("contentTransitionOverlay");
+  QVERIFY(overlay);
+  QVERIFY(overlay->testAttribute(Qt::WA_TransparentForMouseEvents));
+  const auto frames = collectFrames(host);
+  saveFrames(frames, "page-push");
+  QVERIFY2(hasIntermediate(frames), "Rendered page push must include a frame distinct from both endpoints");
+  QCOMPARE(host.geometry(), geometry);
+  QVERIFY(host.hasEditor());
+  QVERIFY(stack->currentWidget() != stack->widget(0));
+  const auto finalHeight = host.preferredContentHeight(host.width());
+  QSignalSpy rejected(editor, &QDialog::rejected);
+  editor->reject();
+  QCOMPARE(rejected.count(), 1);
+  const auto backFrames = collectFrames(host);
+  saveFrames(backFrames, "page-back");
+  QVERIFY2(hasIntermediate(backFrames), "Back must paint actual intermediate frames");
+  QCOMPARE(stack->currentIndex(), 0);
+  QVERIFY(!host.hasEditor());
+  QCOMPARE(host.geometry(), geometry);
+  QVERIFY(finalHeight > 0);
+}
+void R3MotionContractTests::buttonStandardActivation_data()
+{
+  QTest::addColumn<QString>("activation");
+  for (const char *name : {"mouse", "Space", "Return", "Enter", "accessible-press", "click"})
+    QTest::newRow(name) << QString::fromLatin1(name);
+}
+void R3MotionContractTests::buttonStandardActivation()
+{
+  QFETCH(QString, activation);
+  QDialog dialog;
+  auto *layout = new QVBoxLayout(&dialog);
+  auto *button = new QPushButton("Activate once");
+  button->setDefault(true);
+  layout->addWidget(button);
+  dialog.resize(240, 100);
+  dialog.setAttribute(Qt::WA_DontShowOnScreen);
+  dialog.show();
+  button->setFocus();
+  QCoreApplication::processEvents();
+  const auto geometry = button->geometry();
+  auto *focus = QApplication::focusWidget();
+  QSignalSpy clicked(button, &QPushButton::clicked);
+  if (activation == "mouse")
+    QTest::mouseClick(button, Qt::LeftButton);
+  else if (activation == "Space")
+    QTest::keyClick(button, Qt::Key_Space);
+  else if (activation == "Return")
+    QTest::keyClick(button, Qt::Key_Return);
+  else if (activation == "Enter")
+    QTest::keyClick(button, Qt::Key_Enter);
+  else if (activation == "accessible-press") {
+    // Qt may implement AX press using animateClick and its intrinsic release delay.
+    // Compare stock scheduling under Reduced, then require Animated adds no delay.
+    synergy::gui::setMotionModeForTesting(synergy::gui::MotionMode::Reduced);
+    QPushButton baseline("Stock accessible baseline");
+    baseline.setAttribute(Qt::WA_DontShowOnScreen);
+    baseline.show();
+    auto *baselineInterface = QAccessible::queryAccessibleInterface(&baseline);
+    QVERIFY(baselineInterface && baselineInterface->actionInterface());
+    QSignalSpy baselineClicked(&baseline, &QPushButton::clicked);
+    QElapsedTimer baselineClock;
+    baselineClock.start();
+    baselineInterface->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+    QTRY_COMPARE_WITH_TIMEOUT(baselineClicked.count(), 1, 250);
+    const auto baselineMilliseconds = baselineClock.elapsed();
+    baseline.hide();
+    button->setFocus();
+    focus = QApplication::focusWidget();
+    synergy::gui::setMotionModeForTesting(synergy::gui::MotionMode::Animated);
+    auto *interface = QAccessible::queryAccessibleInterface(button);
+    QVERIFY(interface);
+    auto *actions = interface->actionInterface();
+    QVERIFY(actions);
+    QVERIFY(actions->actionNames().contains(QAccessibleActionInterface::pressAction()));
+    QElapsedTimer activationClock;
+    activationClock.start();
+    actions->doAction(QAccessibleActionInterface::pressAction());
+    QTRY_COMPARE_WITH_TIMEOUT(clicked.count(), 1, 250);
+    QVERIFY2(
+        activationClock.elapsed() <= baselineMilliseconds + 60,
+        "Motion adds delay beyond stock Qt accessible activation scheduling"
+    );
+  } else
+    button->click();
+  // Business action must already be routed before waiting for feedback frames.
+  QCOMPARE(clicked.count(), 1);
+  auto *animation = button->findChild<QVariantAnimation *>("buttonFeedbackAnimation");
+  QVERIFY(animation);
+  QCOMPARE(animation->duration(), 110);
+  auto *overlay = button->findChild<QWidget *>("buttonFeedbackOverlay");
+  QVERIFY(overlay);
+  QVERIFY(overlay->testAttribute(Qt::WA_TransparentForMouseEvents));
+  const auto frames = collectFrames(*button, 180);
+  saveFrames(frames, activation);
+  QVERIFY2(hasIntermediate(frames), "Standard activation must paint a non-endpoint feedback frame");
+  QCOMPARE(clicked.count(), 1);
+  QCOMPARE(button->geometry(), geometry);
+  QCOMPARE(QApplication::focusWidget(), focus);
+}
+void R3MotionContractTests::tabAndOptionTransitionsPaint()
+{
+  synergy::gui::ServerConfig config;
+  SettingsDialog dialog(nullptr, config);
+  dialog.setAttribute(Qt::WA_DontShowOnScreen);
+  dialog.show();
+  QCoreApplication::processEvents();
+  auto *tabs = dialog.findChild<QTabWidget *>();
+  QVERIFY(tabs && tabs->count() > 1);
+  tabs->setCurrentIndex(1);
+  const auto frames = collectFrames(dialog);
+  saveFrames(frames, "active-tab");
+  QVERIFY2(hasIntermediate(frames), "Actual tab transition must interpolate rendered frames");
+  QCOMPARE(tabs->currentIndex(), 1);
+  tabs->setCurrentIndex(0);
+  QTest::qWait(180);
+  auto *options = dialog.findChild<QComboBox *>("comboTrayIcon");
+  QVERIFY(options && options->count() == 2);
+  const int target = options->currentIndex() == 0 ? 1 : 0;
+  options->setCurrentIndex(target);
+  const auto optionFrames = collectFrames(dialog);
+  saveFrames(optionFrames, "option-change");
+  QVERIFY2(hasIntermediate(optionFrames), "Actual option change must interpolate rendered frames");
+  QCOMPARE(options->currentIndex(), target);
+  dialog.reject();
+}
+void R3MotionContractTests::interruptionResizeBackAndDestruction()
+{
+  auto host = std::make_unique<PageHost>();
+  auto *stack = prepareHost(*host);
+  auto *parent = page("#447722");
+  auto *child = page("#2255aa");
+  QPointer<QDialog> parentLifetime(parent), childLifetime(child);
+  host->push(parent);
+  QTest::qWait(25);
+  host->push(child);
+  QTest::qWait(25);
+  host->resize(540, 420);
+  QSignalSpy childRejected(child, &QDialog::rejected);
+  child->reject();
+  QCOMPARE(childRejected.count(), 1);
+  QTest::qWait(190);
+  QVERIFY(host->hasEditor());
+  QVERIFY(!parentLifetime.isNull());
+  QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+  QVERIFY(childLifetime.isNull());
+  QCOMPARE(host->findChildren<QWidget *>("contentTransitionOverlay").size(), 0);
+  QCOMPARE(host->width(), 540);
+  QVERIFY(stack->currentIndex() != 0);
+  parent->reject();
+  QTest::qWait(20);
+  host.reset();
+  QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+  QVERIFY(parentLifetime.isNull());
+  // Destroy an activated button while its feedback is in flight.
+  auto *button = new QPushButton("Destroy while animating");
+  button->setAttribute(Qt::WA_DontShowOnScreen);
+  button->show();
+  QPointer<QPushButton> tracked(button);
+  button->click();
+  delete button;
+  QTest::qWait(180);
+  QVERIFY(tracked.isNull());
+}
+void R3MotionContractTests::reducedMotionSettlesImmediately()
+{
+  PageHost host;
+  auto *stack = prepareHost(host);
+  host.push(page("#882244"));
+  QTest::qWait(25);
+  synergy::gui::setMotionModeForTesting(synergy::gui::MotionMode::Reduced);
+  QVERIFY(synergy::gui::reducedMotion());
+  QCoreApplication::processEvents();
+  QCOMPARE(host.findChildren<QWidget *>("contentTransitionOverlay").size(), 0);
+  auto *editor = page("#228844");
+  host.push(editor);
+  QCoreApplication::processEvents();
+  QVERIFY(host.hasEditor());
+  QCOMPARE(host.findChildren<QWidget *>("contentTransitionOverlay").size(), 0);
+  const auto first = host.grab().toImage();
+  QTest::qWait(50);
+  QCOMPARE(host.grab().toImage(), first);
+  editor->reject();
+  QCoreApplication::processEvents();
+  QCOMPARE(stack->count(), 2);
+  QPushButton button("Immediate");
+  QSignalSpy clicked(&button, &QPushButton::clicked);
+  button.click();
+  QCOMPARE(clicked.count(), 1);
+  QCoreApplication::processEvents();
+  for (auto *animation : button.findChildren<QVariantAnimation *>())
+    QVERIFY(animation->state() != QAbstractAnimation::Running);
+}
+int main(int argc, char **argv)
+{
+  QTemporaryDir directory;
+  if (!directory.isValid())
+    return 1;
+  const auto root = QFileInfo(directory.path()).canonicalFilePath();
+  QString error;
+  if (!synergy::runtime::configureIsolatedRuntime(
+          {root, "tsr3-" + QUuid::createUuid().toString(QUuid::WithoutBraces)}, &error
+      ))
+    return 2;
+  QApplication application(argc, argv);
+  Settings::setSettingsFile(root + "/user/motion.conf");
+  Settings::setStateFile(root + "/state/app.state");
+  Settings::setValue(Settings::Core::ComputerName, "Motion-Fixture");
+  Settings::setValue(Settings::Core::Language, "en");
+  Settings::setValue(Settings::Gui::AutoStartCore, false);
+  Settings::setValue(Settings::Gui::CheckForUpdates, false);
+  application.setStyleSheet(synergy::gui::appStyleSheet());
+  synergy::gui::installButtonFeedback();
+  R3MotionContractTests tests;
+  return QTest::qExec(&tests, argc, argv);
+}
+#include "R3MotionContractTests.moc"

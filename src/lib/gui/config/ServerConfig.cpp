@@ -13,6 +13,7 @@
 
 #include <QAbstractButton>
 #include <QPushButton>
+#include <QSaveFile>
 #include <QTextStream>
 namespace synergy::gui {
 
@@ -42,13 +43,40 @@ ServerConfig::ServerConfig(int columns, int rows) : m_screens(columns), m_column
 
 bool ServerConfig::save(const QString &fileName) const
 {
-  QFile file(fileName);
+  QString payload;
+  QTextStream staging(&payload);
+  staging << *this;
+  staging.flush();
+  if (staging.status() != QTextStream::Ok)
+    return false;
+
+  QSaveFile file(fileName);
   if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
     return false;
 
-  save(file);
-  file.close();
+  QTextStream output(&file);
+  output << payload;
+  output.flush();
+  if (output.status() != QTextStream::Ok || file.error() != QFileDevice::NoError) {
+    file.cancelWriting();
+    return false;
+  }
+  return file.commit();
+}
 
+bool ServerConfig::isValidForSerialization() const
+{
+  for (const auto &screen : screens()) {
+    if (screen.modifiers().size() != static_cast<int>(NumModifiers))
+      return false;
+    for (const int target : screen.modifiers())
+      if (target < static_cast<int>(DefaultMod) || target >= static_cast<int>(NumModifiers))
+        return false;
+  }
+  for (const auto &hotkey : hotkeys())
+    for (const auto &action : hotkey.actions())
+      if (!action.isValidForSerialization())
+        return false;
   return true;
 }
 
@@ -220,6 +248,10 @@ int ServerConfig::adjacentScreenIndex(int idx, int deltaColumn, int deltaRow) co
 
 QTextStream &operator<<(QTextStream &outStream, const ServerConfig &config)
 {
+  if (!config.isValidForSerialization()) {
+    outStream.setStatus(QTextStream::WriteFailed);
+    return outStream;
+  }
   outStream << "section: screens" << '\n';
 
   for (const Screen &s : config.screens()) {

@@ -185,13 +185,13 @@ void MainWindow::updateModeControlLabels()
   if (isServer) {
     startText = tr("Start");
     stopText = tr("Stop");
-    startIcon = QIcon::fromTheme(QStringLiteral("system-run"));
-    stopIcon = QIcon::fromTheme(QStringLiteral("process-stop"));
+    startIcon = synergy::gui::appIcon(QStringLiteral("system-run"));
+    stopIcon = synergy::gui::appIcon(QStringLiteral("process-stop"));
   } else {
     startText = tr("Connect");
     stopText = tr("Disconnect");
-    startIcon = QIcon::fromTheme(QStringLiteral("network-connect"));
-    stopIcon = QIcon::fromTheme(QStringLiteral("network-disconnect"));
+    startIcon = synergy::gui::appIcon(QStringLiteral("network-connect"));
+    stopIcon = synergy::gui::appIcon(QStringLiteral("network-disconnect"));
   }
 
   m_actionStartCore->setText(startText);
@@ -292,36 +292,45 @@ void MainWindow::updateScreenName()
 
 void MainWindow::showHostNameEditor()
 {
+  if (!Settings::isWritable() || m_coreProcess.processState() != ProcessState::Stopped || !ui->lineEditName->isHidden())
+    return;
+  ui->lineEditName->setText(Settings::value(Settings::Core::ComputerName).toString());
   ui->lineEditName->show();
+  ui->btnSaveName->show();
+  ui->btnCancelName->show();
   ui->lblComputerName->hide();
   ui->btnEditName->hide();
   toggleCanRunCore(false);
   ui->lineEditName->setFocus();
+  ui->lineEditName->selectAll();
+}
+
+void MainWindow::cancelHostNameEdit()
+{
+  ui->lineEditName->setText(Settings::value(Settings::Core::ComputerName).toString());
+  ui->lineEditName->hide();
+  ui->btnSaveName->hide();
+  ui->btnCancelName->hide();
+  ui->lblComputerName->show();
+  ui->btnEditName->setVisible(m_coreProcess.processState() == ProcessState::Stopped);
+  toggleCanRunCore(canRunCore());
 }
 
 void MainWindow::setHostName()
 {
-  ui->lineEditName->hide();
-  ui->lblComputerName->show();
-  ui->btnEditName->show();
-  toggleCanRunCore(canRunCore());
-
-  QString text = ui->lineEditName->text();
-  const auto screenName = Settings::value(Settings::Core::ComputerName).toString();
-
-  if (text == screenName)
+  if (ui->lineEditName->isHidden() || !Settings::isWritable() || m_coreProcess.processState() != ProcessState::Stopped)
     return;
 
+  const QString text = ui->lineEditName->text();
+  const auto screenName = Settings::value(Settings::Core::ComputerName).toString();
+  if (text == screenName) {
+    cancelHostNameEdit();
+    return;
+  }
+
   const bool isServer = ui->rbModeServer->isChecked();
-  bool existingScreen = false;
-  if (isServer)
-    existingScreen = serverConfig().screenExists(text);
-
+  const bool existingScreen = isServer && serverConfig().screenExists(text);
   if (!ui->lineEditName->hasAcceptableInput() || text.isEmpty() || existingScreen) {
-    blockSignals(true);
-    ui->lineEditName->setText(screenName);
-    blockSignals(false);
-
     const auto title = tr("Invalid Screen Name");
     QString body;
     if (existingScreen) {
@@ -338,10 +347,11 @@ void MainWindow::setHostName()
     return;
   }
 
-  ui->lblComputerName->setText(ui->lineEditName->text());
-  Settings::setValue(Settings::Core::ComputerName, ui->lineEditName->text());
+  ui->lblComputerName->setText(text);
+  Settings::setValue(Settings::Core::ComputerName, text);
   if (isServer)
     serverConfig().updateServerName();
+  cancelHostNameEdit();
   applyConfig();
 }
 

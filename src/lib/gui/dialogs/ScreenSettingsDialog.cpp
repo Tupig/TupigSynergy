@@ -9,6 +9,7 @@
 #include "ScreenSettingsDialogDesign.h"
 #include "widgets/PageHost.h"
 
+#include "gui/StyleUtils.h"
 #include "gui/config/Screen.h"
 #include "validators/AliasValidator.h"
 #include "validators/ScreenNameValidator.h"
@@ -33,7 +34,7 @@ ScreenSettingsDialog::ScreenSettingsDialog(
 {
 
   ui->setupUi(this);
-  ui->listAliases->setMaximumHeight(100);
+
   for (auto *form : findChildren<QFormLayout *>()) {
     int labelWidth = 120;
     for (int row = 0; row < form->rowCount(); ++row) {
@@ -77,15 +78,36 @@ ScreenSettingsDialog::ScreenSettingsDialog(
   const auto valAlias = new validators::AliasValidator(ui->lineAddAlias, valAliasError);
   ui->lineAddAlias->setValidator(valAlias);
 
-  for (int i = 0; i < m_screen->aliases().count(); i++)
-    new QListWidgetItem(m_screen->aliases()[i], ui->listAliases);
+  // An empty validation message is not a blank form row. Keep the validator's
+  // actual text and save rules, showing the row only when there is an error.
+  const auto showNameError = [this] { ui->lblNameError->setVisible(!ui->lblNameError->text().isEmpty()); };
+  const auto showAliasError = [this] { ui->lblAliasError->setVisible(!ui->lblAliasError->text().isEmpty()); };
+  connect(ui->lineNameEdit, &QLineEdit::textChanged, this, showNameError);
+  connect(ui->lineAddAlias, &QLineEdit::textChanged, this, showAliasError);
+  showNameError();
+  showAliasError();
 
-  ui->comboShift->setCurrentIndex(m_screen->modifier(static_cast<int>(Shift)));
-  ui->comboCtrl->setCurrentIndex(m_screen->modifier(static_cast<int>(Ctrl)));
-  ui->comboAlt->setCurrentIndex(m_screen->modifier(static_cast<int>(Alt)));
-  ui->comboMeta->setCurrentIndex(m_screen->modifier(static_cast<int>(Meta)));
-  ui->comboSuper->setCurrentIndex(m_screen->modifier(static_cast<int>(Super)));
-  ui->comboAltGr->setCurrentIndex(m_screen->modifier(static_cast<int>(AltGr)));
+  for (int i = 0; i < m_screen->aliases().count(); i++)
+    new QListWidgetItem(
+        synergy::gui::appIcon(QStringLiteral("video-display")), m_screen->aliases()[i], ui->listAliases
+    );
+
+  const QList<QComboBox *> modifiers{ui->comboShift, ui->comboCtrl,  ui->comboAlt,
+                                     ui->comboMeta,  ui->comboSuper, ui->comboAltGr};
+  for (int source = 0; source < modifiers.size(); ++source) {
+    auto *field = modifiers[source];
+    const int value = m_screen->modifier(source);
+    if (field->findData(value) < 0) {
+      field->addItem(tr("Unsupported modifier (%1) — read-only").arg(value), value);
+      m_readOnly = true;
+    }
+    field->setCurrentIndex(field->findData(value));
+  }
+  if (m_readOnly) {
+    for (auto *field : modifiers)
+      field->setEnabled(false);
+    ui->buttonBox->button(QDialogButtonBox::Save)->setEnabled(false);
+  }
 
   ui->chkDeadTopLeft->setChecked(m_screen->switchCorner(static_cast<int>(TopLeft)));
   ui->chkDeadTopRight->setChecked(m_screen->switchCorner(static_cast<int>(TopRight)));
@@ -108,6 +130,8 @@ ScreenSettingsDialog::ScreenSettingsDialog(
 
 void ScreenSettingsDialog::accept()
 {
+  if (m_readOnly)
+    return;
   if (ui->lineNameEdit->text().isEmpty()) {
     PageHost::present(
         this, new QMessageBox(
@@ -143,12 +167,12 @@ void ScreenSettingsDialog::accept()
   m_screen->setName(ui->lineNameEdit->text());
   m_screen->aliases() = aliases;
 
-  m_screen->setModifier(Shift, ui->comboShift->currentIndex());
-  m_screen->setModifier(Ctrl, ui->comboCtrl->currentIndex());
-  m_screen->setModifier(Alt, ui->comboAlt->currentIndex());
-  m_screen->setModifier(Meta, ui->comboMeta->currentIndex());
-  m_screen->setModifier(Super, ui->comboSuper->currentIndex());
-  m_screen->setModifier(AltGr, ui->comboAltGr->currentIndex());
+  m_screen->setModifier(Shift, ui->comboShift->currentData().toInt());
+  m_screen->setModifier(Ctrl, ui->comboCtrl->currentData().toInt());
+  m_screen->setModifier(Alt, ui->comboAlt->currentData().toInt());
+  m_screen->setModifier(Meta, ui->comboMeta->currentData().toInt());
+  m_screen->setModifier(Super, ui->comboSuper->currentData().toInt());
+  m_screen->setModifier(AltGr, ui->comboAltGr->currentData().toInt());
 
   m_screen->setSwitchCorner(TopLeft, ui->chkDeadTopLeft->isChecked());
   m_screen->setSwitchCorner(TopRight, ui->chkDeadTopRight->isChecked());
@@ -168,7 +192,9 @@ void ScreenSettingsDialog::addAlias()
 {
   if (!ui->lineAddAlias->text().isEmpty() &&
       ui->listAliases->findItems(ui->lineAddAlias->text(), Qt::MatchFixedString).isEmpty()) {
-    new QListWidgetItem(ui->lineAddAlias->text(), ui->listAliases);
+    new QListWidgetItem(
+        synergy::gui::appIcon(QStringLiteral("video-display")), ui->lineAddAlias->text(), ui->listAliases
+    );
     ui->lineAddAlias->clear();
   }
 }

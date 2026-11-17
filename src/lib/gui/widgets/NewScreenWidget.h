@@ -18,6 +18,7 @@ class NewScreenWidget : public QLabel
 
 public:
   explicit NewScreenWidget(QWidget *parent);
+  void startDrag(QWidget *source);
 
 protected:
   void mousePressEvent(QMouseEvent *) override;

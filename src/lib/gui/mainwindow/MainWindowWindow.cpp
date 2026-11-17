@@ -9,6 +9,7 @@
 
 #include "MainWindow.h"
 #include "MainWindowDesign.h"
+#include "gui/AppMenus.h"
 
 #include "Diagnostic.h"
 #include "StyleUtils.h"
@@ -56,12 +57,16 @@
 #include <QMessageBox>
 #include <QNetworkInterface>
 #include <QPointer>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
+#include <QResizeEvent>
+#include <QScopedValueRollback>
 #include <QScreen>
 #include <QScrollBar>
 #include <QShowEvent>
+#include <QVBoxLayout>
 
 #include <memory>
 #include <thread>
@@ -74,100 +79,153 @@ using namespace synergy::gui;
 
 void MainWindow::createMenuBar()
 {
-  m_menuFile->addAction(m_actionStartCore);
-  m_menuFile->addAction(m_actionRestartCore);
-  m_menuFile->addAction(m_actionStopCore);
-  m_menuFile->addSeparator();
-  m_menuFile->addAction(m_actionQuit);
-
-  auto *logAction = new QAction(tr("Show &Log"), this);
-  logAction->setCheckable(true);
-  logAction->setChecked(Settings::value(Settings::Gui::LogExpanded).toBool());
-  connect(logAction, &QAction::toggled, this, &MainWindow::toggleLogVisible);
-  connect(m_logDock, &LogPanel::collapsedChanged, logAction, [logAction](bool collapsed) {
-    QSignalBlocker blocker(logAction);
-    logAction->setChecked(!collapsed);
+  m_actionLog->setCheckable(true);
+  m_actionLog->setChecked(Settings::value(Settings::Gui::LogExpanded).toBool());
+  connect(m_actionLog, &QAction::toggled, this, &MainWindow::toggleLogVisible);
+  connect(m_logDock, &LogPanel::collapsedChanged, m_actionLog, [this](bool collapsed) {
+    QSignalBlocker blocker(m_actionLog);
+    m_actionLog->setChecked(!collapsed);
   });
-  m_menuView->addAction(logAction);
 
-  // macOS moves actions that carry a menu role into the application menu.
-  // A menu holding only such actions renders empty, so macOS gets no Edit
-  // menu at all; its Preferences action rides on the Help menu and is merged
-  // out, leaving "Get help" as the only remaining Help item. Qt prepends each
-  // merged action, hence the reversed order: the application menu shows
-  // "Check for Updates" above "Clear settings".
-  if (synergy::platform::isMac()) {
-    m_menuHelp->addAction(m_actionReportBug);
-    m_menuHelp->addAction(m_actionSettings);
-    m_menuHelp->addAction(m_actionAbout);
-    m_menuHelp->addAction(m_actionClearSettings);
-    m_menuHelp->addAction(m_actionCheckForUpdates);
-  } else {
-    m_menuEdit->addAction(m_actionSettings);
-    m_menuHelp->addAction(m_actionCheckForUpdates);
-    m_menuHelp->addAction(m_actionAbout);
-    m_menuHelp->addAction(m_actionReportBug);
-    m_menuHelp->addSeparator();
-    m_menuHelp->addAction(m_actionClearSettings);
-  }
+  auto *bar = new QMenuBar(this);
+  const AppMenuActions actions{m_actionRestore, m_actionStartCore, m_actionRestartCore,   m_actionStopCore,
+                               m_actionQuit,    m_actionSettings,  m_actionClearSettings, m_actionCheckForUpdates,
+                               m_actionAbout,   m_actionLog,       m_actionReportBug};
+  populateMainMenus(bar, actions, synergy::platform::isMac() ? MenuPlatform::MacOS : MenuPlatform::WindowsLinux);
+  m_menuFile = bar->findChild<QMenu *>(QStringLiteral("menuFile"));
+  m_menuEdit = bar->findChild<QMenu *>(QStringLiteral("menuEdit"));
+  m_menuView = bar->findChild<QMenu *>(QStringLiteral("menuView"));
+  m_menuHelp = bar->findChild<QMenu *>(QStringLiteral("menuHelp"));
+  setMenuBar(bar);
+}
 
-  auto menuBar = new QMenuBar(this);
-  menuBar->addMenu(m_menuFile);
-  if (!synergy::platform::isMac())
-    menuBar->addMenu(m_menuEdit);
-  menuBar->addMenu(m_menuView);
-  menuBar->addMenu(m_menuHelp);
+void MainWindow::fitToCurrentPage()
+{
+  if (m_fittingPage || !m_pageHost)
+    return;
+  const QScopedValueRollback<bool> fitting(m_fittingPage, true);
+  ui->updateShortcutPresentation(width());
+  const int preferred = m_pageHost->preferredContentHeight(m_pageHost->width());
+  const auto *currentScreen = screen() ? screen() : QGuiApplication::primaryScreen();
+  const int available = currentScreen ? currentScreen->availableGeometry().height() : 800;
+  const int frame = qMax(0, frameGeometry().height() - height());
+  const int menuHeight = menuBar()->isNativeMenuBar() ? 0 : menuBar()->sizeHint().height();
+  const int chrome = ui->pageBar->height() + ui->statusBar->height() + menuHeight;
+  const int bodyCap = qMax(1, qMin(660, available - chrome - frame));
+  const int target = chrome + qMin(preferred, bodyCap);
+  if (height() != target)
+    resize(width(), target);
+}
 
-  setMenuBar(menuBar);
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+  QMainWindow::resizeEvent(event);
+  ui->updateShortcutPresentation(event->size().width());
+  if (m_pageHost)
+    m_pageHost->requestContentFit();
+}
+
+synergy::gui::update::UpdateChecker *MainWindow::createUpdateChecker()
+{
+  return new synergy::gui::update::UpdateChecker(this);
 }
 
 void MainWindow::checkForUpdates(bool manual)
 {
-  auto *checker = new synergy::gui::update::UpdateChecker(this);
-  const auto release = [checker]() { checker->deleteLater(); };
+  QPointer<synergy::gui::update::UpdateChecker> checker = createUpdateChecker();
+  if (!checker)
+    return;
+  checker->setParent(this);
+  const auto finished = std::make_shared<bool>(false);
+  QPointer<MessagePage> checking;
+  if (manual) {
+    checking =
+        new MessagePage(this, MessagePage::Kind::Information, tr("Check for Updates"), tr("Checking for updates…"));
+    auto *progress = new QProgressBar(checking);
+    progress->setRange(0, 0);
+    checking->addContentWidget(progress);
+    auto *cancel = checking->addButton(tr("Cancel"));
+    connect(cancel, &QPushButton::clicked, checking, &QDialog::reject);
+    const auto cancelCheck = [this, checker, finished] {
+      if (*finished || !checker)
+        return;
+      *finished = true;
+      // Abort may emit failure synchronously; remove result handlers first.
+      disconnect(checker.data(), nullptr, this, nullptr);
+      delete checker.data();
+    };
+    connect(checking, &QDialog::rejected, this, cancelCheck);
+    connect(checking, &QObject::destroyed, this, cancelCheck);
+    showPage(checking);
+  }
+  const auto release = [this, checker, checking, finished]() {
+    if (*finished || !checker)
+      return false;
+    *finished = true;
+    disconnect(checker.data(), nullptr, this, nullptr);
+    checker->deleteLater();
+    if (checking)
+      checking->accept();
+    return true;
+  };
 
   connect(
-      checker, &synergy::gui::update::UpdateChecker::updateAvailable, this,
+      checker.data(), &synergy::gui::update::UpdateChecker::updateAvailable, this,
       [this, release](const synergy::gui::update::UpdateInfo &info) {
+        if (!release())
+          return;
         showPage(new synergy::gui::update::UpdateDialog(info, this));
-        release();
       }
   );
   connect(
-      checker, &synergy::gui::update::UpdateChecker::noUpdate, this,
+      checker.data(), &synergy::gui::update::UpdateChecker::noUpdate, this,
       [this, manual, release](const QString &version) {
+        if (!release())
+          return;
         if (manual) {
-          showPage(new QMessageBox(
-              QMessageBox::Information, tr("No Updates"), tr("You are running the latest version (%1).").arg(version),
-              QMessageBox::Ok, this
-          ));
+          auto *page = new MessagePage(
+              this, MessagePage::Kind::Information, tr("No Updates"),
+              tr("You are running the latest version (%1).").arg(version)
+          );
+          auto *ok = page->addButton(tr("OK"), true);
+          connect(ok, &QPushButton::clicked, page, &QDialog::accept);
+          showPage(page);
         }
-        release();
       }
   );
-  connect(checker, &synergy::gui::update::UpdateChecker::failed, this, [this, manual, release](const QString &reason) {
-    if (manual) {
-      auto *page = new MessagePage(this, MessagePage::Kind::Warning, tr("Update Check Failed"), reason);
-      auto *ok = page->addButton(tr("OK"), true);
-      connect(ok, &QPushButton::clicked, page, &QDialog::accept);
-      showPage(page);
-    } else {
-      qWarning().noquote() << "update check failed:" << reason;
-    }
-    release();
-  });
+  connect(
+      checker.data(), &synergy::gui::update::UpdateChecker::failed, this,
+      [this, manual, release](const QString &reason) {
+        if (!release())
+          return;
+        if (manual) {
+          auto *page = new MessagePage(this, MessagePage::Kind::Warning, tr("Update Check Failed"), reason);
+          auto *close = page->addButton(tr("Close"));
+          connect(close, &QPushButton::clicked, page, &QDialog::reject);
+          auto *retry = page->addButton(tr("Retry"), true);
+          connect(retry, &QPushButton::clicked, this, [this, page, retry] {
+            retry->setEnabled(false);
+            page->accept();
+            checkForUpdates(true);
+          });
+          showPage(page);
+        } else {
+          qWarning().noquote() << "update check failed:" << reason;
+        }
+      }
+  );
 
-  checker->checkForUpdates();
+  if (checker && !*finished)
+    checker->checkForUpdates();
 }
 
 void MainWindow::setupTrayIcon()
 {
-  auto trayMenu = new QMenu(this);
-  trayMenu->addActions(
-      {m_actionStartCore, m_actionRestartCore, m_actionStopCore, m_actionMinimize, m_actionRestore, m_actionTrayQuit}
-  );
-  trayMenu->insertSeparator(m_actionMinimize);
-  trayMenu->insertSeparator(m_actionTrayQuit);
+  auto *trayMenu = new QMenu(this);
+  const AppMenuActions actions{m_actionRestore, m_actionStartCore, m_actionRestartCore,   m_actionStopCore,
+                               m_actionQuit,    m_actionSettings,  m_actionClearSettings, m_actionCheckForUpdates,
+                               m_actionAbout,   m_actionLog,       m_actionReportBug};
+  populateTrayMenu(trayMenu, actions);
   m_trayIcon->setContextMenu(trayMenu);
 
   setTrayIcon();
@@ -305,15 +363,12 @@ void MainWindow::changeEvent(QEvent *e)
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
-  if (obj != ui->lineEditName || event->type() != QEvent::KeyPress)
+  if ((obj != ui->lineEditName && obj != ui->btnSaveName && obj != ui->btnCancelName) || ui->lineEditName->isHidden() ||
+      event->type() != QEvent::KeyPress)
     return false;
   if (const auto keyEvent = static_cast<QKeyEvent *>(event); keyEvent->key() != Qt::Key_Escape)
     return false;
-  ui->lineEditName->hide();
-  ui->lblComputerName->show();
-  ui->btnEditName->show();
-  ui->lineEditName->setText(Settings::value(Settings::Core::ComputerName).toString());
-  toggleCanRunCore(canRunCore());
+  cancelHostNameEdit();
   return true;
 }
 
@@ -326,7 +381,7 @@ void MainWindow::showAndActivate()
   showNormal();
   raise();
   activateWindow();
-  m_actionRestore->setVisible(false);
+  m_actionRestore->setVisible(true);
   m_actionMinimize->setVisible(true);
   if (!wasVisible)
     restoreWindow();

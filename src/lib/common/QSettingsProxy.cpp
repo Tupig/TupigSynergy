@@ -6,6 +6,7 @@
 
 #include "QSettingsProxy.h"
 
+#include "common/RuntimeContext.h"
 #include "common/Settings.h"
 
 /**
@@ -16,7 +17,7 @@
  */
 QString getSystemSettingsBaseDir()
 {
-  return Settings::SystemDir;
+  return Settings::systemDir();
 }
 
 //
@@ -29,7 +30,7 @@ void QSettingsProxy::load(const QString &fileName)
     m_pSettings.get()->deleteLater();
 
   if (fileName.isEmpty())
-    m_pSettings = std::make_unique<QSettings>(QSettings::NativeFormat, QSettings::UserScope, kAppName, kAppName);
+    m_pSettings = synergy::runtime::legacySettings(QSettings::UserScope);
   else
     m_pSettings = std::make_unique<QSettings>(fileName, QSettings::IniFormat);
 }

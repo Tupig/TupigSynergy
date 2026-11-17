@@ -4,6 +4,7 @@
  */
 
 #include "AboutDialogDesign.h"
+#include "gui/StyleUtils.h"
 
 #include <QCoreApplication>
 #include <QFrame>
@@ -24,7 +25,7 @@ void Ui::AboutDialog::setupUi(QDialog *dialog)
     dialog->setObjectName(QStringLiteral("AboutDialog"));
   dialog->setWindowModality(Qt::ApplicationModal);
   dialog->resize(560, 620);
-  dialog->setWindowIcon(QIcon::fromTheme(QStringLiteral("help-about")));
+  dialog->setWindowIcon(synergy::gui::appIcon(QStringLiteral("help-about")));
   dialog->setModal(true);
 
   auto *verticalLayout = new QVBoxLayout(dialog);
@@ -47,6 +48,7 @@ void Ui::AboutDialog::setupUi(QDialog *dialog)
 
   frameLogo = new QGroupBox(scrollAreaWidgetContents);
   frameLogo->setObjectName(QStringLiteral("frameLogo"));
+  frameLogo->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   auto *gridLayout = new QVBoxLayout(frameLogo);
   gridLayout->setSpacing(8);
   gridLayout->setObjectName(QStringLiteral("gridLayout"));
@@ -60,7 +62,7 @@ void Ui::AboutDialog::setupUi(QDialog *dialog)
 
   lblName = new QLabel(frameLogo);
   lblName->setObjectName(QStringLiteral("lblName"));
-  lblName->setMinimumSize(QSize(0, 74));
+  lblName->setFixedHeight(32);
   lblName->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
   gridLayout->addWidget(lblName);
 
@@ -106,8 +108,9 @@ void Ui::AboutDialog::setupUi(QDialog *dialog)
 
   btnCopyVersion = new QPushButton(widget_2);
   btnCopyVersion->setObjectName(QStringLiteral("btnCopyVersion"));
-  btnCopyVersion->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy")));
+  btnCopyVersion->setIcon(synergy::gui::appIcon(QStringLiteral("edit-copy")));
   btnCopyVersion->setFlat(true);
+  btnCopyVersion->setProperty("small", true);
   horizontalLayout->addWidget(btnCopyVersion);
 
   auto *horizontalSpacer = new QSpacerItem(8, 0, QSizePolicy::Expanding, QSizePolicy::Minimum);
@@ -119,6 +122,7 @@ void Ui::AboutDialog::setupUi(QDialog *dialog)
 
   groupBox = new QGroupBox(scrollAreaWidgetContents);
   groupBox->setObjectName(QStringLiteral("groupBox"));
+  groupBox->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   auto *verticalLayout_2 = new QVBoxLayout(groupBox);
   verticalLayout_2->setSpacing(8);
   verticalLayout_2->setObjectName(QStringLiteral("verticalLayout_2"));
@@ -138,6 +142,7 @@ void Ui::AboutDialog::setupUi(QDialog *dialog)
 
   groupLicenses = new QGroupBox(scrollAreaWidgetContents);
   groupLicenses->setObjectName(QStringLiteral("groupLicenses"));
+  groupLicenses->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   auto *licensesLayout = new QVBoxLayout(groupLicenses);
   licensesLayout->setSpacing(8);
   licensesLayout->setObjectName(QStringLiteral("licensesLayout"));
@@ -151,9 +156,6 @@ void Ui::AboutDialog::setupUi(QDialog *dialog)
   licensesLayout->addWidget(linkGpl);
 
   verticalLayout_4->addWidget(groupLicenses);
-
-  auto *verticalSpacer = new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
-  verticalLayout_4->addItem(verticalSpacer);
 
   scrollArea->setWidget(scrollAreaWidgetContents);
   verticalLayout->addWidget(scrollArea);
@@ -169,7 +171,7 @@ void Ui::AboutDialog::setupUi(QDialog *dialog)
 
   btnOk = new QPushButton(widget);
   btnOk->setObjectName(QStringLiteral("btnOk"));
-  btnOk->setIcon(QIcon::fromTheme(QStringLiteral("window-close")));
+  btnOk->setIcon(synergy::gui::appIcon(QStringLiteral("window-close")));
   verticalSpacerLayout->addWidget(btnOk);
 
   verticalLayout->addWidget(widget);
@@ -182,9 +184,13 @@ void Ui::AboutDialog::retranslateUi(QDialog *dialog)
   dialog->setWindowTitle(QCoreApplication::translate("AboutDialog", "About %1"));
   frameLogo->setTitle(QString());
   label->setText(QCoreApplication::translate("AboutDialog", "Version:"));
+  btnCopyVersion->setText(QCoreApplication::translate("AboutDialog", "Copy"));
   btnCopyVersion->setToolTip(QCoreApplication::translate("AboutDialog", "Copy version information"));
   groupBox->setTitle(QString());
   lblImportantDevs->setText(QCoreApplication::translate("AboutDialog", "Important Developers"));
   groupLicenses->setTitle(QString());
+  linkGpl->setText(
+      QStringLiteral("<a href=\"https://www.gnu.org/licenses/old-licenses/gpl-2.0.html\">GNU GPL Version 2</a>")
+  );
   btnOk->setText(QCoreApplication::translate("AboutDialog", "&Close"));
 }

@@ -7,9 +7,11 @@
  */
 
 #include "SettingsDialog.h"
+#include "FingerprintDialog.h"
 #include "SettingsDialogDesign.h"
 #include "common/LogLevel.h"
 #include "common/PlatformInfo.h"
+#include "gui/StyleUtils.h"
 #include "widgets/PageHost.h"
 
 #include "common/Constants.h"
@@ -36,8 +38,10 @@
 #include <QLabel>
 #include <QLayoutItem>
 #include <QListView>
+#include <QLocale>
 #include <QMessageBox>
 #include <QVariant>
+#include <algorithm>
 
 using namespace synergy::gui;
 
@@ -48,7 +52,13 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
 {
 
   ui->setupUi(this);
-  setMinimumWidth(560);
+  const auto bindToggle = [](QCheckBox *visible, QGroupBox *proxy) {
+    connect(visible, &QCheckBox::toggled, proxy, &QGroupBox::setChecked);
+    connect(proxy, &QGroupBox::toggled, visible, &QCheckBox::setChecked);
+  };
+  bindToggle(ui->cbLogToFile, ui->groupLogToFile);
+  bindToggle(ui->cbTlsEnabled, ui->groupSecurity);
+  bindToggle(ui->cbServiceEnabled, ui->groupService);
 
   // these are enabled by the control next to them
   ui->lineCommandEnter->setEnabled(false);
@@ -59,8 +69,10 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
   m_originalLanguageSetting = Settings::value(Settings::Core::Language).toString();
   // set up the language combo
   I18N::reDetectLanguages();
-  ui->comboLanguage->addItems(I18N::detectedLanguages());
-  ui->comboLanguage->setCurrentText(I18N::toNativeName(I18N::currentLanguage()));
+  ui->comboLanguage->addItem(tr("Follow system"), QString());
+  for (const auto &language : I18N::detectedLanguages())
+    ui->comboLanguage->addItem(language, I18N::nativeTo639Name(language));
+  ui->comboLanguage->setCurrentIndex(ui->comboLanguage->findData(m_originalLanguageSetting));
   // 使用可测量的 Qt 列表弹层，避免 macOS 原生弹层按窄控件宽度截断语言名称。
   auto *languageView = new QListView(ui->comboLanguage);
   languageView->setTextElideMode(Qt::ElideNone);
@@ -72,8 +84,8 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
 
   updateText();
 
-  ui->comboTlsKeyLength->setItemIcon(0, QIcon::fromTheme(QStringLiteral("security-medium")));
-  ui->comboTlsKeyLength->setItemIcon(1, QIcon::fromTheme(QStringLiteral("security-high")));
+  ui->comboTlsKeyLength->setItemIcon(0, appIcon(QStringLiteral("security-medium")));
+  ui->comboTlsKeyLength->setItemIcon(1, appIcon(QStringLiteral("security-high")));
   ui->lblTlsCertInfo->setFixedSize(28, 28);
 
   ui->rbIconMono->setIcon(QIcon::fromTheme(QStringLiteral("%1-symbolic").arg(kRevFqdnName)));
@@ -102,18 +114,36 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
   }
 
   connect(ui->comboTrayIcon, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
-    ui->rbIconMono->setChecked(index == 1);
-    ui->rbIconColorful->setChecked(index == 0);
+    const bool mono = ui->comboTrayIcon->itemData(index).toBool();
+    ui->rbIconMono->setChecked(mono);
+    ui->rbIconColorful->setChecked(!mono);
   });
   connect(ui->rbIconMono, &QRadioButton::toggled, this, [this](bool mono) {
-    ui->comboTrayIcon->setCurrentIndex(mono ? 1 : 0);
+    ui->comboTrayIcon->setCurrentIndex(ui->comboTrayIcon->findData(mono));
   });
   connect(ui->rbIconColorful, &QRadioButton::toggled, this, [this](bool colorful) {
     if (colorful)
-      ui->comboTrayIcon->setCurrentIndex(0);
+      ui->comboTrayIcon->setCurrentIndex(ui->comboTrayIcon->findData(false));
   });
+  const auto bindBehavior = [this](QComboBox *combo, QRadioButton *first, QRadioButton *second) {
+    connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [combo, first, second](int index) {
+      const bool value = combo->itemData(index).toBool();
+      first->setChecked(!value);
+      second->setChecked(value);
+    });
+    connect(first, &QRadioButton::toggled, combo, [combo](bool checked) {
+      if (checked)
+        combo->setCurrentIndex(combo->findData(false));
+    });
+    connect(second, &QRadioButton::toggled, combo, [combo](bool checked) {
+      if (checked)
+        combo->setCurrentIndex(combo->findData(true));
+    });
+  };
+  bindBehavior(ui->comboStartBehavior, ui->rbShowOnStart, ui->rbAutoHide);
+  bindBehavior(ui->comboCloseBehavior, ui->rbExitOnClose, ui->rbCloseToTray);
   loadFromConfig();
-  ui->comboTrayIcon->setCurrentIndex(ui->rbIconMono->isChecked() ? 1 : 0);
+  ui->comboTrayIcon->setCurrentIndex(ui->comboTrayIcon->findData(ui->rbIconMono->isChecked()));
   logLevelChanged();
 
   adjustSize();
@@ -123,6 +153,11 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
 
   // 设计稿：标签列固定 120px，控件紧贴标签，剩余空间放到最右列。
   for (auto *grid : findChildren<QGridLayout *>()) {
+    if (grid->objectName() == QStringLiteral("logPathForm") ||
+        grid->objectName() == QStringLiteral("certificateForm")) {
+      grid->setColumnStretch(1, 1);
+      continue;
+    }
     if (grid->columnCount() != 2)
       continue;
     grid->setColumnStretch(0, 0);
@@ -159,7 +194,7 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
             }
           }
         }
-        source->setContentsMargins(12, 12, 12, 12);
+        source->setContentsMargins(0, 0, 0, 0);
         source->addWidget(card);
       }
     }
@@ -171,8 +206,28 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
     connect(
         scope, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SettingsDialog::setButtonBoxEnabledButtons
     );
+    scope->setFixedWidth(180);
     scope->setEnabled(Settings::isWritable());
+    scope->setProperty("originalScopeIndex", scope->currentIndex());
   }
+  const auto placeActions = [this] {
+    auto *page = ui->tabWidget->currentWidget();
+    QGroupBox *card = nullptr;
+    for (auto *candidate : page->findChildren<QGroupBox *>()) {
+      if (!candidate->isCheckable()) {
+        card = candidate;
+        break;
+      }
+    }
+    if (!card)
+      return;
+    if (ui->buttonBox->parentWidget()->layout())
+      ui->buttonBox->parentWidget()->layout()->removeWidget(ui->buttonBox);
+    card->layout()->addWidget(ui->buttonBox);
+    ui->buttonBox->show();
+  };
+  connect(ui->tabWidget, &QTabWidget::currentChanged, this, placeActions);
+  placeActions();
   // Align independently nested form rows, and recompute when translated labels change.
   updateText();
 }
@@ -186,7 +241,7 @@ void SettingsDialog::changeEvent(QEvent *e)
   }
 }
 
-void SettingsDialog::initConnections() const
+void SettingsDialog::initConnections()
 {
   connect(this, &SettingsDialog::shown, this, &SettingsDialog::showReadOnlyMessage, Qt::QueuedConnection);
 
@@ -204,19 +259,47 @@ void SettingsDialog::initConnections() const
   connect(ui->groupSecurity, &QGroupBox::toggled, this, &SettingsDialog::updateTlsControlsEnabled);
   connect(ui->groupService, &QGroupBox::toggled, this, &SettingsDialog::updateControls);
   connect(ui->btnTlsRegenCert, &QPushButton::clicked, this, &SettingsDialog::regenCertificates);
-  connect(
-      ui->comboTlsKeyLength, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-      &SettingsDialog::updateRequestedKeySize
-  );
+  connect(ui->btnViewFingerprint, &QPushButton::clicked, this, [this] {
+    const auto savedPath = Settings::value(Settings::Security::Certificate).toString();
+    const auto fingerprint = TlsUtility::certFingerprint(savedPath);
+    if (fingerprint.size() != 32) {
+      PageHost::present(
+          this, new QMessageBox(
+                    QMessageBox::Warning, tr("Certificate unavailable"),
+                    tr("The saved certificate does not contain a valid SHA-256 fingerprint."), QMessageBox::Ok, this
+                )
+      );
+      return;
+    }
+    PageHost::present(
+        this, new FingerprintDialog(
+                  this, {QCryptographicHash::Sha256, fingerprint}, FingerprintDialogMode::Local, {}, savedPath
+              )
+    );
+  });
   connect(ui->btnTlsCertPath, &QPushButton::clicked, this, &SettingsDialog::browseCertificatePath);
   connect(ui->btnBrowseLog, &QPushButton::clicked, this, &SettingsDialog::browseLogPath);
   connect(ui->groupLogToFile, &QGroupBox::toggled, this, &SettingsDialog::setLogToFile);
   connect(
       ui->comboLogLevel, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SettingsDialog::logLevelChanged
   );
-  connect(ui->comboLanguage, &QComboBox::currentTextChanged, this, [](const QString &lang) {
-    const auto shortName = I18N::nativeTo639Name(lang);
-    I18N::setLanguage(shortName);
+  connect(ui->comboLanguage, qOverload<int>(&QComboBox::currentIndexChanged), this, [this] {
+    auto language = ui->comboLanguage->currentData().toString();
+    if (language.isEmpty()) {
+      const QLocale system;
+      language = system.language() == QLocale::Chinese
+                     ? (system.script() == QLocale::TraditionalChineseScript ? QStringLiteral("zh_TW")
+                                                                             : QStringLiteral("zh_CN"))
+                     : QStringLiteral("en");
+      if (language == QStringLiteral("zh_TW") && ui->comboLanguage->findData(language) < 0)
+        language = QStringLiteral("zh_CN");
+      if (ui->comboLanguage->findData(language) < 0)
+        language = QStringLiteral("en");
+    }
+    const auto stored = Settings::value(Settings::Core::Language);
+    I18N::setLanguage(language);
+    Settings::setValue(Settings::Core::Language, stored);
+    setButtonBoxEnabledButtons();
   });
 
   // Connect modifiable controls
@@ -258,15 +341,20 @@ void SettingsDialog::initConnections() const
 
 void SettingsDialog::regenCertificates()
 {
-  if (TlsUtility::generateCertificate()) {
+  const auto certificate = Settings::value(Settings::Security::Certificate).toString();
+  const int keyLength = std::max(kMinimumRsaBits, ui->comboTlsKeyLength->currentText().toInt());
+  if (TlsUtility::generateCertificateAt(certificate, keyLength)) {
+    // Regeneration is an explicit file action. Commit only its matching metadata
+    // so cancelling unrelated drafts cannot leave the saved certificate invalid.
+    Settings::setValue(Settings::Security::KeySize, keyLength);
     PageHost::present(
         this, new QMessageBox(
                   QMessageBox::Information, tr("TLS Certificate Regenerated"),
                   tr("TLS certificate regenerated successfully."), QMessageBox::Ok, this
               )
     );
-    const auto certificate = Settings::value(Settings::Security::Certificate).toString();
     updateKeyLengthOnFile(certificate);
+    setButtonBoxEnabledButtons();
   }
 }
 
@@ -328,6 +416,7 @@ void SettingsDialog::showReadOnlyMessage()
 
 void SettingsDialog::updateText()
 {
+  ui->comboLanguage->setItemText(0, tr("Follow system"));
   const auto logLevelNames = LogLevel::logLevelNames();
   const QStringList toolTips = {tr("Required messages"),        tr("Non-fatal errors"), tr("General warnings"),
                                 tr("General events [Default]"), tr("Debug entries"),    tr("Verbose debug output")};
@@ -394,10 +483,7 @@ void SettingsDialog::accept()
   Settings::setValue(Settings::Gui::CloseToTray, ui->rbCloseToTray->isChecked());
   Settings::setValue(Settings::Gui::SymbolicTrayIcon, ui->rbIconMono->isChecked());
   Settings::setValue(Settings::Security::CheckPeers, ui->cbRequireClientCert->isChecked());
-  const auto selectedLanguage = I18N::nativeTo639Name(ui->comboLanguage->currentText());
-  Settings::setValue(
-      Settings::Core::Language, selectedLanguage == m_originalLanguage ? m_originalLanguageSetting : selectedLanguage
-  );
+  Settings::setValue(Settings::Core::Language, ui->comboLanguage->currentData());
   Settings::setValue(Settings::Log::GuiDebug, ui->cbGuiDebug->isChecked());
   Settings::setValue(Settings::Gui::ShowVersionInTitle, ui->cbShowVersion->isChecked());
   if (m_checkForUpdates != nullptr) {
@@ -420,6 +506,7 @@ void SettingsDialog::accept()
 
 void SettingsDialog::loadFromConfig()
 {
+  ui->comboLanguage->setCurrentIndex(ui->comboLanguage->findData(m_originalLanguageSetting));
   if (auto *scope = findChild<QComboBox *>(QStringLiteral("comboSettingsScope")))
     scope->setCurrentIndex(scope->property("originalScopeIndex").toInt());
   ui->sbPort->setValue(Settings::value(Settings::Core::Port).toInt());
@@ -459,9 +546,7 @@ void SettingsDialog::loadFromConfig()
   ui->rbCloseToTray->setChecked(closeToTray);
   ui->rbExitOnClose->setChecked(!closeToTray);
 
-  ui->lblDebugWarning->setVisible(
-      Settings::value(Settings::Log::Level).toInt() > static_cast<int>(LogLevel::Level::Info)
-  );
+  ui->lblDebugWarning->show();
 
   ui->comboInterface->setCurrentText(Settings::value(Settings::Core::Interface).toString());
   if (ui->comboInterface->currentIndex() <= 0) {
@@ -473,7 +558,9 @@ void SettingsDialog::loadFromConfig()
 
   qDebug() << "load from config done";
 
+  updateTlsControls();
   updateControls();
+  setButtonBoxEnabledButtons();
 }
 
 void SettingsDialog::updateTlsControls()
@@ -506,6 +593,7 @@ void SettingsDialog::updateTlsControlsEnabled()
   ui->widgetTlsCert->setEnabled(enabled);
   ui->btnTlsRegenCert->setEnabled(enabled);
   ui->cbRequireClientCert->setEnabled(enabled && !isClientMode());
+  ui->cbTlsEnabled->setEnabled(writable);
 }
 
 bool SettingsDialog::isClientMode() const
@@ -521,11 +609,11 @@ void SettingsDialog::updateKeyLengthOnFile(const QString &path)
   }
 
   auto length = TlsUtility::getCertKeyLength(path);
-  auto labelIcon = QPixmap(QIcon::fromTheme(QStringLiteral("security-low")).pixmap(24, 24));
+  auto labelIcon = QPixmap(appIcon(QStringLiteral("security-low")).pixmap(24, 24));
   if (length == kMinimumRsaBits)
-    labelIcon = QPixmap(QIcon::fromTheme(QStringLiteral("security-medium")).pixmap(24, 24));
+    labelIcon = QPixmap(appIcon(QStringLiteral("security-medium")).pixmap(24, 24));
   if (length == 4096)
-    labelIcon = QPixmap(QIcon::fromTheme(QStringLiteral("security-high")).pixmap(24, 24));
+    labelIcon = QPixmap(appIcon(QStringLiteral("security-high")).pixmap(24, 24));
 
   ui->lblTlsCertInfo->setPixmap(labelIcon);
   ui->lblTlsCertInfo->setToolTip(tr("Key length: %1 bits").arg(QString::number(length)));
@@ -536,6 +624,10 @@ void SettingsDialog::updateControls()
   const bool writable = Settings::isWritable();
   const bool serviceChecked = ui->groupService->isChecked();
   const bool logToFile = ui->groupLogToFile->isChecked();
+  ui->cbLogToFile->setEnabled(writable);
+  ui->cbServiceEnabled->setVisible(synergy::platform::isWindows() && !Settings::isPortableMode());
+  ui->cbElevateDaemon->setVisible(synergy::platform::isWindows() && !Settings::isPortableMode());
+  ui->cbServiceEnabled->setEnabled(writable);
 
   ui->buttonBox->button(QDialogButtonBox::Save)->setEnabled(writable);
 
@@ -543,6 +635,8 @@ void SettingsDialog::updateControls()
   ui->comboInterface->setEnabled(writable);
   ui->comboLogLevel->setEnabled(writable);
   ui->groupLogToFile->setEnabled(writable);
+  ui->comboStartBehavior->setEnabled(writable);
+  ui->comboCloseBehavior->setEnabled(writable);
   ui->rbAutoHide->setEnabled(writable);
   ui->rbShowOnStart->setEnabled(writable);
   ui->cbPreventSleep->setEnabled(writable);
@@ -573,19 +667,12 @@ void SettingsDialog::updateControls()
 
   ui->widgetLogFilename->setEnabled(writable && logToFile);
 
-  updateTlsControls();
-}
-
-void SettingsDialog::updateRequestedKeySize() const
-{
-  if (ui->comboTlsKeyLength->currentText() == Settings::value(Settings::Security::KeySize).toString())
-    return;
-  Settings::setValue(Settings::Security::KeySize, ui->comboTlsKeyLength->currentText());
+  updateTlsControlsEnabled();
 }
 
 void SettingsDialog::logLevelChanged()
 {
-  ui->lblDebugWarning->setVisible(ui->comboLogLevel->currentIndex() > static_cast<int>(LogLevel::Level::Info));
+  ui->lblDebugWarning->show();
 }
 
 bool SettingsDialog::isModified() const
@@ -595,7 +682,7 @@ bool SettingsDialog::isModified() const
 
   bool modified =
       (ui->sbPort->value() != Settings::value(Settings::Core::Port).toInt()) ||
-      (ui->comboLogLevel->currentData() != Settings::logLevelText()) ||
+      (ui->comboLogLevel->currentData().toString().compare(Settings::logLevelText(), Qt::CaseInsensitive) != 0) ||
       (ui->groupLogToFile->isChecked() != Settings::value(Settings::Log::ToFile).toBool()) ||
       (ui->lineLogFilename->text() != Settings::value(Settings::Log::File).toString()) ||
       (ui->rbAutoHide->isChecked() != Settings::value(Settings::Gui::Autohide).toBool()) ||
@@ -614,7 +701,7 @@ bool SettingsDialog::isModified() const
       (ui->cbRunExitCommand->isChecked() != Settings::value(Settings::Core::EnableExitCommand).toBool()) ||
       (ui->lineCommandEnter->text() != Settings::value(Settings::Core::ScreenEnterCommand).toString()) ||
       (ui->lineCommandExit->text() != Settings::value(Settings::Core::ScreenExitCommand).toString()) ||
-      (I18N::nativeTo639Name(ui->comboLanguage->currentText()) != m_originalLanguage);
+      (ui->comboLanguage->currentData().toString() != m_originalLanguageSetting);
 
   modified = modified || (m_checkForUpdates->isChecked() != Settings::value(Settings::Gui::CheckForUpdates).toBool());
   if (auto *scope = findChild<QComboBox *>(QStringLiteral("comboSettingsScope")))
@@ -654,12 +741,15 @@ bool SettingsDialog::isDefault() const
       (ui->lineCommandExit->text() == Settings::defaultValue(Settings::Core::ScreenExitCommand).toString()) &&
       (ui->cbRunEnterCommand->isChecked() == Settings::defaultValue(Settings::Core::EnableEnterCommand).toBool()) &&
       (ui->cbRunExitCommand->isChecked() == Settings::defaultValue(Settings::Core::EnableExitCommand).toBool()) &&
-      (ui->comboLanguage->currentText() == "English")
+      (ui->comboLanguage->currentData().toString() == Settings::defaultValue(Settings::Core::Language).toString())
   );
 }
 
 void SettingsDialog::resetToDefault()
 {
+  ui->comboLanguage->setCurrentIndex(
+      ui->comboLanguage->findData(Settings::defaultValue(Settings::Core::Language).toString())
+  );
   ui->sbPort->setValue(Settings::defaultValue(Settings::Core::Port).toInt());
   ui->comboLogLevel->setCurrentIndex(
       static_cast<int>(LogLevel::fromOption(Settings::defaultValue(Settings::Log::Level).toString()))
@@ -695,7 +785,13 @@ void SettingsDialog::resetToDefault()
   else
     ui->rbIconColorful->setChecked(true);
 
-  ui->lblDebugWarning->setVisible(false);
+  ui->lblDebugWarning->show();
+
+  ui->lineTlsCertPath->setText(Settings::defaultValue(Settings::Security::Certificate).toString());
+  ui->comboTlsKeyLength->setCurrentText(Settings::defaultValue(Settings::Security::KeySize).toString());
+  ui->groupSecurity->setChecked(Settings::defaultValue(Settings::Security::TlsEnabled).toBool());
+  ui->cbRequireClientCert->setChecked(Settings::defaultValue(Settings::Security::CheckPeers).toBool());
+  ui->lblTlsCertInfo->clear();
 
   ui->comboInterface->setCurrentIndex(0);
 

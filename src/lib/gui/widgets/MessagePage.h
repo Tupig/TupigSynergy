@@ -29,10 +29,12 @@ public:
 
   explicit MessagePage(QWidget *parent, Kind kind, const QString &title, const QString &message, bool richText = false);
 
+  void addContentWidget(QWidget *widget);
   QCheckBox *addCheckBox(const QString &text);
   QPushButton *addButton(const QString &text, bool primary = false, bool danger = false);
 
 private:
+  QVBoxLayout *m_contentLayout = nullptr;
   QVBoxLayout *m_layout = nullptr;
   QWidget *m_actions = nullptr;
 };

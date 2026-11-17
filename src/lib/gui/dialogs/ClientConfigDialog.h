@@ -32,6 +32,7 @@ private:
    * @brief updateText update widget text
    */
   void updateText() const;
+  void fitScrollFields();
 
   /**
    * @brief initConnections

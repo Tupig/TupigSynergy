@@ -38,7 +38,7 @@ private:
 // Gotcha: On Windows non-portable mode, additional config files such as TLS config are saved
 // in 'Program Data' and are not stored in the same place as the settings file.
 #ifdef Q_OS_WIN
-  inline static const QString m_settingsPath = Settings::SystemDir;
+  inline static const QString m_settingsPath = Settings::systemDir();
 #else
   inline static const QString m_settingsPath = m_settingsPathTemp;
 #endif

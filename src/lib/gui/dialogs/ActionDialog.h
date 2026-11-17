@@ -52,6 +52,7 @@ private:
   void actionTypeChanged(int index);
   bool isKeyAction(int index) const;
   bool canSave() const;
+  bool m_readOnly = false;
 
   std::unique_ptr<Ui::ActionDialog> ui;
   Hotkey &m_hotkey;

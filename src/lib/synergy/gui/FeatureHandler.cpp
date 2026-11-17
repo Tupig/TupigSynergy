@@ -19,6 +19,7 @@
 #include "FeatureHandler.h"
 
 #include "common/Constants.h"
+#include "common/I18N.h"
 #include "common/Settings.h"
 #include "synergy/gui/SettingsMigration.h"
 #include "synergy/gui/SettingsScope.h"
@@ -239,27 +240,38 @@ void FeatureHandler::addScopeTab(QDialog *parent) const
   auto *generalCard = parent->findChild<QGroupBox *>(QStringLiteral("generalCard"));
   auto *generalForm = parent->findChild<QGridLayout *>(QStringLiteral("generalForm"));
   if (generalCard && generalForm) {
-    auto *label = new QLabel(QObject::tr("Scope"), generalCard);
+    auto *label = new QLabel(QObject::tr("Settings scope"), generalCard);
     label->setObjectName(QStringLiteral("scopeLabel"));
-    label->setMinimumWidth(120);
+    label->setFixedWidth(120);
     auto *selector = new QComboBox(generalCard);
     selector->setObjectName(QStringLiteral("comboSettingsScope"));
     selector->addItem(QObject::tr("Current user"), false);
     selector->addItem(QObject::tr("All users"), true);
     selector->setMaximumWidth(180);
-    const bool system = Settings::settingsFile() == Settings::SystemSettingFile;
-    selector->setCurrentIndex(system ? 1 : 0);
-    selector->setProperty("originalScopeIndex", system ? 1 : 0);
-    selector->setToolTip(
-        QObject::tr("Choose where %1 stores its settings. Changes take effect when %1 restarts.")
-            .arg(QApplication::applicationName())
-    );
+    const bool system = Settings::settingsFile() == Settings::systemSettingsFile();
+    selector->setCurrentIndex(selector->findData(system));
+    selector->setProperty("originalScope", system);
+    const auto refreshText = [label, selector] {
+      const QSignalBlocker blocker(selector);
+      label->setText(QObject::tr("Settings scope"));
+      label->setAccessibleName(label->text());
+      label->setToolTip(label->text());
+      selector->setAccessibleName(label->text());
+      selector->setItemText(selector->findData(false), QObject::tr("Current user"));
+      selector->setItemText(selector->findData(true), QObject::tr("All users"));
+      selector->setToolTip(
+          QObject::tr("Choose where %1 stores its settings. Changes take effect when %1 restarts.")
+              .arg(QApplication::applicationName())
+      );
+    };
+    QObject::connect(I18N::instance(), &I18N::languageChanged, parent, refreshText);
+    refreshText();
     const int row = generalForm->rowCount();
     generalForm->addWidget(label, row, 0, Qt::AlignLeft | Qt::AlignVCenter);
     generalForm->addWidget(selector, row, 1, Qt::AlignLeft | Qt::AlignVCenter);
     // 修改先留在编辑器草稿，只有保存后才执行作用域切换；取消不触碰配置。
     QObject::connect(parent, &QDialog::accepted, parent, [parent, selector, system] {
-      const bool toSystem = selector->currentIndex() == 1;
+      const bool toSystem = selector->currentData().toBool();
       if (toSystem != system)
         SettingsScope::switchTo(parent, toSystem);
     });
@@ -304,15 +316,15 @@ void FeatureHandler::addScopeTab(QDialog *parent) const
 
   auto *userRadio = buildOption(
       QObject::tr("Current user"), QObject::tr("Settings apply only to your user account on this computer."),
-      Settings::UserSettingFile
+      Settings::userSettingsFile()
   );
   auto *systemRadio = buildOption(
       QObject::tr("All users"),
       QObject::tr("Settings apply to every user on this computer. Requires administrator privileges."),
-      Settings::SystemSettingFile
+      Settings::systemSettingsFile()
   );
 
-  const bool isSystem = (Settings::settingsFile() == Settings::SystemSettingFile);
+  const bool isSystem = (Settings::settingsFile() == Settings::systemSettingsFile());
   userRadio->setChecked(!isSystem);
   systemRadio->setChecked(isSystem);
 

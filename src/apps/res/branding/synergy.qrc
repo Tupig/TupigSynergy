@@ -1,5 +1,6 @@
 <RCC>
     <qresource>
+        <file alias="licenses/Lucide-Feather.txt">../../../../LICENSES/Lucide-Feather.txt</file>
         <file>image/logo-dark.png</file>
         <file>image/logo-light.png</file>
         <!-- Square app icon (512x512). The logo-*.png files are 304x74

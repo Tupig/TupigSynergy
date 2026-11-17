@@ -6,6 +6,7 @@
  */
 
 #include "KeySequenceWidget.h"
+#include "gui/ActionPresentation.h"
 
 #include <QMouseEvent>
 
@@ -14,17 +15,41 @@ KeySequenceWidget::KeySequenceWidget(QWidget *parent, const KeySequence &seq)
       m_KeySequence(seq),
       m_BackupSequence(seq)
 {
-  setFocusPolicy(Qt::NoFocus);
+  setFocusPolicy(Qt::StrongFocus);
+  setProperty("keyCapture", true);
+  connect(this, &QPushButton::clicked, this, [this] {
+    if (isEnabled() && status() == Stopped)
+      startRecording();
+  });
   updateOutput();
 }
 
 void KeySequenceWidget::setKeySequence(const KeySequence &seq)
 {
+  if (isRecording())
+    releaseKeyboard();
   m_KeySequence = seq;
   m_BackupSequence = seq;
 
   setStatus(Stopped);
   updateOutput();
+}
+
+QPushButton *KeySequenceWidget::createRecordButton(QWidget *parent)
+{
+  m_recordButton = new QPushButton(tr("Record keys"), parent);
+  m_recordButton->setObjectName(QStringLiteral("recordShortcutButton"));
+  m_recordButton->setIcon(synergy::gui::appIcon(QStringLiteral("key")));
+  m_recordButton->setAutoDefault(false);
+  connect(m_recordButton, &QPushButton::clicked, this, [this] {
+    if (!isRecording())
+      click();
+  });
+  connect(this, &KeySequenceWidget::recordingChanged, m_recordButton, [button = m_recordButton](bool recording) {
+    if (button)
+      button->setEnabled(!recording);
+  });
+  return m_recordButton;
 }
 
 void KeySequenceWidget::mousePressEvent(QMouseEvent *event)
@@ -44,11 +69,13 @@ void KeySequenceWidget::mousePressEvent(QMouseEvent *event)
 
 void KeySequenceWidget::startRecording()
 {
+  m_BackupSequence = m_KeySequence;
   m_KeySequence = KeySequence();
   setDown(true);
   setFocus();
   grabKeyboard();
   setStatus(Recording);
+  updateOutput();
 }
 
 void KeySequenceWidget::stopRecording()
@@ -58,15 +85,18 @@ void KeySequenceWidget::stopRecording()
     updateOutput();
   }
 
-  setDown(false);
-  focusNextChild();
-  releaseKeyboard();
   setStatus(Stopped);
+  setDown(false);
+  releaseKeyboard();
+  updateOutput();
+  focusNextChild();
   Q_EMIT keySequenceChanged();
 }
 
 bool KeySequenceWidget::event(QEvent *event)
 {
+  if (event->type() == QEvent::LanguageChange || event->type() == QEvent::EnabledChange)
+    updateOutput();
   if (status() == Recording) {
     switch (event->type()) {
     case QEvent::KeyPress:
@@ -99,10 +129,25 @@ bool KeySequenceWidget::event(QEvent *event)
 
 void KeySequenceWidget::keyPressEvent(QKeyEvent *event)
 {
+  if (status() == Stopped) {
+    if (isEnabled() &&
+        (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)) {
+      event->accept();
+      startRecording();
+      return;
+    }
+    QPushButton::keyPressEvent(event);
+    return;
+  }
+
   event->accept();
 
-  if (status() == Stopped)
+  if (event->key() == Qt::Key_Escape) {
+    m_KeySequence = backupSequence();
+    stopRecording();
+    updateOutput();
     return;
+  }
 
   if (m_KeySequence.appendKey(event->key(), event->modifiers()))
     stopRecording();
@@ -112,12 +157,13 @@ void KeySequenceWidget::keyPressEvent(QKeyEvent *event)
 
 void KeySequenceWidget::updateOutput()
 {
-  QString s;
-
-  if (m_KeySequence.isMouseButton())
-    s = mousePrefix() + m_KeySequence.toString() + mousePostfix();
-  else
-    s = keyPrefix() + m_KeySequence.toString() + keyPostfix();
-
-  setText(s);
+  if (m_recordButton) {
+    m_recordButton->setText(tr("Record keys"));
+    m_recordButton->setEnabled(isEnabled() && !isRecording());
+  }
+  if (isRecording()) {
+    setText(tr("Recording… Press Esc to cancel"));
+    return;
+  }
+  setText(synergy::gui::keySequenceCaption(m_KeySequence));
 }

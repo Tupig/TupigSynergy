@@ -4,6 +4,7 @@
  */
 
 #include "ClientConfigDialogDesign.h"
+#include "CompactLayout.h"
 
 #include <QAbstractSpinBox>
 #include <QCoreApplication>
@@ -40,10 +41,11 @@ void Ui::ClientConfigDialog::setupUi(QDialog *dialog)
   // 连接行为
   connectionBehaviorGroup = new QGroupBox(scrollAreaWidgetContents);
   connectionBehaviorGroup->setObjectName(QStringLiteral("connectionBehaviorGroup"));
+  connectionBehaviorGroup->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   connectionBehaviorLayout = new QVBoxLayout(connectionBehaviorGroup);
   connectionBehaviorLayout->setObjectName(QStringLiteral("connectionBehaviorLayout"));
   connectionBehaviorLayout->setSpacing(8);
-  connectionBehaviorLayout->setContentsMargins(0, 0, 0, 0);
+  connectionBehaviorLayout->setContentsMargins(12, 26, 12, 12);
 
   cbDynamicConnectTime = new QCheckBox(connectionBehaviorGroup);
   cbDynamicConnectTime->setObjectName(QStringLiteral("cbDynamicConnectTime"));
@@ -52,18 +54,24 @@ void Ui::ClientConfigDialog::setupUi(QDialog *dialog)
   cbLanguageSync = new QCheckBox(connectionBehaviorGroup);
   cbLanguageSync->setObjectName(QStringLiteral("cbLanguageSync"));
   connectionBehaviorLayout->addWidget(cbLanguageSync);
+  auto *retryHint = new QLabel(connectionBehaviorGroup);
+  retryHint->setObjectName(QStringLiteral("retryRangeHint"));
+  retryHint->setProperty("muted", true);
+  retryHint->setWordWrap(true);
+  connectionBehaviorLayout->addWidget(retryHint);
 
   pageLayout->addWidget(connectionBehaviorGroup);
 
   // 滚动修饰符
   groupBox = new QGroupBox(scrollAreaWidgetContents);
   groupBox->setObjectName(QStringLiteral("groupBox"));
+  groupBox->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 
   gridLayout = new QFormLayout(groupBox);
   gridLayout->setObjectName(QStringLiteral("gridLayout"));
   gridLayout->setHorizontalSpacing(10);
   gridLayout->setVerticalSpacing(8);
-  gridLayout->setContentsMargins(0, 0, 0, 0);
+  gridLayout->setContentsMargins(12, 26, 12, 12);
   gridLayout->setRowWrapPolicy(QFormLayout::DontWrapRows);
   gridLayout->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
   gridLayout->setFormAlignment(Qt::AlignLeft | Qt::AlignTop);
@@ -174,16 +182,20 @@ void Ui::ClientConfigDialog::retranslateUi(QDialog *dialog)
   dialog->setWindowTitle(QCoreApplication::translate("ClientConfigDialog", "Client Configuration"));
   connectionBehaviorGroup->setTitle(QCoreApplication::translate("ClientConfigDialog", "Connection Behaviour"));
   cbDynamicConnectTime->setText(
-      QCoreApplication::translate("ClientConfigDialog", "Use dynamic reconnection time based on connection attempts")
+      QCoreApplication::translate("ClientConfigDialog", "Increase delay after failed connection attempts")
   );
   // 单行字面量：lupdate 才能把整段 tooltip 当作一个可翻译源串；
   // 禁止 clang-format 折行，否则提取出的源串会被截断。
   // clang-format off
   cbDynamicConnectTime->setToolTip(QCoreApplication::translate("ClientConfigDialog", "<html><head/><body><p>Allow the client to slow the rate it attempts to reconnect to the server when connections attempts are failing. The delay between connection attempts will  start at 1 second intervals and can be a maxium of 5 minutes between connection attempts.</p></body></html>"));
   // clang-format on
-  cbLanguageSync->setText(
-      QCoreApplication::translate("ClientConfigDialog", "Use server's keyboard language on this computer")
-  );
+  cbLanguageSync->setText(QCoreApplication::translate("ClientConfigDialog", "Use the server keyboard language"));
+  dialog->findChild<QLabel *>(QStringLiteral("retryRangeHint"))
+      ->setText(
+          QCoreApplication::translate(
+              "ClientConfigDialog", "Retries start at 1 second and increase to a maximum of 5 minutes."
+          )
+      );
   groupBox->setTitle(QCoreApplication::translate("ClientConfigDialog", "Scroll Modifiers"));
   lblHScroll->setText(QCoreApplication::translate("ClientConfigDialog", "Horizontal Scroll"));
   cbXScrollInvert->setText(QCoreApplication::translate("ClientConfigDialog", "Invert"));
@@ -191,4 +203,6 @@ void Ui::ClientConfigDialog::retranslateUi(QDialog *dialog)
   lblVScroll->setText(QCoreApplication::translate("ClientConfigDialog", "Vertical Scroll"));
   cbYScrollInvert->setText(QCoreApplication::translate("ClientConfigDialog", "Invert"));
   lblScrollSpeed->setText(QCoreApplication::translate("ClientConfigDialog", "Scale"));
+  synergy::gui::compact::normalizeCards(dialog);
+  synergy::gui::compact::styleButtons(buttonBox);
 }

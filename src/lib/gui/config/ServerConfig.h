@@ -124,6 +124,7 @@ public:
   static size_t defaultClipboardSharingSize();
 
   bool save(const QString &fileName) const;
+  bool isValidForSerialization() const;
   bool screenExists(const QString &screenName) const;
   void save(QFile &file) const;
   bool isFull() const;

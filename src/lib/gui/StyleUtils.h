@@ -16,6 +16,9 @@
 
 namespace synergy::gui {
 
+/// Offline 24px line artwork; known action names share one adaptive icon family.
+QIcon appIcon(const QString &name);
+
 /**
  * @brief Detects dark mode in a universal manner (all Qt versions).
  * Until better platform support is added, it's more reliable to use the old way (compare text and window lightness),

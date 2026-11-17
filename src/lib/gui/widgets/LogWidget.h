@@ -54,6 +54,7 @@ private:
   static Record parse(const QString &line);
   void rebuild();
   void updateVisibleHeight();
+  void requestTailScroll();
   int rowHeight() const;
 
   QTableWidget *m_table = nullptr;
@@ -62,4 +63,7 @@ private:
   QString m_filter;
   QString m_latestLine;
   int m_visibleLines = 6;
+  mutable bool m_followTail = true;
+  bool m_adjustingContents = false;
+  bool m_tailScrollPending = false;
 };

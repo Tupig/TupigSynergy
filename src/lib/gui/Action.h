@@ -68,6 +68,7 @@ public:
   Action() = default;
 
   QString text() const;
+  bool isValidForSerialization() const;
   const KeySequence &keySequence() const
   {
     return m_keySequence;
@@ -160,7 +161,7 @@ private:
   int m_lockCursorMode = static_cast<int>(LockCursorMode::toggle);
   bool m_activeOnRelease = false;
   bool m_hasScreens = false;
-  bool m_restartServer;
+  bool m_restartServer = false;
 
   inline static const QString m_commandTemplate = QStringLiteral("(%1)");
   inline static const QStringList m_actionTypeNames{

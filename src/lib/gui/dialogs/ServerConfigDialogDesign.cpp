@@ -4,6 +4,9 @@
  */
 
 #include "ServerConfigDialogDesign.h"
+#include "CompactLayout.h"
+#include "common/NetworkProtocol.h"
+#include "gui/StyleUtils.h"
 
 #include <QCoreApplication>
 #include <QFont>
@@ -11,8 +14,10 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QIcon>
+#include <QListView>
 #include <QSizePolicy>
 #include <QSpacerItem>
+#include <QTextLayout>
 #include <QVBoxLayout>
 
 namespace {
@@ -33,7 +38,37 @@ QCheckBox *createCheckBox(QWidget *parent, const QString &name)
 {
   auto *result = new QCheckBox(parent);
   result->setObjectName(name);
+  result->setAttribute(Qt::WA_LayoutUsesWidgetRect);
   return result;
+}
+
+// Preserve the complete translated enable caption while keeping the reference
+// label column fixed. Native checkbox text painting supports explicit lines.
+void fitEnableCaption(QCheckBox *checkBox)
+{
+  const QString original = checkBox->text();
+  checkBox->setAttribute(Qt::WA_LayoutUsesWidgetRect);
+  checkBox->setFixedWidth(120);
+  checkBox->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+  checkBox->ensurePolished();
+  QTextLayout text(original, checkBox->font());
+  QTextOption option;
+  option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+  text.setTextOption(option);
+  QStringList lines;
+  text.beginLayout();
+  while (true) {
+    auto line = text.createLine();
+    if (!line.isValid())
+      break;
+    line.setLineWidth(88);
+    lines.append(original.mid(line.textStart(), line.textLength()).trimmed());
+  }
+  text.endLayout();
+  checkBox->setText(lines.join(QLatin1Char('\n')));
+  checkBox->setMinimumHeight(qMax(22, static_cast<int>(lines.size()) * checkBox->fontMetrics().lineSpacing() + 4));
+  checkBox->setToolTip(original);
+  checkBox->setAccessibleName(QString(original).remove(QLatin1Char('&')));
 }
 
 QRadioButton *createRadioButton(QWidget *parent, const QString &name)
@@ -48,6 +83,7 @@ QSpinBox *createSpinBox(QWidget *parent, const QString &name)
   auto *result = new QSpinBox(parent);
   result->setObjectName(name);
   result->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+  result->setFixedWidth(180);
   return result;
 }
 
@@ -55,7 +91,7 @@ QPushButton *createPushButton(QWidget *parent, const QString &name, const QStrin
 {
   auto *button = new QPushButton(parent);
   button->setObjectName(name);
-  button->setIcon(QIcon::fromTheme(icon));
+  button->setIcon(synergy::gui::appIcon(icon));
   return button;
 }
 
@@ -77,7 +113,10 @@ QGridLayout *createGrid(const QString &name, int column1Stretch, int column2Stre
   auto *result = new QGridLayout;
   result->setObjectName(name);
   result->setContentsMargins(0, 0, 0, 0);
-  result->setSpacing(8);
+  result->setHorizontalSpacing(10);
+  result->setVerticalSpacing(8);
+  result->setColumnMinimumWidth(0, 120);
+  result->setColumnMinimumWidth(1, 180);
   result->setColumnStretch(0, column1Stretch);
   result->setColumnStretch(1, column2Stretch);
   result->setColumnStretch(2, column3Stretch);
@@ -95,7 +134,7 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   auto *dialogLayout = new QVBoxLayout(dialog);
   dialogLayout->setObjectName(QStringLiteral("vboxLayout"));
   dialogLayout->setSpacing(8);
-  dialogLayout->setContentsMargins(12, 12, 12, 12);
+  dialogLayout->setContentsMargins(10, 10, 10, 10);
 
   tabWidget = new QTabWidget(dialog);
   tabWidget->setObjectName(QStringLiteral("tabWidget"));
@@ -112,14 +151,14 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   // 页面宿主只在窗口小到无法容纳操作栏时提供整体滚动兜底。
   groupComputerLayout = new QGroupBox(tabComputers);
   groupComputerLayout->setObjectName(QStringLiteral("groupComputerLayout"));
-  groupComputerLayout->setTitle(QString());
+  groupComputerLayout->setTitle(
+      QCoreApplication::translate("ServerConfigDialog", "Arrange computer displays by dragging")
+  );
   auto *computerCardLayout = new QVBoxLayout(groupComputerLayout);
   computerCardLayout->setObjectName(QStringLiteral("computerCardLayout"));
   computerCardLayout->setSpacing(8);
-  computerCardLayout->setContentsMargins(12, 12, 12, 12);
-  computerCardLayout->setStretch(0, 0);
-  computerCardLayout->setStretch(1, 1);
-  computerCardLayout->setStretch(2, 0);
+  computerCardLayout->setContentsMargins(12, 26, 12, 12);
+  groupComputerLayout->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 
   label_2 = new QLabel(groupComputerLayout);
   label_2->setObjectName(QStringLiteral("label_2"));
@@ -129,11 +168,13 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   label_2->setWordWrap(true);
   label_2->setIndent(-1);
   label_2->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+  label_2->setProperty("muted", true);
   computerCardLayout->addWidget(label_2);
 
   screenSetupView = new ScreenSetupView(groupComputerLayout);
   screenSetupView->setObjectName(QStringLiteral("screenSetupView"));
-  screenSetupView->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Expanding);
+  screenSetupView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  screenSetupView->setFixedHeight(180);
   screenSetupView->setAcceptDrops(true);
   screenSetupView->setAutoFillBackground(false);
   screenSetupView->setFrameShape(QFrame::NoFrame);
@@ -162,7 +203,7 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   layoutComputers->addWidget(lblNewScreen);
   computerCardLayout->addLayout(layoutComputers);
 
-  computerPageLayout->addWidget(groupComputerLayout, 1);
+  computerPageLayout->addWidget(groupComputerLayout);
   tabWidget->addTab(tabComputers, QString());
 
   // Hotkeys
@@ -184,23 +225,23 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   hotkeysScrollLayout->setObjectName(QStringLiteral("hotkeysScrollLayout"));
   hotkeysScrollLayout->setSpacing(8);
   hotkeysScrollLayout->setContentsMargins(0, 0, 0, 0);
-  hotkeysScrollLayout->setStretch(0, 1);
-  hotkeysScrollLayout->setStretch(1, 1);
+  hotkeysScrollLayout->setAlignment(Qt::AlignTop);
 
   groupHotkeys = new QGroupBox(hotkeysScrollContents);
   groupHotkeys->setObjectName(QStringLiteral("groupHotkeys"));
-  groupHotkeys->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+  groupHotkeys->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   auto *hotkeysLayout = new QVBoxLayout(groupHotkeys);
   hotkeysLayout->setObjectName(QStringLiteral("_3"));
   hotkeysLayout->setSpacing(8);
-  hotkeysLayout->setContentsMargins(12, 12, 12, 12);
-  hotkeysLayout->setStretch(0, 1);
-  hotkeysLayout->setStretch(1, 0);
+  hotkeysLayout->setContentsMargins(12, 26, 12, 12);
 
   listHotkeys = new QListWidget(groupHotkeys);
   listHotkeys->setObjectName(QStringLiteral("listHotkeys"));
-  listHotkeys->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  listHotkeys->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   hotkeysLayout->addWidget(listHotkeys);
+  synergy::gui::compact::fitRows(
+      listHotkeys, QCoreApplication::translate("ServerConfigDialog", "No hotkeys configured")
+  );
 
   auto *hotkeyButtonsLayout = new QHBoxLayout;
   hotkeyButtonsLayout->setObjectName(QStringLiteral("hotkeyButtonsLayout"));
@@ -224,18 +265,19 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   QFont actionsFont;
   actionsFont.setKerning(true);
   groupActions->setFont(actionsFont);
-  groupActions->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+  groupActions->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   auto *actionsCardLayout = new QVBoxLayout(groupActions);
   actionsCardLayout->setObjectName(QStringLiteral("actionsCardLayout"));
   actionsCardLayout->setSpacing(8);
-  actionsCardLayout->setContentsMargins(12, 12, 12, 12);
-  actionsCardLayout->setStretch(0, 1);
-  actionsCardLayout->setStretch(1, 0);
+  actionsCardLayout->setContentsMargins(12, 26, 12, 12);
 
   listActions = new QListWidget(groupActions);
   listActions->setObjectName(QStringLiteral("listActions"));
-  listActions->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  listActions->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   actionsCardLayout->addWidget(listActions);
+  synergy::gui::compact::fitRows(
+      listActions, QCoreApplication::translate("ServerConfigDialog", "Select a hotkey to view its actions")
+  );
 
   auto *actionButtonsLayout = new QHBoxLayout;
   actionButtonsLayout->setObjectName(QStringLiteral("actionButtonsLayout"));
@@ -278,11 +320,11 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   m_pGridCorners->setSpacing(8);
   m_pGridCorners->setContentsMargins(0, 0, 0, 0);
   m_pGridCorners->setColumnStretch(0, 1);
-  m_pGridCorners->setColumnStretch(1, 1);
+  m_pGridCorners->setColumnStretch(1, 0);
   m_pGridCorners->setRowStretch(0, 0);
   m_pGridCorners->setRowStretch(1, 0);
   m_pGridCorners->setRowStretch(2, 0);
-  m_pGridCorners->setRowStretch(3, 1);
+  m_pGridCorners->setAlignment(Qt::AlignTop);
 
   groupMisc = createGroupBox(sharingScrollContents, QStringLiteral("groupMisc"));
   QFont miscFont;
@@ -291,7 +333,7 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   auto *verticalLayout_4 = new QVBoxLayout(groupMisc);
   verticalLayout_4->setObjectName(QStringLiteral("verticalLayout_4"));
   verticalLayout_4->setSpacing(8);
-  verticalLayout_4->setContentsMargins(12, 12, 12, 12);
+  verticalLayout_4->setContentsMargins(12, 26, 12, 12);
 
   cbRelativeMouseMoves = createCheckBox(groupMisc, QStringLiteral("cbRelativeMouseMoves"));
   cbRelativeMouseMoves->setEnabled(true);
@@ -307,13 +349,15 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   cbEnableClipboard = createCheckBox(groupMisc, QStringLiteral("cbEnableClipboard"));
   cbEnableClipboard->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
   cbEnableClipboard->setChecked(true);
-  verticalLayout_4->addWidget(cbEnableClipboard);
+  verticalLayout_4->insertWidget(0, cbEnableClipboard);
 
   auto *layoutClipboard = new QHBoxLayout;
   layoutClipboard->setObjectName(QStringLiteral("layoutClipboard"));
-  layoutClipboard->setSpacing(8);
+  layoutClipboard->setSpacing(10);
   layoutClipboard->setContentsMargins(0, 0, 0, 0);
   label_7 = createLabel(groupMisc, QStringLiteral("label_7"), 120);
+  label_7->setFixedWidth(120);
+  label_7->setWordWrap(true);
   layoutClipboard->addWidget(label_7);
   sbClipboardSizeLimit = createSpinBox(groupMisc, QStringLiteral("sbClipboardSizeLimit"));
   sbClipboardSizeLimit->setEnabled(false);
@@ -322,7 +366,7 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   layoutClipboard->addWidget(sbClipboardSizeLimit);
   layoutClipboard->addItem(createSpacer());
   verticalLayout_4->addLayout(layoutClipboard);
-  m_pGridCorners->addWidget(groupMisc, 0, 0, 1, 2);
+  m_pGridCorners->addWidget(groupMisc, 0, 0);
 
   groupCorners = new QGroupBox(sharingScrollContents);
   groupCorners->setObjectName(QStringLiteral("groupCorners"));
@@ -334,7 +378,7 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   auto *verticalLayout_6 = new QVBoxLayout(groupCorners);
   verticalLayout_6->setObjectName(QStringLiteral("verticalLayout_6"));
   verticalLayout_6->setSpacing(8);
-  verticalLayout_6->setContentsMargins(12, 12, 12, 12);
+  verticalLayout_6->setContentsMargins(12, 26, 12, 12);
 
   auto *m_pLayoutCorners = new QGridLayout;
   m_pLayoutCorners->setObjectName(QStringLiteral("m_pLayoutCorners"));
@@ -345,18 +389,20 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   cbCornerTopLeft = createCheckBox(groupCorners, QStringLiteral("cbCornerTopLeft"));
   m_pLayoutCorners->addWidget(cbCornerTopLeft, 0, 0);
   cbCornerTopRight = createCheckBox(groupCorners, QStringLiteral("cbCornerTopRight"));
-  m_pLayoutCorners->addWidget(cbCornerTopRight, 0, 1);
+  m_pLayoutCorners->addWidget(cbCornerTopRight, 1, 0);
   cbCornerBottomLeft = createCheckBox(groupCorners, QStringLiteral("cbCornerBottomLeft"));
-  m_pLayoutCorners->addWidget(cbCornerBottomLeft, 1, 0);
+  m_pLayoutCorners->addWidget(cbCornerBottomLeft, 2, 0);
   cbCornerBottomRight = createCheckBox(groupCorners, QStringLiteral("cbCornerBottomRight"));
-  m_pLayoutCorners->addWidget(cbCornerBottomRight, 1, 1);
+  m_pLayoutCorners->addWidget(cbCornerBottomRight, 3, 0);
   verticalLayout_6->addLayout(m_pLayoutCorners);
 
   auto *m_pLayoutCornerSize = new QHBoxLayout;
   m_pLayoutCornerSize->setObjectName(QStringLiteral("m_pLayoutCornerSize"));
-  m_pLayoutCornerSize->setSpacing(8);
+  m_pLayoutCornerSize->setSpacing(10);
   m_pLayoutCornerSize->setContentsMargins(0, 0, 0, 0);
   label = createLabel(groupCorners, QStringLiteral("label"), 120);
+  label->setFixedWidth(120);
+  label->setWordWrap(true);
   m_pLayoutCornerSize->addWidget(label);
   sbSwitchCornerSize = createSpinBox(groupCorners, QStringLiteral("sbSwitchCornerSize"));
   sbSwitchCornerSize->setMaximum(30000);
@@ -364,33 +410,43 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   label->setBuddy(sbSwitchCornerSize);
   m_pLayoutCornerSize->addItem(createSpacer());
   verticalLayout_6->addLayout(m_pLayoutCornerSize);
-  m_pGridCorners->addWidget(groupCorners, 1, 0, Qt::AlignTop);
+  m_pGridCorners->addWidget(groupCorners, 1, 0);
 
   groupNetwork = createGroupBox(sharingScrollContents, QStringLiteral("groupNetwork"));
   auto *verticalLayout_5 = createGrid(QStringLiteral("verticalLayout_5"), 0, 0, 1);
-  verticalLayout_5->setContentsMargins(12, 12, 12, 12);
+  verticalLayout_5->setContentsMargins(12, 26, 12, 12);
   cbHeartbeat = createCheckBox(groupNetwork, QStringLiteral("cbHeartbeat"));
   cbHeartbeat->setEnabled(true);
-  verticalLayout_5->addWidget(cbHeartbeat, 0, 0, 1, 2);
+  verticalLayout_5->addWidget(cbHeartbeat, 0, 0);
   sbHeartbeat = createSpinBox(groupNetwork, QStringLiteral("sbHeartbeat"));
   sbHeartbeat->setEnabled(false);
   sbHeartbeat->setMinimum(1000);
   sbHeartbeat->setMaximum(30000);
   sbHeartbeat->setSingleStep(1000);
   sbHeartbeat->setValue(5000);
-  verticalLayout_5->addWidget(sbHeartbeat, 1, 1);
+  verticalLayout_5->addWidget(sbHeartbeat, 0, 1);
   labelProtocol = createLabel(groupNetwork, QStringLiteral("labelProtocol"), 120);
-  verticalLayout_5->addWidget(labelProtocol, 2, 0, 1, 2);
+  labelProtocol->setFixedWidth(120);
+  labelProtocol->setWordWrap(true);
+  verticalLayout_5->addWidget(labelProtocol, 1, 0);
   rbProtocolSynergy = createRadioButton(groupNetwork, QStringLiteral("rbProtocolSynergy"));
   rbProtocolSynergy->setText(QStringLiteral("Synergy"));
   rbProtocolSynergy->setChecked(true);
-  verticalLayout_5->addWidget(rbProtocolSynergy, 3, 0);
+  rbProtocolSynergy->hide();
   rbProtocolBarrier = createRadioButton(groupNetwork, QStringLiteral("rbProtocolBarrier"));
   rbProtocolBarrier->setText(QStringLiteral("Barrier"));
-  verticalLayout_5->addWidget(rbProtocolBarrier, 3, 1);
-  verticalLayout_5->addItem(createSpacer(), 0, 2, 4, 1);
+  rbProtocolBarrier->hide();
+  comboProtocol = new QComboBox(groupNetwork);
+  comboProtocol->setObjectName(QStringLiteral("comboProtocol"));
+  comboProtocol->setView(new QListView(comboProtocol));
+  comboProtocol->setFixedWidth(180);
+  comboProtocol->addItem(QStringLiteral("Synergy"), QVariant::fromValue(NetworkProtocol::Synergy));
+  comboProtocol->addItem(QStringLiteral("Barrier"), QVariant::fromValue(NetworkProtocol::Barrier));
+  labelProtocol->setBuddy(comboProtocol);
+  verticalLayout_5->addWidget(comboProtocol, 1, 1);
+  verticalLayout_5->addItem(createSpacer(), 0, 2, 2, 1);
   groupNetwork->setLayout(verticalLayout_5);
-  m_pGridCorners->addWidget(groupNetwork, 1, 1, Qt::AlignTop);
+  m_pGridCorners->addWidget(groupNetwork, 2, 0);
 
   groupSwitch = new QGroupBox(sharingScrollContents);
   groupSwitch->setObjectName(QStringLiteral("groupSwitch"));
@@ -399,7 +455,7 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   groupSwitch->setFont(switchFont);
   groupSwitch->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   auto *switchCardLayout = createGrid(QStringLiteral("switchCardLayout"), 0, 0, 1);
-  switchCardLayout->setContentsMargins(12, 12, 12, 12);
+  switchCardLayout->setContentsMargins(12, 26, 12, 12);
   cbSwitchDelay = createCheckBox(groupSwitch, QStringLiteral("cbSwitchDelay"));
   cbSwitchDelay->setEnabled(true);
   cbSwitchDelay->setMinimumWidth(120);
@@ -424,12 +480,13 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   switchCardLayout->addWidget(sbSwitchDoubleTap, 1, 1);
   switchCardLayout->addItem(createSpacer(), 0, 2, 2, 1);
   groupSwitch->setLayout(switchCardLayout);
-  m_pGridCorners->addWidget(groupSwitch, 2, 0, 1, 2);
+  m_pGridCorners->addWidget(groupSwitch, 3, 0);
 
-  sharingBottomStretch = new QWidget(sharingScrollContents);
-  sharingBottomStretch->setObjectName(QStringLiteral("sharingBottomStretch"));
-  m_pGridCorners->addWidget(sharingBottomStretch, 3, 0, 1, 2);
-
+  synergy::gui::compact::combineCards(
+      sharingScrollContents, {groupMisc, groupCorners, groupNetwork, groupSwitch}, QStringLiteral("sharingCard")
+  );
+  for (auto *section : {groupMisc, groupCorners, groupNetwork, groupSwitch})
+    section->layout()->setContentsMargins(0, 0, 0, 0);
   sharingScrollArea->setWidget(sharingScrollContents);
   advancedPageLayout->addWidget(sharingScrollArea);
   tabWidget->addTab(tabAdvanced, QString());
@@ -454,10 +511,7 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   configScrollLayout->setObjectName(QStringLiteral("configScrollLayout"));
   configScrollLayout->setSpacing(8);
   configScrollLayout->setContentsMargins(0, 0, 0, 0);
-  configScrollLayout->setStretch(0, 0);
-  configScrollLayout->setStretch(1, 0);
-  configScrollLayout->setStretch(2, 0);
-  configScrollLayout->setStretch(3, 1);
+  configScrollLayout->setAlignment(Qt::AlignTop);
 
   label_5 = new QLabel(configScrollContents);
   label_5->setObjectName(QStringLiteral("label_5"));
@@ -467,24 +521,30 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   label_5->setFont(titleFont);
   label_5->setTextFormat(Qt::PlainText);
   label_5->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-  configScrollLayout->addWidget(label_5);
+  label_5->hide();
 
   label_6 = new QLabel(configScrollContents);
   label_6->setObjectName(QStringLiteral("label_6"));
   label_6->setTextFormat(Qt::MarkdownText);
   label_6->setWordWrap(true);
   label_6->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-  configScrollLayout->addWidget(label_6);
 
   groupExternalConfig = createGroupBox(configScrollContents, QStringLiteral("groupExternalConfig"));
   groupExternalConfig->setCheckable(true);
   groupExternalConfig->setChecked(false);
+  groupExternalConfig->hide();
+  auto *externalCard = createGroupBox(configScrollContents, QStringLiteral("externalConfigCard"));
+  auto *externalLayout = new QVBoxLayout(externalCard);
+  externalLayout->setContentsMargins(12, 10, 12, 12);
+  externalLayout->setSpacing(8);
+  cbExternalConfig = createCheckBox(externalCard, QStringLiteral("cbExternalConfig"));
+  externalLayout->addWidget(cbExternalConfig);
   auto *horizontalLayout = new QVBoxLayout(groupExternalConfig);
   horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
   horizontalLayout->setSpacing(8);
-  horizontalLayout->setContentsMargins(12, 12, 12, 12);
+  horizontalLayout->setContentsMargins(12, 26, 12, 12);
 
-  widgetExternalConfigControls = new QWidget(groupExternalConfig);
+  widgetExternalConfigControls = new QWidget(externalCard);
   widgetExternalConfigControls->setObjectName(QStringLiteral("widgetExternalConfigControls"));
   widgetExternalConfigControls->setEnabled(false);
   auto *horizontalLayout_2 = new QHBoxLayout(widgetExternalConfigControls);
@@ -507,13 +567,11 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   btnBrowseConfigFile->setCursor(Qt::PointingHandCursor);
   btnBrowseConfigFile->setText(QString());
   btnBrowseConfigFile->setFlat(true);
+  btnBrowseConfigFile->setProperty("iconButton32", true);
   horizontalLayout_2->addWidget(btnBrowseConfigFile);
-  horizontalLayout->addWidget(widgetExternalConfigControls);
-  configScrollLayout->addWidget(groupExternalConfig);
-
-  configBottomStretch = new QWidget(configScrollContents);
-  configBottomStretch->setObjectName(QStringLiteral("configBottomStretch"));
-  configScrollLayout->addWidget(configBottomStretch);
+  externalLayout->addWidget(widgetExternalConfigControls);
+  externalLayout->addWidget(label_6);
+  configScrollLayout->addWidget(externalCard);
 
   configScrollArea->setWidget(configScrollContents);
   verticalLayout->addWidget(configScrollArea);
@@ -526,6 +584,19 @@ void Ui::ServerConfigDialog::setupUi(QDialog *dialog)
   buttonBox->setOrientation(Qt::Horizontal);
   buttonBox->setStandardButtons(QDialogButtonBox::Cancel | QDialogButtonBox::Ok);
   dialogLayout->addWidget(buttonBox);
+  const auto placeActions = [tabs = tabWidget, box = buttonBox, dialogLayout] {
+    const auto name = tabs->currentIndex() == 2 ? QStringLiteral("sharingCard") : QStringLiteral("externalConfigCard");
+    if (tabs->currentIndex() == 2 || tabs->currentIndex() == 3) {
+      synergy::gui::compact::placeActions(tabs->currentWidget()->findChild<QGroupBox *>(name), box);
+    } else {
+      if (auto *parent = box->parentWidget(); parent && parent->layout())
+        parent->layout()->removeWidget(box);
+      dialogLayout->addWidget(box);
+      box->show();
+    }
+  };
+  QObject::connect(tabWidget, &QTabWidget::currentChanged, dialog, placeActions);
+  placeActions();
 
   retranslateUi(dialog);
   tabWidget->setCurrentIndex(0);
@@ -568,11 +639,16 @@ void Ui::ServerConfigDialog::retranslateUi(QDialog *dialog)
       tabWidget->indexOf(tabConfigFile), QCoreApplication::translate("ServerConfigDialog", "Config file", nullptr)
   );
 
-  groupComputerLayout->setTitle(QString());
-  label_2->setText(
-      QCoreApplication::translate(
-          "ServerConfigDialog", "Configure the layout of your computer displays by dragging to where you want.", nullptr
-      )
+  groupComputerLayout->setTitle(
+      QCoreApplication::translate("ServerConfigDialog", "Arrange computer displays by dragging")
+  );
+  synergy::gui::compact::setSubtleText(
+      label_2, QCoreApplication::translate(
+                   "ServerConfigDialog",
+                   "Double-click an existing computer to edit its settings. Add computer provides an alternative to "
+                   "dragging, including keyboard and screen-reader access.",
+                   nullptr
+               )
   );
   lblRemoveScreen->setToolTip(
       QCoreApplication::translate(
@@ -592,7 +668,7 @@ void Ui::ServerConfigDialog::retranslateUi(QDialog *dialog)
   btnEditAction->setText(QCoreApplication::translate("ServerConfigDialog", "E&dit", nullptr));
   btnRemoveAction->setText(QCoreApplication::translate("ServerConfigDialog", "Re&move", nullptr));
 
-  groupMisc->setTitle(QCoreApplication::translate("ServerConfigDialog", "&Misc", nullptr));
+  groupMisc->setTitle(QString());
   cbRelativeMouseMoves->setText(
       QCoreApplication::translate("ServerConfigDialog", "Use &relative mouse movements", nullptr)
   );
@@ -609,9 +685,7 @@ void Ui::ServerConfigDialog::retranslateUi(QDialog *dialog)
   label_7->setText(QCoreApplication::translate("ServerConfigDialog", "Limit to:", nullptr));
   sbClipboardSizeLimit->setSuffix(QCoreApplication::translate("ServerConfigDialog", "MB", nullptr));
 
-  groupCorners->setTitle(
-      QCoreApplication::translate("ServerConfigDialog", "&Dead corners (for this computer)", nullptr)
-  );
+  groupCorners->setTitle(QString());
   cbCornerTopLeft->setText(QCoreApplication::translate("ServerConfigDialog", "To&p-left", nullptr));
   cbCornerTopRight->setText(QCoreApplication::translate("ServerConfigDialog", "Top-rig&ht", nullptr));
   cbCornerBottomLeft->setText(QCoreApplication::translate("ServerConfigDialog", "&Bottom-left", nullptr));
@@ -619,7 +693,7 @@ void Ui::ServerConfigDialog::retranslateUi(QDialog *dialog)
   label->setText(QCoreApplication::translate("ServerConfigDialog", "Cor&ner size", nullptr));
   sbSwitchCornerSize->setSuffix(QCoreApplication::translate("ServerConfigDialog", "px", nullptr));
 
-  groupNetwork->setTitle(QCoreApplication::translate("ServerConfigDialog", "&Network", nullptr));
+  groupNetwork->setTitle(QString());
   cbHeartbeat->setText(QCoreApplication::translate("ServerConfigDialog", "&Check clients every", nullptr));
   cbHeartbeat->setWhatsThis(
       QCoreApplication::translate(
@@ -633,6 +707,7 @@ void Ui::ServerConfigDialog::retranslateUi(QDialog *dialog)
   );
   sbHeartbeat->setSuffix(QCoreApplication::translate("ServerConfigDialog", "ms", nullptr));
   labelProtocol->setText(QCoreApplication::translate("ServerConfigDialog", "Network protocol", nullptr));
+  comboProtocol->setAccessibleName(labelProtocol->text());
   labelProtocol->setWhatsThis(
       QCoreApplication::translate(
           "ServerConfigDialog",
@@ -648,24 +723,29 @@ void Ui::ServerConfigDialog::retranslateUi(QDialog *dialog)
       )
   );
 
-  groupSwitch->setTitle(QCoreApplication::translate("ServerConfigDialog", "&Switching", nullptr));
+  groupSwitch->setTitle(QString());
   cbSwitchDelay->setText(QCoreApplication::translate("ServerConfigDialog", "Switch &after waiting", nullptr));
   sbSwitchDelay->setSuffix(QCoreApplication::translate("ServerConfigDialog", "ms", nullptr));
   cbSwitchDoubleTap->setText(
       QCoreApplication::translate("ServerConfigDialog", "Switch on double &tap within", nullptr)
   );
   sbSwitchDoubleTap->setSuffix(QCoreApplication::translate("ServerConfigDialog", "ms", nullptr));
+  for (auto *checkBox : {cbHeartbeat, cbSwitchDelay, cbSwitchDoubleTap})
+    fitEnableCaption(checkBox);
 
   label_5->setText(QCoreApplication::translate("ServerConfigDialog", "Core server config file", nullptr));
-  label_6->setText(
-      QCoreApplication::translate(
-          "ServerConfigDialog",
-          "Use a server config file to create complex computer layouts that are not possible with the simple "
-          "grid-based computer layout editor.\n\nEnabling this setting will disable the server config GUI.",
-          nullptr
-      )
+  synergy::gui::compact::setSubtleText(
+      label_6, QCoreApplication::translate(
+                   "ServerConfigDialog",
+                   "Use a server config file to create complex computer layouts that are not possible with the simple "
+                   "grid-based computer layout editor.\n\nEnabling this setting will disable the server config GUI.",
+                   nullptr
+               )
   );
   groupExternalConfig->setTitle(QCoreApplication::translate("ServerConfigDialog", "Use a server config file", nullptr));
+  cbExternalConfig->setText(groupExternalConfig->title());
   labelConfigFile->setText(QCoreApplication::translate("ServerConfigDialog", "Config file path", nullptr));
   btnBrowseConfigFile->setText(QString());
+  synergy::gui::compact::normalizeCards(dialog);
+  synergy::gui::compact::styleButtons(buttonBox);
 }

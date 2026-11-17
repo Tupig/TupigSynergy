@@ -37,7 +37,7 @@ const auto kPreferSystemKey = QStringLiteral("scope/preferSystem");
 
 QString extraFile()
 {
-  return QStringLiteral("%1/%2.extra.conf").arg(Settings::UserDir, kAppName);
+  return QStringLiteral("%1/%2.extra.conf").arg(Settings::userDir(), kAppName);
 }
 
 } // namespace
@@ -57,11 +57,11 @@ void SettingsScope::setPreferSystem(bool prefer)
 
 bool SettingsScope::isSystemWritable()
 {
-  const QFileInfo info(Settings::SystemSettingFile);
+  const QFileInfo info(Settings::systemSettingsFile());
   if (info.exists()) {
     return info.isWritable();
   }
-  QFileInfo dir(QFileInfo(Settings::SystemSettingFile).absolutePath());
+  QFileInfo dir(QFileInfo(Settings::systemSettingsFile()).absolutePath());
   if (dir.exists()) {
     return dir.isWritable();
   }
@@ -81,15 +81,15 @@ bool SettingsScope::switchTo(QDialog *parent, bool toSystem)
             "<p>The 'All users' scope requires administrator privileges. "
             "Run %1 as administrator/root to change settings here.</p>"
         )
-            .arg(QApplication::applicationName(), Settings::SystemSettingFile)
+            .arg(QApplication::applicationName(), Settings::systemSettingsFile())
     );
     return false;
   }
 
   Settings::save();
 
-  const auto destFile = toSystem ? Settings::SystemSettingFile : Settings::UserSettingFile;
-  const auto sourceFile = toSystem ? Settings::UserSettingFile : Settings::SystemSettingFile;
+  const auto destFile = toSystem ? Settings::systemSettingsFile() : Settings::userSettingsFile();
+  const auto sourceFile = toSystem ? Settings::userSettingsFile() : Settings::systemSettingsFile();
 
   QSettings dest(destFile, QSettings::IniFormat);
   if (dest.allKeys().isEmpty()) {

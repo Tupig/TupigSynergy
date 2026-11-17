@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
 
+#include "gui/StyleUtils.h"
+
 #include "LogPanel.h"
 
 #include "LogWidget.h"
@@ -15,19 +17,48 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPainter>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QVariant>
 
 namespace {
 
+// Keep the full source text/tooltip and accessibility value while painting one line.
+class ElidedLogLabel final : public QLabel
+{
+public:
+  using QLabel::QLabel;
+  QSize minimumSizeHint() const override
+  {
+    return {0, fontMetrics().height()};
+  }
+
+protected:
+  void paintEvent(QPaintEvent *event) override
+  {
+    if (fontMetrics().horizontalAdvance(text()) <= contentsRect().width()) {
+      QLabel::paintEvent(event);
+      return;
+    }
+    QPainter painter(this);
+    painter.setFont(font());
+    painter.setPen(palette().color(foregroundRole()));
+    painter.drawText(
+        contentsRect(), Qt::AlignLeft | Qt::AlignVCenter,
+        fontMetrics().elidedText(text(), Qt::ElideRight, contentsRect().width())
+    );
+  }
+};
+
 QPushButton *iconButton(QWidget *parent, const QString &icon, const QString &tip)
 {
   auto *button = new QPushButton(parent);
   button->setProperty("iconButton", true);
-  button->setIcon(QIcon::fromTheme(icon));
+  button->setIcon(synergy::gui::appIcon(icon));
   button->setIconSize(QSize(14, 14));
   button->setToolTip(tip);
+  button->setAccessibleName(tip);
   return button;
 }
 
@@ -84,8 +115,10 @@ LogPanel::LogPanel(QWidget *parent) : QFrame(parent)
 
   // 设计稿：工具条右侧是固定宽度的搜索输入框，而不是折叠图标。
   m_search = new QLineEdit(toolbar);
+  m_search->setObjectName(QStringLiteral("logSearch"));
   m_search->setPlaceholderText(tr("Search log"));
   m_search->setMaximumWidth(104);
+  m_search->setAccessibleName(tr("Search log"));
   toolbarLayout->addWidget(m_search);
 
   m_btnCopy = iconButton(toolbar, QStringLiteral("edit-copy"), tr("Copy Log"));
@@ -120,9 +153,12 @@ LogPanel::LogPanel(QWidget *parent) : QFrame(parent)
   auto *collapsedLayout = new QHBoxLayout(m_collapsedRow);
   collapsedLayout->setContentsMargins(10, 12, 10, 12);
   collapsedLayout->setSpacing(8);
-  m_badge = new QLabel(tr("Running"), m_collapsedRow);
+  m_badge = new QLabel(tr("Log"), m_collapsedRow);
   m_badge->setObjectName(QStringLiteral("logBadge"));
-  m_tail = new QLabel(m_collapsedRow);
+  m_tail = new ElidedLogLabel(m_collapsedRow);
+  m_tail->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+  m_tail->setMinimumWidth(0);
+  m_tail->setWordWrap(false);
   m_tail->setObjectName(QStringLiteral("logTail"));
   m_tail->setTextInteractionFlags(Qt::TextSelectableByMouse);
   m_btnExpand = iconButton(m_collapsedRow, QStringLiteral("go-up"), tr("Expand Log"));
@@ -199,12 +235,15 @@ void LogPanel::updateText()
 {
   m_title->setText(tr("Log"));
   m_hint->setText(tr("Latest 6 · wrapped"));
-  m_badge->setText(tr("Running"));
+  m_badge->setText(tr("Log"));
   m_btnCopy->setToolTip(tr("Copy Log"));
   m_btnClear->setToolTip(tr("Clear Log"));
   m_btnCollapse->setToolTip(tr("Collapse Log"));
   m_btnExpand->setToolTip(tr("Expand Log"));
   m_search->setPlaceholderText(tr("Search log"));
+  m_search->setAccessibleName(tr("Search log"));
+  for (auto *button : {m_btnCopy, m_btnClear, m_btnCollapse, m_btnExpand})
+    button->setAccessibleName(button->toolTip());
   const auto labels = QStringList{tr("All"), tr("Info"), tr("Warn"), tr("Error")};
   const auto buttons = m_levels->buttons();
   for (int i = 0; i < buttons.size() && i < labels.size(); ++i) {

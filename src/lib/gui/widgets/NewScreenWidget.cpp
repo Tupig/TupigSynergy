@@ -21,6 +21,11 @@ NewScreenWidget::NewScreenWidget(QWidget *parent) : QLabel(parent)
 
 void NewScreenWidget::mousePressEvent(QMouseEvent *)
 {
+  startDrag(this);
+}
+
+void NewScreenWidget::startDrag(QWidget *source)
+{
   //: Used as the hostname. Translation may not contain spaces
   synergy::gui::Screen newScreen(tr("Unnamed"));
 
@@ -31,7 +36,7 @@ void NewScreenWidget::mousePressEvent(QMouseEvent *)
   auto *pMimeData = new QMimeData;
   pMimeData->setData(ScreenSetupModel::mimeType(), itemData);
 
-  auto *pDrag = new QDrag(this);
+  auto *pDrag = new QDrag(source);
   pDrag->setMimeData(pMimeData);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   pDrag->setPixmap(pixmap());

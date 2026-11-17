@@ -12,19 +12,19 @@
 ModeCard::ModeCard(QWidget *parent) : QRadioButton(parent)
 {
   setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-  setFixedHeight(66);
+  setFixedHeight(56);
   setCursor(Qt::PointingHandCursor);
   setAttribute(Qt::WA_Hover);
 }
 
 QSize ModeCard::sizeHint() const
 {
-  return {230, 66};
+  return {230, 56};
 }
 
 QSize ModeCard::minimumSizeHint() const
 {
-  return {180, 66};
+  return {180, 56};
 }
 
 bool ModeCard::hitButton(const QPoint &position) const
@@ -35,7 +35,7 @@ bool ModeCard::hitButton(const QPoint &position) const
 void ModeCard::paintEvent(QPaintEvent *)
 {
   const bool dark = synergy::gui::isDarkMode();
-  const QColor accent(QStringLiteral("#4cc38a"));
+  const QColor accent(dark ? QStringLiteral("#4cc38a") : QStringLiteral("#2f9e6b"));
   QPainter painter(this);
   painter.setRenderHint(QPainter::Antialiasing);
   painter.setPen(isChecked() ? QPen(QColor(76, 195, 138, 140), 1) : QPen(Qt::NoPen));
@@ -45,11 +45,11 @@ void ModeCard::paintEvent(QPaintEvent *)
   painter.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 9, 9);
   painter.setPen(isChecked() ? QPen(accent) : QPen(QColor(QStringLiteral("#777980"))));
   painter.setBrush(isChecked() ? accent : Qt::transparent);
-  painter.drawEllipse(QPointF(17, 20), 7, 7);
+  painter.drawEllipse(QPointF(17, 16), 7, 7);
   if (isChecked()) {
     painter.setPen(Qt::NoPen);
     painter.setBrush(Qt::white);
-    painter.drawEllipse(QPointF(17, 20), 2.5, 2.5);
+    painter.drawEllipse(QPointF(17, 16), 2.5, 2.5);
   }
   const bool server = objectName() == QStringLiteral("rbModeServer");
   QFont titleFont = font();
@@ -58,13 +58,13 @@ void ModeCard::paintEvent(QPaintEvent *)
   painter.setFont(titleFont);
   painter.setPen(palette().color(isEnabled() ? QPalette::Active : QPalette::Disabled, QPalette::WindowText));
   const QString title = text();
-  painter.drawText(QRect(32, 9, width() - 42, 20), Qt::AlignLeft | Qt::AlignVCenter, title);
+  painter.drawText(QRect(32, 4, width() - 42, 20), Qt::AlignLeft | Qt::AlignVCenter, title);
   QFont subtitle = font();
   subtitle.setPixelSize(11);
   painter.setFont(subtitle);
   painter.setPen(QColor(dark ? QStringLiteral("#9a9aa0") : QStringLiteral("#62626a")));
   painter.drawText(
-      QRect(32, 31, width() - 42, 30), Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
+      QRect(32, 25, width() - 42, 28), Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
       server ? tr("Share this computer's keyboard and mouse") : tr("Use another computer's keyboard and mouse")
   );
   if (hasFocus()) {

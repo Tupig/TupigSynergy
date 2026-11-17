@@ -640,15 +640,11 @@ QPair<bool, QString> CoreProcess::persistServerConfig() const
   }
 
   const auto configFilePath = Settings::defaultValue(Settings::Server::ExternalConfigFile).toString();
-  QFile configFile(configFilePath);
-  if (!configFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-    qWarning() << "failed to open core config file for write:" << configFilePath;
-    return {false, configFile.fileName()};
+  if (!m_serverConfig.save(configFilePath)) {
+    qWarning() << "failed to persist core configuration:" << configFilePath;
+    return {false, configFilePath};
   }
-
-  m_serverConfig.save(configFile);
-  configFile.close();
-  return {Settings::isServerConfigFileReadable(), configFile.fileName()};
+  return {Settings::isServerConfigFileReadable(), configFilePath};
 }
 
 void CoreProcess::setConnectionState(ConnectionState state)

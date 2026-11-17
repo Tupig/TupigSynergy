@@ -6,12 +6,14 @@
 
 #include "LogWidget.h"
 #include "common/PlatformInfo.h"
+#include "gui/StyleUtils.h"
 
 #include <gui/Logger.h>
 
 #include <QEvent>
 #include <QFontDatabase>
 #include <QHeaderView>
+#include <QScopedValueRollback>
 #include <QScrollBar>
 #include <QTableWidget>
 #include <QTableWidgetItem>
@@ -58,6 +60,13 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_table{new QTableWidge
   m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
   m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
   m_table->viewport()->installEventFilter(this);
+  auto *scrollBar = m_table->verticalScrollBar();
+  connect(scrollBar, &QScrollBar::valueChanged, this, [this, scrollBar](int value) {
+    // User scrolling and search may pause following; content/layout adjustments may not.
+    if (!m_adjustingContents)
+      m_followTail = value == scrollBar->maximum();
+  });
+  connect(scrollBar, &QScrollBar::rangeChanged, this, [this] { requestTailScroll(); });
   connect(m_table->horizontalHeader(), &QHeaderView::sectionResized, this, [this](int column, int, int) {
     if (column == 2)
       QTimer::singleShot(0, this, [this] { updateVisibleHeight(); });
@@ -103,6 +112,7 @@ LogWidget::Record LogWidget::parse(const QString &line)
 
 void LogWidget::appendLine(const QString &msg)
 {
+  const QScopedValueRollback<bool> adjusting(m_adjustingContents, true);
   if (static_cast<int>(m_history.size()) == kHistoryLimit) {
     const auto &oldest = m_history.front();
     --m_counts[levelIndex(oldest)];
@@ -127,7 +137,7 @@ void LogWidget::appendLine(const QString &msg)
     levelFont.setPixelSize(11);
     level->setFont(levelFont);
     auto *message = new QTableWidgetItem(record.message);
-    message->setForeground(QColor(QStringLiteral("#cfcfd6")));
+    message->setForeground(QColor(synergy::gui::isDarkMode() ? QStringLiteral("#cfcfd6") : QStringLiteral("#3a3a40")));
     m_table->setItem(row, 0, time);
     m_table->setItem(row, 1, level);
     m_table->setItem(row, 2, message);
@@ -152,6 +162,7 @@ bool LogWidget::eventFilter(QObject *watched, QEvent *event)
 
 void LogWidget::updateVisibleHeight()
 {
+  const QScopedValueRollback<bool> adjusting(m_adjustingContents, true);
   // 根据实际列宽重算换行高度，不能只打开 wordWrap 后仍固定单行高度。
   const int count = m_table->rowCount();
   int height = 0;
@@ -190,6 +201,7 @@ void LogWidget::updateVisibleHeight()
   m_table->setVisible(rows > 0);
   m_table->setFixedHeight(height);
   setFixedHeight(height);
+  requestTailScroll();
 }
 
 void LogWidget::setLevelFilter(const QString &level)
@@ -230,6 +242,7 @@ int LogWidget::levelIndex(const QString &line)
 
 void LogWidget::rebuild()
 {
+  const QScopedValueRollback<bool> adjusting(m_adjustingContents, true);
   m_table->setRowCount(0);
   m_latestLine.clear();
   QList<QString> visible;
@@ -254,7 +267,7 @@ void LogWidget::rebuild()
     levelFont.setPixelSize(11);
     level->setFont(levelFont);
     auto *message = new QTableWidgetItem(record.message);
-    message->setForeground(QColor(QStringLiteral("#cfcfd6")));
+    message->setForeground(QColor(synergy::gui::isDarkMode() ? QStringLiteral("#cfcfd6") : QStringLiteral("#3a3a40")));
     m_table->setItem(row, 0, time);
     m_table->setItem(row, 1, level);
     m_table->setItem(row, 2, message);
@@ -266,6 +279,8 @@ void LogWidget::rebuild()
 
 void LogWidget::clear()
 {
+  const QScopedValueRollback<bool> adjusting(m_adjustingContents, true);
+  m_followTail = true;
   m_history.clear();
   m_latestLine.clear();
   m_counts = {0, 0, 0};
@@ -322,8 +337,22 @@ void LogWidget::findPrevious(const QString &text)
   }
 }
 
+void LogWidget::requestTailScroll()
+{
+  if (!m_followTail || m_tailScrollPending)
+    return;
+  m_tailScrollPending = true;
+  // Wait for Qt's pending row/viewport layout, including appends while hidden.
+  QTimer::singleShot(0, this, [this] {
+    if (m_followTail)
+      scrollToBottom();
+    m_tailScrollPending = false;
+  });
+}
+
 void LogWidget::scrollToBottom() const
 {
+  m_followTail = true;
   auto *bar = m_table->verticalScrollBar();
   bar->setValue(bar->maximum());
 }

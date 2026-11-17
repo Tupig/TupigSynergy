@@ -4,9 +4,11 @@
  */
 
 #include "ScreenSettingsDialogDesign.h"
+#include "CompactLayout.h"
 
 #include <QCoreApplication>
 #include <QFrame>
+#include <QListView>
 #include <QStringList>
 
 namespace {
@@ -35,11 +37,12 @@ QLabel *createFormLabel(QWidget *parent)
 QComboBox *createModifierCombo(QWidget *parent)
 {
   auto *combo = new QComboBox(parent);
+  combo->setView(new QListView(combo));
   combo->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
-  combo->setMaximumSize(140, 16777215);
+  combo->setFixedWidth(180);
   combo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
   for (int i = 0; i < 7; ++i) {
-    combo->addItem(QString());
+    combo->addItem(QString(), i);
   }
   return combo;
 }
@@ -96,7 +99,7 @@ void Ui::ScreenSettingsDialog::setupUi(QDialog *dialog)
   lineNameEdit = new QLineEdit(groupComputerName);
   lineNameEdit->setObjectName(QStringLiteral("lineNameEdit"));
   lineNameEdit->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
-  lineNameEdit->setMaximumSize(180, 16777215);
+  lineNameEdit->setFixedWidth(180);
   lineNameEdit->setMaxLength(255);
   _4->setWidget(0, QFormLayout::FieldRole, lineNameEdit);
   label_7->setBuddy(lineNameEdit);
@@ -110,15 +113,24 @@ void Ui::ScreenSettingsDialog::setupUi(QDialog *dialog)
   lblNameError->setWordWrap(true);
   lblNameError->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
   _3->addWidget(lblNameError);
+  auto *nameHint = new QLabel(groupComputerName);
+  nameHint->setObjectName(QStringLiteral("computerNameHint"));
+  nameHint->setProperty("muted", true);
+  nameHint->setWordWrap(true);
+  _3->addWidget(nameHint);
 
   layoutLeftSide->addWidget(groupComputerName);
 
   groupModifers = new QGroupBox(scrollAreaWidgetContents);
   groupModifers->setObjectName(QStringLiteral("groupModifers"));
 
-  formLayout_2 = new QFormLayout(groupModifers);
+  auto *modifiersCardLayout = new QVBoxLayout(groupModifers);
+  modifiersCardLayout->setContentsMargins(12, 10, 12, 12);
+  modifiersCardLayout->setSpacing(12);
+  formLayout_2 = new QFormLayout;
   formLayout_2->setObjectName(QStringLiteral("formLayout_2"));
   configureFormLayout(formLayout_2);
+  modifiersCardLayout->addLayout(formLayout_2);
 
   label_2 = createFormLabel(groupModifers);
   label_2->setObjectName(QStringLiteral("label_2"));
@@ -191,56 +203,33 @@ void Ui::ScreenSettingsDialog::setupUi(QDialog *dialog)
   verticalLayout_2->setSpacing(8);
   verticalLayout_2->setContentsMargins(0, 0, 0, 0);
 
-  layoutDeadCornersTop = new QHBoxLayout;
-  layoutDeadCornersTop->setObjectName(QStringLiteral("layoutDeadCornersTop"));
-  layoutDeadCornersTop->setSpacing(8);
-  layoutDeadCornersTop->setContentsMargins(0, 0, 0, 0);
-
-  chkDeadTopLeft = new QCheckBox(groupDeadCorners);
-  chkDeadTopLeft->setObjectName(QStringLiteral("chkDeadTopLeft"));
-  chkDeadTopLeft->setAutoRepeatInterval(100);
-  layoutDeadCornersTop->addWidget(chkDeadTopLeft);
-
-  chkDeadTopRight = new QCheckBox(groupDeadCorners);
-  chkDeadTopRight->setObjectName(QStringLiteral("chkDeadTopRight"));
-  chkDeadTopRight->setLayoutDirection(Qt::RightToLeft);
-  layoutDeadCornersTop->addWidget(chkDeadTopRight);
-
-  verticalLayout_2->addLayout(layoutDeadCornersTop);
-
+  for (const auto &name :
+       {QStringLiteral("chkDeadTopLeft"), QStringLiteral("chkDeadTopRight"), QStringLiteral("chkDeadBottomLeft"),
+        QStringLiteral("chkDeadBottomRight")}) {
+    auto *corner = new QCheckBox(groupDeadCorners);
+    corner->setObjectName(name);
+    verticalLayout_2->addWidget(corner);
+    if (name == QStringLiteral("chkDeadTopLeft"))
+      chkDeadTopLeft = corner;
+    else if (name == QStringLiteral("chkDeadTopRight"))
+      chkDeadTopRight = corner;
+    else if (name == QStringLiteral("chkDeadBottomLeft"))
+      chkDeadBottomLeft = corner;
+    else
+      chkDeadBottomRight = corner;
+  }
   layoutCornerSize = new QFormLayout;
   layoutCornerSize->setObjectName(QStringLiteral("layoutCornerSize"));
   configureFormLayout(layoutCornerSize);
-
   label = createFormLabel(groupDeadCorners);
   label->setObjectName(QStringLiteral("label"));
-  layoutCornerSize->setWidget(0, QFormLayout::LabelRole, label);
-
   sbSwitchCornerSize = new QSpinBox(groupDeadCorners);
   sbSwitchCornerSize->setObjectName(QStringLiteral("sbSwitchCornerSize"));
-  sbSwitchCornerSize->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
-  sbSwitchCornerSize->setMinimumSize(70, 0);
-  sbSwitchCornerSize->setMaximumSize(90, 16777215);
-  layoutCornerSize->setWidget(0, QFormLayout::FieldRole, sbSwitchCornerSize);
+  sbSwitchCornerSize->setFixedWidth(110);
+  sbSwitchCornerSize->setSuffix(QStringLiteral(" px"));
+  layoutCornerSize->addRow(label, sbSwitchCornerSize);
   label->setBuddy(sbSwitchCornerSize);
-
   verticalLayout_2->addLayout(layoutCornerSize);
-
-  layoutDeadCornersBottom = new QHBoxLayout;
-  layoutDeadCornersBottom->setObjectName(QStringLiteral("layoutDeadCornersBottom"));
-  layoutDeadCornersBottom->setSpacing(8);
-  layoutDeadCornersBottom->setContentsMargins(0, 0, 0, 0);
-
-  chkDeadBottomLeft = new QCheckBox(groupDeadCorners);
-  chkDeadBottomLeft->setObjectName(QStringLiteral("chkDeadBottomLeft"));
-  layoutDeadCornersBottom->addWidget(chkDeadBottomLeft);
-
-  chkDeadBottomRight = new QCheckBox(groupDeadCorners);
-  chkDeadBottomRight->setObjectName(QStringLiteral("chkDeadBottomRight"));
-  chkDeadBottomRight->setLayoutDirection(Qt::RightToLeft);
-  layoutDeadCornersBottom->addWidget(chkDeadBottomRight);
-
-  verticalLayout_2->addLayout(layoutDeadCornersBottom);
 
   layoutRightSide->addWidget(groupDeadCorners);
 
@@ -277,7 +266,7 @@ void Ui::ScreenSettingsDialog::setupUi(QDialog *dialog)
 
   groupAliases = new QGroupBox(scrollAreaWidgetContents);
   groupAliases->setObjectName(QStringLiteral("groupAliases"));
-  groupAliases->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+  groupAliases->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 
   verticalLayout = new QVBoxLayout(groupAliases);
   verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
@@ -301,21 +290,19 @@ void Ui::ScreenSettingsDialog::setupUi(QDialog *dialog)
   btnAddAlias->setEnabled(true);
   horizontalLayout->addWidget(btnAddAlias);
 
-  verticalLayout->addLayout(horizontalLayout);
-
   lblAliasError = new QLabel(groupAliases);
   lblAliasError->setObjectName(QStringLiteral("lblAliasError"));
   lblAliasError->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
   lblAliasError->setText(QStringLiteral("lblAliasError"));
   lblAliasError->setWordWrap(true);
   lblAliasError->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-  verticalLayout->addWidget(lblAliasError);
 
   listAliases = new QListWidget(groupAliases);
   listAliases->setObjectName(QStringLiteral("listAliases"));
-  listAliases->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
-  listAliases->setMinimumSize(120, 72);
-  listAliases->setMaximumSize(16777215, 100);
+  listAliases->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+  synergy::gui::compact::fitRows(
+      listAliases, QCoreApplication::translate("ScreenSettingsDialog", "No aliases configured")
+  );
   listAliases->setSelectionMode(QAbstractItemView::ExtendedSelection);
   verticalLayout->addWidget(listAliases);
 
@@ -323,20 +310,61 @@ void Ui::ScreenSettingsDialog::setupUi(QDialog *dialog)
   btnRemoveAlias->setObjectName(QStringLiteral("btnRemoveAlias"));
   btnRemoveAlias->setEnabled(false);
   btnRemoveAlias->setMaximumSize(140, 16777215);
-  verticalLayout->addWidget(btnRemoveAlias, 0, Qt::AlignLeft);
+  horizontalLayout->addWidget(btnRemoveAlias);
+  verticalLayout->addLayout(horizontalLayout);
+  verticalLayout->addWidget(lblAliasError);
 
   layoutRightSide->addWidget(groupAliases);
 
   layoutOptions->addLayout(layoutRightSide);
 
   scrollArea->setWidget(scrollAreaWidgetContents);
-  _2->addWidget(scrollArea);
+  tabWidget = new QTabWidget(dialog);
+  tabWidget->setObjectName(QStringLiteral("tabWidget"));
+  const QList<QList<QGroupBox *>> cards{
+      {groupComputerName}, {groupModifers}, {groupDeadCorners, groupFixes}, {groupAliases}
+  };
+  for (const auto &tabCards : cards) {
+    auto *page = new QWidget(tabWidget);
+    auto *pageLayout = new QVBoxLayout(page);
+    pageLayout->setContentsMargins(0, 0, 0, 0);
+    pageLayout->setSpacing(8);
+    for (auto *card : tabCards) {
+      card->setParent(page);
+      card->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+      card->layout()->setContentsMargins(12, 10, 12, 12);
+      pageLayout->addWidget(card);
+    }
+    pageLayout->setAlignment(Qt::AlignTop);
+    tabWidget->addTab(page, QString());
+  }
+  synergy::gui::compact::combineCards(
+      tabWidget->widget(2), {groupDeadCorners, groupFixes}, QStringLiteral("compatibilityCard")
+  );
+  groupDeadCorners->layout()->setContentsMargins(0, 0, 0, 0);
+  // The old container now holds only empty layouts; no settings widgets are recreated.
+  delete scrollArea;
+  scrollArea = nullptr;
+  scrollAreaWidgetContents = nullptr;
+  _2->addWidget(tabWidget);
 
   buttonBox = new QDialogButtonBox(dialog);
   buttonBox->setObjectName(QStringLiteral("buttonBox"));
   buttonBox->setOrientation(Qt::Horizontal);
   buttonBox->setStandardButtons(QDialogButtonBox::Cancel | QDialogButtonBox::Save);
-  _2->addWidget(buttonBox);
+  const auto placeActions = [this] {
+    auto *page = tabWidget->currentWidget();
+    QGroupBox *card = nullptr;
+    for (auto *candidate : page->findChildren<QGroupBox *>()) {
+      if (!candidate->property("cardSection").toBool()) {
+        card = candidate;
+        break;
+      }
+    }
+    synergy::gui::compact::placeActions(card, buttonBox);
+  };
+  QObject::connect(tabWidget, &QTabWidget::currentChanged, dialog, placeActions);
+  placeActions();
 
   QWidget::setTabOrder(lineNameEdit, comboMeta);
   QWidget::setTabOrder(comboMeta, comboShift);
@@ -365,10 +393,19 @@ void Ui::ScreenSettingsDialog::retranslateUi(QDialog *dialog)
 {
   dialog->setWindowTitle(QCoreApplication::translate("ScreenSettingsDialog", "Computer settings"));
 
-  groupComputerName->setTitle(QCoreApplication::translate("ScreenSettingsDialog", "Computer Info"));
-  label_7->setText(QCoreApplication::translate("ScreenSettingsDialog", "Name"));
+  tabWidget->setTabText(0, QCoreApplication::translate("ScreenSettingsDialog", "Computer Info"));
+  tabWidget->setTabText(1, QCoreApplication::translate("ScreenSettingsDialog", "Modifier Keys"));
+  tabWidget->setTabText(2, QCoreApplication::translate("ScreenSettingsDialog", "Corners and compatibility"));
+  tabWidget->setTabText(3, QCoreApplication::translate("ScreenSettingsDialog", "Aliases"));
 
-  groupModifers->setTitle(QCoreApplication::translate("ScreenSettingsDialog", "Modifier Keys"));
+  groupComputerName->setTitle(QString());
+  label_7->setText(QCoreApplication::translate("ScreenSettingsDialog", "Name"));
+  dialog->findChild<QLabel *>(QStringLiteral("computerNameHint"))
+      ->setText(
+          QCoreApplication::translate("ScreenSettingsDialog", "The computer name must be unique in this layout.")
+      );
+
+  groupModifers->setTitle(QString());
   label_2->setText(QCoreApplication::translate("ScreenSettingsDialog", "&Shift"));
   label_3->setText(QCoreApplication::translate("ScreenSettingsDialog", "&Ctrl"));
   label_4->setText(QCoreApplication::translate("ScreenSettingsDialog", "Al&t"));
@@ -391,7 +428,7 @@ void Ui::ScreenSettingsDialog::retranslateUi(QDialog *dialog)
     }
   }
 
-  groupDeadCorners->setTitle(QCoreApplication::translate("ScreenSettingsDialog", "Dead Corners"));
+  groupDeadCorners->setTitle(QString());
   chkDeadTopLeft->setToolTip(QCoreApplication::translate("ScreenSettingsDialog", "Top Left"));
   chkDeadTopRight->setToolTip(QCoreApplication::translate("ScreenSettingsDialog", "Top Right"));
   label->setText(QCoreApplication::translate("ScreenSettingsDialog", "Corner si&ze"));
@@ -404,7 +441,10 @@ void Ui::ScreenSettingsDialog::retranslateUi(QDialog *dialog)
   chkFixNumLock->setText(QCoreApplication::translate("ScreenSettingsDialog", "NUM LOCK key"));
   chkFixXTest->setText(QCoreApplication::translate("ScreenSettingsDialog", "XTest for Xinerama"));
 
-  groupAliases->setTitle(QCoreApplication::translate("ScreenSettingsDialog", "Aliases"));
+  groupAliases->setTitle(QString());
   btnAddAlias->setText(QCoreApplication::translate("ScreenSettingsDialog", "&Add"));
   btnRemoveAlias->setText(QCoreApplication::translate("ScreenSettingsDialog", "&Remove"));
+
+  synergy::gui::compact::normalizeCards(dialog);
+  synergy::gui::compact::styleButtons(buttonBox);
 }

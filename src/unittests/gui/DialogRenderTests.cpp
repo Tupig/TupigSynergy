@@ -2,6 +2,8 @@
  * SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
+#include "UiRenderTestSupport.h"
+#include "common/RuntimeContext.h"
 #include "common/Settings.h"
 #include "gui/Action.h"
 #include "gui/AppStyle.h"
@@ -18,6 +20,8 @@
 #include "gui/update/UpdateDialog.h"
 #include "gui/widgets/KeySequenceWidget.h"
 #include "update/TestHttpServer.h"
+#include <QFileInfo>
+#include <QUuid>
 
 #include <QApplication>
 #include <QCryptographicHash>
@@ -32,12 +36,17 @@
 #include <QtTest>
 
 namespace {
+QString updateText(const char *source)
+{
+  return QCoreApplication::translate("synergy::gui::update::UpdateDialog", source);
+}
 
 /// 离屏渲染页面并保存截图，避免向系统注入真实输入。
 void renderToFile(QWidget &widget, const QString &path)
 {
   widget.ensurePolished();
   widget.adjustSize();
+  QVERIFY2(settleStaticRender(widget), "Static capture did not settle within 1000ms");
   QPixmap pixmap(widget.size());
   pixmap.fill(Qt::transparent);
   widget.render(&pixmap);
@@ -60,7 +69,9 @@ private Q_SLOTS:
 
 void DialogRenderTests::rendersHotkeyAndAction()
 {
-  const QString outputDir = QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"));
+  const QString outputDir = qEnvironmentVariable(
+      "SYNERGY_UI_EVIDENCE_DIR", QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"))
+  );
   QDir().mkpath(outputDir);
 
   Hotkey hotkey;
@@ -87,7 +98,9 @@ void DialogRenderTests::rendersUpdateAndFingerprint()
   info.notes = QStringLiteral("- 修复日志面板高度\n- 新增卡片式配置页");
   info.releaseUrl = QUrl(QStringLiteral("https://github.com/Tupig/TupigSynergy/releases/tag/v1.22.0"));
   info.asset.name = QStringLiteral("synergy_1.22.0_mac_arm64.dmg");
-  const QString outputDir = QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"));
+  const QString outputDir = qEnvironmentVariable(
+      "SYNERGY_UI_EVIDENCE_DIR", QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"))
+  );
   QDir().mkpath(outputDir);
 
   synergy::gui::update::UpdateDialog updateDialog(info, nullptr);
@@ -147,13 +160,13 @@ void DialogRenderTests::downloadsUpdateFromLoopback()
   // 找到「下载并安装」按钮。
   QPushButton *downloadButton = nullptr;
   for (auto *button : dialog.findChildren<QPushButton *>()) {
-    if (button->text().contains(QStringLiteral("Download")))
+    if (button->text() == updateText("Download and Install"))
       downloadButton = button;
   }
   QVERIFY(downloadButton != nullptr);
   QTest::mouseClick(downloadButton, Qt::LeftButton);
 
-  QTRY_COMPARE_WITH_TIMEOUT(downloadButton->text(), QStringLiteral("Install Now"), 15000);
+  QTRY_COMPARE_WITH_TIMEOUT(downloadButton->text(), updateText("Install Now"), 15000);
   auto *progress = dialog.findChild<QProgressBar *>();
   QVERIFY(progress != nullptr);
   QCOMPARE(progress->value(), 100);
@@ -162,7 +175,9 @@ void DialogRenderTests::downloadsUpdateFromLoopback()
 
 void DialogRenderTests::rendersConfigurationPages()
 {
-  const QString outputDir = QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"));
+  const QString outputDir = qEnvironmentVariable(
+      "SYNERGY_UI_EVIDENCE_DIR", QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"))
+  );
   QDir().mkpath(outputDir);
 
   synergy::gui::ServerConfig config;
@@ -213,6 +228,14 @@ int main(int argc, char **argv)
   QTemporaryDir directory;
   if (!directory.isValid())
     return 1;
+  // COMPLETE-R1 isolation lineage: preserve all inherited assertions and fixtures.
+  QString isolationError;
+  if (!synergy::runtime::configureIsolatedRuntime(
+          {QFileInfo(directory.path()).canonicalFilePath(),
+           "ts-complete-" + QUuid::createUuid().toString(QUuid::WithoutBraces)},
+          &isolationError
+      ))
+    return 2;
   qputenv("XDG_CONFIG_HOME", directory.path().toUtf8());
   qputenv("XDG_STATE_HOME", directory.path().toUtf8());
   QApplication app(argc, argv);
