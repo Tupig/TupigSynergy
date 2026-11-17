@@ -178,6 +178,26 @@ jobs:
       - name: Check Chinese translations
         run: python3 scripts/ci/check-translations.py
 
+  codeql:
+    name: Analyze C++
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: c-cpp
+          build-mode: none
+      - name: Analyze C++
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:c-cpp
+
   # ---------------------------------------------------------------------------
   # 2. Build. One CMake configure line per OS; the runner compiler differs.
   # Windows x64: MSVC + Ninja. macOS arm64: AppleClang.
@@ -768,8 +788,8 @@ jobs:
           retention-days: 14
 
   github-release:
-    needs: [get-version, build-windows, build-macos]
-    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.publish_release == 'true' && needs.build-windows.result == 'success' && needs.build-macos.result == 'success' }}
+    needs: [get-version, build-windows, build-macos, codeql]
+    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.publish_release == 'true' && needs.build-windows.result == 'success' && needs.build-macos.result == 'success' && needs.codeql.result == 'success' }}
     runs-on: ubuntu-latest
     # contents:write uploads the Release. id-token and attestations mint the
     # Sigstore provenance for those same bytes. Job permissions replace the
@@ -891,6 +911,7 @@ jobs:
         get-version,
         lint-clang,
         lint-encoding,
+        codeql,
         build-windows,
         build-macos,
         github-release,
@@ -939,6 +960,7 @@ jobs:
           test "${{ needs.get-version.result }}" = success || exit 1
           test "${{ needs.lint-clang.result }}" = success || exit 1
           test "${{ needs.lint-encoding.result }}" = success || exit 1
+          test "${{ needs.codeql.result }}" = success || exit 1
           require_result() {
             local selected="$1" result="$2" expected=skipped
             if [ "$selected" = true ]; then expected=success; fi

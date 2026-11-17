@@ -449,6 +449,43 @@ class GitHubDeliveryContract(unittest.TestCase):
         self.assertNotIn("||", condition)
         self.assertIn("publish_release == 'true'", condition)
         self.assertIn("needs.get-version.result == 'success'", condition)
+        self.assertIn("needs.codeql.result == 'success'", condition)
+
+    def test_real_codeql_job_preserves_required_name_permissions_and_no_build(self):
+        analysis = job("codeql")
+        self.assertRegex(analysis, r"(?m)^    name:\s*Analyze C\+\+\s*$")
+        self.assertRegex(analysis, r"(?m)^    runs-on:\s*ubuntu-latest\s*$")
+        self.assertEqual(len(re.findall(r"(?m)^    name:\s*Analyze C\+\+\s*$", WORKFLOW.read_text())), 1)
+        self.assertNotRegex(analysis, r"(?m)^\s*(?:if|continue-on-error|strategy|run):")
+        self.assertNotRegex(analysis, r"secrets[.\[]|github/codeql-action/autobuild")
+        self.assertNotRegex(analysis, r"(?m)^\s*(?:ref|repository|token):")
+        global_permissions = re.search(r"(?m)^permissions:\n((?:  [^\n]*\n)+)", WORKFLOW.read_text())
+        self.assertIsNotNone(global_permissions)
+        self.assertEqual(re.findall(r"(?m)^  ([\w-]+):\s*(\w+)\s*$", global_permissions.group(1)),
+                         [("contents", "read")])
+        permissions = re.search(r"(?m)^    permissions:\n((?:      [^\n]*\n)+)", analysis)
+        self.assertIsNotNone(permissions)
+        self.assertEqual(dict(re.findall(r"(?m)^      ([\w-]+):\s*(\w+)\s*$", permissions.group(1))),
+                         {"contents": "read", "security-events": "write"})
+        blocks = steps(analysis)
+        expected = (
+            "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066",
+            "github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066",
+        )
+        actual = [re.findall(r"(?m)^        uses:\s*([^\s#]+)", block) for block in blocks]
+        self.assertEqual(actual, [[action] for action in expected])
+        init_inputs = dict(re.findall(r"(?m)^          ([\w-]+):\s*([^\s#]+)", blocks[1]))
+        self.assertEqual(init_inputs, {"languages": "c-cpp", "build-mode": "none"})
+        analyze_inputs = dict(re.findall(r"(?m)^          ([\w-]+):\s*([^\s#]+)", blocks[2]))
+        self.assertIn(analyze_inputs, ({"category": "/language:c-cpp"},
+                                     {"category": "/language:c-cpp", "upload": "always"}))
+        for name in ("github-release", "ci-passed"):
+            with self.subTest(required_by=name):
+                prefix = job(name).split("    steps:", 1)[0]
+                dependencies = re.search(r"(?m)^    needs:\s*(\[[^\]]+\])", prefix)
+                self.assertIsNotNone(dependencies)
+                self.assertIn("codeql", re.findall(r"[\w-]+", dependencies.group(1)))
 
     def test_workflow_does_not_mutate_source_or_push_main(self):
         paths = list((ROOT / ".github/workflows").glob("*.yml"))
@@ -819,7 +856,7 @@ class GitHubDeliverySuccessorContract(unittest.TestCase):
         )
         flag_names = ("build_windows", "build_macos", "publish_release")
         def statuses(flags):
-            result = {name: "success" for name in ("get-version", "lint-clang", "lint-encoding")}
+            result = {name: "success" for name in ("get-version", "lint-clang", "lint-encoding", "codeql")}
             result.update({name: "success" if flags[key] == "true" else "skipped" for name, key in (
                 ("build-windows", "build_windows"), ("build-macos", "build_macos"),
                 ("github-release", "publish_release"))})
