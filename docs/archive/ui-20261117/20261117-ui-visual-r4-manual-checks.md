@@ -1,0 +1,47 @@
+# Visual R4 manual comparison contract / 视觉R4人工对照合同
+
+## English
+
+Tester-authored actual worksheet, created before paired list/subtle changes under BP-UI-20261117-VISUAL-R4. This is a bounded complement to the independent executable structure/token checks, not a new requirement or a passing result. All AFTER cells are pending independent review and fresh final-source observation.
+
+Reference: inert `/private/tmp/tupig-ui-full.html`, SHA256 `63895000d2dff328e6a075df18d2f61a2170023a748c19e12500e7f18047345f`. HTML207-212 defines borderless lists,9px corner radius, background#1e1f23, item padding7px vertical/10px horizontal,12px row text and14px icons when the row has an icon. HTML113 defines subtle text11.5px, muted#9a9aa0, line-height1.65 (about19px for multiline text). These expectations are reference-derived; Qt property names and prior implementation are not the oracle. Font rasterization/antialiasing is not expected to match a browser glyph-for-glyph; compare logical geometry, flat colors, text hierarchy and wraps.
+
+Primary BEFORE identity: `build/ui-visual-r4-evidence/common-red-r2/probe-identity.json`; executable SHA256 `628932fdfad7cdb419b34cb032ebc275fbd2c286113153dc1e894e380164855a`; source manifest `6e7d36f78df1adffcc84a8535ea47c5e7ceb4d9bd77cfda745d772213a6dfa9f` (1091 files); production main/real hooks with existing isolated RuntimeContext and blocked runtime commands; process9050 launched2026-11-17T13:04:01.462Z. Cocoa, native dark palette, DPR2, logical widths540/600/820; the examples below use600logical/1200physical pixels. Global QSS SHA256 `c68df65864f4eda484ca54c957e1542e71c04322e42fd072abf748c9b71cca71`. This was a newly launched isolated test variant, not PID19168 or a byte-identical distributed executable. Widget grabs and final native compositor/CUA observations remain separately labeled.
+
+| ID and reference relationship | Actual BEFORE evidence and bounded finding | AFTER check and status |
+|---|---|---|
+| R4-M01 Server Hotkeys / HTML522-529,207-212 | `common-red-r2/renders/server-tab1-type-1-recipients0-zh_CN-600.png`: both real hotkey/action lists show dark straight rectangular native backing and visible edges rather than the rounded borderless list. Identity above. | Pending: same page at both languages/all three widths; empty and at least two distinct real fixture rows, rounded9px/bg#1e1f23, row inset7/10, no hard native border, icons14 when present; retain row selection and Add/Edit/Remove routing. |
+| R4-M02 Computer aliases / HTML608,207-212 | `common-red-r2/renders/computer-tab3-type-1-recipients0-zh_CN-600.png`: real alias empty list has the same straight dark rectangle. Identity above. | Pending: empty/one/multiple aliases, same list tokens; list precedes input+Add/Remove row, controls fit at540; add a synthetic draft alias then Cancel and reopen to establish preservation. |
+| R4-M03 Hotkey associated actions / HTML618-627,207-212 | Supplementary earlier `group2-green/renders/hotkey-tab0-type-1-recipients0-zh_CN-600.png` shows the same native list issue after single-card correction. Its source/launch receipts exist, but the exact earlier executable hash was not captured before relink; do not present that supplementary image as a fully bound new baseline. M01/M02 are the fully bound shared-list baseline. | Pending: freshly identified final source/probe, empty and two distinct actions; consistent list tokens inside the single Hotkey card; nested edit/remove/Back/Cancel retain draft ownership and actual labels. |
+| R4-M04 Action specified recipients / HTML629-640,207-212; existing All/Specified contract | Supplementary earlier `group2-green/renders/action-tab0-type2-recipients1-zh_CN-600.png`; same identity limitation as M03. | Pending: fresh exact identity, actual type/key-action and Specified popup selections; readable existing computer rows, check states and selection affordance, same-card list; Cancel/reopen preserves the original names. Do not add the unsupported current-computer recipient mode. |
+| R4-M05 Preferences Log explanatory text / HTML578-588,113 | `common-red-r2/renders/preferences-tab2-type-1-recipients0-zh_CN-600.png`: actual performance warning is available for paired text hierarchy comparison. No claim that its regular weight is600; measured ordinary control/label weights are tracked in executable metadata. | Pending: match muted subtle tier,11.5logical px (integral Qt font metadata11/12 is acceptable), sensible multiline spacing near19px, natural wrap, adjacent in-card actions; no arbitrary bolding or extra card title. |
+| R4-M06 Server layout/config hints / HTML510-521,546-549,113 | `common-red-r2/renders/server-tab0-type-1-recipients0-zh_CN-600.png` and `server-tab3-type-1-recipients0-zh_CN-600.png`, same primary identity. | Pending: screenshot-compare placement below the meaningful heading/after config controls, muted tier and line spacing; no duplicated inset; actual configuration/drag alternatives and external-file ownership remain unchanged. |
+| R4-M07 Remaining page subtle descriptions / HTML551-602,604-627,642-713 | Existing fixture diagrams identify Client connection hint, Computer name error guidance, Hotkey recording hint, Fingerprint algorithm/saved source, Update summary/waiting note, About description and message body. They are an inspection map; BEFORE/AFTER final-source images for all these remain pending. | Pending: final exact source/probe for every actual route/tab/state, both languages,540/600/820; preserve error/recording/waiting/source meaning and refer each visible hint to the appropriate HTML page. Explicitly record a page with no subtle description as not applicable, with reason. |
+| R4-M08 Server layout tools / HTML510-529, default button CSS | `remaining-red-r2/renders/server-tab0-type-1-recipients0-zh_CN-600.png`, exact launch in `remaining-red-r2/probe-identity.json`, source manifest `f201e0239cee6dec2fa721ac6ab9f7e3de5ca69d4eb8a26a0094dee12da16583`: accessible Add/Delete coexist with large legacy NewScreen/Trash widgets. | Pending: exactly two visible layout tools (Add Computer/Delete Selected), reference default32px outer height and15px icons; no visible giant legacy tools. These are not small26 buttons. Existing drag-to-create/layout dragging and primary/empty/external-file deletion safeguards remain. Fixed reference roles also classify Hotkey and Action Add/Edit/Remove as default32; a product small property cannot prove its own size category. |
+
+After collection must record its own source manifest, executable hash, launch/PID/QPA/theme/DPR, logical width, exact image path, actual observed measurements and disposition per ID. Every captured visible page/tab is compared at its natural height, not an arbitrary full-screen stretch. First compare600px then verify540/820 do not clip, expand empty lists, hide text or create excessive bottom space. Inspect full images, not only contact-sheet thumbnails. List/helper behavior still needs the inherited transaction tests; an attractive screenshot does not establish Save/Cancel correctness.
+
+Safety and limits: only the already isolated fixture target may be manipulated; no user-store read/edit, old-process shutdown, system clipboard, OS permission grant, real input sharing/core connection, external browser/installer or release/install action. Empty/populated rows are synthetic owned drafts; cancel after inspection. Do not copy sample HTML device/IP/log/update values into product defaults. Final PM CUA is separate native evidence; the tester does not claim physical tray/Dock or hardware acceptance.
+
+## 中文
+
+这是测试代理在列表/说明文字配对修改前编写的实际人工对照检查表，绑定R4执行包，补充独立可执行结构/尺寸检查，不增加产品规则。所有修改后检查均待独立审核及最终源码的新观察，不是通过记录。
+
+参考稿摘要见上文。HTML207-212规定列表无边框、9px圆角、背景#1e1f23、条目上下7px/左右10px、12px文字及存在图标时14px图标；HTML113的subtle为11.5px、muted#9a9aa0、1.65行高（多行约19px）。比较逻辑尺寸、平坦颜色、字级和换行，不要求浏览器与Qt的字形抗锯齿逐像素一致，不以既有实现或属性名自证。
+
+主要修改前证据绑定到上文确切执行文件、1091文件清单、启动PID9050和时间。Cocoa、深色原生调色板、DPR2，例图为600逻辑/1200物理像素，所有540/820状态也有独立记录；这是真实main及钩子的隔离测试变体，不是旧PID19168或交付程序逐字节身份。QWidget抓图和最终原生合成器/CUA图分列。
+
+| 编号 | 修改前证据/边界 | 修改后待核 |
+|---|---|---|
+| R4-M01 服务端快捷键及动作列表 | 上表精确路径及主要身份；实际两列表为较黑直角矩形并有原生边缘。 | 待办：中英文三宽度，空列表及两条不同夹具行，9px圆角/无边框/背景色/7与10内距/存在图标时14px；保留真实选择与增删编辑路由。 |
+| R4-M02 计算机别名 | 上表aliases实图和主要身份，空列表相同直角深色外观。 | 待办：空/单行/多行，同样列表令牌；列表在输入与增删行前，540无裁切；新增合成草稿后取消重开核对保持。 |
+| R4-M03 快捷键关联动作 | 早前group2-green实图仅补充定位；执行文件重链接前未取旧二进制摘要，不能将其伪装成完全绑定新基线。共享列表真实基线由M01/M02建立。 | 待办：最终新身份下空/两动作、单卡片内列表及嵌套编辑/移除/返回/取消，标签与数据对应。 |
+| R4-M04 Action指定接收者 | 早前实图同样仅补充定位，保留旧二进制身份不足限制。 | 待办：新精确身份，真实动作/全部与指定弹层，行文字、勾选和选中反馈、同卡片；取消保持原名称，不增加后端不支持的当前计算机模式。 |
+| R4-M05 首选项日志说明 | common-red-r2日志页精确实图；不把常规字重400臆测为600。 | 待办：subtle静音字级、11.5逻辑px（Qt整数11/12可接受）、多行约19px间距、自然换行和邻近卡内动作，不多加标题或加粗。 |
+| R4-M06 服务端布局/外部配置提示 | 上表两个server实图及主要身份。 | 待办：有意义标题下/配置控件后的正确位置、静音层级和行距、单层留白，保留真实配置和拖拽替代入口。 |
+| R4-M07 其他页面说明文字 | Client重连、计算机名称提示、Hotkey录制、Fingerprint算法/已保存来源、Update摘要/等待、About及消息正文是实际检查映射；各自最终前后图仍待补。 | 待办：全部实际页面/标签/状态的最终身份实图、双语三宽度，按相应HTML逐项说明位置/层级/换行；无说明文字的页面明确标不适用及理由。 |
+| R4-M08 服务端布局工具 | remaining-red-r2布局实图及上文精确启动/源码身份：可访问新增/删除与旧大型新屏幕/垃圾桶重复可见。参考HTML510-529。 | 待办：仅两个可见布局工具（新增计算机/删除选中），默认外高32px、图标15px，不是小按钮26；旧大工具不再可见。拖拽新建/排列以及主机、空格、外部文件删除保护保持。Hotkey/Action增改删同属参考默认32，不以产品small属性自证。 |
+
+修改后每项必须另记最终源码清单、执行文件摘要、启动PID/时间/QPA/主题/DPR、逻辑宽度、图片路径、实测观察及结论。先逐张看600，再核540/820不裁切、不把空列表撑大、不漏文字或多留底空；采用自然高度，不能只看缩略拼图。事务和所有权继续由继承的实际测试独立验证。
+
+仅操作既有隔离夹具；不读改日常设置、不停止旧实例、不操作系统剪贴板、授权限、启动真实共享/core、外部浏览器/安装器或发布安装。合成列表改动观察后取消。HTML示例设备/IP/日志/更新值不得进入产品默认值。最终PM原生CUA、物理托盘/Dock和硬件验收分开，不作未经观察的通过声明。
