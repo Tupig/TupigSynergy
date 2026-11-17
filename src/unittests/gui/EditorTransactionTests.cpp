@@ -17,6 +17,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QListWidget>
 #include <QPushButton>
@@ -26,6 +27,8 @@
 #include <QUuid>
 #include <QtTest>
 
+#include <cstdio>
+
 class EditorTransactionTests : public QObject
 {
   Q_OBJECT
@@ -34,6 +37,7 @@ private Q_SLOTS:
   void clientSaveWrites();
   void screenAliasesReplaceRatherThanAppend();
   void logsFilterCountAndBoundHistory();
+  void largeLogHistoryWrapsAfterResizeFontAndFilter();
   void serverCancelRestoresProtocol();
   void protocolValuesSupportStoredAndDefaultTypes();
   void traySelectorCancelDoesNotWrite();
@@ -100,6 +104,15 @@ void EditorTransactionTests::serverCancelRestoresProtocol()
 
 void EditorTransactionTests::logsFilterCountAndBoundHistory()
 {
+  QElapsedTimer elapsed;
+  elapsed.start();
+  const auto phase = [&](const char *name, int appended = -1) {
+    std::fprintf(
+        stderr, "EL1 phase=%s elapsed_ms=%lld appended=%d\n", name, static_cast<long long>(elapsed.elapsed()), appended
+    );
+    std::fflush(stderr);
+  };
+  phase("enter");
   LogWidget log;
   log.appendLine(QStringLiteral("[time] INFO: first"));
   log.appendLine(QStringLiteral("[time] WARNING: second"));
@@ -113,23 +126,131 @@ void EditorTransactionTests::logsFilterCountAndBoundHistory()
   QVERIFY(!log.allText().contains(QStringLiteral("first")));
   log.setLevelFilter(QString());
   log.clear();
-  for (int i = 0; i < 10003; ++i)
+  for (int i = 0; i < 10003; ++i) {
+    if (i == 0)
+      phase("append-0", 0);
     log.appendLine(QStringLiteral("[time] INFO: record-%1").arg(i));
+    if ((i + 1) % 1000 == 0)
+      phase("append-progress", i + 1);
+  }
+  phase("append-loop-end", 10003);
   QCOMPARE(log.levelCounts()[0], 10000);
   QVERIFY(!log.allText().contains(QStringLiteral("record-0\n")));
   QVERIFY(log.allText().contains(QStringLiteral("record-10002")));
   log.clear();
   QCOMPARE(log.levelCounts()[0], 0);
   QVERIFY(log.allText().isEmpty());
+  phase("long-append-before");
   log.appendLine(QStringLiteral("[time] ERROR: ") + QString(20000, QLatin1Char('x')));
+  phase("long-append-after");
   QVERIFY(log.maximumHeight() <= 236);
+  phase("resize-before");
   log.resize(320, 236);
+  phase("resize-after");
+  phase("show-before");
   log.show();
+  phase("show-after");
+  phase("process-events-before");
   QCoreApplication::processEvents();
+  phase("process-events-after");
   auto *table = log.findChild<QTableWidget *>();
   QVERIFY(table != nullptr);
   QCOMPARE(table->textElideMode(), Qt::ElideNone);
   QVERIFY(table->rowHeight(table->rowCount() - 1) > table->fontMetrics().height() * 2);
+}
+
+void EditorTransactionTests::largeLogHistoryWrapsAfterResizeFontAndFilter()
+{
+  LogWidget log;
+  log.resize(640, 236);
+  const auto payload = QStringLiteral("wrapped geometry text ").repeated(12).trimmed();
+  QStringList expectedAll;
+  QStringList expectedInfo;
+  QStringList expectedWarning;
+  for (int row = 0; row < 20; ++row) {
+    const bool warning = row % 2 != 0;
+    const auto line = QStringLiteral("[time] %1: row-%2 %3")
+                          .arg(warning ? QStringLiteral("WARNING") : QStringLiteral("INFO"))
+                          .arg(row)
+                          .arg(payload);
+    expectedAll.append(line);
+    (warning ? expectedWarning : expectedInfo).append(line);
+    log.appendLine(line);
+  }
+  const std::array<int, 3> counts{10, 10, 0};
+  auto *table = log.findChild<QTableWidget *>();
+  QVERIFY(table != nullptr);
+  QCOMPARE(table->font().pixelSize(), 12);
+  QCOMPARE(table->rowCount(), 20);
+  QCOMPARE(log.allText(), expectedAll.join(QLatin1Char('\n')));
+  QCOMPARE(log.levelCounts(), counts);
+
+  QSize previousGeometry;
+  QElapsedTimer stableSince;
+  const auto lastRowHeight = [&] { return table->rowHeight(table->rowCount() - 1); };
+  const auto geometryStable = [&] {
+    const QSize geometry(table->columnWidth(2), lastRowHeight());
+    if (geometry != previousGeometry || !stableSince.isValid()) {
+      previousGeometry = geometry;
+      stableSince.start();
+      return false;
+    }
+    return stableSince.elapsed() >= 50;
+  };
+  log.show();
+  QTRY_VERIFY_WITH_TIMEOUT(
+      table->columnWidth(2) > 350 && lastRowHeight() > table->fontMetrics().height() * 2 && geometryStable(), 1000
+  );
+  const int wideColumn = table->columnWidth(2);
+  const int wideHeight = lastRowHeight();
+
+  log.resize(320, 236);
+  QTRY_VERIFY_WITH_TIMEOUT(
+      table->columnWidth(2) < wideColumn && lastRowHeight() > wideHeight && geometryStable(), 1000
+  );
+  const int narrowHeight = lastRowHeight();
+  QCOMPARE(table->rowCount(), 20);
+  QCOMPARE(log.allText(), expectedAll.join(QLatin1Char('\n')));
+  QCOMPARE(log.levelCounts(), counts);
+
+  auto font = table->font();
+  font.setPixelSize(20);
+  table->setFont(font);
+  QCOMPARE(table->font().pixelSize(), 20);
+  QTRY_VERIFY_WITH_TIMEOUT(lastRowHeight() > narrowHeight && geometryStable(), 1000);
+  const int mixedColumn = table->columnWidth(2);
+  QCOMPARE(table->rowCount(), 20);
+  QCOMPARE(log.allText(), expectedAll.join(QLatin1Char('\n')));
+  QCOMPARE(log.levelCounts(), counts);
+
+  log.setLevelFilter(QStringLiteral("info"));
+  QCOMPARE(table->rowCount(), 10);
+  QCOMPARE(log.allText(), expectedInfo.join(QLatin1Char('\n')));
+  QCOMPARE(log.levelCounts(), counts);
+  QTRY_VERIFY_WITH_TIMEOUT(
+      table->columnWidth(2) > mixedColumn && lastRowHeight() > table->fontMetrics().height() * 2 && geometryStable(),
+      1000
+  );
+  const int infoColumn = table->columnWidth(2);
+  const int infoHeight = lastRowHeight();
+
+  log.setLevelFilter(QStringLiteral("warn"));
+  QCOMPARE(table->rowCount(), 10);
+  QCOMPARE(log.allText(), expectedWarning.join(QLatin1Char('\n')));
+  QCOMPARE(log.levelCounts(), counts);
+  QTRY_VERIFY_WITH_TIMEOUT(
+      table->columnWidth(2) < infoColumn && lastRowHeight() >= infoHeight && geometryStable(), 1000
+  );
+  const int warningColumn = table->columnWidth(2);
+  const int warningHeight = lastRowHeight();
+
+  log.setLevelFilter(QString());
+  QCOMPARE(table->rowCount(), 20);
+  QCOMPARE(log.allText(), expectedAll.join(QLatin1Char('\n')));
+  QCOMPARE(log.levelCounts(), counts);
+  QTRY_VERIFY_WITH_TIMEOUT(
+      table->columnWidth(2) == warningColumn && lastRowHeight() == warningHeight && geometryStable(), 1000
+  );
 }
 
 void EditorTransactionTests::traySelectorCancelDoesNotWrite()

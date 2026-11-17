@@ -13,6 +13,7 @@
 #include <QEvent>
 #include <QFontDatabase>
 #include <QHeaderView>
+#include <QResizeEvent>
 #include <QScopedValueRollback>
 #include <QScrollBar>
 #include <QTableWidget>
@@ -67,9 +68,11 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_table{new QTableWidge
       m_followTail = value == scrollBar->maximum();
   });
   connect(scrollBar, &QScrollBar::rangeChanged, this, [this] { requestTailScroll(); });
-  connect(m_table->horizontalHeader(), &QHeaderView::sectionResized, this, [this](int column, int, int) {
-    if (column == 2)
+  connect(m_table->horizontalHeader(), &QHeaderView::sectionResized, this, [this](int column, int, int newWidth) {
+    if (column == 2) {
+      m_messageColumnWidth = qMax(1, newWidth);
       QTimer::singleShot(0, this, [this] { updateVisibleHeight(); });
+    }
   });
 
   QFont font = synergy::platform::isWindows() ? QFont(QStringLiteral("Consolas"))
@@ -81,6 +84,8 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_table{new QTableWidge
   layout->setContentsMargins(0, 0, 0, 0);
   layout->addWidget(m_table);
   setLayout(layout);
+  m_messageColumnWidth = qMax(1, m_table->columnWidth(2));
+  m_table->installEventFilter(this);
 
   connect(synergy::gui::Logger::instance(), &synergy::gui::Logger::newLine, this, &LogWidget::appendLine);
 }
@@ -155,23 +160,32 @@ void LogWidget::setVisibleLines(int lines)
 
 bool LogWidget::eventFilter(QObject *watched, QEvent *event)
 {
-  if (watched == m_table->viewport() && event->type() == QEvent::Resize)
-    updateVisibleHeight();
+  if (watched == m_table->viewport() && event->type() == QEvent::Resize) {
+    const auto *resize = static_cast<QResizeEvent *>(event);
+    updateVisibleHeight(resize->size().width() != resize->oldSize().width());
+  } else if (watched == m_table &&
+             (event->type() == QEvent::FontChange || event->type() == QEvent::ApplicationFontChange)) {
+    updateVisibleHeight(true);
+  }
   return QWidget::eventFilter(watched, event);
 }
 
-void LogWidget::updateVisibleHeight()
+void LogWidget::updateVisibleHeight(bool refreshColumnWidth)
 {
   const QScopedValueRollback<bool> adjusting(m_adjustingContents, true);
   // 根据实际列宽重算换行高度，不能只打开 wordWrap 后仍固定单行高度。
   const int count = m_table->rowCount();
+  // Querying sectionSize flushes native ResizeToContents work. Keep that out of
+  // bulk append, while small logs and explicit geometry changes stay immediate.
+  if (refreshColumnWidth || (count > 0 && count <= m_visibleLines))
+    m_messageColumnWidth = qMax(1, m_table->columnWidth(2));
+  const int width = qMax(1, m_messageColumnWidth - 16);
   int height = 0;
   for (int row = qMax(0, count - m_visibleLines); row < count; ++row) {
     const auto *item = m_table->item(row, 2);
     if (!item)
       continue;
     // Qt 的表格 sizeHint 在不同平台会忽略长单词换行，显式按消息列宽排版。
-    const int width = qMax(1, m_table->columnWidth(2) - 16);
     qreal textHeight = 0;
     const auto paragraphs = item->text().split(QLatin1Char('\n'));
     for (const auto &paragraph : paragraphs) {
@@ -272,7 +286,7 @@ void LogWidget::rebuild()
     m_table->setItem(row, 1, level);
     m_table->setItem(row, 2, message);
   }
-  updateVisibleHeight();
+  updateVisibleHeight(true);
   scrollToBottom();
   Q_EMIT historyChanged(m_latestLine);
 }
