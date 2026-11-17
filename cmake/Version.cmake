@@ -7,15 +7,8 @@
 # Keep vcpkg.json "version-string" equal to MAJOR.MINOR.PATCH (CI checks this).
 set(SYNERGY_VERSION_MAJOR 2)
 set(SYNERGY_VERSION_MINOR 1)
-# CI release builds compute the next patch from existing tags and pass it in the
-# environment, so every published build gets an incremented version. Keep the
-# committed value in sync with vcpkg.json for the consistency check.
-if(DEFINED ENV{SYNERGY_VERSION_PATCH} AND NOT "$ENV{SYNERGY_VERSION_PATCH}" STREQUAL "")
-  set(SYNERGY_VERSION_PATCH $ENV{SYNERGY_VERSION_PATCH})
-else()
-  # 文件是唯一真源；不要读取 CMake 缓存里上一次构建的补丁号。
-  set(SYNERGY_VERSION_PATCH 7)
-endif()
+# The committed constants are authoritative; environment and cache cannot change a release.
+set(SYNERGY_VERSION_PATCH 1)
 set(SYNERGY_VERSION_STAGE "")
 
 # Composes the full version string by applying SYNERGY_VERSION_RELEASE /

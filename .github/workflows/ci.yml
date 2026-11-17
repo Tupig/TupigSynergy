@@ -1,27 +1,8 @@
-# Single workflow, shown as "TuPig Synergy" (CMAKE_PROJECT_PROPER_NAME).
-# Jobs are ordered for reading; `needs` is what actually schedules them:
-#   1. prepare (version, encoding, clang-format, and the trigger plan below)
-#   2. build (Windows MSVC, macOS AppleClang arm64+x86_64, Linux gcc, Flatpak)
-#   3. publish (GitHub Release, optional S3, Slack on failure)
-#   4. analysis (only workflow_dispatch with analyze=true)
-#   5. ci-passed, the branch-protection gate
-#
-# Triggers - one run does not start another:
-#   pull_request to main  lint, then Windows, macOS, and the free Linux subset.
-#                         Unsigned snapshot artifacts. No publish or notifications.
-#                         A newer push to that PR cancels the older run.
-#   release published     Windows and macOS, clean version, attach packages. This fires
-#                         when a person publishes a Release. The publish job uses the
-#                         workflow token, and that token does not start a new workflow,
-#                         so it does not loop. Do not publish the same commit from the
-#                         UI and from workflow_dispatch; those are different refs and
-#                         both would build.
-#   workflow_dispatch     manual. package-type=release builds Windows and macOS and
-#                         publishes. package-type=snapshot honors platform and does
-#                         not publish. analyze is independent of package-type.
-# Merging a PR does not start another validation run: the PR run already covered
-# the change. PR and manual runs use different concurrency groups, so a free Linux
-# check cannot cancel a release build that is already going.
+# PRs validate only Windows x64 and macOS arm64.
+# Manual snapshots build the selected native platform(s), without publication.
+# Manual releases run at an existing exact version tag on integrated main.
+# Both native builds, contract checks and payload audits must pass before publication.
+# Release events do not start builds; publication creates a new draft then exposes it.
 
 name: TuPig Synergy
 
@@ -32,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       package-type:
-        description: "release: all platforms, clean version, publish the GitHub Release. snapshot: no publish; platform applies."
+        description: "release: exact existing version tag on main, Windows and macOS, new GitHub Release. snapshot: no publish; platform applies."
         required: false
         default: "snapshot"
         type: choice
@@ -50,8 +31,6 @@ on:
           - macos
   pull_request:
     branches: [main]
-  release:
-    types: [published]
 
 # Automatic PR runs cancel only their own older run. Manual and release runs
 # never cancel, and neither can cancel another run's group.
@@ -66,14 +45,11 @@ env:
   NODE_OPTIONS: --no-deprecation
 
   # Release shape, propagated to cmake (Synergy.cmake reads these as options).
-  # Release events and explicit package-type=release → clean X.Y.Z.
-  # Push to main + package-type=snapshot → snapshot build.
+  # Explicit package-type=release uses the committed clean X.Y.Z.
+  # Manual package-type=snapshot adds the snapshot suffix.
   # Pull requests fall through to the cmake dev default.
-  SYNERGY_VERSION_RELEASE: ${{ github.event_name == 'release' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'release') }}
+  SYNERGY_VERSION_RELEASE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'release' }}
   SYNERGY_VERSION_SNAPSHOT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'snapshot' }}
-  # A manual release must publish an incremented version; its patch is computed
-  # from existing tags so a new GitHub Release is created for every build.
-  SYNERGY_VERSION_AUTO_BUMP: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'release' }}
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -87,13 +63,10 @@ jobs:
       version: ${{ steps.get-version.outputs.version }}
       base: ${{ steps.get-version.outputs.base }}
       patch: ${{ steps.get-version.outputs.patch }}
-      linux_targets: ${{ steps.plan.outputs.targets }}
       windows_targets: ${{ steps.plan.outputs.windows_targets }}
       macos_targets: ${{ steps.plan.outputs.macos_targets }}
       build_windows: ${{ steps.plan.outputs.build_windows }}
       build_macos: ${{ steps.plan.outputs.build_macos }}
-      build_linux: ${{ steps.plan.outputs.build_linux }}
-      build_flatpak: ${{ steps.plan.outputs.build_flatpak }}
       publish_release: ${{ steps.plan.outputs.publish_release }}
       skip_unchanged: ${{ steps.plan.outputs.skip_unchanged }}
 
@@ -113,8 +86,7 @@ jobs:
 
       # One place decides what this event builds. Job `if`s only read these
       # outputs, so a platform is not accidentally both required and skipped.
-      # pull_request: free Linux. release and explicit package-type=release:
-      # Windows and macOS and a GitHub Release. snapshot: honor platform; all or legacy blank means all.
+      # Pull requests and releases build both native targets. Snapshots honor platform.
       - name: Plan builds for this event
         id: plan
         env:
@@ -124,77 +96,54 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          linux_key=free
           build_windows=false
           build_macos=false
-          build_linux=false
-          build_flatpak=false
           publish_release=false
           skip_unchanged=false
           case "$GITHUB_EVENT_NAME" in
             pull_request)
-              linux_key=free
               build_windows=true
               build_macos=true
-              build_linux=true
-              ;;
-            release)
-              # Release packaging is Windows and macOS only; Linux packages are
-              # validated by the free push/PR subset but not published.
-              build_windows=true
-              build_macos=true
-              publish_release=true
               ;;
             workflow_dispatch)
-              linux_key=full
-              if [ "$PACKAGE_TYPE" = "release" ]; then
-                # Release packaging is Windows and macOS only; Linux packages are
-                # validated by the free push/PR subset but not published.
-                build_windows=true
-                build_macos=true
-                publish_release=true
-              else
-                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "all" ] || [ "$PLATFORM" = "windows" ]; then
+              case "$PACKAGE_TYPE" in
+                release)
                   build_windows=true
-                fi
-                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "all" ] || [ "$PLATFORM" = "macos" ]; then
                   build_macos=true
-                fi
-                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "all" ] || [ "$PLATFORM" = "linux" ]; then
-                  build_linux=true
-                  build_flatpak=true
-                fi
-                if [ "$PLATFORM" = "flatpak" ]; then
-                  build_flatpak=true
-                fi
-              fi
+                  publish_release=true
+                  ;;
+                snapshot)
+                  case "$PLATFORM" in
+                    ''|all) build_windows=true; build_macos=true ;;
+                    windows) build_windows=true ;;
+                    macos) build_macos=true ;;
+                    *) echo "::error::unsupported snapshot platform"; exit 1 ;;
+                  esac
+                  ;;
+                *) echo "::error::unsupported package type"; exit 1 ;;
+              esac
               ;;
             *)
               echo "::error::unexpected event $GITHUB_EVENT_NAME"
               exit 1
               ;;
           esac
-          targets=$(jq -c --arg k "$linux_key" '.[$k] | map(. + {"expected-arch": (if (.name | endswith("-arm64")) then "arm64" elif (.name | endswith("-x86_64")) then "x64" else error("unsupported declared Linux target") end)})' .github/matrices/linux-targets.json)
-          # Release packaging ships Windows x64 and macOS arm64 only. Pull
-          # requests and snapshots keep the full architecture matrix.
-          # 交付只构建 Windows x64 与 macOS arm64，其余平台不构建。
+          if [ "$build_windows" != true ] && [ "$build_macos" != true ]; then
+            echo "::error::empty native build plan"
+            exit 1
+          fi
+          # Builds and distribution are limited to Windows x64 and macOS arm64.
           windows_targets='[{"name":"windows-2022-x64","runs-on":"windows-2022","vcpkg-triplet":"x64-windows-release","arch":"amd64","qt-version":"6.10.3"}]'
           macos_targets='[{"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.1","config-args":"-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}]'
-          targets='[]'
-          build_linux=false
-          build_flatpak=false
           {
-            echo "targets=$targets"
             echo "windows_targets=$windows_targets"
             echo "macos_targets=$macos_targets"
             echo "build_windows=$build_windows"
             echo "build_macos=$build_macos"
-            echo "build_linux=$build_linux"
-            echo "build_flatpak=$build_flatpak"
             echo "publish_release=$publish_release"
             echo "skip_unchanged=$skip_unchanged"
           } >> "$GITHUB_OUTPUT"
-          echo "plan event=$GITHUB_EVENT_NAME package=${PACKAGE_TYPE:-<none>} platform=${PLATFORM:-<none>} linux_matrix=$linux_key windows=$build_windows macos=$build_macos linux=$build_linux flatpak=$build_flatpak publish=$publish_release skip=$skip_unchanged"
+          echo "plan event=$GITHUB_EVENT_NAME package=${PACKAGE_TYPE:-<none>} platform=${PLATFORM:-<none>} windows=$build_windows macos=$build_macos publish=$publish_release skip=$skip_unchanged"
 
   lint-clang:
     needs: get-version
@@ -231,7 +180,7 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # 2. Build. One CMake configure line per OS; the runner compiler differs.
-  # Windows: MSVC + Ninja. macOS: AppleClang (arm64 and x86_64). Linux: gcc.
+  # Windows x64: MSVC + Ninja. macOS arm64: AppleClang.
   # ---------------------------------------------------------------------------
   build-windows:
     needs: [get-version, lint-encoding]
@@ -244,7 +193,6 @@ jobs:
       actions: read
 
     env:
-      SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
       # SignPath Foundation holds the code-signing key. The API token is the only
       # secret. Organization id and project slug are Actions variables assigned
       # after the project is approved. Missing any of them leaves the package unsigned.
@@ -279,41 +227,49 @@ jobs:
         shell: bash
         run: cmake --build build --config Release -j8
 
-      - name: GUI configuration tests
+      - name: GUI configuration and critical contract tests
+        timeout-minutes: 15
         env:
           QT_QPA_PLATFORM: offscreen
         shell: bash
         run: |
           set -euo pipefail
+          python3 scripts/ci/check-diagnostic-paths.py build/CMakeCache.txt \
+            build/r3-test-evidence build/src/unittests/test-results \
+            build/src/unittests/Testing/Temporary/LastTest.log
           cache=build/CMakeCache.txt
           test -f "$cache" || { echo 'Missing configured CMake cache'; exit 1; }
           value() { sed -n "s/^$1:[^=]*=//p" "$cache"; }
-          build_tests=$(value BUILD_TESTS)
-          skip_build_tests=$(value SKIP_BUILD_TESTS)
+          test "$(value BUILD_TESTS)" = ON || { echo 'Required native tests are disabled'; exit 1; }
           qt_dir=$(value QT_DIR)
-          case "$build_tests:$skip_build_tests" in
-            ON:ON|ON:OFF|OFF:ON|OFF:OFF) ;;
-            *) echo 'Unknown or conflicting test configuration'; exit 1 ;;
-          esac
-          qt_major=unknown
-          if [ -f "$qt_dir/Qt5Config.cmake" ] && [ ! -f "$qt_dir/Qt6Config.cmake" ]; then
-            qt_major=5
-          elif [ -f "$qt_dir/Qt6Config.cmake" ] && [ ! -f "$qt_dir/Qt5Config.cmake" ]; then
-            qt_major=6
-          else
-            echo 'Unknown or conflicting selected Qt configuration'; exit 1
-          fi
-          printf 'GUI configuration: BUILD_TESTS=%s SKIP_BUILD_TESTS=%s QT_DIR=%s QT_VERSION_MAJOR=%s\n' "$build_tests" "$skip_build_tests" "$qt_dir" "$qt_major"
-          if [ "$RUNNER_OS" = Linux ] && { [ "$build_tests" = OFF ] || [ "$qt_major" = 5 ]; }; then
-            echo 'Not Run: GUI configuration tests disabled by recorded CMake/Qt configuration'
-            exit 0
-          fi
-          if [ "$build_tests" != ON ] || [ "$qt_major" != 6 ]; then
-            echo 'Required native GUI configuration tests are unavailable'; exit 1
-          fi
-          test -d build/src/unittests || { echo 'Missing required Qt6 test directory'; exit 1; }
-          for suite in ScreenTests ScreenSetupModelTests ValidatorTests; do
-            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error -R "^${suite}$"
+          test -f "$qt_dir/Qt6Config.cmake" && test ! -f "$qt_dir/Qt5Config.cmake" || {
+            echo 'Required unambiguous Qt6 configuration is unavailable'; exit 1;
+          }
+          mkdir -p build/r3-test-evidence
+          suites=(PageHostTests EditorTransactionTests NativeDesignTests LayoutAcceptanceTests
+            R3RuntimeContextTests R3OptionContractTests R3SerializationTests R3MotionContractTests
+            R3StartupContractTests R3VisualContractTests R3TrayQuitTests
+            R4VisualContractTests MainWindowFlowTests DialogRenderTests)
+          for suite in "${suites[@]}"; do
+            target=$suite
+            if [ "$suite" = R4VisualContractTests ]; then target=R4VisualProbe; fi
+            python3 scripts/ci/check-diagnostic-paths.py "build/r3-test-evidence/${suite}-build.log"
+            cmake --build build --config Release --target "$target" -j8 2>&1 | tee "build/r3-test-evidence/${suite}-build.log"
+            python3 scripts/ci/check-diagnostic-paths.py --recursive \
+              build/src/unittests/Testing/Temporary "build/src/unittests/test-results/${suite}.txt" \
+              "build/r3-test-evidence/${suite}.xml" "build/r3-test-evidence/${suite}.log"
+            status=0
+            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error \
+              --output-junit "$PWD/build/r3-test-evidence/${suite}.xml" \
+              --output-log "$PWD/build/r3-test-evidence/${suite}.log" -R "^${suite}$" || status=$?
+            python3 scripts/ci/check-diagnostic-paths.py \
+              "build/src/unittests/test-results/${suite}.txt" build/src/unittests/Testing/Temporary/LastTest.log \
+              "build/r3-test-evidence/${suite}-${suite}.txt" "build/r3-test-evidence/${suite}-LastTest.log"
+            for raw in "build/src/unittests/test-results/${suite}.txt" \
+              build/src/unittests/Testing/Temporary/LastTest.log; do
+              if [ -f "$raw" ]; then cp "$raw" "build/r3-test-evidence/${suite}-$(basename "$raw")"; fi
+            done
+            test "$status" -eq 0 || exit "$status"
           done
 
       # Iron rule: the GUI file is synergy_<X.Y.Z>.exe. X.Y.Z is get-version's
@@ -477,7 +433,9 @@ jobs:
       # Stage: test the build and the package, then upload it.
       - name: Unit tests
         uses: ./.github/actions/run-tests
-        timeout-minutes: 2
+        timeout-minutes: 15
+        with:
+          exclude-tests: '^(PageHostTests|EditorTransactionTests|NativeDesignTests|LayoutAcceptanceTests|R3RuntimeContextTests|R3OptionContractTests|R3SerializationTests|R3MotionContractTests|R3StartupContractTests|R3VisualContractTests|R3TrayQuitTests|R4VisualContractTests|MainWindowFlowTests|DialogRenderTests)$'
 
       - name: Test packaged build
         uses: ./.github/actions/test-package
@@ -493,57 +451,72 @@ jobs:
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
           retention-days: 14
 
-  bump-version:
-    needs: [build-macos]
-    if: ${{ needs.get-version.outputs.skip_unchanged != 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          fetch-depth: 0
-
-      - name: Bump patch version
+      - name: Preserve test probe identities
+        if: ${{ always() }}
+        shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PYEOF'
-          import json, pathlib, re
-          version_file = pathlib.Path("cmake/Version.cmake")
-          text = version_file.read_text()
-          match = re.search(r"set\(SYNERGY_VERSION_PATCH (\d+)\)", text)
-          patch = int(match.group(1)) + 1
-          text = re.sub(r"set\(SYNERGY_VERSION_PATCH \d+\)", f"set(SYNERGY_VERSION_PATCH {patch})", text)
-          version_file.write_text(text)
-          manifest = pathlib.Path("vcpkg.json")
-          data = json.loads(manifest.read_text())
-          major = int(re.search(r"set\(SYNERGY_VERSION_MAJOR (\d+)\)", text).group(1))
-          minor = int(re.search(r"set\(SYNERGY_VERSION_MINOR (\d+)\)", text).group(1))
-          new_version = f"{major}.{minor}.{patch}"
-          data["version-string"] = new_version
-          manifest.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-          pathlib.Path("build").mkdir(exist_ok=True)
-          pathlib.Path("build/next-version").write_text(new_version)
-          PYEOF
-          next=$(cat build/next-version)
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add cmake/Version.cmake vcpkg.json
-          git commit -m "chore: 构建版本升级到 ${next} [skip ci]"
-          git push origin HEAD
+          python3 scripts/ci/check-diagnostic-paths.py \
+            build/bin/R3StartupProbe.exe build/bin/R4VisualProbe.exe \
+            build/bin/R3StartupProbe.app/Contents/MacOS/R3StartupProbe \
+            build/bin/R4VisualProbe.app/Contents/MacOS/R4VisualProbe \
+            build/r3-test-evidence/R3StartupProbe-identity.json \
+            build/r3-test-evidence/R4VisualProbe-identity.json
+          mkdir -p build/r3-test-evidence
+          python3 - <<'PYTHON'
+          import hashlib, json
+          from pathlib import Path
+          candidates = (
+              Path('build/bin/R3StartupProbe.exe'), Path('build/bin/R4VisualProbe.exe'),
+              Path('build/bin/R3StartupProbe.app/Contents/MacOS/R3StartupProbe'),
+              Path('build/bin/R4VisualProbe.app/Contents/MacOS/R4VisualProbe'),
+          )
+          records = [{'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+                     for path in candidates if path.is_file()]
+          for probe in ('R3StartupProbe', 'R4VisualProbe'):
+              output = Path('build/r3-test-evidence/' + probe + '-identity.json')
+              selected = [record for record in records if Path(record['path']).name in (probe, probe + '.exe')]
+              output.write_text(json.dumps({'probe': probe, 'files': selected}, indent=2) + '\n')
+          PYTHON
+
+      - name: Validate diagnostic upload paths
+        id: diagnostics-safe
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/check-diagnostic-paths.py --recursive \
+            build/r3-test-evidence/ \
+            build/r3-test-evidence/R3StartupProbe-identity.json \
+            build/r3-test-evidence/R4VisualProbe-identity.json \
+            build/src/unittests/test-results/ \
+            build/src/unittests/test-results/ctest.xml \
+            build/src/unittests/Testing/Temporary/LastTest.log
+          echo 'safe=true' >> "$GITHUB_OUTPUT"
+
+      - name: Upload raw contract diagnostics
+        if: ${{ always() && steps.diagnostics-safe.outputs.safe == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: r3-test-evidence-windows-x64
+          path: |
+            build/r3-test-evidence/
+            build/r3-test-evidence/R3StartupProbe-identity.json
+            build/r3-test-evidence/R4VisualProbe-identity.json
+            build/src/unittests/test-results/
+            build/src/unittests/test-results/ctest.xml
+            build/src/unittests/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+          retention-days: 14
 
   build-macos:
-    needs: [get-version, build-windows]
+    needs: [get-version, lint-encoding]
     if: ${{ needs.get-version.outputs.build_macos == 'true' }}
     name: macos-arm64
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 60
 
     env:
-      SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
       MAC_SIGNING: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID != '' }}
       MAC_CODESIGN_ID: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}
 
@@ -572,41 +545,49 @@ jobs:
         shell: bash
         run: cmake --build build --config Release -j8
 
-      - name: GUI configuration tests
+      - name: GUI configuration and critical contract tests
+        timeout-minutes: 15
         env:
           QT_QPA_PLATFORM: offscreen
         shell: bash
         run: |
           set -euo pipefail
+          python3 scripts/ci/check-diagnostic-paths.py build/CMakeCache.txt \
+            build/r3-test-evidence build/src/unittests/test-results \
+            build/src/unittests/Testing/Temporary/LastTest.log
           cache=build/CMakeCache.txt
           test -f "$cache" || { echo 'Missing configured CMake cache'; exit 1; }
           value() { sed -n "s/^$1:[^=]*=//p" "$cache"; }
-          build_tests=$(value BUILD_TESTS)
-          skip_build_tests=$(value SKIP_BUILD_TESTS)
+          test "$(value BUILD_TESTS)" = ON || { echo 'Required native tests are disabled'; exit 1; }
           qt_dir=$(value QT_DIR)
-          case "$build_tests:$skip_build_tests" in
-            ON:ON|ON:OFF|OFF:ON|OFF:OFF) ;;
-            *) echo 'Unknown or conflicting test configuration'; exit 1 ;;
-          esac
-          qt_major=unknown
-          if [ -f "$qt_dir/Qt5Config.cmake" ] && [ ! -f "$qt_dir/Qt6Config.cmake" ]; then
-            qt_major=5
-          elif [ -f "$qt_dir/Qt6Config.cmake" ] && [ ! -f "$qt_dir/Qt5Config.cmake" ]; then
-            qt_major=6
-          else
-            echo 'Unknown or conflicting selected Qt configuration'; exit 1
-          fi
-          printf 'GUI configuration: BUILD_TESTS=%s SKIP_BUILD_TESTS=%s QT_DIR=%s QT_VERSION_MAJOR=%s\n' "$build_tests" "$skip_build_tests" "$qt_dir" "$qt_major"
-          if [ "$RUNNER_OS" = Linux ] && { [ "$build_tests" = OFF ] || [ "$qt_major" = 5 ]; }; then
-            echo 'Not Run: GUI configuration tests disabled by recorded CMake/Qt configuration'
-            exit 0
-          fi
-          if [ "$build_tests" != ON ] || [ "$qt_major" != 6 ]; then
-            echo 'Required native GUI configuration tests are unavailable'; exit 1
-          fi
-          test -d build/src/unittests || { echo 'Missing required Qt6 test directory'; exit 1; }
-          for suite in ScreenTests ScreenSetupModelTests ValidatorTests; do
-            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error -R "^${suite}$"
+          test -f "$qt_dir/Qt6Config.cmake" && test ! -f "$qt_dir/Qt5Config.cmake" || {
+            echo 'Required unambiguous Qt6 configuration is unavailable'; exit 1;
+          }
+          mkdir -p build/r3-test-evidence
+          suites=(PageHostTests EditorTransactionTests NativeDesignTests LayoutAcceptanceTests
+            R3RuntimeContextTests R3OptionContractTests R3SerializationTests R3MotionContractTests
+            R3StartupContractTests R3VisualContractTests R3TrayQuitTests
+            R4VisualContractTests MainWindowFlowTests DialogRenderTests)
+          for suite in "${suites[@]}"; do
+            target=$suite
+            if [ "$suite" = R4VisualContractTests ]; then target=R4VisualProbe; fi
+            python3 scripts/ci/check-diagnostic-paths.py "build/r3-test-evidence/${suite}-build.log"
+            cmake --build build --config Release --target "$target" -j8 2>&1 | tee "build/r3-test-evidence/${suite}-build.log"
+            python3 scripts/ci/check-diagnostic-paths.py --recursive \
+              build/src/unittests/Testing/Temporary "build/src/unittests/test-results/${suite}.txt" \
+              "build/r3-test-evidence/${suite}.xml" "build/r3-test-evidence/${suite}.log"
+            status=0
+            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error \
+              --output-junit "$PWD/build/r3-test-evidence/${suite}.xml" \
+              --output-log "$PWD/build/r3-test-evidence/${suite}.log" -R "^${suite}$" || status=$?
+            python3 scripts/ci/check-diagnostic-paths.py \
+              "build/src/unittests/test-results/${suite}.txt" build/src/unittests/Testing/Temporary/LastTest.log \
+              "build/r3-test-evidence/${suite}-${suite}.txt" "build/r3-test-evidence/${suite}-LastTest.log"
+            for raw in "build/src/unittests/test-results/${suite}.txt" \
+              build/src/unittests/Testing/Temporary/LastTest.log; do
+              if [ -f "$raw" ]; then cp "$raw" "build/r3-test-evidence/${suite}-$(basename "$raw")"; fi
+            done
+            test "$status" -eq 0 || exit "$status"
           done
 
       # Stage: sign and notarize, only when APPLE_CODESIGN_ID is set.
@@ -710,7 +691,9 @@ jobs:
       # Stage: test the build and the package, then upload it.
       - name: Unit tests
         uses: ./.github/actions/run-tests
-        timeout-minutes: 2
+        timeout-minutes: 15
+        with:
+          exclude-tests: '^(PageHostTests|EditorTransactionTests|NativeDesignTests|LayoutAcceptanceTests|R3RuntimeContextTests|R3OptionContractTests|R3SerializationTests|R3MotionContractTests|R3StartupContractTests|R3VisualContractTests|R3TrayQuitTests|R4VisualContractTests|MainWindowFlowTests|DialogRenderTests)$'
 
       - name: Test packaged build
         uses: ./.github/actions/test-package
@@ -726,9 +709,67 @@ jobs:
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
           retention-days: 14
 
+      - name: Preserve test probe identities
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/check-diagnostic-paths.py \
+            build/bin/R3StartupProbe.exe build/bin/R4VisualProbe.exe \
+            build/bin/R3StartupProbe.app/Contents/MacOS/R3StartupProbe \
+            build/bin/R4VisualProbe.app/Contents/MacOS/R4VisualProbe \
+            build/r3-test-evidence/R3StartupProbe-identity.json \
+            build/r3-test-evidence/R4VisualProbe-identity.json
+          mkdir -p build/r3-test-evidence
+          python3 - <<'PYTHON'
+          import hashlib, json
+          from pathlib import Path
+          candidates = (
+              Path('build/bin/R3StartupProbe.exe'), Path('build/bin/R4VisualProbe.exe'),
+              Path('build/bin/R3StartupProbe.app/Contents/MacOS/R3StartupProbe'),
+              Path('build/bin/R4VisualProbe.app/Contents/MacOS/R4VisualProbe'),
+          )
+          records = [{'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+                     for path in candidates if path.is_file()]
+          for probe in ('R3StartupProbe', 'R4VisualProbe'):
+              output = Path('build/r3-test-evidence/' + probe + '-identity.json')
+              selected = [record for record in records if Path(record['path']).name in (probe, probe + '.exe')]
+              output.write_text(json.dumps({'probe': probe, 'files': selected}, indent=2) + '\n')
+          PYTHON
+
+      - name: Validate diagnostic upload paths
+        id: diagnostics-safe
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/check-diagnostic-paths.py --recursive \
+            build/r3-test-evidence/ \
+            build/r3-test-evidence/R3StartupProbe-identity.json \
+            build/r3-test-evidence/R4VisualProbe-identity.json \
+            build/src/unittests/test-results/ \
+            build/src/unittests/test-results/ctest.xml \
+            build/src/unittests/Testing/Temporary/LastTest.log
+          echo 'safe=true' >> "$GITHUB_OUTPUT"
+
+      - name: Upload raw contract diagnostics
+        if: ${{ always() && steps.diagnostics-safe.outputs.safe == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: r3-test-evidence-macos-arm64
+          path: |
+            build/r3-test-evidence/
+            build/r3-test-evidence/R3StartupProbe-identity.json
+            build/r3-test-evidence/R4VisualProbe-identity.json
+            build/src/unittests/test-results/
+            build/src/unittests/test-results/ctest.xml
+            build/src/unittests/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+          retention-days: 14
+
   github-release:
     needs: [get-version, build-windows, build-macos]
-    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.publish_release == 'true' && (needs.build-windows.result == 'success' || needs.build-macos.result == 'success') }}
+    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.publish_release == 'true' && needs.build-windows.result == 'success' && needs.build-macos.result == 'success' }}
     runs-on: ubuntu-latest
     # contents:write uploads the Release. id-token and attestations mint the
     # Sigstore provenance for those same bytes. Job permissions replace the
@@ -773,8 +814,19 @@ jobs:
           VERSION: ${{ needs.get-version.outputs.base }}
         run: |
           set -euo pipefail
-          shopt -s nullglob globstar
-          mapfile -t files < <(find dist -type f ! -name '*.digest' | sort)
+          if [ "$GITHUB_EVENT_NAME" != workflow_dispatch ] ||
+             [ "$GITHUB_REF" != "refs/tags/v${VERSION}" ]; then
+            echo "::error::release requires manual dispatch at the exact committed version tag"
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::invalid release identity"
+            exit 1
+          fi
+          files=()
+          while IFS= read -r file; do
+            files+=("$file")
+          done < <(find dist -type f ! -name '*.digest' | sort)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "::error::no package files to publish"
             exit 1
@@ -789,44 +841,49 @@ jobs:
           # signing. Keep both bilingual: the project is Chinese-first.
           notes="## 发布信息 / Release information"$'\n\n'
           notes+="- 每个安装包都附带 GitHub 构建来源证明 / Every package carries a GitHub build-provenance attestation:"$'\n'
-          notes+="  \`gh attestation verify FILE --repo Tupig/Tupig_synergy\`"$'\n'
+          notes+="  \`gh attestation verify FILE --repo ${GH_REPO}\`"$'\n'
           notes+="- Windows 包在 SignPath 审批前未签名 / Windows packages are unsigned until SignPath approval."$'\n'
           notes+="- macOS 包未使用 Developer ID 签名与公证，首次运行需在「系统设置 → 隐私与安全性 → 辅助功能」中授权；升级后如再次提示，请重新授权 / "
           notes+="macOS packages use an ad-hoc signature (no Developer ID, no notarization); grant Accessibility permission after the first launch and re-grant after an update if prompted."$'\n'
           marker="Built-From: ${GITHUB_SHA}"
-          # A published release must have an incremented version: reusing a tag
-          # for different code is exactly what the auto-bump prevents. A rerun
-          # of the same commit may still refresh its own assets.
-          if existing_sha=$(gh api "repos/${GH_REPO}/commits/${tag}" --jq .sha 2>/dev/null) &&
-             [ -n "$existing_sha" ] && [ "$existing_sha" != "$GITHUB_SHA" ]; then
+          # The validated integrated commit must already own this version tag.
+          # Never let release creation infer a target from the default branch.
+          if ! existing_sha=$(gh api "repos/${GH_REPO}/commits/${tag}" --jq .sha 2>/dev/null); then
+            echo "::error::Release ${tag} requires an existing validated source tag"
+            exit 1
+          fi
+          if [ "$existing_sha" != "$GITHUB_SHA" ]; then
             echo "::error::Release ${tag} already points to ${existing_sha}; bump the version before publishing"
             exit 1
           fi
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "${files[@]}" --clobber
-            existing=$(gh release view "$tag" --json body -q .body)
-            cleaned=$(printf '%s\n' "$existing" | tr -d '\r' | grep -v '^Built-From: ' || true)
-            if [ -z "${cleaned//[[:space:]]/}" ]; then
-              cleaned="$notes"
-            fi
-            gh release edit "$tag" --notes "${cleaned}"$'\n\n'"${marker}"
-          else
-            # --generate-notes lists the merged pull requests since the last
-            # release; the edit appends the provenance/signing footer.
-            gh release create "$tag" "${files[@]}" --title "$title" --generate-notes --latest
-            generated=$(gh release view "$tag" --json body -q .body)
-            gh release edit "$tag" --notes "${generated}"$'\n\n'"${notes}"$'\n\n'"${marker}"
+          if ! main_sha=$(gh api "repos/${GH_REPO}/commits/main" --jq .sha); then
+            echo "::error::cannot resolve integrated main"
+            exit 1
           fi
+          if [ "$main_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::release source is not the current integrated main commit"
+            exit 1
+          fi
+          # Any existing release (including a draft) is immutable to this run.
+          # A nonzero query is absence only when the actual HTTP status is 404.
+          if release_response=$(gh api --include "repos/${GH_REPO}/releases/tags/${tag}"); then
+            echo "::error::Release ${tag} already exists; no assets will be replaced"
+            exit 1
+          else
+            release_status=$(printf '%s\n' "$release_response" | tr -d '\r' | sed -n 's/^HTTP\/[^ ]* \([0-9][0-9][0-9]\)\( .*\)\{0,1\}$/\1/p' | tail -n 1)
+            if [ "$release_status" != 404 ]; then
+              echo "::error::cannot establish absence of Release ${tag} (HTTP ${release_status:-unknown})"
+              exit 1
+            fi
+          fi
+          # All packages are uploaded while private; expose the complete set only last.
+          gh release create "$tag" "${files[@]}" --verify-tag --target "$GITHUB_SHA" --title "$title" --generate-notes --draft
+          generated=$(gh release view "$tag" --json body -q .body)
+          notes_file=$(mktemp)
+          trap 'rm -f "$notes_file"' EXIT
+          printf '%s\n\n%s\n\n%s\n' "$generated" "$notes" "$marker" > "$notes_file"
+          gh release edit "$tag" --notes-file "$notes_file" --draft=false --latest
 
-  # Upload release packages to AWS S3 for distribution. Snapshot validation
-  # never enters this job or reads AWS credentials. Release publication
-  # uploads whatever artifacts exist - one failed target must not block shipping
-  # the rest (a flaky distro should not discard other release artifacts).
-  # The publication decision comes from get-version, which supplies the path. Layout: <dir>/<dev|snapshot|release>/<version>/...
-  # No checkout (download-artifact only). Artifacts land at the workspace root under dist/.
-  # Secrets cannot be referenced from a job-level `if` (context unavailable
-  # there), so gate each AWS step individually: when secrets are unset the
-  # job still runs but every upload step is skipped - job stays green (A-30 (#54)).
   ci-passed:
     runs-on: ubuntu-latest
     needs:
@@ -836,34 +893,58 @@ jobs:
         lint-encoding,
         build-windows,
         build-macos,
-        bump-version,
         github-release,
       ]
     if: always()
 
     steps:
-      # 'skipped' is treated as passing because the plan step skips platforms
-      # on purpose (push/PR skip Windows, macOS and Flatpak; snapshot honors
-      # platform). package-type=release and a published Release do not skip a
-      # platform. A failed job is still a failure. get-version never filters
-      # out, so requiring it catches a build skipped by its failure.
-      # lint-clang and lint-encoding have no platform filter: a failed lint used
-      # to be invisible here (builds skip via needs:, skipped counted as ok).
-      # Always require both. No checkout: this job only inspects needs.* results.
+      # Reconstruct the selected route; a skipped required job is always a failure.
       - name: Check all jobs passed or were intentionally skipped
+        env:
+          PACKAGE_TYPE: ${{ inputs.package-type }}
+          PLATFORM: ${{ inputs.platform }}
         run: |
-          ok() {
-            [[ "$1" == "success" || "$1" == "skipped" ]]
+          set -euo pipefail
+          expected_windows=false
+          expected_macos=false
+          expected_release=false
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              expected_windows=true
+              expected_macos=true
+              ;;
+            workflow_dispatch)
+              case "$PACKAGE_TYPE" in
+                release)
+                  expected_windows=true
+                  expected_macos=true
+                  expected_release=true
+                  ;;
+                snapshot)
+                  case "$PLATFORM" in
+                    ''|all) expected_windows=true; expected_macos=true ;;
+                    windows) expected_windows=true ;;
+                    macos) expected_macos=true ;;
+                    *) echo 'Unsupported snapshot platform'; exit 1 ;;
+                  esac
+                  ;;
+                *) echo 'Unsupported package type'; exit 1 ;;
+              esac
+              ;;
+            *) echo 'Unsupported workflow event'; exit 1 ;;
+          esac
+          test "${{ needs.get-version.outputs.build_windows }}" = "$expected_windows" || exit 1
+          test "${{ needs.get-version.outputs.build_macos }}" = "$expected_macos" || exit 1
+          test "${{ needs.get-version.outputs.publish_release }}" = "$expected_release" || exit 1
+          test "${{ needs.get-version.result }}" = success || exit 1
+          test "${{ needs.lint-clang.result }}" = success || exit 1
+          test "${{ needs.lint-encoding.result }}" = success || exit 1
+          require_result() {
+            local selected="$1" result="$2" expected=skipped
+            if [ "$selected" = true ]; then expected=success; fi
+            test "$result" = "$expected"
           }
-          if ok "${{needs.get-version.result}}" \
-             && ok "${{needs.lint-clang.result}}" \
-             && ok "${{needs.lint-encoding.result}}" \
-             && ok "${{needs.build-windows.result}}" \
-             && ok "${{needs.build-macos.result}}" \
-             && ok "${{needs.bump-version.result}}" \
-             && ok "${{needs.github-release.result}}"; then
-            printf '\342\234\205 CI passed\n' > "$GITHUB_STEP_SUMMARY"
-          else
-            exit 1
-          fi
-
+          require_result "$expected_windows" "${{ needs.build-windows.result }}" || exit 1
+          require_result "$expected_macos" "${{ needs.build-macos.result }}" || exit 1
+          require_result "$expected_release" "${{ needs.github-release.result }}" || exit 1
+          printf '\342\234\205 CI passed\n' > "$GITHUB_STEP_SUMMARY"

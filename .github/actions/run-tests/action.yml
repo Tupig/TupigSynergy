@@ -1,6 +1,12 @@
 name: "Run tests"
 description: "Runs the unit tests"
 
+inputs:
+  exclude-tests:
+    description: "Exact CTest regex already executed by the critical-contract step"
+    required: false
+    default: ""
+
 runs:
   using: "composite"
 
@@ -9,30 +15,31 @@ runs:
       id: unit-tests
       env:
         QT_QPA_PLATFORM: offscreen
+        CTEST_EXCLUDE_REGEX: ${{ inputs.exclude-tests }}
       # Relative to the project directory (the repository root).
       working-directory: .
       run: |
+        set -euo pipefail
         # Refuse indirect diagnostic paths before cleanup or the no-tests route.
-        for diagnostic_path in build build/src build/src/unittests \
-          build/src/unittests/test-results build/src/unittests/Testing \
-          build/src/unittests/Testing/Temporary \
-          build/src/unittests/Testing/Temporary/LastTest.log \
-          build/src/unittests/test-results/*.txt; do
-          if [ -L "$diagnostic_path" ]; then
-            echo "Refusing symlink diagnostic path: $diagnostic_path"
-            exit 1
-          fi
-        done
-        # BUILD_TESTS=OFF legs (debian-12, ubuntu-24.04, rocky) and Qt5
-        # fallback (debian-13-x86_64) produce no unittests directory.
+        python3 scripts/ci/check-diagnostic-paths.py --recursive \
+          build/src/unittests/test-results build/src/unittests/Testing/Temporary
         if [ ! -d "build/src/unittests" ]; then
-          echo "No unit tests built (BUILD_TESTS=OFF or Qt5); skipping."
-          exit 0
+          echo "Required native test directory is missing."
+          exit 1
         fi
+        mkdir -p build/src/unittests/test-results
         # Remove only fixed build outputs so a crash cannot reuse old results.
         rm -f -- build/src/unittests/test-results/*.txt \
-          build/src/unittests/Testing/Temporary/LastTest.log
-        ctest --test-dir "build/src/unittests" --output-on-failure
+          build/src/unittests/Testing/Temporary/LastTest.log \
+          build/src/unittests/test-results/ctest.xml
+        python3 scripts/ci/check-diagnostic-paths.py \
+          build/src/unittests/test-results/ctest.xml build/src/unittests/Testing/Temporary/LastTest.log
+        ctest_args=(--test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error
+          --output-junit "$PWD/build/src/unittests/test-results/ctest.xml")
+        if [ -n "${CTEST_EXCLUDE_REGEX:-}" ]; then
+          ctest_args+=(-E "$CTEST_EXCLUDE_REGEX")
+        fi
+        ctest "${ctest_args[@]}"
       shell: bash
 
     - name: Show current test failure diagnostics
@@ -40,18 +47,11 @@ runs:
       working-directory: .
       shell: bash
       run: |
-        for diagnostic_path in build build/src build/src/unittests \
-          build/src/unittests/test-results build/src/unittests/Testing \
-          build/src/unittests/Testing/Temporary \
-          build/src/unittests/Testing/Temporary/LastTest.log \
-          build/src/unittests/test-results/*.txt; do
-          if [ -L "$diagnostic_path" ]; then
-            echo "Refusing symlink diagnostic path: $diagnostic_path"
-            exit 1
-          fi
-        done
+        set -euo pipefail
+        python3 scripts/ci/check-diagnostic-paths.py --recursive \
+          build/src/unittests/test-results build/src/unittests/Testing/Temporary
         found_result=false
-        for result in build/src/unittests/test-results/*.txt; do
+        for result in build/src/unittests/test-results/*.txt build/src/unittests/test-results/*.xml; do
           if [ -f "$result" ]; then
             found_result=true
             echo "=== $result ==="

@@ -60,11 +60,18 @@ if(CLEAN_TRS)
   list(APPEND TR_OPTIONS -no-obsolete)
 endif()
 
-# English will have only plurals
-qt_create_translation(TRS ${TR_SOURCE_DIRS} ${filename}_en.ts OPTIONS -pluralonly ${TR_OPTIONS})
-
-# Other languages contain the full set of strings.
-qt_create_translation(TRS ${TR_SOURCE_DIRS} ${translations} OPTIONS ${TR_OPTIONS})
+# Normal builds compile the reviewed catalogues without changing source TS files.
+# Updating messages is a separate, explicit maintenance operation, never an ALL dependency.
+qt_add_translation(TRS ${filename}_en.ts ${translations})
+set(_maintenance_ts ${translations})
+list(TRANSFORM _maintenance_ts PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+add_custom_target(update_translations
+  COMMAND Qt6::lupdate ${TR_OPTIONS} -pluralonly ${TR_SOURCE_DIRS}
+    -ts "${CMAKE_CURRENT_SOURCE_DIR}/${filename}_en.ts"
+  COMMAND Qt6::lupdate ${TR_OPTIONS} ${TR_SOURCE_DIRS} -ts ${_maintenance_ts}
+  COMMENT "Explicitly updating translation source catalogues"
+  VERBATIM
+)
 
 # Qt ships its own strings (standard dialog buttons such as Save/Cancel, built-in
 # widget and file-dialog text) as qtbase_<lang>.qm, separately from the
