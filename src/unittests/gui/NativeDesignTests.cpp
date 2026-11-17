@@ -34,10 +34,15 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QDate>
+#include <QDebug>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QFontDatabase>
+#include <QFontInfo>
+#include <QFontMetrics>
 #include <QHostAddress>
 #include <QLabel>
+#include <QLibraryInfo>
 #include <QLineEdit>
 #include <QMainWindow>
 #include <QPalette>
@@ -61,6 +66,21 @@
 #include <QtTest>
 
 namespace {
+
+void diagnoseGeometryFailure(const QWidget *target, const char *check)
+{
+  for (int depth = 0; target && depth < 4; target = target->parentWidget(), ++depth) {
+    const auto *layout = target->layout();
+    const auto policy = target->sizePolicy();
+    qInfo().nospace() << "WF1 geometry check=" << check << " depth=" << depth
+                      << " type=" << target->metaObject()->className() << " object=" << target->objectName()
+                      << " geometry=" << target->geometry() << " minimum=" << target->minimumSize()
+                      << " minimumHint=" << target->minimumSizeHint() << " hint=" << target->sizeHint()
+                      << " policy=" << static_cast<int>(policy.horizontalPolicy()) << ','
+                      << static_cast<int>(policy.verticalPolicy())
+                      << " layoutMinimum=" << (layout ? layout->minimumSize() : QSize(-1, -1));
+  }
+}
 
 void applyTestPalette(bool dark)
 {
@@ -127,6 +147,7 @@ class NativeDesignTests : public QObject
 {
   Q_OBJECT
 private Q_SLOTS:
+  void initTestCase();
   void mainShellResponsiveWidths_data();
   void mainShellResponsiveWidths();
   void mainShellUsesCompactCards_data();
@@ -141,6 +162,40 @@ private Q_SLOTS:
   void logFollowsTailWithoutInterruptingHistory();
   void leavingUpdateCancelsPendingDownload();
 };
+
+void NativeDesignTests::initTestCase()
+{
+  const auto fontDirectory = qEnvironmentVariable("QT_QPA_FONTDIR");
+  const auto families = QFontDatabase::families();
+  qInfo().nospace() << "WF1 environment qt=" << qVersion() << " platform=" << QGuiApplication::platformName()
+                    << " style=" << QApplication::style()->objectName()
+                    << " fontdirSet=" << qEnvironmentVariableIsSet("QT_QPA_FONTDIR")
+                    << " fontdirExists=" << (!fontDirectory.isEmpty() && QDir(fontDirectory).exists())
+                    << " defaultFontdirExists="
+                    << QDir(QLibraryInfo::path(QLibraryInfo::LibrariesPath) + QStringLiteral("/fonts")).exists()
+                    << " familyCount=" << families.size();
+  qInfo().nospace() << "WF1 families SegoeUI=" << families.contains(QStringLiteral("Segoe UI"), Qt::CaseInsensitive)
+                    << " Arial=" << families.contains(QStringLiteral("Arial"), Qt::CaseInsensitive)
+                    << " MicrosoftYaHei=" << families.contains(QStringLiteral("Microsoft YaHei"), Qt::CaseInsensitive)
+                    << " NotoSansCJKSC=" << families.contains(QStringLiteral("Noto Sans CJK SC"), Qt::CaseInsensitive);
+  const auto requested = QApplication::font();
+  const QFontInfo resolved(requested);
+  qInfo().nospace() << "WF1 font requestedFamily=" << requested.family() << " requestedPixels=" << requested.pixelSize()
+                    << " requestedPoints=" << requested.pointSizeF() << " resolvedFamily=" << resolved.family()
+                    << " resolvedPixels=" << resolved.pixelSize() << " resolvedPoints=" << resolved.pointSizeF()
+                    << " exactMatch=" << resolved.exactMatch();
+  const QFontMetrics metrics(requested);
+  const auto settingsText = QString::fromUtf8("\xE8\xAE\xBE\xE7\xBD\xAE");
+  for (const auto &text :
+       {QStringLiteral("iiiiiiii"), QStringLiteral("WWWWWWWW"), QStringLiteral("Settings"), settingsText}) {
+    auto output = qInfo().nospace();
+    output << "WF1 metrics text=" << text << " advance=" << metrics.horizontalAdvance(text)
+           << " bounds=" << metrics.boundingRect(text) << " height=" << metrics.height()
+           << " ascent=" << metrics.ascent() << " descent=" << metrics.descent();
+    if (text == settingsText)
+      output << " firstGlyph=" << metrics.inFontUcs4(0x8BBE) << " secondGlyph=" << metrics.inFontUcs4(0x7F6E);
+  }
+}
 
 // COMPLETE-R1 additive matrix: original R1 600px oracle remains unchanged.
 void NativeDesignTests::mainShellResponsiveWidths_data()
@@ -193,10 +248,14 @@ void NativeDesignTests::mainShellResponsiveWidths()
         static_cast<QWidget *>(ui.btnToggleCore), static_cast<QWidget *>(ui.btnRestartCore),
         static_cast<QWidget *>(server ? ui.btnConfigureServer : ui.btnConfigureClient)}) {
     QVERIFY(field->isVisibleTo(&window));
+    if (!window.rect().contains(QRect(field->mapTo(&window, QPoint()), field->size())))
+      diagnoseGeometryFailure(field, "responsive-containment");
     QVERIFY2(
         window.rect().contains(QRect(field->mapTo(&window, QPoint()), field->size())), qPrintable(field->objectName())
     );
   }
+  if (ui.workspace->horizontalScrollBar()->maximum() != 0)
+    diagnoseGeometryFailure(ui.workspace, "responsive-horizontal-scroll");
   QCOMPARE(ui.workspace->horizontalScrollBar()->maximum(), 0);
   capture(
       window, QStringLiteral("main-responsive-%1-%2-%3").arg(language).arg(width).arg(server ? "server" : "client")
@@ -278,11 +337,15 @@ void NativeDesignTests::mainShellUsesCompactCards()
   for (const auto *card : {ui.rbModeServer, ui.rbModeClient}) {
     QVERIFY(card->height() >= 48);
     QVERIFY2(card->height() <= 56, "Mode cards must use the compact reference proportions.");
+    if (!window.rect().contains(QRect(card->mapTo(&window, QPoint()), card->size())))
+      diagnoseGeometryFailure(card, "compact-card-containment");
     QVERIFY(window.rect().contains(QRect(card->mapTo(&window, QPoint()), card->size())));
   }
   for (const auto *button :
        {ui.btnSettingsShortcut, ui.btnUpdatesShortcut, ui.btnAboutShortcut,
         server ? ui.btnConfigureServer : ui.btnConfigureClient, ui.btnToggleCore, ui.btnRestartCore}) {
+    if (!window.rect().contains(QRect(button->mapTo(&window, QPoint()), button->size())))
+      diagnoseGeometryFailure(button, "compact-button-containment");
     QVERIFY(window.rect().contains(QRect(button->mapTo(&window, QPoint()), button->size())));
   }
   QCOMPARE(ui.logPanel->isCollapsed(), collapsed);
@@ -436,7 +499,11 @@ void NativeDesignTests::embeddedPages()
     if (tabs)
       tabs->setCurrentIndex(index);
     QCoreApplication::processEvents();
+    if (host.width() != 600)
+      diagnoseGeometryFailure(&host, "embedded-host-width");
     QCOMPARE(host.width(), 600);
+    if (editor->width() > 580)
+      diagnoseGeometryFailure(editor, "embedded-editor-width");
     QVERIFY2(editor->width() <= 580, qPrintable(kind + QStringLiteral(" exceeds the workspace inset.")));
     for (auto *field : editor->findChildren<QWidget *>()) {
       if (!field->isVisibleTo(editor) ||
@@ -451,9 +518,13 @@ void NativeDesignTests::embeddedPages()
                               .arg(bounds.x())
                               .arg(bounds.width())
                               .arg(editor->width());
+      if (!(bounds.left() >= 0 && bounds.right() < editor->width()))
+        diagnoseGeometryFailure(field, "embedded-field-containment");
       QVERIFY2(bounds.left() >= 0 && bounds.right() < editor->width(), qPrintable(detail));
     }
     for (auto *area : editor->findChildren<QScrollArea *>()) {
+      if (area->isVisibleTo(editor) && area->horizontalScrollBar()->maximum() != 0)
+        diagnoseGeometryFailure(area, "embedded-horizontal-scroll");
       if (area->isVisibleTo(editor))
         QCOMPARE(area->horizontalScrollBar()->maximum(), 0);
     }
