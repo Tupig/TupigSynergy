@@ -593,16 +593,16 @@ void R3OptionContractTests::languagePreviewCancelAndSystemValue()
   reopened.reject();
   {
     SettingsDialog toSystem(nullptr, config);
-    auto *languages = combo(toSystem, "comboLanguage");
-    languages->setCurrentIndex(languages->findData(QString()));
+    auto *cancelledSystemLanguages = combo(toSystem, "comboLanguage");
+    cancelledSystemLanguages->setCurrentIndex(cancelledSystemLanguages->findData(QString()));
     QCOMPARE(Settings::value(Settings::Core::Language).toString(), QStringLiteral("en"));
     toSystem.reject();
     QCOMPARE(Settings::value(Settings::Core::Language).toString(), QStringLiteral("en"));
   }
   {
     SettingsDialog toSystem(nullptr, config);
-    auto *languages = combo(toSystem, "comboLanguage");
-    languages->setCurrentIndex(languages->findData(QString()));
+    auto *acceptedSystemLanguages = combo(toSystem, "comboLanguage");
+    acceptedSystemLanguages->setCurrentIndex(acceptedSystemLanguages->findData(QString()));
     QTest::mouseClick(saveButton(toSystem), Qt::LeftButton);
     QCOMPARE(toSystem.result(), int(QDialog::Accepted));
     QVERIFY(Settings::value(Settings::Core::Language).toString().isEmpty());

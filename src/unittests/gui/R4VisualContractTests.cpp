@@ -1748,16 +1748,16 @@ private Q_SLOTS:
     m_window->resize(width, m_window->height());
     auto *host = m_window->findChild<PageHost *>();
     QVERIFY(host);
-    QList<QPointer<QDialog>> pages;
+    QList<QPointer<QDialog>> openedPages;
     const auto dismiss = qScopeGuard([&] {
-      for (auto it = pages.rbegin(); it != pages.rend(); ++it)
+      for (auto it = openedPages.rbegin(); it != openedPages.rend(); ++it)
         if (*it) {
           (*it)->reject();
           QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         }
     });
     auto *server = new ServerConfigDialog(m_window, config);
-    pages << server;
+    openedPages << server;
     host->push(server);
     QVERIFY(settleStaticRender(*m_window));
     auto *tabs = server->findChild<QTabWidget *>();
@@ -1784,7 +1784,7 @@ private Q_SLOTS:
       if (candidate->isVisibleTo(m_window))
         hotkey = candidate;
     QVERIFY(hotkey);
-    pages << hotkey;
+    openedPages << hotkey;
     QVERIFY(settleStaticRender(*m_window));
     auto *associated = hotkey->findChild<QListWidget *>("listAssociatedActions");
     QVERIFY(associated);
@@ -1801,7 +1801,7 @@ private Q_SLOTS:
       if (candidate->isVisibleTo(m_window))
         action = candidate;
     QVERIFY(action);
-    pages << action;
+    openedPages << action;
     QVERIFY(settleStaticRender(*m_window));
     auto *types = action->findChild<QComboBox *>("comboActionType");
     auto *box = action->findChild<QDialogButtonBox *>();
@@ -1859,7 +1859,7 @@ private Q_SLOTS:
                 {"rect", rectJson(bounds(control, action))}
             }
         );
-    for (auto it = pages.rbegin(); it != pages.rend(); ++it) {
+    for (auto it = openedPages.rbegin(); it != openedPages.rend(); ++it) {
       auto *buttons = (*it)->findChild<QDialogButtonBox *>();
       QVERIFY(buttons && buttons->button(QDialogButtonBox::Cancel));
       QTest::mouseClick(buttons->button(QDialogButtonBox::Cancel), Qt::LeftButton);
