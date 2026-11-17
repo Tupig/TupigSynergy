@@ -183,7 +183,7 @@ void CoreProcess::checkExistingProcess()
   client->connectToServer();
 }
 
-void CoreProcess::onProcessFinished(int exitCode, QProcess::ExitStatus)
+void CoreProcess::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
   using enum ProcessState;
   setConnectionState(ConnectionState::Disconnected);
@@ -196,6 +196,12 @@ void CoreProcess::onProcessFinished(int exitCode, QProcess::ExitStatus)
   if (m_processState == Stopping) {
     setProcessState(Stopped);
     qInfo("core desktop process stopped");
+    return;
+  }
+
+  if (exitStatus == QProcess::CrashExit) {
+    setProcessState(Stopped);
+    qWarning("desktop process crashed");
     return;
   }
 

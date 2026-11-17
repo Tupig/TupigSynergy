@@ -9,16 +9,40 @@
 #include "gui/config/ServerConfig.h"
 #include "gui/core/CoreProcess.h"
 #include <QApplication>
+#include <QDebug>
 #include <QFile>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QTemporaryDir>
 #include <QTextStream>
 #include <QUuid>
 #include <QtTest>
 
+#include <algorithm>
+#include <chrono>
 #include <deque>
 
 namespace {
+struct ExitMessage
+{
+  QtMsgType type;
+  QString text;
+};
+thread_local QList<ExitMessage> *exitMessages = nullptr;
+void captureExitMessage(QtMsgType type, const QMessageLogContext &, const QString &text)
+{
+  if (exitMessages)
+    exitMessages->append({type, text});
+}
+
+enum class ExitClassification
+{
+  Crash,
+  IntentionalStop,
+  Normal,
+  Failure
+};
+
 void seedConfig(int type, int direction, int lock, int modifier)
 {
   auto &settings = Settings::proxy().get();
@@ -72,6 +96,8 @@ private Q_SLOTS:
   void validCanonicalEncodings();
   void ioRefusalPreservesExistingPayload();
   void actualCorePersistenceDoesNotLaunchOrTruncate();
+  void actualCoreExitClassification_data();
+  void actualCoreExitClassification();
 };
 void R3SerializationTests::invalidConfigCannotTruncateOrPartiallyWrite_data()
 {
@@ -231,6 +257,160 @@ void R3SerializationTests::actualCorePersistenceDoesNotLaunchOrTruncate()
   QCOMPARE(changed.count(), 0);
   QVERIFY(core.findChildren<QProcess *>().isEmpty());
 }
+
+void R3SerializationTests::actualCoreExitClassification_data()
+{
+  using State = synergy::core::ProcessState;
+  using Classification = ExitClassification;
+  QTest::addColumn<int>("initialState");
+  QTest::addColumn<int>("rawExitCode");
+  QTest::addColumn<int>("exitStatus");
+  QTest::addColumn<bool>("stableUptime");
+  QTest::addColumn<int>("expectedState");
+  QTest::addColumn<bool>("expectedRetry");
+  QTest::addColumn<int>("expectedInterval");
+  QTest::addColumn<int>("expectedNextDelay");
+  QTest::addColumn<int>("expectedClassification");
+  struct Row
+  {
+    const char *name;
+    State initial;
+    int code;
+    QProcess::ExitStatus status;
+    bool stable;
+    State expected;
+    bool retry;
+    int interval;
+    int nextDelay;
+    Classification classification;
+  };
+  // No raw 5 row: the unfixed handler could contact the fixed live core IPC.
+  const Row rows[]{
+      {"crash-stopped-0", State::Stopped, 0, QProcess::CrashExit, false, State::Stopped, false, 0, 2000,
+       Classification::Crash},
+      {"crash-stopped-9", State::Stopped, 9, QProcess::CrashExit, false, State::Stopped, false, 0, 2000,
+       Classification::Crash},
+      {"crash-started-0", State::Started, 0, QProcess::CrashExit, false, State::Stopped, false, 0, 2000,
+       Classification::Crash},
+      {"crash-started-9", State::Started, 9, QProcess::CrashExit, false, State::Stopped, false, 0, 2000,
+       Classification::Crash},
+      {"crash-stopping-0", State::Stopping, 0, QProcess::CrashExit, false, State::Stopped, false, 0, 2000,
+       Classification::IntentionalStop},
+      {"crash-stopping-9", State::Stopping, 9, QProcess::CrashExit, false, State::Stopped, false, 0, 2000,
+       Classification::IntentionalStop},
+      {"normal-stopped-0", State::Stopped, 0, QProcess::NormalExit, false, State::Stopped, false, 0, 2000,
+       Classification::Normal},
+      {"normal-started-recent-0", State::Started, 0, QProcess::NormalExit, false, State::RetryPending, true, 2000, 4000,
+       Classification::Normal},
+      {"normal-started-stable-0", State::Started, 0, QProcess::NormalExit, true, State::RetryPending, true, 1000, 2000,
+       Classification::Normal},
+      {"normal-stopping-0", State::Stopping, 0, QProcess::NormalExit, false, State::Stopped, false, 0, 2000,
+       Classification::IntentionalStop},
+      {"normal-stopped-9", State::Stopped, 9, QProcess::NormalExit, false, State::Stopped, false, 0, 2000,
+       Classification::Failure},
+      {"normal-started-9", State::Started, 9, QProcess::NormalExit, false, State::Stopped, false, 0, 2000,
+       Classification::Failure},
+      {"normal-stopping-9", State::Stopping, 9, QProcess::NormalExit, false, State::Stopped, false, 0, 2000,
+       Classification::IntentionalStop},
+  };
+  for (const auto &row : rows)
+    QTest::newRow(row.name) << int(row.initial) << row.code << int(row.status) << row.stable << int(row.expected)
+                            << row.retry << row.interval << row.nextDelay << int(row.classification);
+}
+
+void R3SerializationTests::actualCoreExitClassification()
+{
+  QFETCH(int, initialState);
+  QFETCH(int, rawExitCode);
+  QFETCH(int, exitStatus);
+  QFETCH(bool, stableUptime);
+  QFETCH(int, expectedState);
+  QFETCH(bool, expectedRetry);
+  QFETCH(int, expectedInterval);
+  QFETCH(int, expectedNextDelay);
+  QFETCH(int, expectedClassification);
+  using State = synergy::core::ProcessState;
+  synergy::gui::ServerConfig config;
+  synergy::gui::CoreProcess core(config);
+  const auto stopRetryOnExit = qScopeGuard([&] { core.m_retryTimer.stop(); });
+  core.m_processState = State(initialState);
+  core.m_connectionState = synergy::core::ConnectionState::Connected;
+  core.m_retryDelayMs = 2000;
+  core.m_startedAt = std::chrono::steady_clock::now() - std::chrono::seconds(stableUptime ? 11 : 0);
+  core.m_retryTimer.setSingleShot(true);
+  core.m_retryTimer.start(60000);
+  const bool seededTimerActive = core.m_retryTimer.isActive();
+  QList<ExitMessage> messages;
+  State observedState = State::Stopped;
+  auto observedConnection = synergy::core::ConnectionState::Disconnected;
+  int observedNextDelay = 0;
+  bool retryActive = false;
+  int retryInterval = 0;
+  {
+    // Capture only the handler, not constructor diagnostics about an absent
+    // core binary next to this unit executable. No process or IPC is started.
+    auto *previousMessages = exitMessages;
+    exitMessages = &messages;
+    const auto previousHandler = qInstallMessageHandler(captureExitMessage);
+    const auto restoreMessages = qScopeGuard([&] {
+      qInstallMessageHandler(previousHandler);
+      exitMessages = previousMessages;
+    });
+    core.onProcessFinished(rawExitCode, QProcess::ExitStatus(exitStatus));
+    observedState = core.processState();
+    observedConnection = core.connectionState();
+    observedNextDelay = core.m_retryDelayMs;
+    retryInterval = core.m_retryTimer.interval();
+    retryActive = core.m_retryTimer.isActive();
+    core.m_retryTimer.stop();
+  }
+  // Every timer is stopped and the message handler restored before assertions.
+  const auto hasMessage = [&](QtMsgType type, const QString &text) {
+    return std::any_of(messages.cbegin(), messages.cend(), [&](const auto &message) {
+      return message.type == type && message.text == text;
+    });
+  };
+  const auto hasText = [&](const QString &text) {
+    return std::any_of(messages.cbegin(), messages.cend(), [&](const auto &message) {
+      return message.text.contains(text);
+    });
+  };
+  QStringList observed;
+  for (const auto &message : messages)
+    observed.append(QStringLiteral("%1:%2").arg(int(message.type)).arg(message.text));
+  qInfo().noquote() << "CE1 handler observation" << QTest::currentDataTag() << "state" << int(observedState)
+                    << "retry-active-before-stop" << retryActive << "retry-interval" << retryInterval << "next-delay"
+                    << observedNextDelay << observed;
+  QVERIFY(seededTimerActive);
+  QVERIFY(!core.m_retryTimer.isActive());
+  QCOMPARE(observedState, State(expectedState));
+  QCOMPARE(observedConnection, synergy::core::ConnectionState::Disconnected);
+  QCOMPARE(retryActive, expectedRetry);
+  if (expectedRetry)
+    QCOMPARE(retryInterval, expectedInterval);
+  QCOMPARE(observedNextDelay, expectedNextDelay);
+  const auto classification = ExitClassification(expectedClassification);
+  QCOMPARE(
+      hasMessage(QtWarningMsg, QStringLiteral("desktop process crashed")), classification == ExitClassification::Crash
+  );
+  QCOMPARE(
+      hasMessage(QtDebugMsg, QStringLiteral("desktop process exited normally")),
+      classification == ExitClassification::Normal
+  );
+  QCOMPARE(
+      hasMessage(QtWarningMsg, QStringLiteral("desktop process exited with code: 9")),
+      classification == ExitClassification::Failure
+  );
+  QCOMPARE(
+      hasMessage(QtInfoMsg, QStringLiteral("core desktop process stopped")),
+      classification == ExitClassification::IntentionalStop
+  );
+  QCOMPARE(hasText(QStringLiteral("retrying")), expectedRetry);
+  QVERIFY(!hasText(QStringLiteral("checking existing core")));
+  QVERIFY(core.m_process == nullptr);
+  QVERIFY(core.findChildren<QProcess *>().isEmpty());
+}
+
 int main(int argc, char **argv)
 {
   QTemporaryDir dir;
