@@ -25,6 +25,7 @@
 
 #include <QApplication>
 #include <QCryptographicHash>
+#include <QDialog>
 #include <QDir>
 #include <QListWidget>
 #include <QPixmap>
@@ -210,9 +211,11 @@ void DialogRenderTests::rendersConfigurationPages()
 void DialogRenderTests::animatedButtonStillDeliversClick()
 {
   synergy::gui::installButtonFeedback();
-  QPushButton button(QStringLiteral("Test"));
+  QDialog dialog;
+  QPushButton button(QStringLiteral("Test"), &dialog);
   button.resize(100, 32);
-  button.show();
+  dialog.resize(120, 52);
+  dialog.show();
   QCoreApplication::processEvents();
   QSignalSpy clicked(&button, &QPushButton::clicked);
   QTest::mouseClick(&button, Qt::LeftButton);
