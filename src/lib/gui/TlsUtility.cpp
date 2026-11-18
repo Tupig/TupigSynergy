@@ -12,6 +12,7 @@
 #include "net/SecureUtils.h"
 #include "net/TlsPolicy.h"
 
+#include <QCoreApplication>
 #include <QDebug>
 #include <QFile>
 #include <QSslCertificate>
@@ -110,20 +111,23 @@ bool generateCertificateAt(const QString &certPath, int keyLength)
 
   QFileInfo info(certPath);
   if (QDir dir(info.absolutePath()); !dir.exists() && !dir.mkpath(".")) {
-    qCritical("failed to create directory for tls certificate");
+    qCritical() << QCoreApplication::translate("GuiLogMessages", "failed to create directory for tls certificate");
     return false;
   }
   // best effort defense in depth: block other local users from replacing the
   // certificate or trust stores in this directory; the private key file gets
   // its own explicit DACL when it is written (SecureUtils.cpp)
   if (!synergy::restrictSystemDirectoryPermissions(info.absolutePath())) {
-    qWarning() << "failed to restrict the directory for the tls certificate:" << info.absolutePath();
+    qWarning(
+    ) << QCoreApplication::translate("GuiLogMessages", "failed to restrict the directory for the tls certificate:")
+      << info.absolutePath();
   }
 
   try {
     synergy::generatePemSelfSignedCert(certPath, keyLength);
   } catch (const std::exception &e) {
-    qCritical() << "failed to generate self-signed pem cert:" << e.what();
+    qCritical() << QCoreApplication::translate("GuiLogMessages", "failed to generate self-signed pem cert:")
+                << e.what();
     return false;
   }
   qDebug("tls certificate generated");

@@ -9,6 +9,7 @@
 #include "common/Settings.h"
 
 #include <QCoreApplication>
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -25,7 +26,7 @@ void restart()
   if (int resetIndex = arguments.indexOf("--reset"); resetIndex != -1)
     arguments.removeAt(resetIndex);
 
-  qInfo("launching new process: %s", qPrintable(program));
+  qInfo().noquote() << QCoreApplication::translate("GuiLogMessages", "launching new process: %1").arg(program);
   QProcess::startDetached(program, arguments);
 
   qDebug("exiting current process");
@@ -59,9 +60,10 @@ void clearSettings(bool enableRestart)
   // recursively: in portable mode it is the user's own folder and may hold
   // unrelated files (data loss), and in system scope it is ProgramData with
   // the IPC token, service config, and TLS material for every user.
-  qInfo("removing settings file: %s", qPrintable(settingsFile));
+  qInfo().noquote() << QCoreApplication::translate("GuiLogMessages", "removing settings file: %1").arg(settingsFile);
   if (QFile::exists(settingsFile) && !QFile::remove(settingsFile))
-    qWarning("cannot remove settings file: %s", qPrintable(settingsFile));
+    qWarning().noquote(
+    ) << QCoreApplication::translate("GuiLogMessages", "cannot remove settings file: %1").arg(settingsFile);
 
   // When the settings file is in the user scope (all platforms except
   // installed Windows), the TLS material sits in an app-owned directory next
@@ -69,9 +71,10 @@ void clearSettings(bool enableRestart)
   if (Settings::settingsPath() == profilePath) {
     const auto tlsDir = Settings::tlsDir();
     if (QDir(tlsDir).exists()) {
-      qInfo("removing tls directory: %s", qPrintable(tlsDir));
+      qInfo().noquote() << QCoreApplication::translate("GuiLogMessages", "removing tls directory: %1").arg(tlsDir);
       if (!QDir(tlsDir).removeRecursively())
-        qWarning("cannot remove tls directory: %s", qPrintable(tlsDir));
+        qWarning().noquote(
+        ) << QCoreApplication::translate("GuiLogMessages", "cannot remove tls directory: %1").arg(tlsDir);
     }
   }
 
@@ -80,13 +83,17 @@ void clearSettings(bool enableRestart)
     if (QDir().mkpath(profilePath)) {
       QFile file(settingsFile);
       if (!file.open(QIODevice::WriteOnly))
-        qWarning("cannot recreate portable settings file: %s", qPrintable(settingsFile));
+        qWarning().noquote(
+        ) << QCoreApplication::translate("GuiLogMessages", "cannot recreate portable settings file: %1")
+                 .arg(settingsFile);
       else {
         file.write(" ", 1);
         file.close();
       }
     } else {
-      qWarning("cannot recreate portable settings directory: %s", qPrintable(profilePath));
+      qWarning().noquote(
+      ) << QCoreApplication::translate("GuiLogMessages", "cannot recreate portable settings directory: %1")
+               .arg(profilePath);
     }
   }
 #endif

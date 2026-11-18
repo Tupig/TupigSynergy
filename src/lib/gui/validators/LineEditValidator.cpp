@@ -9,6 +9,8 @@
 #include "ValidationError.h"
 
 #include <QApplication>
+#include <QCoreApplication>
+#include <QDebug>
 #include <QLineEdit>
 #include <QStyle>
 #include <QValidator>
@@ -21,7 +23,7 @@ LineEditValidator::LineEditValidator(QLineEdit *lineEdit, ValidationError *error
 {
 
   if (!m_pLineEdit) {
-    qCritical("validator line edit not set");
+    qCritical() << QCoreApplication::translate("GuiLogMessages", "validator line edit not set");
   }
 }
 

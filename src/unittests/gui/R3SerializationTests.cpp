@@ -393,22 +393,23 @@ void R3SerializationTests::actualCoreExitClassification()
   QCOMPARE(observedNextDelay, expectedNextDelay);
   const auto classification = ExitClassification(expectedClassification);
   QCOMPARE(
-      hasMessage(QtWarningMsg, QStringLiteral("desktop process crashed")), classification == ExitClassification::Crash
+      hasMessage(QtWarningMsg, QStringLiteral("The desktop process crashed")),
+      classification == ExitClassification::Crash
   );
   QCOMPARE(
       hasMessage(QtDebugMsg, QStringLiteral("desktop process exited normally")),
       classification == ExitClassification::Normal
   );
   QCOMPARE(
-      hasMessage(QtWarningMsg, QStringLiteral("desktop process exited with code: 9")),
+      hasMessage(QtWarningMsg, QStringLiteral("The desktop process exited with code: 9")),
       classification == ExitClassification::Failure
   );
   QCOMPARE(
-      hasMessage(QtInfoMsg, QStringLiteral("core desktop process stopped")),
+      hasMessage(QtInfoMsg, QStringLiteral("The core desktop process stopped")),
       classification == ExitClassification::IntentionalStop
   );
   QCOMPARE(hasText(QStringLiteral("retrying")), expectedRetry);
-  QVERIFY(!hasText(QStringLiteral("checking existing core")));
+  QVERIFY(!hasText(QStringLiteral("Checking the existing core")));
   QVERIFY(core.m_process == nullptr);
   QVERIFY(core.findChildren<QProcess *>().isEmpty());
 }

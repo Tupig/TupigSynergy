@@ -193,7 +193,8 @@ IpcClient::IpcClient(
 void IpcClient::connectToServer()
 {
   if (m_state == State::Connecting) {
-    qWarning().noquote() << QStringLiteral("%1 ipc client already connecting to server").arg(m_typeName);
+    qWarning().noquote(
+    ) << QCoreApplication::translate("GuiLogMessages", "%1 ipc client already connecting to server").arg(m_typeName);
     return;
   }
 
@@ -204,7 +205,8 @@ void IpcClient::connectToServer()
 
   if (m_socket->state() != QLocalSocket::UnconnectedState) {
     qWarning().noquote(
-    ) << QStringLiteral("%1 ipc client socket not in unconnected state, disconnecting").arg(m_typeName);
+    ) << QCoreApplication::translate("GuiLogMessages", "%1 ipc client socket not in unconnected state, disconnecting")
+             .arg(m_typeName);
     disconnectFromServer();
   }
 
@@ -215,8 +217,9 @@ void IpcClient::connectToServer()
 void IpcClient::attemptConnection()
 {
   if (m_retryCount >= kRetryLimit) {
-    qWarning().noquote() << QStringLiteral("%1 ipc client failed to connect after %2 attempts")
-                                .arg(m_typeName, QString::number(kRetryLimit));
+    qWarning().noquote(
+    ) << QCoreApplication::translate("GuiLogMessages", "%1 ipc client failed to connect after %2 attempts")
+             .arg(m_typeName, QString::number(kRetryLimit));
     m_state = State::Unconnected;
     Q_EMIT connectionFailed();
     return;
@@ -246,8 +249,10 @@ void IpcClient::attemptConnection()
         // only accept a server that runs with the same identity as the
         // daemon/core (this user, SYSTEM on Windows, root on Unix).
         if (!verifyServerIsTrusted(m_socket, m_serverExecutable)) {
-          qWarning().noquote(
-          ) << QStringLiteral("%1 ipc server failed peer verification, refusing to send hello").arg(m_typeName);
+          qWarning().noquote() << QCoreApplication::translate(
+                                      "GuiLogMessages", "%1 ipc server failed peer verification, refusing to send hello"
+          )
+                                      .arg(m_typeName);
           disconnectFromServer();
           Q_EMIT connectionFailed();
           return;
@@ -301,15 +306,16 @@ void IpcClient::handleDisconnected()
 void IpcClient::handleErrorOccurred()
 {
   if (m_state == State::Connecting) {
-    qWarning().noquote(
-    ) << QStringLiteral("%1 ipc client failed to connect: %2").arg(m_typeName, m_socket->errorString());
+    qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "%1 ipc client failed to connect: %2")
+                                .arg(m_typeName, m_socket->errorString());
     m_socket->disconnectFromServer();
     m_state = State::Unconnected;
     scheduleRetry();
     return;
   }
 
-  qWarning().noquote() << QStringLiteral("%1 ipc client error: %2").arg(m_typeName, m_socket->errorString());
+  qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "%1 ipc client error: %2")
+                              .arg(m_typeName, m_socket->errorString());
 
   if (m_state == State::Connected) {
     disconnectFromServer();
@@ -330,7 +336,8 @@ void IpcClient::handleReadyRead()
     qDebug().noquote() << QStringLiteral("%1 ipc client message: %2").arg(m_typeName, message);
     const auto parts = splitIpcMessage(message);
     if (parts.isEmpty()) {
-      qWarning().noquote() << QStringLiteral("%1 ipc client got invalid message: %2").arg(m_typeName, message);
+      qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "%1 ipc client got invalid message: %2")
+                                  .arg(m_typeName, message);
       continue;
     }
 
@@ -358,7 +365,8 @@ void IpcClient::handleHandshakeMessage(const QStringList &parts)
 {
   if (parts.at(0) == QStringLiteral("error")) {
     const auto detail = parts.size() >= 2 ? parts.at(1) : QStringLiteral("unknown");
-    qCritical().noquote() << QStringLiteral("%1 ipc server rejected connection: %2").arg(m_typeName, detail);
+    qCritical().noquote(
+    ) << QCoreApplication::translate("GuiLogMessages", "%1 ipc server rejected connection: %2").arg(m_typeName, detail);
     disconnectFromServer();
     Q_EMIT connectionFailed();
     return;
@@ -370,7 +378,8 @@ void IpcClient::handleHandshakeMessage(const QStringList &parts)
   if (parts.at(0) == QStringLiteral("versionMismatch")) {
     const auto serverVersion = parts.size() >= 2 ? parts.at(1) : QStringLiteral("unknown");
     qWarning().noquote(
-    ) << QStringLiteral("%1 ipc version mismatch (client: %2, server: %3)").arg(m_typeName, versionId, serverVersion);
+    ) << QCoreApplication::translate("GuiLogMessages", "%1 ipc version mismatch (client: %2, server: %3)")
+             .arg(m_typeName, versionId, serverVersion);
     m_state = State::Connected;
     Q_EMIT versionMismatch();
     return;
@@ -381,7 +390,8 @@ void IpcClient::handleHandshakeMessage(const QStringList &parts)
   }
 
   if (parts.size() < 2) {
-    qCritical().noquote() << QStringLiteral("%1 ipc server hello missing version").arg(m_typeName);
+    qCritical().noquote(
+    ) << QCoreApplication::translate("GuiLogMessages", "%1 ipc server hello missing version").arg(m_typeName);
     disconnectFromServer();
     Q_EMIT connectionFailed();
     return;
@@ -395,7 +405,9 @@ void IpcClient::handleHandshakeMessage(const QStringList &parts)
 void IpcClient::sendMessage(const QString &message)
 {
   if (m_state != State::Connected) {
-    qWarning().noquote() << QStringLiteral("%1 cannot send command, ipc client not connected").arg(m_typeName);
+    qWarning().noquote(
+    ) << QCoreApplication::translate("GuiLogMessages", "%1 cannot send command, ipc client not connected")
+             .arg(m_typeName);
     return;
   }
 

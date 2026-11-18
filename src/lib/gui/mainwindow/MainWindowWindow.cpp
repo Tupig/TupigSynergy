@@ -36,6 +36,7 @@
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
 #include "widgets/StatusBar.h"
+#include <QCoreApplication>
 #include <QDebug>
 #include <QMessageBox>
 
@@ -210,7 +211,7 @@ void MainWindow::checkForUpdates(bool manual)
           });
           showPage(page);
         } else {
-          qWarning().noquote() << "update check failed:" << reason;
+          qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "update check failed:") << reason;
         }
       }
   );

@@ -41,6 +41,7 @@
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QCloseEvent>
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDesktopServices>
 #include <QFileDialog>
@@ -533,11 +534,13 @@ void MainWindow::open()
 
   if (Settings::value(Settings::Gui::AutoStartCore).toBool()) {
     if (!m_certificateReady) {
-      qWarning() << "skipping core auto start, tls certificate is still being generated";
+      qWarning() << QCoreApplication::translate(
+          "GuiLogMessages", "skipping core auto start, tls certificate is still being generated"
+      );
       return;
     }
     if (m_coreProcess.mode() == CoreMode::None) {
-      qWarning() << "skipping core auto start, mode is not set";
+      qWarning() << QCoreApplication::translate("GuiLogMessages", "skipping core auto start, mode is not set");
       return;
     }
     if (ui->rbModeClient->isChecked() && ui->lineHostname->text().isEmpty())

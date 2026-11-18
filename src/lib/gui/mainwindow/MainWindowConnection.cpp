@@ -39,6 +39,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QCloseEvent>
+#include <QCoreApplication>
 #include <QCursor>
 #include <QDebug>
 #include <QDesktopServices>
@@ -299,7 +300,8 @@ void MainWindow::handlePeerFingerprint(const QString &fingerprint)
     current.read(databasePath);
     current.addTrusted(sha256);
     if (!current.write(databasePath)) {
-      qCritical().noquote() << "unable to write fingerprint to db:" << databasePath;
+      qCritical().noquote() << QCoreApplication::translate("GuiLogMessages", "unable to write fingerprint to db:")
+                            << databasePath;
       m_coreProcess.stop();
       return;
     }
@@ -440,7 +442,7 @@ void MainWindow::generateCertificateAsync()
             self->m_fingerprint = {QCryptographicHash::Sha256, TlsUtility::certFingerprint()};
             self->updateLocalFingerprint();
           } else {
-            qCritical("failed to generate a tls certificate");
+            qCritical() << QCoreApplication::translate("GuiLogMessages", "failed to generate a tls certificate");
           }
         },
         Qt::QueuedConnection

@@ -705,6 +705,126 @@ Do you want to connect to the server?
 <context>
     <name>synergy::gui::CoreProcess</name>
     <message>
+        <source>Checking the existing core</source>
+        <translation>正在检查现有核心进程</translation>
+    </message>
+    <message>
+        <source>The existing core version matches; leaving it running</source>
+        <translation>现有核心进程版本匹配，保持运行</translation>
+    </message>
+    <message>
+        <source>The existing core version does not match; requesting it to stop</source>
+        <translation>现有核心进程版本不匹配，正在请求其停止</translation>
+    </message>
+    <message>
+        <source>The existing core stopped successfully</source>
+        <translation>现有核心进程已成功停止</translation>
+    </message>
+    <message>
+        <source>The core desktop process stopped</source>
+        <translation>核心桌面进程已停止</translation>
+    </message>
+    <message>
+        <source>The desktop process crashed</source>
+        <translation>桌面进程已崩溃</translation>
+    </message>
+    <message>
+        <source>The desktop process exited with code: %1</source>
+        <translation>桌面进程已退出，退出码：%1</translation>
+    </message>
+    <message>
+        <source>Running command: %1</source>
+        <translation>正在运行命令：%1</translation>
+    </message>
+    <message>
+        <source>Failed to restrict the settings directory: %1</source>
+        <translation>无法限制设置目录的权限：%1</translation>
+    </message>
+    <message>
+        <source>Stopping the core desktop process</source>
+        <translation>正在停止核心桌面进程</translation>
+    </message>
+    <message>
+        <source>Log file: %1</source>
+        <translation>日志文件：%1</translation>
+    </message>
+    <message>
+        <source>Failed to establish the core IPC connection</source>
+        <translation>无法建立核心 IPC 连接</translation>
+    </message>
+    <message>
+        <source>The core process is already stopped</source>
+        <translation>核心进程已经停止</translation>
+    </message>
+    <message>
+        <source>Cleaning up the core process</source>
+        <translation>正在清理核心进程</translation>
+    </message>
+    <message>
+        <source>Failed to persist the core configuration: %1</source>
+        <translation>无法保存核心配置：%1</translation>
+    </message>
+    <message>
+        <source>Core IPC received an unknown connection state: %1</source>
+        <translation>核心 IPC 收到未知连接状态：%1</translation>
+    </message>
+    <message>
+        <source>Core IPC received an unknown connection refusal: %1</source>
+        <translation>核心 IPC 收到未知连接拒绝原因：%1</translation>
+    </message>
+    <message>
+        <source>Clearing core settings through the daemon</source>
+        <translation>正在通过守护进程清除核心设置</translation>
+    </message>
+    <message>
+        <source>core server binary does not exist</source>
+        <translation>找不到核心服务端程序</translation>
+    </message>
+    <message>
+        <source>could not contact existing core</source>
+        <translation>无法连接现有核心进程</translation>
+    </message>
+    <message>
+        <source>core process must be in starting state</source>
+        <translation>核心进程必须处于启动状态</translation>
+    </message>
+    <message>
+        <source>core process must be in stopping state</source>
+        <translation>核心进程必须处于停止过程中</translation>
+    </message>
+    <message>
+        <source>process not set, cannot stop</source>
+        <translation>没有可停止的进程</translation>
+    </message>
+    <message>
+        <source>core process already started</source>
+        <translation>核心进程已经启动</translation>
+    </message>
+    <message>
+        <source>core mode is not set, skipping core start</source>
+        <translation>尚未设置共享模式，跳过核心进程启动</translation>
+    </message>
+    <message>
+        <source>config file name empty for server args</source>
+        <translation>服务端启动参数中的配置文件名为空</translation>
+    </message>
+    <message>
+        <source>invalid process mode</source>
+        <translation>进程模式无效</translation>
+    </message>
+    <message>
+        <source>cannot copy settings into %1</source>
+        <translation>无法将设置复制到 %1</translation>
+    </message>
+    <message>
+        <source>cannot restrict the copied settings file: %1</source>
+        <translation>无法限制复制后的设置文件权限：%1</translation>
+    </message>
+    <message>
+        <source>Cannot write to the service log file: %1</source>
+        <translation>无法写入服务日志文件：%1</translation>
+    </message>
+    <message>
         <source>Sending start request to the service (configuration: %1)</source>
         <translation>正在向服务发送启动请求（配置文件：%1）</translation>
     </message>
@@ -2738,6 +2858,161 @@ Package: %3</source>
     <message>
         <source>A computer with this name already exists</source>
         <translation>一台同名的计算机已经存在</translation>
+    </message>
+</context>
+<context>
+    <name>GuiLogMessages</name>
+    <message>
+        <source>Not requesting notification permission in dev build</source>
+        <translation>开发版不请求通知权限</translation>
+    </message>
+    <message>
+        <source>Notification permission request error: %1</source>
+        <translation>请求通知权限失败：%1</translation>
+    </message>
+    <message>
+        <source>Not showing notification in dev build</source>
+        <translation>开发版不显示通知</translation>
+    </message>
+    <message>
+        <source>Notification display request error: %1</source>
+        <translation>请求显示通知失败：%1</translation>
+    </message>
+    <message>
+        <source>launching new process: %1</source>
+        <translation>正在启动新进程：%1</translation>
+    </message>
+    <message>
+        <source>removing settings file: %1</source>
+        <translation>正在删除设置文件：%1</translation>
+    </message>
+    <message>
+        <source>cannot remove settings file: %1</source>
+        <translation>无法删除设置文件：%1</translation>
+    </message>
+    <message>
+        <source>removing tls directory: %1</source>
+        <translation>正在删除 TLS 目录：%1</translation>
+    </message>
+    <message>
+        <source>cannot remove tls directory: %1</source>
+        <translation>无法删除 TLS 目录：%1</translation>
+    </message>
+    <message>
+        <source>cannot recreate portable settings file: %1</source>
+        <translation>无法重新创建便携设置文件：%1</translation>
+    </message>
+    <message>
+        <source>cannot recreate portable settings directory: %1</source>
+        <translation>无法重新创建便携设置目录：%1</translation>
+    </message>
+    <message>
+        <source>failed to open file for tail:</source>
+        <translation>无法打开待跟踪的日志文件：</translation>
+    </message>
+    <message>
+        <source>failed to reopen tailed file:</source>
+        <translation>无法重新打开跟踪中的日志文件：</translation>
+    </message>
+    <message>
+        <source>failed to seek in tailed file:</source>
+        <translation>无法定位跟踪中的日志文件：</translation>
+    </message>
+    <message>
+        <source>failed to restrict the directory for the tls certificate:</source>
+        <translation>无法限制 TLS 证书目录的访问权限：</translation>
+    </message>
+    <message>
+        <source>failed to generate self-signed pem cert:</source>
+        <translation>生成自签名 PEM 证书失败：</translation>
+    </message>
+    <message>
+        <source>update check failed:</source>
+        <translation>检查更新失败：</translation>
+    </message>
+    <message>
+        <source>unable to write fingerprint to db:</source>
+        <translation>无法将指纹写入信任库：</translation>
+    </message>
+    <message>
+        <source>skipping core auto start, tls certificate is still being generated</source>
+        <translation>跳过核心自动启动，TLS 证书仍在生成</translation>
+    </message>
+    <message>
+        <source>skipping core auto start, mode is not set</source>
+        <translation>跳过核心自动启动，尚未设置模式</translation>
+    </message>
+    <message>
+        <source>failed to generate a tls certificate</source>
+        <translation>生成 TLS 证书失败</translation>
+    </message>
+    <message>
+        <source>failed to create directory for tls certificate</source>
+        <translation>无法创建 TLS 证书目录</translation>
+    </message>
+    <message>
+        <source>unrecognized protocol when writing config</source>
+        <translation>写入配置时遇到无法识别的协议</translation>
+    </message>
+    <message>
+        <source>validator line edit not set</source>
+        <translation>未设置验证器的输入框</translation>
+    </message>
+    <message>
+        <source>tls certificate file not found: %1</source>
+        <translation>找不到 TLS 证书文件：%1</translation>
+    </message>
+    <message>
+        <source>grid size out of bounds: %1 columns x %2 rows, clamping to 100</source>
+        <translation>网格大小超出范围：%1 列 × %2 行，超限维度将限制为 100</translation>
+    </message>
+    <message>
+        <source>screen list (%1) too small for %2 columns x %3 rows, clamping the grid</source>
+        <translation>屏幕列表（%1 项）不足以填满 %2 列 × %3 行，正在缩小网格</translation>
+    </message>
+    <message>
+        <source>%1 ipc client already connecting to server</source>
+        <translation>%1 IPC 客户端已在连接服务器</translation>
+    </message>
+    <message>
+        <source>%1 ipc client socket not in unconnected state, disconnecting</source>
+        <translation>%1 IPC 客户端套接字未处于未连接状态，正在断开</translation>
+    </message>
+    <message>
+        <source>%1 ipc client failed to connect after %2 attempts</source>
+        <translation>%1 IPC 客户端尝试连接 %2 次后仍失败</translation>
+    </message>
+    <message>
+        <source>%1 ipc server failed peer verification, refusing to send hello</source>
+        <translation>%1 IPC 服务器身份验证失败，拒绝发送握手消息</translation>
+    </message>
+    <message>
+        <source>%1 ipc client failed to connect: %2</source>
+        <translation>%1 IPC 客户端连接失败：%2</translation>
+    </message>
+    <message>
+        <source>%1 ipc client error: %2</source>
+        <translation>%1 IPC 客户端错误：%2</translation>
+    </message>
+    <message>
+        <source>%1 ipc client got invalid message: %2</source>
+        <translation>%1 IPC 客户端收到无效消息：%2</translation>
+    </message>
+    <message>
+        <source>%1 ipc server rejected connection: %2</source>
+        <translation>%1 IPC 服务器拒绝连接：%2</translation>
+    </message>
+    <message>
+        <source>%1 ipc version mismatch (client: %2, server: %3)</source>
+        <translation>%1 IPC 版本不匹配（客户端：%2，服务器：%3）</translation>
+    </message>
+    <message>
+        <source>%1 ipc server hello missing version</source>
+        <translation>%1 IPC 服务器握手消息缺少版本</translation>
+    </message>
+    <message>
+        <source>%1 cannot send command, ipc client not connected</source>
+        <translation>%1 无法发送命令，IPC 客户端尚未连接</translation>
     </message>
 </context>
 </TS>
