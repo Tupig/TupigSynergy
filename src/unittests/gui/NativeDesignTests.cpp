@@ -373,6 +373,15 @@ void NativeDesignTests::mainShellUsesCompactCards()
     QVERIFY(footer != nullptr);
     ui.workspace->ensureWidgetVisible(footer, 0, 0);
     QCoreApplication::processEvents();
+    QElapsedTimer footerReadiness;
+    footerReadiness.start();
+    while (footerReadiness.elapsed() < 1000 && !ui.workspace->viewport()->rect().contains(QRect(
+                                                   footer->mapTo(ui.workspace->viewport(), QPoint()), footer->size()
+                                               ))) {
+      ui.workspace->ensureWidgetVisible(footer, 0, 0);
+      QCoreApplication::processEvents();
+      QTest::qWait(10);
+    }
     if (language == QStringLiteral("zh_CN")) {
       auto *table = records->findChild<QTableWidget *>();
       QVERIFY(table != nullptr);
