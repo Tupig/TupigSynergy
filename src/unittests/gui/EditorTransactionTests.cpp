@@ -24,6 +24,7 @@
 #include <QRadioButton>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QTranslator>
 #include <QUuid>
 #include <QtTest>
 
@@ -37,6 +38,7 @@ private Q_SLOTS:
   void clientSaveWrites();
   void screenAliasesReplaceRatherThanAppend();
   void logsFilterCountAndBoundHistory();
+  void localizingEngineLogPreservesRawHistory();
   void largeLogHistoryWrapsAfterResizeFontAndFilter();
   void serverCancelRestoresProtocol();
   void protocolValuesSupportStoredAndDefaultTypes();
@@ -162,6 +164,44 @@ void EditorTransactionTests::logsFilterCountAndBoundHistory()
   phase("process-events-after");
   QCOMPARE(table->textElideMode(), Qt::ElideNone);
   QVERIFY(table->rowHeight(table->rowCount() - 1) > table->fontMetrics().height() * 2);
+}
+
+void EditorTransactionTests::localizingEngineLogPreservesRawHistory()
+{
+  class FixtureTranslator final : public QTranslator
+  {
+  public:
+    bool isEmpty() const override
+    {
+      return false;
+    }
+
+    QString translate(const char *context, const char *source, const char *, int) const override
+    {
+      if (QByteArrayView(context) == "EngineLogMessages" && QByteArrayView(source) == "fixture connection accepted")
+        return QStringLiteral("已接受客户端连接");
+      return {};
+    }
+  };
+
+  LogWidget log;
+  auto *table = log.findChild<QTableWidget *>();
+  QVERIFY(table);
+  const QString raw = QStringLiteral("[2026-11-18T18:17:28.518] INFO: fixture connection accepted");
+  log.appendLine(raw);
+  const QString unknown = QStringLiteral("[time] WARNING: unknown engine detail");
+  log.appendLine(unknown);
+  QCOMPARE(table->item(0, 2)->text(), QStringLiteral("fixture connection accepted"));
+  FixtureTranslator translator;
+  QVERIFY(QCoreApplication::installTranslator(&translator));
+  QTRY_COMPARE(table->item(0, 2)->text(), QStringLiteral("已接受客户端连接"));
+  QCOMPARE(table->item(1, 2)->text(), QStringLiteral("unknown engine detail"));
+  QCOMPARE(log.allText(), raw + QLatin1Char('\n') + unknown);
+  log.setLevelFilter(QStringLiteral("info"));
+  QVERIFY(log.latestDisplayText().endsWith(QStringLiteral("已接受客户端连接")));
+  QCOMPARE(log.allText(), raw);
+  QVERIFY(QCoreApplication::removeTranslator(&translator));
+  QTRY_COMPARE(table->item(0, 2)->text(), QStringLiteral("fixture connection accepted"));
 }
 
 void EditorTransactionTests::largeLogHistoryWrapsAfterResizeFontAndFilter()

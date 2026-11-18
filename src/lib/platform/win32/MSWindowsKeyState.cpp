@@ -328,7 +328,7 @@ void MSWindowsKeyState::pollPressedKeys(KeyButtonSet &pressedKeys) const
 {
   BYTE keyState[256];
   if (!GetKeyboardState(keyState)) {
-    LOG_WARN("keyboard state is unexpected");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "keyboard state is unexpected"));
     LOG_DEBUG("function 'GetKeyboardState' returned false on 'pollPressedKeys'");
     return;
   }

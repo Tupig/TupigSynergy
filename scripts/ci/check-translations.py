@@ -78,7 +78,7 @@ def calls(text: str):
             continue
         line = text.count("\n", 0, match.start()) + 1
         kind = match.group("call")
-        takes_context = "translate" in kind
+        takes_context = "translate" in kind.lower()
         depth = 0
         literals = []
         index = match.end() - 1  # points at '('

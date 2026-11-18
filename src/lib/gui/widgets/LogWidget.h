@@ -32,6 +32,7 @@ public:
   void setLevelFilter(const QString &level);
   void clear();
   [[nodiscard]] QString allText() const;
+  [[nodiscard]] QString latestDisplayText() const;
   /// {info, warn, error} counts over the whole history (not just the filter).
   [[nodiscard]] std::array<int, 3> levelCounts() const;
 
@@ -39,6 +40,7 @@ Q_SIGNALS:
   void historyChanged(const QString &latestLine);
 
 protected:
+  void changeEvent(QEvent *event) override;
   bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:

@@ -26,7 +26,7 @@ void ClientProxy1_8::synchronizeLanguages() const
     LOG_VERBOSE("send server languages to the client: %s", localLayouts.c_str());
     ProtocolUtil::writef(getStream(), kMsgDLanguageSynchronisation, &localLayouts);
   } else {
-    LOG_ERR("failed to read server languages");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to read server languages"));
   }
 }
 

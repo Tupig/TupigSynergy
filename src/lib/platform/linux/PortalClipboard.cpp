@@ -108,13 +108,13 @@ QByteArray PortalClipboard::encodeFormat(IClipboard::Format format, const QByteA
   if (format == IClipboard::Format::Bitmap) {
     const auto bmpFile = dibToBmp(data);
     if (bmpFile.isEmpty()) {
-      LOG_WARN("clipboard bitmap data is malformed");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "clipboard bitmap data is malformed"));
       return {};
     }
 
     QImage image;
     if (!image.loadFromData(bmpFile, "BMP")) {
-      LOG_WARN("failed to decode clipboard bitmap");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to decode clipboard bitmap"));
       return {};
     }
 
@@ -122,7 +122,7 @@ QByteArray PortalClipboard::encodeFormat(IClipboard::Format format, const QByteA
     QBuffer buf(&png);
     buf.open(QIODevice::WriteOnly);
     if (!image.save(&buf, "PNG")) {
-      LOG_WARN("failed to encode clipboard image as png");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to encode clipboard image as png"));
       return {};
     }
 
@@ -139,7 +139,7 @@ QByteArray PortalClipboard::decodeFormat(IClipboard::Format format, const QByteA
   if (format == IClipboard::Format::Bitmap) {
     QImage image;
     if (!image.loadFromData(bytes, "PNG")) {
-      LOG_WARN("failed to decode clipboard png");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to decode clipboard png"));
       return {};
     }
 
@@ -147,7 +147,7 @@ QByteArray PortalClipboard::decodeFormat(IClipboard::Format format, const QByteA
     QBuffer buf(&bmp);
     buf.open(QIODevice::WriteOnly);
     if (!image.save(&buf, "BMP")) {
-      LOG_WARN("failed to encode clipboard image as bmp");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to encode clipboard image as bmp"));
       return {};
     }
 
@@ -160,13 +160,13 @@ QByteArray PortalClipboard::readSelectionBytes(XdpSession *session, const char *
 {
   const int fd = xdp_session_selection_read(session, mime);
   if (fd < 0) {
-    LOG_ERR("failed to read clipboard selection: invalid fd");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to read clipboard selection: invalid fd"));
     return {};
   }
 
   QFile pipe;
   if (!pipe.open(fd, QIODevice::ReadOnly, QFileDevice::AutoCloseHandle)) {
-    LOG_WARN("failed to wrap clipboard pipe");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to wrap clipboard pipe"));
     ::close(fd);
     return {};
   }
@@ -237,14 +237,14 @@ void PortalClipboard::serveSelectionTransfer(EiClipboard *cache, XdpSession *ses
 
   const int fd = xdp_session_selection_write(session, serial);
   if (fd < 0) {
-    LOG_WARN("failed to open clipboard selection write fd");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to open clipboard selection write fd"));
     xdp_session_selection_write_done(session, serial, false);
     return;
   }
 
   QFile pipe;
   if (!pipe.open(fd, QIODevice::WriteOnly, QFileDevice::AutoCloseHandle)) {
-    LOG_WARN("failed to wrap clipboard pipe");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to wrap clipboard pipe"));
     ::close(fd);
     xdp_session_selection_write_done(session, serial, false);
     return;
@@ -256,7 +256,7 @@ void PortalClipboard::serveSelectionTransfer(EiClipboard *cache, XdpSession *ses
   while (written < total) {
     pollfd pfd{fd, POLLOUT, 0};
     if (poll(&pfd, 1, kWriteTimeoutMs) <= 0) {
-      LOG_ERR("timed out writing clipboard selection");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "timed out writing clipboard selection"));
       xdp_session_selection_write_done(session, serial, false);
       return;
     }

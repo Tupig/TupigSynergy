@@ -96,7 +96,7 @@ BOOL MSWindowsProcess::startAsUser(HANDLE userToken, LPSECURITY_ATTRIBUTES sa)
   LPVOID environment;
   if (!CreateEnvironmentBlock(&environment, userToken, FALSE)) {
     const DWORD error = GetLastError();
-    LOG_ERR("could not create environment block");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not create environment block"));
     // this function takes ownership of the token on every path
     CloseHandle(userToken);
     throw std::runtime_error(windowsErrorToString(error));
@@ -135,7 +135,7 @@ DWORD MSWindowsProcess::waitForExit()
 
   LOG_DEBUG("waiting for process to exit, pid: %lu", m_info.dwProcessId);
   if (WaitForSingleObject(m_info.hProcess, kMaxWaitMilliseconds) != WAIT_OBJECT_0) {
-    LOG_ERR("process did not exit within the expected time");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "process did not exit within the expected time"));
     TerminateProcess(m_info.hProcess, 1);
     throw std::runtime_error(windowsErrorToString(GetLastError()));
   }
@@ -232,7 +232,7 @@ bool MSWindowsProcess::startDetachedAsSessionUser(
 )
 {
   if (application.empty()) {
-    LOG_ERR("refusing to start a detached process without an application path");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "refusing to start a detached process without an application path"));
     return false;
   }
 

@@ -50,7 +50,7 @@ AppUtilWindows::~AppUtilWindows()
 
 BOOL WINAPI AppUtilWindows::consoleHandler(DWORD)
 {
-  LOG_INFO("got shutdown signal");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "got shutdown signal"));
   IEventQueue *events = AppUtil::instance().app().getEvents();
   events->addEvent(Event(EventTypes::Quit));
   return TRUE;
@@ -176,7 +176,7 @@ HKL AppUtilWindows::getCurrentKeyboardLayout() const
   if (GetGUIThreadInfo(0, &gti) && gti.hwndActive) {
     layout = GetKeyboardLayout(GetWindowThreadProcessId(gti.hwndActive, nullptr));
   } else {
-    LOG_WARN("failed to determine current keyboard layout");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to determine current keyboard layout"));
   }
 
   return layout;
@@ -192,7 +192,7 @@ void AppUtilWindows::eventLoop()
       kCloseEventName, TRUE, FALSE, L"D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;OW)"
   );
   if (!hCloseEvent) {
-    LOG_CRIT("failed to create event for windows event loop");
+    LOG_CRIT(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to create event for windows event loop"));
     throw std::runtime_error(windowsErrorToString(GetLastError()));
   }
 

@@ -106,15 +106,15 @@ void MSWindowsWatchdog::stop()
   m_running = false;
 
   if (m_mainThread != nullptr && !m_mainThread->wait(kThreadWaitSeconds)) {
-    LOG_WARN("main thread is slow to stop, waiting");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "main thread is slow to stop, waiting"));
     m_mainThread->wait();
   }
   if (m_outputThread != nullptr && !m_outputThread->wait(kThreadWaitSeconds)) {
-    LOG_WARN("output thread is slow to stop, waiting");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "output thread is slow to stop, waiting"));
     m_outputThread->wait();
   }
   if (m_sasThread != nullptr && !m_sasThread->wait(kThreadWaitSeconds)) {
-    LOG_WARN("sas thread is slow to stop, waiting");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "sas thread is slow to stop, waiting"));
     m_sasThread->wait();
   }
 }
@@ -173,7 +173,7 @@ MSWindowsWatchdog::getUserToken(LPSECURITY_ATTRIBUTES security, bool elevatedTok
       }
       return token;
     } catch (...) {
-      LOG_ERR("failed to duplicate user token from winlogon.exe");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to duplicate user token from winlogon.exe"));
       if (process != nullptr) {
         CloseHandle(process);
       }
@@ -196,7 +196,7 @@ void MSWindowsWatchdog::mainLoop(const void *)
   } catch (std::exception &e) {
     LOG_ERR("could not shut down existing processes: %s", e.what());
   } catch (...) {
-    LOG_ERR("could not shut down existing processes");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not shut down existing processes"));
   }
 
   LOG_DEBUG("starting watchdog main loop");
@@ -278,7 +278,7 @@ void MSWindowsWatchdog::mainLoop(const void *)
         m_process->shutdown();
         m_process.reset();
       } else {
-        LOG_WARN("no process to stop");
+        LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "no process to stop"));
       }
       shutdownExistingProcesses();
       m_processState = Idle;
@@ -312,7 +312,9 @@ bool MSWindowsWatchdog::isProcessRunning()
 
   DWORD exitCode = 0;
   if (!GetExitCodeProcess(m_process->info().hProcess, &exitCode)) {
-    LOG_WARN("could not query process exit code, treating process as not running");
+    LOG_WARN(
+        QT_TRANSLATE_NOOP("EngineLogMessages", "could not query process exit code, treating process as not running")
+    );
     return false;
   }
   return exitCode == STILL_ACTIVE;
@@ -459,7 +461,7 @@ void MSWindowsWatchdog::shutdownExistingProcesses()
   // first we need to take a snapshot of the running processes
   MSWindowsHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, kAllProcesses));
   if (snapshot.get() == INVALID_HANDLE_VALUE) {
-    LOG_ERR("could not get process snapshot");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not get process snapshot"));
     throw std::runtime_error(windowsErrorToString(GetLastError()));
   }
 
@@ -470,7 +472,7 @@ void MSWindowsWatchdog::shutdownExistingProcesses()
   // unlikely we can go any further
   BOOL gotEntry = Process32First(snapshot.get(), &entry);
   if (!gotEntry) {
-    LOG_ERR("could not get first process entry");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not get first process entry"));
     throw std::runtime_error(windowsErrorToString(GetLastError()));
   }
 
@@ -491,7 +493,7 @@ void MSWindowsWatchdog::shutdownExistingProcesses()
       if (err != ERROR_NO_MORE_FILES) {
 
         // only worry about error if it's not the end of the snapshot
-        LOG_ERR("could not get next process entry");
+        LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not get next process entry"));
         throw std::runtime_error(windowsErrorToString(GetLastError()));
       }
     }
@@ -505,7 +507,7 @@ MSWindowsWatchdog::ProcessState MSWindowsWatchdog::handleStartError(const std::s
   if (!message.empty()) {
     LOG_CRIT("daemon failed to start process, error: %s", message.data());
   } else {
-    LOG_CRIT("daemon failed to start process, unknown error");
+    LOG_CRIT(QT_TRANSLATE_NOOP("EngineLogMessages", "daemon failed to start process, unknown error"));
   }
 
   // After consecutive failures, slow down the retry rate exponentially:
@@ -517,7 +519,7 @@ MSWindowsWatchdog::ProcessState MSWindowsWatchdog::handleStartError(const std::s
     LOG_DEBUG("start delay, seconds=%u, time=%f", delaySeconds, m_nextStartTime.value());
     return ProcessState::StartScheduled;
   } else {
-    LOG_INFO("retrying process start immediately");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "retrying process start immediately"));
     m_nextStartTime.reset();
     return ProcessState::StartPending;
   }
@@ -551,14 +553,14 @@ void MSWindowsWatchdog::initOutputReadPipe()
   saAttr.lpSecurityDescriptor = nullptr;
 
   if (!CreatePipe(&m_outputReadPipe, &m_outputWritePipe, &saAttr, 0)) {
-    LOG_ERR("could not create output pipe");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not create output pipe"));
     throw std::runtime_error(windowsErrorToString(GetLastError()));
   }
 
   // Set the pipe to non-blocking mode, which allows us to stop the output reader thread immediately
   // in order to speed up the shutdown process when the Windows service needs to stop.
   if (DWORD mode = PIPE_NOWAIT; !SetNamedPipeHandleState(m_outputReadPipe, &mode, nullptr, nullptr)) {
-    LOG_ERR("could not set pipe to non-blocking mode");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not set pipe to non-blocking mode"));
     const auto err = GetLastError();
     CloseHandle(m_outputReadPipe);
     CloseHandle(m_outputWritePipe);
@@ -577,14 +579,14 @@ void MSWindowsWatchdog::initSasFunc()
   // able to write to when the install location is not protected.
   HINSTANCE sasLib = LoadLibraryExW(L"sas.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
   if (!sasLib) {
-    LOG_ERR("could not load sas.dll");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not load sas.dll"));
     throw std::runtime_error(windowsErrorToString(GetLastError()));
   }
 
   LOG_DEBUG("loaded sas.dll, used to simulate ctrl-alt-del");
   m_sendSasFunc = (SendSas)GetProcAddress(sasLib, "SendSAS");
   if (!m_sendSasFunc) {
-    LOG_ERR("could not find SendSAS function in sas.dll");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not find SendSAS function in sas.dll"));
     throw std::runtime_error(windowsErrorToString(GetLastError()));
   }
 

@@ -3015,4 +3015,923 @@ Package: %3</source>
         <translation>%1 无法发送命令，IPC 客户端尚未连接</translation>
     </message>
 </context>
+<context>
+    <name>EngineLogMessages</name>
+    <message>
+        <source>Failed to decode media key event</source>
+        <translation>无法解码媒体按键事件</translation>
+    </message>
+    <message>
+        <source>INCR target mismatch</source>
+        <translation>INCR 目标类型不匹配</translation>
+    </message>
+    <message>
+        <source>IORegisterForSystemPower failed</source>
+        <translation>IORegisterForSystemPower 调用失败</translation>
+    </message>
+    <message>
+        <source>QtDataSocket::bind not supported on data sockets</source>
+        <translation>QtDataSocket::bind 不支持数据套接字</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport: certificate path is empty</source>
+        <translation>QtNetworkTransport：证书路径为空</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport: disconnected</source>
+        <translation>QtNetworkTransport：连接已断开</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport: no socket</source>
+        <translation>QtNetworkTransport：没有套接字</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport: non-fatal error, can retry</source>
+        <translation>QtNetworkTransport：发生非致命错误，可以重试</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport: not connected</source>
+        <translation>QtNetworkTransport：尚未连接</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport: write queue full, dropping data</source>
+        <translation>QtNetworkTransport：写入队列已满，正在丢弃数据</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport::bind not supported on client sockets</source>
+        <translation>QtNetworkTransport::bind 不支持客户端套接字</translation>
+    </message>
+    <message>
+        <source>QtTransportListenSocket: cannot adopt incoming socket</source>
+        <translation>QtTransportListenSocket：无法接管传入的套接字</translation>
+    </message>
+    <message>
+        <source>QtTransportListenSocket: certificate path is empty</source>
+        <translation>QtTransportListenSocket：证书路径为空</translation>
+    </message>
+    <message>
+        <source>QtTransportListenSocket: no server</source>
+        <translation>QtTransportListenSocket：没有服务器</translation>
+    </message>
+    <message>
+        <source>SendInput blocked, input dropped (target window may run elevated)</source>
+        <translation>SendInput 受阻，输入已丢弃（目标窗口可能以提升权限运行）</translation>
+    </message>
+    <message>
+        <source>X11 display connection lost (ioErrorHandler fired)</source>
+        <translation>X11 显示连接已丢失（已触发 ioErrorHandler）</translation>
+    </message>
+    <message>
+        <source>accepted client connection</source>
+        <translation>已接受客户端连接</translation>
+    </message>
+    <message>
+        <source>accepted secure socket</source>
+        <translation>已接受安全套接字连接</translation>
+    </message>
+    <message>
+        <source>activation has no options</source>
+        <translation>激活事件未提供选项</translation>
+    </message>
+    <message>
+        <source>an unknown error occurred</source>
+        <translation>发生未知错误</translation>
+    </message>
+    <message>
+        <source>applying watchdog command not implemented on this platform</source>
+        <translation>此平台尚未实现看门狗命令的应用操作</translation>
+    </message>
+    <message>
+        <source>can't get the active group, use the first group instead</source>
+        <translation>无法获取当前活动键盘组，改用第一组</translation>
+    </message>
+    <message>
+        <source>can't leave screen</source>
+        <translation>无法离开当前屏幕</translation>
+    </message>
+    <message>
+        <source>can't open xkb display during reading languages</source>
+        <translation>读取语言列表时无法打开 XKB 显示连接</translation>
+    </message>
+    <message>
+        <source>cannot add to clipboard, no owner</source>
+        <translation>无法向剪贴板添加数据：没有所有者</translation>
+    </message>
+    <message>
+        <source>cannot add to clipboard, not open</source>
+        <translation>无法向剪贴板添加数据：剪贴板未打开</translation>
+    </message>
+    <message>
+        <source>cannot apply watchdog command: no config file set</source>
+        <translation>无法应用看门狗命令：未设置配置文件</translation>
+    </message>
+    <message>
+        <source>cannot check for clipboard format, not open</source>
+        <translation>无法检查剪贴板格式：剪贴板未打开</translation>
+    </message>
+    <message>
+        <source>cannot create IC</source>
+        <translation>无法创建输入上下文（IC）</translation>
+    </message>
+    <message>
+        <source>cannot determine if process was launched as service</source>
+        <translation>无法确定进程是否以服务方式启动</translation>
+    </message>
+    <message>
+        <source>cannot empty clipboard, not open</source>
+        <translation>无法清空剪贴板：剪贴板未打开</translation>
+    </message>
+    <message>
+        <source>cannot get IC filter events</source>
+        <translation>无法获取输入上下文（IC）的过滤事件</translation>
+    </message>
+    <message>
+        <source>cannot get IM styles</source>
+        <translation>无法获取输入法（IM）样式</translation>
+    </message>
+    <message>
+        <source>cannot get clipboard format, not open</source>
+        <translation>无法获取剪贴板格式：剪贴板未打开</translation>
+    </message>
+    <message>
+        <source>cannot send a file transfer without both emitter callbacks</source>
+        <translation>缺少两个必需的发送回调，无法发送文件</translation>
+    </message>
+    <message>
+        <source>clearing daemon settings</source>
+        <translation>正在清除守护进程设置</translation>
+    </message>
+    <message>
+        <source>clearing watchdog command not implemented on this platform</source>
+        <translation>此平台尚未实现看门狗命令的清除操作</translation>
+    </message>
+    <message>
+        <source>clipboard bitmap data is malformed</source>
+        <translation>剪贴板位图数据格式有误</translation>
+    </message>
+    <message>
+        <source>clipboard data chunk before start</source>
+        <translation>尚未开始剪贴板传输就收到了数据块</translation>
+    </message>
+    <message>
+        <source>clipboard end chunk before start</source>
+        <translation>尚未开始剪贴板传输就收到了结束块</translation>
+    </message>
+    <message>
+        <source>clipboard grabbed while active screen was changed, resending clipboard data</source>
+        <translation>活动屏幕切换期间取得了剪贴板所有权，正在重新发送剪贴板数据</translation>
+    </message>
+    <message>
+        <source>clipboard is not open</source>
+        <translation>剪贴板未打开</translation>
+    </message>
+    <message>
+        <source>clipboard not enabled on remote desktop session, discarding restore token to force a fresh session</source>
+        <translation>远程桌面会话未启用剪贴板，正在丢弃恢复令牌以强制创建新会话</translation>
+    </message>
+    <message>
+        <source>clipboard not enabled on session, discarding restore token to force a fresh session</source>
+        <translation>会话未启用剪贴板，正在丢弃恢复令牌以强制创建新会话</translation>
+    </message>
+    <message>
+        <source>clipboard sharing disabled by server</source>
+        <translation>服务器已禁用剪贴板共享</translation>
+    </message>
+    <message>
+        <source>clipboard sharing is disabled</source>
+        <translation>剪贴板共享已禁用</translation>
+    </message>
+    <message>
+        <source>clipboard sharing is disabled because the server set the maximum clipboard size to 0</source>
+        <translation>服务器将剪贴板大小上限设为 0，剪贴板共享已禁用</translation>
+    </message>
+    <message>
+        <source>clipboard unmarshall: truncated header</source>
+        <translation>剪贴板反序列化失败：数据头不完整</translation>
+    </message>
+    <message>
+        <source>clipboard was updated</source>
+        <translation>剪贴板已更新</translation>
+    </message>
+    <message>
+        <source>connected to secure socket</source>
+        <translation>已连接到安全套接字</translation>
+    </message>
+    <message>
+        <source>core stopped successfully</source>
+        <translation>核心进程已成功停止</translation>
+    </message>
+    <message>
+        <source>core/interface is not set: listening on all network interfaces</source>
+        <translation>未设置 core/interface：正在监听所有网络接口</translation>
+    </message>
+    <message>
+        <source>could not create environment block</source>
+        <translation>无法创建环境块</translation>
+    </message>
+    <message>
+        <source>could not create output pipe</source>
+        <translation>无法创建输出管道</translation>
+    </message>
+    <message>
+        <source>could not duplicate token</source>
+        <translation>无法复制令牌</translation>
+    </message>
+    <message>
+        <source>could not find SendSAS function in sas.dll</source>
+        <translation>在 sas.dll 中找不到 SendSAS 函数</translation>
+    </message>
+    <message>
+        <source>could not get entry for parent process</source>
+        <translation>无法获取父进程条目</translation>
+    </message>
+    <message>
+        <source>could not get first process entry</source>
+        <translation>无法获取首个进程条目</translation>
+    </message>
+    <message>
+        <source>could not get next process entry</source>
+        <translation>无法获取下一个进程条目</translation>
+    </message>
+    <message>
+        <source>could not get process snapshot</source>
+        <translation>无法获取进程快照</translation>
+    </message>
+    <message>
+        <source>could not get secure socket cipher</source>
+        <translation>无法获取安全套接字的加密套件</translation>
+    </message>
+    <message>
+        <source>could not load client certificates</source>
+        <translation>无法加载客户端证书</translation>
+    </message>
+    <message>
+        <source>could not load sas.dll</source>
+        <translation>无法加载 sas.dll</translation>
+    </message>
+    <message>
+        <source>could not open input desktop</source>
+        <translation>无法打开输入桌面</translation>
+    </message>
+    <message>
+        <source>could not query process exit code, treating process as not running</source>
+        <translation>无法查询进程退出码，按进程未运行处理</translation>
+    </message>
+    <message>
+        <source>could not set pipe to non-blocking mode</source>
+        <translation>无法将管道设为非阻塞模式</translation>
+    </message>
+    <message>
+        <source>could not shut down existing processes</source>
+        <translation>无法关闭现有进程</translation>
+    </message>
+    <message>
+        <source>could not split cipher for protocol</source>
+        <translation>无法从加密套件描述中解析协议</translation>
+    </message>
+    <message>
+        <source>couldn't get io master port</source>
+        <translation>无法获取 I/O 主端口</translation>
+    </message>
+    <message>
+        <source>current primary screen is not entered on shutdown</source>
+        <translation>关闭时当前主屏幕未处于已进入状态</translation>
+    </message>
+    <message>
+        <source>current screen not found in list</source>
+        <translation>在列表中找不到当前屏幕</translation>
+    </message>
+    <message>
+        <source>current secondary screen is entered on shutdown</source>
+        <translation>关闭时当前从屏幕仍处于已进入状态</translation>
+    </message>
+    <message>
+        <source>current server layout is not installed on client</source>
+        <translation>客户端未安装服务器当前的键盘布局</translation>
+    </message>
+    <message>
+        <source>cursor is locked to screen, check scroll lock key</source>
+        <translation>光标已锁定在当前屏幕，请检查 Scroll Lock 键</translation>
+    </message>
+    <message>
+        <source>cursor may not be visible</source>
+        <translation>光标可能不可见</translation>
+    </message>
+    <message>
+        <source>daemon failed to start process, unknown error</source>
+        <translation>守护进程未能启动进程：未知错误</translation>
+    </message>
+    <message>
+        <source>daemon ipc server got empty config file path</source>
+        <translation>daemon IPC 服务器收到空的配置文件路径</translation>
+    </message>
+    <message>
+        <source>daemon ipc server got empty log level</source>
+        <translation>daemon IPC 服务器收到空的日志级别</translation>
+    </message>
+    <message>
+        <source>daemon ipc server got invalid config file message</source>
+        <translation>daemon IPC 服务器收到无效的配置文件消息</translation>
+    </message>
+    <message>
+        <source>daemon ipc server got invalid log level message</source>
+        <translation>daemon IPC 服务器收到无效的日志级别消息</translation>
+    </message>
+    <message>
+        <source>daemon is running</source>
+        <translation>daemon 正在运行</translation>
+    </message>
+    <message>
+        <source>daemon is stopping</source>
+        <translation>daemon 正在停止</translation>
+    </message>
+    <message>
+        <source>daemon stop watchdog unknown error</source>
+        <translation>daemon 停止看门狗时发生未知错误</translation>
+    </message>
+    <message>
+        <source>daemon unknown error</source>
+        <translation>daemon 发生未知错误</translation>
+    </message>
+    <message>
+        <source>default screen lock is on, locking cursor to screen</source>
+        <translation>默认屏幕锁定已开启，正在将光标锁定在当前屏幕</translation>
+    </message>
+    <message>
+        <source>disconnected from eis, will afterwards commence attempt to reconnect</source>
+        <translation>已断开与 EIS 的连接，随后将尝试重新连接</translation>
+    </message>
+    <message>
+        <source>either XRRScreenChangeNotifyEvent or RRNotify_CrtcChange received</source>
+        <translation>收到 XRRScreenChangeNotifyEvent 或 RRNotify_CrtcChange 事件</translation>
+    </message>
+    <message>
+        <source>enabling mouse keys for cursor visibility</source>
+        <translation>正在启用鼠标键功能以显示光标</translation>
+    </message>
+    <message>
+        <source>entering screen</source>
+        <translation>正在进入屏幕</translation>
+    </message>
+    <message>
+        <source>eof violates tls protocol</source>
+        <translation>连接意外结束，未遵循 TLS 关闭协议</translation>
+    </message>
+    <message>
+        <source>error communicating with new client</source>
+        <translation>与新客户端通信时出错</translation>
+    </message>
+    <message>
+        <source>error on screen</source>
+        <translation>屏幕发生错误</translation>
+    </message>
+    <message>
+        <source>error reading keyboard layouts</source>
+        <translation>读取键盘布局时出错</translation>
+    </message>
+    <message>
+        <source>error sending to server</source>
+        <translation>向服务器发送数据时出错</translation>
+    </message>
+    <message>
+        <source>error while closing TCP socket</source>
+        <translation>关闭 TCP 套接字时出错</translation>
+    </message>
+    <message>
+        <source>error while converting clipboard data</source>
+        <translation>转换剪贴板数据时出错</translation>
+    </message>
+    <message>
+        <source>fail to post hid event</source>
+        <translation>投递 HID 事件失败</translation>
+    </message>
+    <message>
+        <source>failed to accept secure socket</source>
+        <translation>接受安全套接字连接失败</translation>
+    </message>
+    <message>
+        <source>failed to close handle</source>
+        <translation>关闭句柄失败</translation>
+    </message>
+    <message>
+        <source>failed to compile keymap, falling back to defaults</source>
+        <translation>编译键位映射失败，回退到默认设置</translation>
+    </message>
+    <message>
+        <source>failed to connect secure socket</source>
+        <translation>建立安全套接字连接失败</translation>
+    </message>
+    <message>
+        <source>failed to convert ISO639/2 lang code to ISO639/1</source>
+        <translation>将 ISO639/2 语言代码转换为 ISO639/1 失败</translation>
+    </message>
+    <message>
+        <source>failed to create a CFRunLoopSourceRef for the quartz event tap</source>
+        <translation>无法为 Quartz 事件监听创建 CFRunLoopSourceRef</translation>
+    </message>
+    <message>
+        <source>failed to create event for windows event loop</source>
+        <translation>无法为 Windows 事件循环创建事件</translation>
+    </message>
+    <message>
+        <source>failed to create quartz event tap</source>
+        <translation>创建 Quartz 事件监听失败</translation>
+    </message>
+    <message>
+        <source>failed to decode clipboard bitmap</source>
+        <translation>解码剪贴板位图失败</translation>
+    </message>
+    <message>
+        <source>failed to decode clipboard png</source>
+        <translation>解码剪贴板 PNG 失败</translation>
+    </message>
+    <message>
+        <source>failed to determine current keyboard layout</source>
+        <translation>无法确定当前键盘布局</translation>
+    </message>
+    <message>
+        <source>failed to disable system idle sleep</source>
+        <translation>禁止系统空闲休眠失败</translation>
+    </message>
+    <message>
+        <source>failed to duplicate user token from winlogon.exe</source>
+        <translation>从 winlogon.exe 复制用户令牌失败</translation>
+    </message>
+    <message>
+        <source>failed to enable system idle sleep</source>
+        <translation>恢复系统空闲休眠失败</translation>
+    </message>
+    <message>
+        <source>failed to encode clipboard image as bmp</source>
+        <translation>将剪贴板图像编码为 BMP 失败</translation>
+    </message>
+    <message>
+        <source>failed to encode clipboard image as png</source>
+        <translation>将剪贴板图像编码为 PNG 失败</translation>
+    </message>
+    <message>
+        <source>failed to get cursor position</source>
+        <translation>获取光标位置失败</translation>
+    </message>
+    <message>
+        <source>failed to get x11 keyboard description</source>
+        <translation>获取 X11 键盘描述失败</translation>
+    </message>
+    <message>
+        <source>failed to grab clipboard</source>
+        <translation>获取剪贴板访问权失败</translation>
+    </message>
+    <message>
+        <source>failed to init watchSystemPowerThread</source>
+        <translation>初始化 watchSystemPowerThread 失败</translation>
+    </message>
+    <message>
+        <source>failed to open clipboard selection write fd</source>
+        <translation>打开剪贴板选择内容的写入文件描述符失败</translation>
+    </message>
+    <message>
+        <source>failed to open clipboard: already opened</source>
+        <translation>打开剪贴板失败：剪贴板已打开</translation>
+    </message>
+    <message>
+        <source>failed to open x11 default display</source>
+        <translation>打开 X11 默认显示失败</translation>
+    </message>
+    <message>
+        <source>failed to poll active group</source>
+        <translation>查询当前活动键盘布局组失败</translation>
+    </message>
+    <message>
+        <source>failed to post change language message</source>
+        <translation>投递语言切换消息失败</translation>
+    </message>
+    <message>
+        <source>failed to prevent system from going to sleep</source>
+        <translation>阻止系统休眠失败</translation>
+    </message>
+    <message>
+        <source>failed to read "configItem" in xml file</source>
+        <translation>读取 XML 文件中的“configItem”失败</translation>
+    </message>
+    <message>
+        <source>failed to read clipboard selection: invalid fd</source>
+        <translation>读取剪贴板选择内容失败：文件描述符无效</translation>
+    </message>
+    <message>
+        <source>failed to read server languages</source>
+        <translation>读取服务器键盘布局语言失败</translation>
+    </message>
+    <message>
+        <source>failed to run screen enter command</source>
+        <translation>执行进入屏幕命令失败</translation>
+    </message>
+    <message>
+        <source>failed to run screen exit command</source>
+        <translation>执行离开屏幕命令失败</translation>
+    </message>
+    <message>
+        <source>failed to set clipboard data</source>
+        <translation>设置剪贴板数据失败</translation>
+    </message>
+    <message>
+        <source>failed to set needed keyboard layout</source>
+        <translation>设置所需键盘布局失败</translation>
+    </message>
+    <message>
+        <source>failed to set new keyboard layout</source>
+        <translation>设置新键盘布局失败</translation>
+    </message>
+    <message>
+        <source>failed to update screen shape during display reconfiguration</source>
+        <translation>显示配置变更时更新屏幕形状失败</translation>
+    </message>
+    <message>
+        <source>failed to verify server certificate fingerprint</source>
+        <translation>验证服务器证书指纹失败</translation>
+    </message>
+    <message>
+        <source>failed to wrap clipboard pipe</source>
+        <translation>封装剪贴板管道失败</translation>
+    </message>
+    <message>
+        <source>file chunk unreadable</source>
+        <translation>文件数据块无法读取</translation>
+    </message>
+    <message>
+        <source>file data chunk before start</source>
+        <translation>尚未收到开始块就收到文件数据块</translation>
+    </message>
+    <message>
+        <source>file end chunk before start</source>
+        <translation>尚未收到开始块就收到文件结束块</translation>
+    </message>
+    <message>
+        <source>file start chunk while a transfer is already active</source>
+        <translation>已有文件传输正在进行时收到文件开始块</translation>
+    </message>
+    <message>
+        <source>file transfer outbound: no readable files in the selection</source>
+        <translation>发送文件：所选项目中没有可读取的文件</translation>
+    </message>
+    <message>
+        <source>file transfer: cannot open a staging file in the drop directory</source>
+        <translation>文件传输：无法在接收目录中打开暂存文件</translation>
+    </message>
+    <message>
+        <source>file transfer: drag announced no usable names</source>
+        <translation>文件传输：拖放预告未包含可用文件名</translation>
+    </message>
+    <message>
+        <source>file transfer: every announced name was refused</source>
+        <translation>文件传输：所有预告的文件名均被拒绝</translation>
+    </message>
+    <message>
+        <source>file transfer: failed while writing the staging file</source>
+        <translation>文件传输：写入暂存文件时失败</translation>
+    </message>
+    <message>
+        <source>file transfer: no drop directory configured, discarding received content</source>
+        <translation>文件传输：未配置接收目录，丢弃收到的内容</translation>
+    </message>
+    <message>
+        <source>file transfer: no drop directory configured, every transfer will be refused</source>
+        <translation>文件传输：未配置接收目录，将拒绝所有传输</translation>
+    </message>
+    <message>
+        <source>file transfer: no drop directory configured, refusing the whole drag</source>
+        <translation>文件传输：未配置接收目录，拒绝整个拖放操作</translation>
+    </message>
+    <message>
+        <source>file transfer: no free target path for an accepted name</source>
+        <translation>文件传输：已接受的文件名没有可用目标路径</translation>
+    </message>
+    <message>
+        <source>file transfer: no receiver to hand the chunk to</source>
+        <translation>文件传输：没有可接收此数据块的接收器</translation>
+    </message>
+    <message>
+        <source>file transfer: received a file</source>
+        <translation>文件传输：已收到文件</translation>
+    </message>
+    <message>
+        <source>file transfer: received a file with no announced name</source>
+        <translation>文件传输：收到的文件没有预告文件名</translation>
+    </message>
+    <message>
+        <source>file transfer: refused unsafe file name from peer</source>
+        <translation>文件传输：拒绝了对端提供的不安全文件名</translation>
+    </message>
+    <message>
+        <source>file transfer: refusing to write outside the drop directory</source>
+        <translation>文件传输：拒绝写入接收目录之外的位置</translation>
+    </message>
+    <message>
+        <source>file transfer: the server sent a chunk this client rejected</source>
+        <translation>文件传输：服务器发送的数据块被此客户端拒绝</translation>
+    </message>
+    <message>
+        <source>file transfer: unreadable drag announce</source>
+        <translation>文件传输：无法读取拖放通告</translation>
+    </message>
+    <message>
+        <source>fingerprint does not match trusted fingerprint</source>
+        <translation>指纹与受信任的指纹不匹配</translation>
+    </message>
+    <message>
+        <source>got shutdown signal</source>
+        <translation>收到关闭信号</translation>
+    </message>
+    <message>
+        <source>input capture activated without a session, skipping clipboard read</source>
+        <translation>输入捕获在没有会话的情况下激活，跳过读取剪贴板</translation>
+    </message>
+    <message>
+        <source>io service not found</source>
+        <translation>找不到 I/O 服务</translation>
+    </message>
+    <message>
+        <source>ipc server failed to listen</source>
+        <translation>IPC 服务器监听失败</translation>
+    </message>
+    <message>
+        <source>isFatal() not valid for non-secure connections</source>
+        <translation>isFatal() 不适用于非安全连接</translation>
+    </message>
+    <message>
+        <source>keyboard layout fail. Reply is unexpected!</source>
+        <translation>键盘布局操作失败：收到意外的回复</translation>
+    </message>
+    <message>
+        <source>keyboard layout fail. dbus interface is invalid</source>
+        <translation>键盘布局操作失败：D-Bus 接口无效</translation>
+    </message>
+    <message>
+        <source>keyboard layout fail. reply contains error</source>
+        <translation>键盘布局操作失败：回复包含错误</translation>
+    </message>
+    <message>
+        <source>keyboard state is unexpected</source>
+        <translation>键盘状态异常</translation>
+    </message>
+    <message>
+        <source>leaving screen</source>
+        <translation>正在离开屏幕</translation>
+    </message>
+    <message>
+        <source>main thread is slow to stop, waiting</source>
+        <translation>主线程停止缓慢，正在等待</translation>
+    </message>
+    <message>
+        <source>malloc failed for ClipboardInfo</source>
+        <translation>为 ClipboardInfo 分配内存失败</translation>
+    </message>
+    <message>
+        <source>needed keyboard layout is disabled for programmatically selection</source>
+        <translation>所需键盘布局已禁用程序化选择</translation>
+    </message>
+    <message>
+        <source>needed keyboard layout is null</source>
+        <translation>所需键盘布局为空</translation>
+    </message>
+    <message>
+        <source>new client disconnected</source>
+        <translation>新客户端已断开连接</translation>
+    </message>
+    <message>
+        <source>new client is unresponsive</source>
+        <translation>新客户端无响应</translation>
+    </message>
+    <message>
+        <source>next screen not active</source>
+        <translation>下一个屏幕未激活</translation>
+    </message>
+    <message>
+        <source>no configuration path provided</source>
+        <translation>未提供配置路径</translation>
+    </message>
+    <message>
+        <source>no input capture pointer barriers found</source>
+        <translation>未找到输入捕获的指针屏障</translation>
+    </message>
+    <message>
+        <source>no process to stop</source>
+        <translation>没有需要停止的进程</translation>
+    </message>
+    <message>
+        <source>no support for IM</source>
+        <translation>不支持输入法（IM）</translation>
+    </message>
+    <message>
+        <source>no supported IM styles</source>
+        <translation>没有受支持的输入法（IM）样式</translation>
+    </message>
+    <message>
+        <source>not enough screens to toggle</source>
+        <translation>屏幕数量不足，无法切换</translation>
+    </message>
+    <message>
+        <source>not running as admin, some features may not work</source>
+        <translation>未以管理员身份运行，部分功能可能无法使用</translation>
+    </message>
+    <message>
+        <source>options are the incorrect size, can not process them</source>
+        <translation>选项数据大小不正确，无法处理</translation>
+    </message>
+    <message>
+        <source>options are the incorrect size, not sending</source>
+        <translation>选项数据大小不正确，不予发送</translation>
+    </message>
+    <message>
+        <source>output thread is slow to stop, waiting</source>
+        <translation>输出线程停止缓慢，正在等待</translation>
+    </message>
+    <message>
+        <source>portal input capture session was closed, exiting</source>
+        <translation>Portal 输入捕获会话已关闭，正在退出</translation>
+    </message>
+    <message>
+        <source>portal remote desktop clipboard not enabled on session, cannot claim</source>
+        <translation>Portal 远程桌面会话未启用剪贴板，无法取得所有权</translation>
+    </message>
+    <message>
+        <source>portal remote desktop session was closed, reconnecting</source>
+        <translation>Portal 远程桌面会话已关闭，正在重新连接</translation>
+    </message>
+    <message>
+        <source>process did not exit within the expected time</source>
+        <translation>进程未在预期时间内退出</translation>
+    </message>
+    <message>
+        <source>process is not trusted anymore, quitting</source>
+        <translation>进程不再受信任，正在退出</translation>
+    </message>
+    <message>
+        <source>quartz event tap was disabled by timeout, re-enabling</source>
+        <translation>Quartz 事件监听因超时被禁用，正在重新启用</translation>
+    </message>
+    <message>
+        <source>quartz event tap was disabled by user input</source>
+        <translation>Quartz 事件监听因用户输入被禁用</translation>
+    </message>
+    <message>
+        <source>quitting</source>
+        <translation>正在退出</translation>
+    </message>
+    <message>
+        <source>refusing empty screen command</source>
+        <translation>拒绝执行空屏幕命令</translation>
+    </message>
+    <message>
+        <source>refusing to start a detached process without an application path</source>
+        <translation>拒绝启动未指定应用程序路径的独立进程</translation>
+    </message>
+    <message>
+        <source>reloaded configuration</source>
+        <translation>已重新加载配置</translation>
+    </message>
+    <message>
+        <source>remote layouts are the incorrect size, can not process them</source>
+        <translation>远程布局数据大小不正确，无法处理</translation>
+    </message>
+    <message>
+        <source>restarting your computer may solve this error</source>
+        <translation>重新启动计算机可能解决此错误</translation>
+    </message>
+    <message>
+        <source>resume</source>
+        <translation>恢复</translation>
+    </message>
+    <message>
+        <source>retry: bad internal server state</source>
+        <translation>重试：服务器内部状态异常</translation>
+    </message>
+    <message>
+        <source>retrying process start immediately</source>
+        <translation>正在立即重试启动进程</translation>
+    </message>
+    <message>
+        <source>sas thread is slow to stop, waiting</source>
+        <translation>SAS 线程停止缓慢，正在等待</translation>
+    </message>
+    <message>
+        <source>screen already entered</source>
+        <translation>已经进入该屏幕</translation>
+    </message>
+    <message>
+        <source>screen already left</source>
+        <translation>已经离开该屏幕</translation>
+    </message>
+    <message>
+        <source>screen command must be an existing file under the settings directory</source>
+        <translation>屏幕命令必须是设置目录下已存在的文件</translation>
+    </message>
+    <message>
+        <source>scroll lock is on, locking cursor to screen</source>
+        <translation>Scroll Lock 已开启，正在将光标锁定在屏幕内</translation>
+    </message>
+    <message>
+        <source>security/checkPeers is off; peer certificates are still required</source>
+        <translation>security/checkPeers 已关闭；仍然需要对端证书</translation>
+    </message>
+    <message>
+        <source>server disconnected due to a protocol error</source>
+        <translation>服务器因协议错误断开连接</translation>
+    </message>
+    <message>
+        <source>server is dead</source>
+        <translation>服务器已失去响应</translation>
+    </message>
+    <message>
+        <source>socket re-use not supported on windows</source>
+        <translation>Windows 不支持套接字复用</translation>
+    </message>
+    <message>
+        <source>startDraggingFiles: failed to build CF_HDROP</source>
+        <translation>startDraggingFiles：无法构建 CF_HDROP</translation>
+    </message>
+    <message>
+        <source>started client</source>
+        <translation>客户端已启动</translation>
+    </message>
+    <message>
+        <source>starting core</source>
+        <translation>正在启动核心进程</translation>
+    </message>
+    <message>
+        <source>starting daemon</source>
+        <translation>正在启动守护进程</translation>
+    </message>
+    <message>
+        <source>stopped client</source>
+        <translation>客户端已停止</translation>
+    </message>
+    <message>
+        <source>stopped server</source>
+        <translation>服务器已停止</translation>
+    </message>
+    <message>
+        <source>suspend</source>
+        <translation>挂起</translation>
+    </message>
+    <message>
+        <source>the XTest extension is not available</source>
+        <translation>XTest 扩展不可用</translation>
+    </message>
+    <message>
+        <source>timed out waiting for desk thread; desk may be stalled</source>
+        <translation>等待桌面线程超时；桌面可能已停滞</translation>
+    </message>
+    <message>
+        <source>timed out writing clipboard selection</source>
+        <translation>写入剪贴板选区超时</translation>
+    </message>
+    <message>
+        <source>tls error occurred (generic failure)</source>
+        <translation>发生 TLS 错误（一般故障）</translation>
+    </message>
+    <message>
+        <source>tls error occurred (system call failure)</source>
+        <translation>发生 TLS 错误（系统调用失败）</translation>
+    </message>
+    <message>
+        <source>tls error occurred (unknown failure)</source>
+        <translation>发生 TLS 错误（未知故障）</translation>
+    </message>
+    <message>
+        <source>tls verification failed: no certificate in context</source>
+        <translation>TLS 验证失败：上下文中没有证书</translation>
+    </message>
+    <message>
+        <source>unable to create keyboard event for keystroke</source>
+        <translation>无法为按键操作创建键盘事件</translation>
+    </message>
+    <message>
+        <source>unexpected state attempting to accept connection</source>
+        <translation>尝试接受连接时状态异常</translation>
+    </message>
+    <message>
+        <source>unknown clipboard chunk mark</source>
+        <translation>未知的剪贴板数据块标记</translation>
+    </message>
+    <message>
+        <source>unknown exception in socket job, dropping connection</source>
+        <translation>套接字任务发生未知异常，正在断开连接</translation>
+    </message>
+    <message>
+        <source>unmatched post warp</source>
+        <translation>收到未匹配的光标跳转后事件</translation>
+    </message>
+    <message>
+        <source>using ei screen for wayland</source>
+        <translation>正在为 Wayland 使用 EI 屏幕</translation>
+    </message>
+    <message>
+        <source>using legacy x windows screen</source>
+        <translation>正在使用传统 X Windows 屏幕</translation>
+    </message>
+    <message>
+        <source>watchdog not initialized</source>
+        <translation>看门狗未初始化</translation>
+    </message>
+</context>
 </TS>

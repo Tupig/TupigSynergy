@@ -27,7 +27,7 @@ void OSXPowerManager::disableSleep()
     CFRelease(reasonForActivity);
     if (result != kIOReturnSuccess) {
       m_sleepPreventionAssertionID = 0;
-      LOG_ERR("failed to disable system idle sleep");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to disable system idle sleep"));
     }
   }
 }

@@ -106,7 +106,7 @@ TransferState FileChunk::assemble(
   // over the transport ceiling; that is deliberately not caught here, because
   // the dispatchers turn it into a clean disconnect. See FileChunk's comment.
   if (!ProtocolUtil::readf(stream, kMsgDFileTransfer + 4, &mark, &data)) {
-    LOG_ERR("file chunk unreadable");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file chunk unreadable"));
     reset();
     return Error;
   }
@@ -115,7 +115,7 @@ TransferState FileChunk::assemble(
     // Refuse a second start while a transfer is in flight: silently restarting
     // would mix two files into one buffer.
     if (state.active) {
-      LOG_ERR("file start chunk while a transfer is already active");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file start chunk while a transfer is already active"));
       reset();
       return Error;
     }
@@ -155,7 +155,7 @@ TransferState FileChunk::assemble(
 
   if (mark == static_cast<uint32_t>(ChunkType::DataChunk)) {
     if (!state.active) {
-      LOG_ERR("file data chunk before start");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file data chunk before start"));
       reset();
       return Error;
     }
@@ -177,7 +177,7 @@ TransferState FileChunk::assemble(
 
   if (mark == static_cast<uint32_t>(ChunkType::DataEnd)) {
     if (!state.active) {
-      LOG_ERR("file end chunk before start");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file end chunk before start"));
       reset();
       return Error;
     }

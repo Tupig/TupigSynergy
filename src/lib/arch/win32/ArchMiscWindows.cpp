@@ -334,7 +334,7 @@ bool ArchMiscWindows::wasLaunchedAsService()
 {
   std::wstring name;
   if (!getParentProcessName(name)) {
-    LOG_ERR("cannot determine if process was launched as service");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot determine if process was launched as service"));
     return false;
   }
 
@@ -345,7 +345,7 @@ bool ArchMiscWindows::getParentProcessName(std::wstring &name)
 {
   PROCESSENTRY32 parentEntry;
   if (!getParentProcessEntry(parentEntry)) {
-    LOG_ERR("could not get entry for parent process");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not get entry for parent process"));
     return false;
   }
 
@@ -425,7 +425,7 @@ std::wstring ArchMiscWindows::getActiveDesktopName()
 {
   HDESK desk = OpenInputDesktop(0, TRUE, GENERIC_READ);
   if (desk == nullptr) {
-    LOG_ERR("could not open input desktop");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not open input desktop"));
     throw std::runtime_error(windowsErrorToString(GetLastError()));
   }
 

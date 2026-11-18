@@ -298,7 +298,9 @@ void XWindowsScreen::handleSystemEvent(const Event &event)
       if (xevent->type == m_xrandrEventBase + RRScreenChangeNotify ||
           (xevent->type == m_xrandrEventBase + RRNotify &&
            reinterpret_cast<XRRNotifyEvent *>(xevent)->subtype == RRNotify_CrtcChange)) {
-        LOG_INFO("either XRRScreenChangeNotifyEvent or RRNotify_CrtcChange received");
+        LOG_INFO(
+            QT_TRANSLATE_NOOP("EngineLogMessages", "either XRRScreenChangeNotifyEvent or RRNotify_CrtcChange received")
+        );
 
         // we're required to call back into XLib so XLib can update its internal
         // state

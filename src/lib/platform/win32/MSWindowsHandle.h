@@ -33,7 +33,7 @@ public:
     }
 
     if (!CloseHandle(m_handle)) {
-      LOG_WARN("failed to close handle");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to close handle"));
     }
   }
 

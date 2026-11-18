@@ -74,7 +74,7 @@ static int verifyCertificateCallback(X509_STORE_CTX *store_ctx, void * /* arg */
   // cursor and can be null here; get0_cert is the peer being verified.
   X509 *cert = X509_STORE_CTX_get0_cert(store_ctx);
   if (cert == nullptr) {
-    LOG_ERR("tls verification failed: no certificate in context");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "tls verification failed: no certificate in context"));
     X509_STORE_CTX_set_error(store_ctx, X509_V_ERR_CERT_NOT_YET_VALID);
     return 0;
   }
@@ -513,7 +513,7 @@ int SecureSocket::secureAccept(int socket)
   if (isFatal()) {
     // Never block here; this thread services every connected socket.
     // Historically a 1s sleep let any failed handshake DoS all clients.
-    LOG_ERR("failed to accept secure socket");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to accept secure socket"));
     m_secureReady = false;
     retry = 0;
     return -1; // Fail
@@ -528,7 +528,7 @@ int SecureSocket::secureAccept(int socket)
       return -1; // Fail
     }
     m_secureReady = true;
-    LOG_INFO("accepted secure socket");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "accepted secure socket"));
     SslLogger::logSecureCipherInfo(m_ssl->m_ssl);
     SslLogger::logSecureConnectInfo(m_ssl->m_ssl);
     return 1;
@@ -542,14 +542,14 @@ int SecureSocket::secureAccept(int socket)
   }
 
   // no good state exists here
-  LOG_ERR("unexpected state attempting to accept connection");
+  LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "unexpected state attempting to accept connection"));
   return -1; // Fail
 }
 
 int SecureSocket::secureConnect(int socket)
 {
   if (!loadCertificate(QString::fromStdString(m_tlsConfig.certificatePath))) {
-    LOG_ERR("could not load client certificates");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not load client certificates"));
     disconnect();
     return -1;
   }
@@ -576,7 +576,7 @@ int SecureSocket::secureConnect(int socket)
   checkResult(r, retry);
 
   if (isFatal()) {
-    LOG_ERR("failed to connect secure socket");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to connect secure socket"));
     retry = 0;
     return -1;
   }
@@ -592,13 +592,13 @@ int SecureSocket::secureConnect(int socket)
   // TLS completion alone is not admission: verify the peer before exposing
   // a ready socket to callers.
   if (verifyCertFingerprint(QString::fromStdString(m_tlsConfig.trustedServersDbPath))) {
-    LOG_INFO("connected to secure socket");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "connected to secure socket"));
     if (!showCertificate()) {
       disconnect();
       return -1; // Cert fail, error
     }
   } else {
-    LOG_ERR("failed to verify server certificate fingerprint");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to verify server certificate fingerprint"));
     disconnect();
     return -1; // Fingerprint failed, error
   }
@@ -670,10 +670,10 @@ void SecureSocket::checkResult(int status, int &retry)
     break;
 
   case SSL_ERROR_SYSCALL:
-    LOG_ERR("tls error occurred (system call failure)");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "tls error occurred (system call failure)"));
     if (ERR_peek_error() == 0) {
       if (status == 0) {
-        LOG_ERR("eof violates tls protocol");
+        LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "eof violates tls protocol"));
       } else if (status == -1) {
         // underlying socket I/O reproted an error
         try {
@@ -688,12 +688,12 @@ void SecureSocket::checkResult(int status, int &retry)
     break;
 
   case SSL_ERROR_SSL:
-    LOG_ERR("tls error occurred (generic failure)");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "tls error occurred (generic failure)"));
     isFatal(true);
     break;
 
   default:
-    LOG_ERR("tls error occurred (unknown failure)");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "tls error occurred (unknown failure)"));
     isFatal(true);
     break;
   }

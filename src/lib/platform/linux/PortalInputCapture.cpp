@@ -239,7 +239,7 @@ gboolean PortalInputCapture::timeoutHandler() const
 
 void PortalInputCapture::handleSessionClosed(XdpSession *session)
 {
-  LOG_ERR("portal input capture session was closed, exiting");
+  LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "portal input capture session was closed, exiting"));
   g_main_loop_quit(m_glibMainLoop);
   m_events->addEvent(Event(EventTypes::Quit));
 
@@ -300,7 +300,9 @@ void PortalInputCapture::setupSession(XdpInputCaptureSession *session)
     // Restored sessions can pre-date clipboard support, leaving the channel
     // disabled even though we requested it. Drop the saved token and recreate
     // the session from scratch so the user gets a fresh permission dialog.
-    LOG_WARN("clipboard not enabled on session, discarding restore token to force a fresh session");
+    LOG_WARN(QT_TRANSLATE_NOOP(
+        "EngineLogMessages", "clipboard not enabled on session, discarding restore token to force a fresh session"
+    ));
 #ifdef HAVE_LIBPORTAL_INPUTCAPTURE_RESTORE
     Settings::setValue(Settings::Server::XdpRestoreToken, QString());
 #endif
@@ -728,10 +730,10 @@ void PortalInputCapture::handleActivated(
           IPrimaryScreen::MotionInfo::alloc(warpX, warpY)
       ));
     } else {
-      LOG_WARN("failed to get cursor position");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to get cursor position"));
     }
   } else {
-    LOG_WARN("activation has no options");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "activation has no options"));
   }
   m_activationId = activationId;
   m_isActive = true;
@@ -755,7 +757,9 @@ void PortalInputCapture::handleActivated(
     claimClipboardOwnership(session);
     LOG_DEBUG("activation clipboard handling complete");
   } else {
-    LOG_WARN("input capture activated without a session, skipping clipboard read");
+    LOG_WARN(
+        QT_TRANSLATE_NOOP("EngineLogMessages", "input capture activated without a session, skipping clipboard read")
+    );
   }
 #endif
 }
@@ -823,7 +827,7 @@ void PortalInputCapture::handleZonesChanged(XdpInputCaptureSession *session, con
         this
     );
   } else {
-    LOG_WARN("no input capture pointer barriers found");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "no input capture pointer barriers found"));
   }
 }
 

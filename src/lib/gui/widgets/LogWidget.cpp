@@ -10,6 +10,7 @@
 
 #include <gui/Logger.h>
 
+#include <QCoreApplication>
 #include <QEvent>
 #include <QFontDatabase>
 #include <QHeaderView>
@@ -116,6 +117,9 @@ LogWidget::Record LogWidget::parse(const QString &line)
       else if (record.level == QStringLiteral("CRITICAL"))
         record.level = tr("Critical");
       record.message = line.mid(colon + 1).trimmed();
+      // Engine and service processes send raw data even when the GUI uses another language.
+      // Only an exact catalogue match is translated. Raw history stays available for copy.
+      record.message = QCoreApplication::translate("EngineLogMessages", qUtf8Printable(record.message));
     }
   }
   return record;
@@ -158,6 +162,13 @@ void LogWidget::setVisibleLines(int lines)
 {
   m_visibleLines = qMax(1, lines);
   updateVisibleHeight();
+}
+
+void LogWidget::changeEvent(QEvent *event)
+{
+  QWidget::changeEvent(event);
+  if (event->type() == QEvent::LanguageChange && !m_history.empty())
+    rebuild();
 }
 
 bool LogWidget::eventFilter(QObject *watched, QEvent *event)
@@ -310,6 +321,14 @@ QString LogWidget::allText() const
       lines.append(line);
   }
   return lines.join(QLatin1Char('\n'));
+}
+
+QString LogWidget::latestDisplayText() const
+{
+  const auto record = parse(m_latestLine);
+  if (record.level.isEmpty())
+    return record.message;
+  return QStringLiteral("[%1] %2: %3").arg(record.time, record.level, record.message);
 }
 
 std::array<int, 3> LogWidget::levelCounts() const

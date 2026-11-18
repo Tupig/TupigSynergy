@@ -224,7 +224,7 @@ bool XWindowsClipboard::CICCCMGetClipboard::processEvent(Display *display, const
     // secondary chunks must have the same target
     else {
       if (target != *m_actualTarget) {
-        LOG_WARN("  INCR target mismatch");
+        LOG_WARN("  " QT_TRANSLATE_NOOP("EngineLogMessages", "INCR target mismatch"));
         m_failed = true;
         m_error = true;
       }

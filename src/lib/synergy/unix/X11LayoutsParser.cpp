@@ -35,7 +35,7 @@ bool X11LayoutsParser::readXMLConfigItemElem(const QDomNode &node, std::vector<L
 {
   auto configItemElem = node.firstChildElement("configItem");
   if (configItemElem.isNull()) {
-    LOG_WARN("failed to read \"configItem\" in xml file");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to read \"configItem\" in xml file"));
     return false;
   }
 
@@ -187,7 +187,7 @@ std::string X11LayoutsParser::convertLayoutToISO(
 
   auto iso639_1Codes = convertISO639_2ToISO639_1(iso639_2Codes);
   if (iso639_1Codes.empty()) {
-    LOG_WARN("failed to convert ISO639/2 lang code to ISO639/1");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to convert ISO639/2 lang code to ISO639/1"));
     return "";
   }
 

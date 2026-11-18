@@ -86,7 +86,7 @@ protected:
   {
     auto *socket = new QSslSocket(this);
     if (!socket->setSocketDescriptor(socketDescriptor)) {
-      LOG_ERR("QtTransportListenSocket: cannot adopt incoming socket");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "QtTransportListenSocket: cannot adopt incoming socket"));
       delete socket;
       return;
     }
@@ -187,7 +187,7 @@ bool QtNetworkTransport::applyCertificate(QSslSocket *ssl, bool /*isServer*/)
 
   const QString path = QString::fromStdString(m_tlsConfig.certificatePath);
   if (path.isEmpty()) {
-    LOG_ERR("QtNetworkTransport: certificate path is empty");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "QtNetworkTransport: certificate path is empty"));
     return false;
   }
 
@@ -238,7 +238,7 @@ QtNetworkTransport::~QtNetworkTransport()
 void QtNetworkTransport::connect(const NetworkAddress &address)
 {
   if (!m_socket) {
-    LOG_ERR("QtNetworkTransport: no socket");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "QtNetworkTransport: no socket"));
     m_fatalError = true;
     return;
   }
@@ -264,7 +264,7 @@ void QtNetworkTransport::connect(const NetworkAddress &address)
 
 void QtNetworkTransport::bind(const NetworkAddress & /*address*/)
 {
-  LOG_WARN("QtNetworkTransport::bind not supported on client sockets");
+  LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "QtNetworkTransport::bind not supported on client sockets"));
 }
 
 void QtNetworkTransport::close()
@@ -315,12 +315,12 @@ uint32_t QtNetworkTransport::read(void *buffer, uint32_t size)
 void QtNetworkTransport::write(const void *buffer, uint32_t size)
 {
   if (!m_connected || !m_socket) {
-    LOG_ERR("QtNetworkTransport: not connected");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "QtNetworkTransport: not connected"));
     return;
   }
 
   if (static_cast<size_t>(m_writeBuffer.size()) + size > m_writeQueueLimit) {
-    LOG_WARN("QtNetworkTransport: write queue full, dropping data");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "QtNetworkTransport: write queue full, dropping data"));
     m_fatalError = true;
     return;
   }
@@ -393,7 +393,7 @@ void QtNetworkTransport::onConnected()
 
 void QtNetworkTransport::onDisconnected()
 {
-  LOG_INFO("QtNetworkTransport: disconnected");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "QtNetworkTransport: disconnected"));
   m_connected = false;
   Q_EMIT transportDisconnected();
 }
@@ -425,7 +425,7 @@ void QtNetworkTransport::onErrorOccurred(QAbstractSocket::SocketError socketErro
   }
 
   if (socketError == QAbstractSocket::ConnectionRefusedError || socketError == QAbstractSocket::SocketTimeoutError) {
-    LOG_WARN("QtNetworkTransport: non-fatal error, can retry");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "QtNetworkTransport: non-fatal error, can retry"));
   } else {
     m_fatalError = true;
   }
@@ -519,7 +519,7 @@ bool QtTransportListenSocket::configureSslServer()
 
   const QString path = QString::fromStdString(m_tlsConfig.certificatePath);
   if (path.isEmpty()) {
-    LOG_ERR("QtTransportListenSocket: certificate path is empty");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "QtTransportListenSocket: certificate path is empty"));
     return false;
   }
 
@@ -550,7 +550,7 @@ bool QtTransportListenSocket::configureSslServer()
 
   const QString path = QString::fromStdString(m_tlsConfig.certificatePath);
   if (path.isEmpty()) {
-    LOG_ERR("QtTransportListenSocket: certificate path is empty");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "QtTransportListenSocket: certificate path is empty"));
     return false;
   }
 
@@ -591,7 +591,7 @@ ArchSocket QtTransportListenSocket::getSocket() const
 bool QtTransportListenSocket::bindAndListen(const NetworkAddress &address)
 {
   if (!m_server) {
-    LOG_ERR("QtTransportListenSocket: no server");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "QtTransportListenSocket: no server"));
     return false;
   }
 

@@ -352,10 +352,10 @@ void OSXScreen::enable()
       dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
       dispatch_release(sem);
     } else {
-      LOG_ERR("failed to create a CFRunLoopSourceRef for the quartz event tap");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to create a CFRunLoopSourceRef for the quartz event tap"));
     }
   } else {
-    LOG_ERR("failed to create quartz event tap");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to create quartz event tap"));
   }
 }
 

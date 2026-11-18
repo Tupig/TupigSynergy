@@ -311,7 +311,7 @@ void OSXKeyState::setGroup(int32_t group)
 {
   TISInputSourceRef keyboardLayout = (TISInputSourceRef)CFArrayGetValueAtIndex(m_groups.get(), group);
   if (!keyboardLayout) {
-    LOG_WARN("needed keyboard layout is null");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "needed keyboard layout is null"));
     return;
   }
   CFBooleanRef canBeSetted = nullptr;
@@ -322,14 +322,15 @@ void OSXKeyState::setGroup(int32_t group)
       canBeSetted = (CFBooleanRef)TISGetInputSourceProperty(source.get(), kTISPropertyInputSourceIsEnableCapable);
   }
   if (!canBeSetted) {
-    LOG_WARN("needed keyboard layout is disabled for programmatically selection");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "needed keyboard layout is disabled for programmatically selection")
+    );
     return;
   }
 
   {
     std::lock_guard<std::mutex> lock(g_tisMutex);
     if (TISSelectInputSource(keyboardLayout) != noErr) {
-      LOG_WARN("failed to set needed keyboard layout");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to set needed keyboard layout"));
     }
   }
 

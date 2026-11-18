@@ -113,13 +113,13 @@ std::string AppUtilUnix::getCurrentLanguageCode()
 
   auto display = XOpenDisplay(nullptr);
   if (!display) {
-    LOG_WARN("failed to open x11 default display");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to open x11 default display"));
     return result;
   }
 
   auto kbdDescr = XkbAllocKeyboard();
   if (!kbdDescr) {
-    LOG_WARN("failed to get x11 keyboard description");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to get x11 keyboard description"));
     return result;
   }
   XkbGetNames(display, XkbSymbolsNameMask, kbdDescr);

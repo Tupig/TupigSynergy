@@ -170,7 +170,7 @@ int main(int argc, char **argv)
       ipcServer, &synergy::core::ipc::IpcServer::stopProcessRequested, coreApp, &App::quit, Qt::DirectConnection
   );
   if (!ipcServer->listen()) {
-    LOG_ERR("ipc server failed to listen");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "ipc server failed to listen"));
     return s_exitFailed;
   }
 

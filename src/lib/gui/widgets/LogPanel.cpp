@@ -181,7 +181,8 @@ LogPanel::LogPanel(QWidget *parent) : QFrame(parent)
   });
   connect(m_btnCollapse, &QPushButton::clicked, this, [this] { setCollapsed(true); });
   connect(m_btnExpand, &QPushButton::clicked, this, [this] { setCollapsed(false); });
-  connect(m_records, &LogWidget::historyChanged, this, [this](const QString &latest) {
+  connect(m_records, &LogWidget::historyChanged, this, [this] {
+    const auto latest = m_records->latestDisplayText();
     m_tail->setText(latest);
     m_tail->setToolTip(latest);
     updateStats();

@@ -129,7 +129,7 @@ TransferState ClipboardChunk::assemble(
     return Started;
   } else if (mark == ChunkType::DataChunk) {
     if (!state.active) {
-      LOG_ERR("clipboard data chunk before start");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "clipboard data chunk before start"));
       reset();
       return Error;
     }
@@ -147,7 +147,7 @@ TransferState ClipboardChunk::assemble(
     return TransferState::InProgress;
   } else if (mark == ChunkType::DataEnd) {
     if (!state.active) {
-      LOG_ERR("clipboard end chunk before start");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "clipboard end chunk before start"));
       reset();
       return Error;
     }
@@ -162,7 +162,7 @@ TransferState ClipboardChunk::assemble(
     return Finished;
   }
 
-  LOG_ERR("unknown clipboard chunk mark");
+  LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "unknown clipboard chunk mark"));
   reset();
   return Error;
 }

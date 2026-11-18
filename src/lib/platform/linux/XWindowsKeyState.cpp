@@ -183,7 +183,7 @@ int32_t XWindowsKeyState::pollActiveGroup() const
       return state.group;
     }
 
-    LOG_WARN("failed to poll active group");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to poll active group"));
   }
 #endif
   return 0;
@@ -236,7 +236,7 @@ bool XWindowsKeyState::setCurrentLanguageWithDBus(int32_t group) const
 
   QDBusInterface screenSaverInterface(service, path, service, bus);
   if (!screenSaverInterface.isValid()) {
-    LOG_WARN("keyboard layout fail. dbus interface is invalid");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "keyboard layout fail. dbus interface is invalid"));
     return false;
   }
 
@@ -250,12 +250,12 @@ bool XWindowsKeyState::setCurrentLanguageWithDBus(int32_t group) const
   }
 
   if (reply.isError()) {
-    LOG_WARN("keyboard layout fail. reply contains error");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "keyboard layout fail. reply contains error"));
     return true;
   }
 
   if (!reply.argumentAt<0>() || reply.argumentAt<1>() != QString("")) {
-    LOG_WARN("keyboard layout fail. Reply is unexpected!");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "keyboard layout fail. Reply is unexpected!"));
     return true;
   }
 

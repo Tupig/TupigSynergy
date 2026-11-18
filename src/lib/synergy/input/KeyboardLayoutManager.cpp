@@ -36,7 +36,7 @@ KeyboardLayoutManager::KeyboardLayoutManager(const std::vector<std::string> &loc
 void KeyboardLayoutManager::setRemoteLayouts(const std::string_view &remoteLayouts)
 {
   if (!remoteLayouts.empty() && remoteLayouts.size() % 2 != 0) {
-    LOG_ERR("remote layouts are the incorrect size, can not process them");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "remote layouts are the incorrect size, can not process them"));
     return;
   }
 

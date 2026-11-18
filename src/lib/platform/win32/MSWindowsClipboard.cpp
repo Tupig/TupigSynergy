@@ -68,7 +68,7 @@ bool MSWindowsClipboard::emptyUnowned()
   if (!EmptyClipboard()) {
     // unable to cause this in integ tests, but this error has never
     // actually been reported by users.
-    LOG_WARN("failed to grab clipboard");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to grab clipboard"));
     return false;
   }
 
@@ -84,7 +84,7 @@ bool MSWindowsClipboard::empty()
   // mark clipboard as being owned by Synergy
   HGLOBAL data = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, 1);
   if (nullptr == SetClipboardData(getOwnershipFormat(), data)) {
-    LOG_WARN("failed to set clipboard data");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to set clipboard data"));
     GlobalFree(data);
     return false;
   }

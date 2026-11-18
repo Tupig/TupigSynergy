@@ -594,7 +594,7 @@ void EiScreen::sendClipboardEvent(EventTypes type, ClipboardID id) const
 {
   auto *info = static_cast<ClipboardInfo *>(malloc(sizeof(ClipboardInfo)));
   if (info == nullptr) {
-    LOG_ERR("malloc failed for ClipboardInfo");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "malloc failed for ClipboardInfo"));
     return;
   }
   info->m_id = id;

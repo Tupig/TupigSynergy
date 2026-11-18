@@ -58,7 +58,7 @@ App::~App()
 
 void App::run(QThread &coreThread)
 {
-  LOG_INFO("starting core");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "starting core"));
 
   // Important: Move the daemon app to the daemon thread before creating any more Qt objects
   // owned by the daemon app, as they will be created on the daemon thread.
@@ -91,11 +91,11 @@ void App::run(QThread &coreThread)
     } catch (std::exception &e) {
       LOG_CRIT("an error occurred: %s\n", e.what());
     } catch (...) {
-      LOG_CRIT("an unknown error occurred\n");
+      LOG_CRIT(QT_TRANSLATE_NOOP("EngineLogMessages", "an unknown error occurred") "\n");
     }
 
     if (result == s_exitSuccess) {
-      LOG_INFO("core stopped successfully");
+      LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "core stopped successfully"));
     } else {
       updateExitCode(result);
       LOG_ERR("core stopped with error code: %d", result);
@@ -152,13 +152,13 @@ void App::initApp()
 
 void App::handleScreenError() const
 {
-  LOG_CRIT("error on screen");
+  LOG_CRIT(QT_TRANSLATE_NOOP("EngineLogMessages", "error on screen"));
   getEvents()->addEvent(Event(EventTypes::Quit));
 }
 
 void App::quit() const
 {
-  LOG_INFO("quitting");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "quitting"));
   getEvents()->addEvent(Event(EventTypes::Quit));
 }
 

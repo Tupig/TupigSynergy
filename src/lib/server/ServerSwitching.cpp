@@ -64,7 +64,7 @@ bool Server::isLockedToScreen() const
   // locked if we say we're locked
   if (isLockedToScreenServer()) {
     if (!m_defaultLockToScreenState) {
-      LOG_INFO("cursor is locked to screen, check scroll lock key");
+      LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "cursor is locked to screen, check scroll lock key"));
     }
     return true;
   }
@@ -155,7 +155,7 @@ void Server::switchScreen(BaseClientProxy *dst, int32_t x, int32_t y, bool forSc
     // leave active screen
     if (!m_active->leave()) {
       // cannot leave screen
-      LOG_WARN("can't leave screen");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "can't leave screen"));
       return;
     }
 

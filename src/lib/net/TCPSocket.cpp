@@ -256,7 +256,7 @@ bool TCPSocket::isReady() const
 bool TCPSocket::isFatal() const
 {
   // TCP sockets aren't ever left in a fatal state.
-  LOG_ERR("isFatal() not valid for non-secure connections");
+  LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "isFatal() not valid for non-secure connections"));
   return false;
 }
 

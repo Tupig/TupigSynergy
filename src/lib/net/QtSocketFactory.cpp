@@ -99,7 +99,7 @@ void QtDataSocket::connect(const NetworkAddress &address)
 
 void QtDataSocket::bind(const NetworkAddress &)
 {
-  LOG_WARN("QtDataSocket::bind not supported on data sockets");
+  LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "QtDataSocket::bind not supported on data sockets"));
 }
 
 void QtDataSocket::close()
