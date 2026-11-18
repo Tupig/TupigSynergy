@@ -62,12 +62,12 @@ public:
 
   void start()
   {
-    m_opacity = m_content ? 0.06 : 0.22;
+    m_opacity = m_content ? 0.045 : 0.22;
     setProperty("motionOpacity", m_opacity);
     m_animation.setStartValue(m_opacity);
     m_animation.setEndValue(0.0);
     m_animation.setDuration(m_content ? 160 : 110);
-    m_animation.setEasingCurve(m_content ? QEasingCurve::OutCubic : QEasingCurve::Linear);
+    m_animation.setEasingCurve(QEasingCurve::Linear);
     show();
     raise();
     m_animation.start();
@@ -82,6 +82,11 @@ public:
     setObjectName(QString());
     hide();
     deleteLater();
+  }
+
+  bool isStarting() const
+  {
+    return m_animation.state() == QAbstractAnimation::Running && m_animation.currentTime() == 0;
   }
 
 protected:
@@ -103,19 +108,19 @@ private:
   qreal m_opacity = 0;
 };
 
-void clearLayer(QWidget *target, const QString &name)
-{
-  if (auto *old = dynamic_cast<MotionLayer *>(target->findChild<QWidget *>(name, Qt::FindDirectChildrenOnly)))
-    old->finish();
-}
-
 void pulse(QWidget *target, bool content)
 {
   if (!target || target->property("motionLayerCreating").toBool())
     return;
   const auto name = content ? QStringLiteral("contentTransitionOverlay") : QStringLiteral("buttonFeedbackOverlay");
-  clearLayer(target, name);
-  if (reducedMotion())
+  const bool reduced = reducedMotion();
+  if (auto *old = dynamic_cast<MotionLayer *>(target->findChild<QWidget *>(name, Qt::FindDirectChildrenOnly))) {
+    // A Qt mouse event and its pressed/released/clicked signals can request the same frame.
+    if (!content && !reduced && old->isStarting())
+      return;
+    old->finish();
+  }
+  if (reduced)
     return;
   target->setProperty("motionLayerCreating", true);
   auto *layer = new MotionLayer(target, content);
