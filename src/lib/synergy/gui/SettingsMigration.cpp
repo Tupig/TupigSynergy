@@ -19,6 +19,7 @@
 #include "SettingsMigration.h"
 
 #include "common/Constants.h"
+#include "common/RuntimeContext.h"
 #include "common/Settings.h"
 #include "synergy/gui/SettingsMigrationMap.h"
 #include "synergy/gui/SettingsScope.h"
@@ -40,7 +41,7 @@ const auto kLegacySystemScopeKey = QStringLiteral("systemScope");
 
 QString extraFile()
 {
-  return QStringLiteral("%1/%2.extra.conf").arg(Settings::UserDir, kAppName);
+  return QStringLiteral("%1/%2.extra.conf").arg(Settings::userDir(), kAppName);
 }
 
 int storedSchemaVersion()
@@ -146,28 +147,30 @@ bool runLegacyMigration()
 {
   bool any = false;
 
-  QSettings legacyUser(QSettings::NativeFormat, QSettings::UserScope, kAppName, kAppName);
+  auto legacyUserStore = synergy::runtime::legacySettings(QSettings::UserScope);
+  auto &legacyUser = *legacyUserStore;
   const bool legacyHadSystemScope = legacyUser.value(kLegacySystemScopeKey, false).toBool();
   if (looksLikeLegacySettings(legacyUser)) {
-    s_lastBackupPath = backupLegacy(legacyUser, Settings::UserSettingFile + QStringLiteral(".legacy.bak"));
+    s_lastBackupPath = backupLegacy(legacyUser, Settings::userSettingsFile() + QStringLiteral(".legacy.bak"));
     qInfo().noquote() << "settings migration: user-scope legacy backed up to" << s_lastBackupPath;
-    if (migrateOneScope(legacyUser, Settings::UserSettingFile) > 0) {
+    if (migrateOneScope(legacyUser, Settings::userSettingsFile()) > 0) {
       any = true;
-      applyMasterCompatDefaults(Settings::UserSettingFile);
+      applyMasterCompatDefaults(Settings::userSettingsFile());
     }
-    maybeClearLegacy(legacyUser, Settings::UserSettingFile, "user-scope");
+    maybeClearLegacy(legacyUser, Settings::userSettingsFile(), "user-scope");
   }
 
-  QSettings legacySystem(QSettings::NativeFormat, QSettings::SystemScope, kAppName, kAppName);
+  auto legacySystemStore = synergy::runtime::legacySettings(QSettings::SystemScope);
+  auto &legacySystem = *legacySystemStore;
   if (looksLikeLegacySettings(legacySystem)) {
-    const auto backupPath = Settings::SystemSettingFile + QStringLiteral(".legacy.bak");
+    const auto backupPath = Settings::systemSettingsFile() + QStringLiteral(".legacy.bak");
     s_lastBackupPath = backupLegacy(legacySystem, backupPath);
     qInfo().noquote() << "settings migration: system-scope legacy backed up to" << s_lastBackupPath;
-    if (migrateOneScope(legacySystem, Settings::SystemSettingFile) > 0) {
+    if (migrateOneScope(legacySystem, Settings::systemSettingsFile()) > 0) {
       any = true;
-      applyMasterCompatDefaults(Settings::SystemSettingFile);
+      applyMasterCompatDefaults(Settings::systemSettingsFile());
     }
-    maybeClearLegacy(legacySystem, Settings::SystemSettingFile, "system-scope");
+    maybeClearLegacy(legacySystem, Settings::systemSettingsFile(), "system-scope");
   }
 
   if (legacyHadSystemScope) {

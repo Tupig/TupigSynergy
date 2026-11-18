@@ -38,6 +38,7 @@ public:
   QLabel *lblLanguage = nullptr;
   QComboBox *comboLanguage = nullptr;
   QLabel *lblTrayIconStyle = nullptr;
+  QComboBox *comboTrayIcon = nullptr;
   QWidget *trayIconOptions = nullptr;
   QRadioButton *rbIconMono = nullptr;
   QRadioButton *rbIconColorful = nullptr;
@@ -47,6 +48,8 @@ public:
   QGroupBox *windowCard = nullptr;
   QLabel *label_3 = nullptr;
   QWidget *widget = nullptr;
+  QComboBox *comboStartBehavior = nullptr;
+  QComboBox *comboCloseBehavior = nullptr;
   QRadioButton *rbShowOnStart = nullptr;
   QRadioButton *rbAutoHide = nullptr;
   QLabel *label = nullptr;
@@ -62,6 +65,7 @@ public:
   QComboBox *comboLogLevel = nullptr;
   QLabel *lblDebugWarning = nullptr;
   QGroupBox *groupLogToFile = nullptr;
+  QCheckBox *cbLogToFile = nullptr;
   QWidget *widgetLogFilename = nullptr;
   QLabel *labelLogPath = nullptr;
   QWidget *logPathControls = nullptr;
@@ -77,6 +81,7 @@ public:
   QLabel *lblPort = nullptr;
   QSpinBox *sbPort = nullptr;
   QGroupBox *groupSecurity = nullptr;
+  QCheckBox *cbTlsEnabled = nullptr;
   QWidget *widgetTlsCert = nullptr;
   QLabel *lblTlsCert = nullptr;
   QWidget *certificateControls = nullptr;
@@ -87,11 +92,13 @@ public:
   QWidget *keyLengthControls = nullptr;
   QComboBox *comboTlsKeyLength = nullptr;
   QPushButton *btnTlsRegenCert = nullptr;
+  QPushButton *btnViewFingerprint = nullptr;
   QCheckBox *cbRequireClientCert = nullptr;
   QWidget *tabAdvanced = nullptr;
   QScrollArea *advancedScroll = nullptr;
   QWidget *advancedScrollContents = nullptr;
   QGroupBox *groupService = nullptr;
+  QCheckBox *cbServiceEnabled = nullptr;
   QCheckBox *cbElevateDaemon = nullptr;
   QGroupBox *commandsCard = nullptr;
   QCheckBox *cbRunEnterCommand = nullptr;

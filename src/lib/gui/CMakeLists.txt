@@ -18,6 +18,9 @@ add_library(${target} STATIC
   ${platform_sources}
   Action.cpp
   Action.h
+  AppIcon.cpp
+  AppMenus.cpp
+  AppMenus.h
   AppStyle.cpp
   AppStyle.h
   Diagnostic.cpp
@@ -37,6 +40,8 @@ add_library(${target} STATIC
   MainWindow.h
   MainWindowDesign.cpp
   MainWindowDesign.h
+  Motion.cpp
+  Motion.h
   Messages.cpp
   Messages.h
   ScreenSetupModel.cpp

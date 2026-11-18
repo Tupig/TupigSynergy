@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "path_base": "repository_relative",
+  "description": {
+    "en": "35 byte-identical report moves, one historical snapshot and two local generated inputs. Original report bodies and immutable packages remain unchanged.",
+    "zh_CN": "35份报告同字节迁移、一份历史快照、两份本地生成输入；报告原文与不可变执行包保持不变。"
+  },
+  "baseline": {
+    "path": "build/ui-current-evidence-20261118/project-cleanup/before-v2.json",
+    "sha256": "26b39047d80cbeb0c1be3ce68c62899b712433c7a4d939b8751cba1f4c910008"
+  },
+  "moves": [
+    {
+      "source": "docs/reports/20261117-ui-completion-delivery.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-completion-delivery.md",
+      "sha256": "1e1d6b83e60a3ea3ff70354c42d14517607b042736f125d939f03340262fd34f",
+      "bytes": 36027
+    },
+    {
+      "source": "docs/reports/20261117-ui-completion-host.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-completion-host.md",
+      "sha256": "8a2d48f3624f887e24452d093770c4ae89e5d99ed1a68c5d1c4b600b9810caec",
+      "bytes": 7229
+    },
+    {
+      "source": "docs/reports/20261117-ui-completion-manual-checks-r2.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-completion-manual-checks-r2.md",
+      "sha256": "607726587736c49ad777aa40348e6cc83349c2e2786dc57ee24425871babf946",
+      "bytes": 2979
+    },
+    {
+      "source": "docs/reports/20261117-ui-completion-manual-checks.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-completion-manual-checks.md",
+      "sha256": "c4f99e4434d30ff24a74d4590015d4dfd5230c75fd85fd107f64f9a316d0f425",
+      "bytes": 7803
+    },
+    {
+      "source": "docs/reports/20261117-ui-completion-review.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-completion-review.md",
+      "sha256": "265965231e129deaa3ad8c5e569a78b23e14e3b94ceee5375ea0ae151d0d02c5",
+      "bytes": 72055
+    },
+    {
+      "source": "docs/reports/20261117-ui-completion-tests.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-completion-tests.md",
+      "sha256": "2ca38f75bff9e8d7b12fb425bae83cce94724d39090b8fa2c36f1cafd177bf34",
+      "bytes": 26470
+    },
+    {
+      "source": "docs/reports/20261117-ui-completion.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-completion.md",
+      "sha256": "32b413987cde02849a17a36bb4aafb59f7f49c066033c15ff4a692e3f98f23dc",
+      "bytes": 17242
+    },
+    {
+      "source": "docs/reports/20261117-ui-pages.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-pages.md",
+      "sha256": "6919ee53c06ee2c89e6821c6e5f6f0041db722e583aca72a7c09abd290f90d2b",
+      "bytes": 6840
+    },
+    {
+      "source": "docs/reports/20261117-ui-r2-delivery.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-r2-delivery.md",
+      "sha256": "4ba220823a5064335cd8b5a2e7fa9f7ad3984c24a78ca6a879c5a068af5e8da9",
+      "bytes": 12142
+    },
+    {
+      "source": "docs/reports/20261117-ui-r2-host.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-r2-host.md",
+      "sha256": "67ac1749de95c9c8d1364a48e46330cc252d97968b461812ac276995c6d290db",
+      "bytes": 36156
+    },
+    {
+      "source": "docs/reports/20261117-ui-r2-pages.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-r2-pages.md",
+      "sha256": "b488f9a9eb322f36c99c659ac1f6b8f328794f0cca4f82b77d24dfb1c31d779d",
+      "bytes": 46538
+    },
+    {
+      "source": "docs/reports/20261117-ui-r2-tester.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-r2-tester.md",
+      "sha256": "22c975dbebd9a29ba4669eff9a8457fb432c425ec90f58a01c2dd641af8090f6",
+      "bytes": 38389
+    },
+    {
+      "source": "docs/reports/20261117-ui-r3-pages-review.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-r3-pages-review.md",
+      "sha256": "5bfb5499154b061cad120a58e707d639d8e1bea27b0d531ee17e533955d3a269",
+      "bytes": 49522
+    },
+    {
+      "source": "docs/reports/20261117-ui-r3-startup-review.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-r3-startup-review.md",
+      "sha256": "f559df890ee534e8a6a54920a98c96b8203acd602253a3428435cbda400ac000",
+      "bytes": 35546
+    },
+    {
+      "source": "docs/reports/20261117-ui-r3-tester.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-r3-tester.md",
+      "sha256": "ed3e35da664602f73a62b80b04517aeb92480f2780cb4ea13f40fc51e02c429f",
+      "bytes": 16679
+    },
+    {
+      "source": "docs/reports/20261117-ui-reconstruction.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-reconstruction.md",
+      "sha256": "a0871035405d9d1d5a8ea0b4e3fb6768402900241024f2254294fb066c781658",
+      "bytes": 8550
+    },
+    {
+      "source": "docs/reports/20261117-ui-shell.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-shell.md",
+      "sha256": "20ecad23ba04b47d8e04c35d7fa1b893f8979fc149a41eb83ecabc5f2f48b6d8",
+      "bytes": 8752
+    },
+    {
+      "source": "docs/reports/20261117-ui-tester.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-tester.md",
+      "sha256": "6dfe1e34bf633fdf743c561fcc1b07d25320d1e9b8e61a0a1542eeb436da43e8",
+      "bytes": 14701
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-button-alignment-checks.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-button-alignment-checks.md",
+      "sha256": "e9d7684bf6800c62eeb055bff1cabff1f18d2625101409dd554441027dfc41af",
+      "bytes": 1950
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-caption-defect-checks.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-caption-defect-checks.md",
+      "sha256": "8ebcf2941a7635a34dc850b9f425991959aa439e7da7363ed54bce47ebfa232f",
+      "bytes": 3757
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-capture-checks.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-capture-checks.md",
+      "sha256": "dfd9bda984afa63ab5e16fdfc658ba2d6684d0aaf78296f9873d83938f9109e8",
+      "bytes": 5127
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-delivery.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-delivery.md",
+      "sha256": "7c2a62a61056de3415058b66f55792faa8467a00fc152d5c7d2e5a0b7f8d254b",
+      "bytes": 14625
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-drag-trace-plan.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-drag-trace-plan.md",
+      "sha256": "428ecc192a1b3dd4ce6b94f1d081f9c7849ca6cfebdb6607d51785bc90324326",
+      "bytes": 4477
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-final-check-plan.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-final-check-plan.md",
+      "sha256": "72ea22fc5c8b71446bb86151257ff3779ae5151a64eaf68cf34f1353f6892758",
+      "bytes": 11246
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-live-language-checks.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-live-language-checks.md",
+      "sha256": "450c0aa80ecb221f83be4c613e079c3aa60c0c119190264d0cecbbec411064e4",
+      "bytes": 2994
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-manual-checks.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-manual-checks.md",
+      "sha256": "aaa1a89c3c1fbcb08c628d79c7483c27282acbbe5ac6ba8ef70c479f91718b26",
+      "bytes": 12071
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-page-checks.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-page-checks.md",
+      "sha256": "b7ace8bb85ed7925df2159a155c6c37e3256916dd97611c6a07dbdeb571cc9df",
+      "bytes": 14788
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-pe-image-ledger.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-pe-image-ledger.md",
+      "sha256": "4b5d6ad70829e44411a7f4f109ca4091258a4a7efd51a77036a86627f95d93b3",
+      "bytes": 49005
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-presentation-checks.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-presentation-checks.md",
+      "sha256": "548f75920df23b97c4129c0c66b8dc57f806825f0859993fd77cf82d4bb3f442",
+      "bytes": 9438
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-protocol-checks.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-protocol-checks.md",
+      "sha256": "5a245454909f67f60ce53c838c616e7edcdf2f713cd031c376120d0c504a3482",
+      "bytes": 4729
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-sharing-columns-checks.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-sharing-columns-checks.md",
+      "sha256": "856f965931282628edb6acdc53eeeda021c2f813ba774ee107f031bca9f59dbe",
+      "bytes": 2101
+    },
+    {
+      "source": "docs/reports/20261117-ui-visual-r4-tests.md",
+      "destination": "docs/archive/ui-20261117/20261117-ui-visual-r4-tests.md",
+      "sha256": "e150779b6e5201d61d526feace32b96fafb60001d86823e5348d9def8888cf3b",
+      "bytes": 27458
+    },
+    {
+      "source": "docs/reports/20261118-ui-recipient-unknown-checks.md",
+      "destination": "docs/archive/ui-20261117/20261118-ui-recipient-unknown-checks.md",
+      "sha256": "e2710e908c6f91859b4f4022c4504d1add05d51ac4c2aa9bb5864af7615c7057",
+      "bytes": 4057
+    },
+    {
+      "source": "docs/reports/20261118-ui-test-closeout.md",
+      "destination": "docs/archive/ui-20261117/20261118-ui-test-closeout.md",
+      "sha256": "eb48f99153398b3ea197576ceb7db078a545e55c74f82a65a5219a14005821ff",
+      "bytes": 5644
+    },
+    {
+      "source": "docs/reports/20261118-ui-visual-pm-image-ledger.md",
+      "destination": "docs/archive/ui-20261117/20261118-ui-visual-pm-image-ledger.md",
+      "sha256": "9b0ce3bf007ecd1c44855363d2b13803d9ad53e0e5d9a2384cc6ec69950852e4",
+      "bytes": 14798
+    }
+  ],
+  "snapshot": {
+    "source": "docs/ui-verification.md",
+    "destination": "docs/archive/ui-20261117/ui-verification-before-20261118.md",
+    "sha256": "14cf202471dd0c237a366b8a7eece186e5741f965dc9660765f65a52b3bd5cac",
+    "bytes": 8066
+  },
+  "local_inputs": [
+    {
+      "source": "docs/reports/20261118-generated-cleanup-inventory.json",
+      "destination": "build/ui-current-evidence-20261118/project-cleanup/20261118-generated-cleanup-inventory.json",
+      "sha256": "129135a3c455c76c6bec3cdb0b4584be7b389e48efc7027e184e1ec5f039b718",
+      "bytes": 22604
+    },
+    {
+      "source": "docs/reports/20261118-generated-cleanup-plan.md",
+      "destination": "build/ui-current-evidence-20261118/project-cleanup/20261118-generated-cleanup-plan.md",
+      "sha256": "ae39051d014c6332100344a6438fb48004fa3e10fa7d048180e98ed2ed45b5d8",
+      "bytes": 4710
+    }
+  ],
+  "historical_reference_policy": {
+    "mapped_report": "A historical report moved byte-identically to its mapped destination; interpret the original path through moves, without rewriting its body. / 历史报告按moves原字节迁往目标，旧路径经集中映射解释，原文不改。",
+    "current_file": "The referenced file currently exists at the checked repository-relative path; a report or hash alone does not establish a missing raw file. / 核查时仓库相对路径的文件实际存在；仅有报告或摘要不证明缺失原件存在。",
+    "removed_with_receipt": "The generated item was deliberately removed after its identity and recreation/disposition receipt were retained; it is not a current raw file. / 生成项在保留身份及重建或处置回执后明确清除，不计当前原件。",
+    "unavailable_before_cleanup": "The historical raw path was already unavailable before the documented cleanup; the cause is unconfirmed and its bytes are not reconstructed. / 历史原始路径在所记清理前已不可用，原因未确认，不凭记忆重造。",
+    "external_history": "The path belongs to a historical external or temporary location; retain its original statement without claiming current availability or retrieving private settings. / 路径属于历史外部或临时位置，保留原陈述，不宣称当前可用且不读取隐私设置。"
+  },
+  "protected_reference_examples": [
+    {
+      "source": "docs/aegis/20261117-ui-r3-build-package.md",
+      "classification": "mapped_report",
+      "note": {
+        "en": "Original line 7 keeps its three historical R3 report names; resolve through moves.",
+        "zh_CN": "原第7行保留三份历史R3报告名，经moves查新位置。"
+      }
+    }
+  ]
+}

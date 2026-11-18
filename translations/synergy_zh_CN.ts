@@ -71,6 +71,34 @@ Session: %1 (%2)</source>
         <source>Copy version information</source>
         <translation>复制版本信息</translation>
     </message>
+    <message>
+        <source>Project home</source>
+        <translation>项目主页</translation>
+    </message>
+    <message>
+        <source>Contributors</source>
+        <translation>贡献者</translation>
+    </message>
+    <message>
+        <source>Third-party notices</source>
+        <translation>第三方许可声明</translation>
+    </message>
+    <message>
+        <source>GNU GPL Version 2 with the OpenSSL exception. Full copyright and third-party notices are available below.</source>
+        <translation>本项目采用 GNU GPL 第 2 版并保留 OpenSSL 例外。完整版权与第三方许可声明可在下方查看。</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>复制</translation>
+    </message>
+    <message>
+        <source>Copyright and licenses</source>
+        <translation>版权与许可声明</translation>
+    </message>
+    <message>
+        <source>Share one keyboard and mouse across computers.</source>
+        <translation>在多台电脑之间共享一套键盘和鼠标。</translation>
+    </message>
 </context>
 <context>
     <name>ActionDialog</name>
@@ -80,11 +108,11 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>When the hotkey is pressed</source>
-        <translation>当按下热键时</translation>
+        <translation type="vanished">当按下热键时</translation>
     </message>
     <message>
         <source>When the hotkey is released</source>
-        <translation>当释放热键时</translation>
+        <translation type="vanished">当释放热键时</translation>
     </message>
     <message>
         <source>Press key(s)</source>
@@ -96,7 +124,7 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Press and release key(s)</source>
-        <translation>按下并释放按键</translation>
+        <translation type="vanished">按下并释放按键</translation>
     </message>
     <message>
         <source>Switch to a computer</source>
@@ -108,11 +136,11 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Switch to next computer</source>
-        <translation>切换到下一台计算机</translation>
+        <translation type="vanished">切换到下一台计算机</translation>
     </message>
     <message>
         <source>Modify the cursor lock</source>
-        <translation>修改光标锁定状态</translation>
+        <translation type="vanished">修改光标锁定状态</translation>
     </message>
     <message>
         <source>Restart the server</source>
@@ -120,31 +148,31 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Switch to the computer on the left</source>
-        <translation>切换到左侧的计算机</translation>
+        <translation type="vanished">切换到左侧的计算机</translation>
     </message>
     <message>
         <source>Switch to the computer on the right</source>
-        <translation>切换到右侧的计算机</translation>
+        <translation type="vanished">切换到右侧的计算机</translation>
     </message>
     <message>
         <source>Switch to the computer above</source>
-        <translation>切换到上方的计算机</translation>
+        <translation type="vanished">切换到上方的计算机</translation>
     </message>
     <message>
         <source>Switch to the computer below</source>
-        <translation>切换到下方的计算机</translation>
+        <translation type="vanished">切换到下方的计算机</translation>
     </message>
     <message>
         <source>Toggle the cursor lock</source>
-        <translation>切换光标锁定</translation>
+        <translation type="vanished">切换光标锁定</translation>
     </message>
     <message>
         <source>Enable the cursor lock</source>
-        <translation>启用光标锁定</translation>
+        <translation type="vanished">启用光标锁定</translation>
     </message>
     <message>
         <source>Disable the cursor lock</source>
-        <translation>禁用光标锁定</translation>
+        <translation type="vanished">禁用光标锁定</translation>
     </message>
     <message>
         <source>Computers to receive this event</source>
@@ -152,14 +180,114 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Switch to %1</source>
-        <translation>切换到 %1</translation>
+        <translation type="vanished">切换到 %1</translation>
+    </message>
+    <message>
+        <source>Action</source>
+        <translation type="vanished">动作</translation>
+    </message>
+    <message>
+        <source>Trigger</source>
+        <translation>触发时机</translation>
+    </message>
+    <message>
+        <source>Action type</source>
+        <translation>动作类型</translation>
+    </message>
+    <message>
+        <source>Key combination</source>
+        <translation>按键组合</translation>
+    </message>
+    <message>
+        <source>Target computer</source>
+        <translation>目标电脑</translation>
+    </message>
+    <message>
+        <source>Direction</source>
+        <translation>方向</translation>
+    </message>
+    <message>
+        <source>Cursor lock</source>
+        <translation>光标锁定</translation>
+    </message>
+    <message>
+        <source>All computers</source>
+        <translation>所有电脑</translation>
+    </message>
+    <message>
+        <source>Specified computers</source>
+        <translation>指定电脑</translation>
+    </message>
+    <message>
+        <source>No computers available</source>
+        <translation>没有可用电脑</translation>
+    </message>
+    <message>
+        <source>On press</source>
+        <translation>按下时</translation>
+    </message>
+    <message>
+        <source>On release</source>
+        <translation>松开时</translation>
+    </message>
+    <message>
+        <source>Press and release keys</source>
+        <translation>按下并松开按键</translation>
+    </message>
+    <message>
+        <source>Next computer</source>
+        <translation>下一台电脑</translation>
+    </message>
+    <message>
+        <source>Change cursor lock</source>
+        <translation>修改光标锁定</translation>
+    </message>
+    <message>
+        <source>Left</source>
+        <translation>左侧</translation>
+    </message>
+    <message>
+        <source>Right</source>
+        <translation>右侧</translation>
+    </message>
+    <message>
+        <source>Up</source>
+        <translation>上方</translation>
+    </message>
+    <message>
+        <source>Down</source>
+        <translation>下方</translation>
+    </message>
+    <message>
+        <source>Toggle lock</source>
+        <translation>切换锁定状态</translation>
+    </message>
+    <message>
+        <source>Enable lock</source>
+        <translation>启用锁定</translation>
+    </message>
+    <message>
+        <source>Disable lock</source>
+        <translation>取消锁定</translation>
+    </message>
+    <message>
+        <source>Unsupported action (%1) — read-only</source>
+        <translation>不支持的动作（%1）— 只读</translation>
+    </message>
+    <message>
+        <source>Choose a computer</source>
+        <translation>选择计算机</translation>
+    </message>
+    <message>
+        <source>%1 (unavailable)</source>
+        <translation>%1（不可用）</translation>
     </message>
 </context>
 <context>
     <name>ClientConfigDialog</name>
     <message>
         <source>Client Configuration</source>
-        <translation type="vanished">客户端配置</translation>
+        <translation>客户端配置</translation>
     </message>
     <message>
         <source>Use server&apos;s keyboard language on this computer</source>
@@ -167,23 +295,23 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Scroll Modifiers</source>
-        <translation type="vanished">滚动设置</translation>
+        <translation>滚动设置</translation>
     </message>
     <message>
         <source>Invert</source>
-        <translation type="vanished">反转</translation>
+        <translation>反转</translation>
     </message>
     <message>
         <source>Horizontal Scroll</source>
-        <translation type="vanished">水平滚动</translation>
+        <translation>水平滚动</translation>
     </message>
     <message>
         <source>Vertical Scroll</source>
-        <translation type="vanished">垂直滚动</translation>
+        <translation>垂直滚动</translation>
     </message>
     <message>
         <source>Scale</source>
-        <translation type="vanished">缩放</translation>
+        <translation>缩放</translation>
     </message>
     <message>
         <source>Close and save changes</source>
@@ -203,7 +331,7 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Allow the client to slow the rate it attempts to reconnect to the server when connections attempts are failing. The delay between connection attempts will  start at 1 second intervals and can be a maxium of 5 minutes between connection attempts.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="vanished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;允许客户端在连接尝试失败时，降低其重连服务器的频率。连接尝试之间的间隔将从 1 秒开始，最长可达 5 分钟。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;允许客户端在连接尝试失败时，降低其重连服务器的频率。连接尝试之间的间隔将从 1 秒开始，最长可达 5 分钟。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>Use dynamic reconnection time based on connection attempts</source>
@@ -211,7 +339,19 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Connection Behaviour</source>
-        <translation type="vanished">连接行为</translation>
+        <translation>连接行为</translation>
+    </message>
+    <message>
+        <source>Increase delay after failed connection attempts</source>
+        <translation>连接失败后逐步延长重试间隔</translation>
+    </message>
+    <message>
+        <source>Use the server keyboard language</source>
+        <translation>使用服务端的键盘语言</translation>
+    </message>
+    <message>
+        <source>Retries start at 1 second and increase to a maximum of 5 minutes.</source>
+        <translation>重试从 1 秒开始，最长间隔为 5 分钟。</translation>
     </message>
 </context>
 <context>
@@ -242,7 +382,7 @@ Only connect if they match!</source>
         <source>
 Trust client and allow connection?
 </source>
-        <translation>
+        <translation type="vanished">
 信任此客户端并允许连接吗？
 </translation>
     </message>
@@ -258,7 +398,7 @@ Trust client and allow connection?
         <source>
 Do you want to connect to the server?
 </source>
-        <translation>
+        <translation type="vanished">
 您想连接到此服务器吗？
 </translation>
     </message>
@@ -286,12 +426,151 @@ Do you want to connect to the server?
         <source>Display the fingerprint as a hash</source>
         <translation>以哈希值形式显示指纹</translation>
     </message>
+    <message>
+        <source>Trust after verification</source>
+        <translation>核对后信任</translation>
+    </message>
+    <message>
+        <source>Reject</source>
+        <translation>拒绝</translation>
+    </message>
+    <message>
+        <source>Trust client and allow connection?</source>
+        <translation>信任客户端并允许连接？</translation>
+    </message>
+    <message>
+        <source>Do you want to connect to the server?</source>
+        <translation>是否连接到此服务端？</translation>
+    </message>
+    <message>
+        <source>Saved certificate: %1</source>
+        <translation>已保存的证书：%1</translation>
+    </message>
 </context>
 <context>
     <name>FingerprintPreview</name>
     <message>
         <source>Invalid hash format</source>
         <translation>无效的哈希格式</translation>
+    </message>
+    <message>
+        <source>Copy fingerprint</source>
+        <translation>复制指纹</translation>
+    </message>
+</context>
+<context>
+    <name>GuiPresentation</name>
+    <message>
+        <source>Record a shortcut</source>
+        <translation>请录制快捷键</translation>
+    </message>
+    <message>
+        <source>Left mouse button</source>
+        <translation>鼠标左键</translation>
+    </message>
+    <message>
+        <source>Right mouse button</source>
+        <translation>鼠标右键</translation>
+    </message>
+    <message>
+        <source>Middle mouse button</source>
+        <translation>鼠标中键</translation>
+    </message>
+    <message>
+        <source>Mouse X1</source>
+        <translation>鼠标侧键 X1</translation>
+    </message>
+    <message>
+        <source>Mouse X2</source>
+        <translation>鼠标侧键 X2</translation>
+    </message>
+    <message>
+        <source>Mouse button %1</source>
+        <translation>鼠标按键 %1</translation>
+    </message>
+    <message>
+        <source>Unsupported action (%1) — read-only</source>
+        <translation>不支持的动作（%1）— 只读</translation>
+    </message>
+    <message>
+        <source>Press keys: %1</source>
+        <translation>按下按键：%1</translation>
+    </message>
+    <message>
+        <source>Release keys: %1</source>
+        <translation>释放按键：%1</translation>
+    </message>
+    <message>
+        <source>Press and release keys: %1</source>
+        <translation>按下并释放按键：%1</translation>
+    </message>
+    <message>
+        <source>Switch to computer: %1</source>
+        <translation>切换到计算机：%1</translation>
+    </message>
+    <message>
+        <source>No computer selected</source>
+        <translation>未选择计算机</translation>
+    </message>
+    <message>
+        <source>Switch left</source>
+        <translation>向左切换</translation>
+    </message>
+    <message>
+        <source>Switch right</source>
+        <translation>向右切换</translation>
+    </message>
+    <message>
+        <source>Switch up</source>
+        <translation>向上切换</translation>
+    </message>
+    <message>
+        <source>Switch down</source>
+        <translation>向下切换</translation>
+    </message>
+    <message>
+        <source>Switch to next computer</source>
+        <translation>切换到下一台计算机</translation>
+    </message>
+    <message>
+        <source>Toggle cursor lock</source>
+        <translation>切换光标锁</translation>
+    </message>
+    <message>
+        <source>Lock cursor</source>
+        <translation>锁定光标</translation>
+    </message>
+    <message>
+        <source>Unlock cursor</source>
+        <translation>解锁光标</translation>
+    </message>
+    <message>
+        <source>Restart server</source>
+        <translation>重启服务端</translation>
+    </message>
+    <message>
+        <source>Specified computers: %1</source>
+        <translation>指定计算机：%1</translation>
+    </message>
+    <message>
+        <source>All computers</source>
+        <translation>全部计算机</translation>
+    </message>
+    <message>
+        <source>On release</source>
+        <translation>释放时</translation>
+    </message>
+    <message>
+        <source>On press</source>
+        <translation>按下时</translation>
+    </message>
+    <message>
+        <source>Switch direction: choose a direction</source>
+        <translation>切换方向：请选择方向</translation>
+    </message>
+    <message>
+        <source>Cursor lock: choose a mode</source>
+        <translation>光标锁：请选择模式</translation>
     </message>
 </context>
 <context>
@@ -303,6 +582,57 @@ Do you want to connect to the server?
     <message>
         <source>Enter the specification for the hotkey:</source>
         <translation>输入热键定义：</translation>
+    </message>
+    <message>
+        <source>Key combination</source>
+        <translation>按键组合</translation>
+    </message>
+    <message>
+        <source>Press a key combination. Escape restores the previous hotkey.</source>
+        <translation>按下组合键；Esc 恢复录制前的快捷键。</translation>
+    </message>
+    <message>
+        <source>Click the field to record a keyboard or mouse shortcut.</source>
+        <translation>点击按键框，录制键盘或鼠标快捷键。</translation>
+    </message>
+    <message>
+        <source>Associated actions</source>
+        <translation>关联动作</translation>
+    </message>
+    <message>
+        <source>No actions configured</source>
+        <translation>尚未配置动作</translation>
+    </message>
+    <message>
+        <source>Add action</source>
+        <translation>新增动作</translation>
+    </message>
+    <message>
+        <source>Configure action</source>
+        <translation>配置动作</translation>
+    </message>
+    <message>
+        <source>Remove action</source>
+        <translation>移除动作</translation>
+    </message>
+    <message>
+        <source>On release</source>
+        <translation type="vanished">释放时</translation>
+    </message>
+    <message>
+        <source>On press</source>
+        <translation type="vanished">按下时</translation>
+    </message>
+</context>
+<context>
+    <name>KeySequenceWidget</name>
+    <message>
+        <source>Recording… Press Esc to cancel</source>
+        <translation>正在录制…按 Esc 取消</translation>
+    </message>
+    <message>
+        <source>Record keys</source>
+        <translation>录制按键</translation>
     </message>
 </context>
 <context>
@@ -403,23 +733,23 @@ Do you want to connect to the server?
     <name>LogPanel</name>
     <message>
         <source>Log</source>
-        <translation type="unfinished">日志</translation>
+        <translation>日志</translation>
     </message>
     <message>
         <source>All</source>
-        <translation type="unfinished">全部</translation>
+        <translation>全部</translation>
     </message>
     <message>
         <source>Info</source>
-        <translation type="unfinished">信息</translation>
+        <translation>信息</translation>
     </message>
     <message>
         <source>Warn</source>
-        <translation type="unfinished">警告</translation>
+        <translation>警告</translation>
     </message>
     <message>
         <source>Error</source>
-        <translation type="unfinished">错误</translation>
+        <translation>错误</translation>
     </message>
     <message>
         <source>Search log</source>
@@ -427,27 +757,27 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Copy Log</source>
-        <translation type="unfinished">复制日志</translation>
+        <translation>复制日志</translation>
     </message>
     <message>
         <source>Clear Log</source>
-        <translation type="unfinished">清空日志</translation>
+        <translation>清空日志</translation>
     </message>
     <message>
         <source>Collapse Log</source>
-        <translation type="unfinished">收起日志</translation>
+        <translation>收起日志</translation>
     </message>
     <message>
         <source>Latest 6 · wrapped</source>
-        <translation type="unfinished">最新 6 条 · 自动换行</translation>
+        <translation>最新 6 条 · 自动换行</translation>
     </message>
     <message>
         <source>Running</source>
-        <translation type="unfinished">运行中</translation>
+        <translation type="obsolete">运行中</translation>
     </message>
     <message>
         <source>Expand Log</source>
-        <translation type="unfinished">展开日志</translation>
+        <translation>展开日志</translation>
     </message>
 </context>
 <context>
@@ -655,17 +985,17 @@ A bound IP is now invalid, you may need to restart the server.</source>
     <message>
         <source>Ctrl+S</source>
         <extracomment>start / restart core shortcut</extracomment>
-        <translation>Ctrl+S</translation>
+        <translation type="vanished">Ctrl+S</translation>
     </message>
     <message>
         <source>Ctrl+T</source>
         <extracomment>stop core shortcut</extracomment>
-        <translation>Ctrl+T</translation>
+        <translation type="vanished">Ctrl+T</translation>
     </message>
     <message>
         <source>Ctrl+Q</source>
         <extracomment>Quit shortcut</extracomment>
-        <translation>Ctrl+Q</translation>
+        <translation type="vanished">Ctrl+Q</translation>
     </message>
     <message>
         <source>
@@ -837,7 +1167,7 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>Check for Updates</source>
-        <translation type="vanished">检查更新</translation>
+        <translation>检查更新</translation>
     </message>
     <message>
         <source>About</source>
@@ -850,6 +1180,18 @@ Additionally, check you are able to %1 the server config file: %2</source>
     <message>
         <source>&amp;Restart</source>
         <translation type="vanished">重启(&amp;R)</translation>
+    </message>
+    <message>
+        <source>Checking for updates…</source>
+        <translation>正在检查更新…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>关闭</translation>
     </message>
 </context>
 <context>
@@ -944,7 +1286,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>OK</source>
-        <translation type="unfinished">确定</translation>
+        <translation>确定</translation>
     </message>
     <message>
         <source>&lt;p&gt;%1 is now connected!&lt;/p&gt;</source>
@@ -1187,27 +1529,27 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Back</source>
-        <translation type="unfinished">返回</translation>
+        <translation>返回</translation>
     </message>
     <message>
         <source>Devices &amp; Connection</source>
-        <translation type="unfinished">设备与连接</translation>
+        <translation>设备与连接</translation>
     </message>
     <message>
         <source>Preferences</source>
-        <translation type="unfinished">首选项</translation>
+        <translation>首选项</translation>
     </message>
     <message>
         <source>Updates</source>
-        <translation type="unfinished">更新</translation>
+        <translation>更新</translation>
     </message>
     <message>
         <source>About</source>
-        <translation type="unfinished">关于</translation>
+        <translation>关于</translation>
     </message>
     <message>
         <source>Use Enter to save the name change.</source>
-        <translation type="unfinished">按 Enter 保存名称修改。</translation>
+        <translation>按 Enter 保存名称修改。</translation>
     </message>
     <message>
         <source>Edit</source>
@@ -1215,110 +1557,130 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Edit Computer Name</source>
-        <translation type="unfinished">编辑计算机名称</translation>
+        <translation>编辑计算机名称</translation>
     </message>
     <message>
         <source>Connect to:</source>
-        <translation type="unfinished">连接到：</translation>
+        <translation>连接到：</translation>
     </message>
     <message>
         <source>Hostname or IP address of the server computer. May contain a comma separated list.</source>
-        <translation type="unfinished">服务端计算机的主机名或 IP 地址，可填写逗号分隔的列表。</translation>
+        <translation>服务端计算机的主机名或 IP 地址，可填写逗号分隔的列表。</translation>
     </message>
     <message>
         <source>Port</source>
-        <translation type="unfinished">端口</translation>
+        <translation>端口</translation>
     </message>
     <message>
         <source>You must select a mode</source>
-        <translation type="unfinished">您必须选择一种模式</translation>
+        <translation>您必须选择一种模式</translation>
     </message>
     <message>
         <source>&amp;Configure Server</source>
-        <translation type="unfinished">配置服务端(&amp;C)</translation>
+        <translation>配置服务端(&amp;C)</translation>
     </message>
     <message>
         <source>Export server configuration</source>
-        <translation type="unfinished">导出服务器配置</translation>
+        <translation>导出服务器配置</translation>
     </message>
     <message>
         <source>&amp;Configure Client</source>
-        <translation type="unfinished">配置客户端(&amp;C)</translation>
+        <translation>配置客户端(&amp;C)</translation>
     </message>
     <message>
         <source>&amp;Start</source>
-        <translation type="unfinished">启动(&amp;S)</translation>
+        <translation>启动(&amp;S)</translation>
     </message>
     <message>
         <source>&amp;Restart</source>
-        <translation type="unfinished">重启(&amp;R)</translation>
+        <translation>重启(&amp;R)</translation>
     </message>
     <message>
         <source>Restart</source>
-        <translation type="unfinished">重启</translation>
+        <translation>重启</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>保存</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Settings scope</source>
+        <translation>设置作用域</translation>
+    </message>
+    <message>
+        <source>Local</source>
+        <translation>本机</translation>
+    </message>
+    <message>
+        <source>Client</source>
+        <translation>客户端</translation>
     </message>
 </context>
 <context>
     <name>ScreenSettingsDialog</name>
     <message>
         <source>Computer settings</source>
-        <translation type="vanished">计算机设置</translation>
+        <translation>计算机设置</translation>
     </message>
     <message>
         <source>Computer Info</source>
-        <translation type="vanished">计算机信息</translation>
+        <translation>计算机信息</translation>
     </message>
     <message>
         <source>Name</source>
-        <translation type="vanished">名称</translation>
+        <translation>名称</translation>
     </message>
     <message>
         <source>Modifier Keys</source>
-        <translation type="vanished">修饰键</translation>
+        <translation>修饰键</translation>
     </message>
     <message>
         <source>M&amp;eta</source>
-        <translation type="vanished">M&amp;eta</translation>
+        <translation>M&amp;eta</translation>
     </message>
     <message>
         <source>&amp;Ctrl</source>
-        <translation type="vanished">&amp;Ctrl</translation>
+        <translation>&amp;Ctrl</translation>
     </message>
     <message>
         <source>S&amp;uper</source>
-        <translation type="vanished">S&amp;uper</translation>
+        <translation>S&amp;uper</translation>
     </message>
     <message>
         <source>Al&amp;t</source>
-        <translation type="vanished">Al&amp;t</translation>
+        <translation>Al&amp;t</translation>
     </message>
     <message>
         <source>Shift</source>
-        <translation type="vanished">Shift</translation>
+        <translation>Shift</translation>
     </message>
     <message>
         <source>Ctrl</source>
-        <translation type="vanished">Ctrl</translation>
+        <translation>Ctrl</translation>
     </message>
     <message>
         <source>Alt</source>
-        <translation type="vanished">Alt</translation>
+        <translation>Alt</translation>
     </message>
     <message>
         <source>Meta</source>
-        <translation type="vanished">Meta</translation>
+        <translation>Meta</translation>
     </message>
     <message>
         <source>Super</source>
-        <translation type="vanished">Super</translation>
+        <translation>Super</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="vanished">无</translation>
+        <translation>无</translation>
     </message>
     <message>
         <source>&amp;Shift</source>
-        <translation type="vanished">&amp;Shift</translation>
+        <translation>&amp;Shift</translation>
     </message>
     <message>
         <source>Dead Corners</source>
@@ -1326,55 +1688,55 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Top Left</source>
-        <translation type="vanished">左上</translation>
+        <translation>左上</translation>
     </message>
     <message>
         <source>Top Right</source>
-        <translation type="vanished">右上</translation>
+        <translation>右上</translation>
     </message>
     <message>
         <source>Corner si&amp;ze</source>
-        <translation type="vanished">角落大小(&amp;Z)</translation>
+        <translation>角落大小(&amp;Z)</translation>
     </message>
     <message>
         <source>Bottom Left</source>
-        <translation type="vanished">左下</translation>
+        <translation>左下</translation>
     </message>
     <message>
         <source>Bottom Right</source>
-        <translation type="vanished">右下</translation>
+        <translation>右下</translation>
     </message>
     <message>
         <source>Fixes</source>
-        <translation type="vanished">修正</translation>
+        <translation>修正</translation>
     </message>
     <message>
         <source>SCROLL LOCK key</source>
-        <translation type="vanished">SCROLL LOCK 键</translation>
+        <translation>SCROLL LOCK 键</translation>
     </message>
     <message>
         <source>CAPS LOCK key</source>
-        <translation type="vanished">CAPS LOCK 键</translation>
+        <translation>CAPS LOCK 键</translation>
     </message>
     <message>
         <source>NUM LOCK key</source>
-        <translation type="vanished">NUM LOCK 键</translation>
+        <translation>NUM LOCK 键</translation>
     </message>
     <message>
         <source>XTest for Xinerama</source>
-        <translation type="vanished">用于 Xinerama 的 XTest</translation>
+        <translation>用于 Xinerama 的 XTest</translation>
     </message>
     <message>
         <source>Aliases</source>
-        <translation type="vanished">别名</translation>
+        <translation>别名</translation>
     </message>
     <message>
         <source>&amp;Add</source>
-        <translation type="vanished">添加(&amp;A)</translation>
+        <translation>添加(&amp;A)</translation>
     </message>
     <message>
         <source>&amp;Remove</source>
-        <translation type="vanished">移除(&amp;R)</translation>
+        <translation>移除(&amp;R)</translation>
     </message>
     <message>
         <source>Top-left</source>
@@ -1391,6 +1753,10 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>Bottom-right</source>
         <translation>右下</translation>
+    </message>
+    <message>
+        <source>Unsupported modifier (%1) — read-only</source>
+        <translation>不支持的修饰键（%1）— 只读</translation>
     </message>
     <message>
         <source>Screen name is empty</source>
@@ -1410,11 +1776,23 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Alt Gr</source>
-        <translation type="vanished">Alt Gr</translation>
+        <translation>Alt Gr</translation>
     </message>
     <message>
         <source>Alt &amp;Gr</source>
-        <translation type="vanished">Alt &amp;Gr</translation>
+        <translation>Alt &amp;Gr</translation>
+    </message>
+    <message>
+        <source>Corners and compatibility</source>
+        <translation>死角与兼容性</translation>
+    </message>
+    <message>
+        <source>No aliases configured</source>
+        <translation>尚未配置别名</translation>
+    </message>
+    <message>
+        <source>The computer name must be unique in this layout.</source>
+        <translation>计算机名称在此布局中必须唯一。</translation>
     </message>
 </context>
 <context>
@@ -1459,7 +1837,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Configure the layout of your computer displays by dragging to where you want.</source>
-        <translation>通过将计算机显示器拖动到所需位置来配置布局。</translation>
+        <translation type="vanished">通过将计算机显示器拖动到所需位置来配置布局。</translation>
     </message>
     <message>
         <source>Drag to the grid to add a new computer.</source>
@@ -1507,7 +1885,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Dead corners (for this computer)</source>
-        <translation>屏幕死角 (针对此计算机)(&amp;D)</translation>
+        <translation type="vanished">屏幕死角 (针对此计算机)(&amp;D)</translation>
     </message>
     <message>
         <source>&amp;Bottom-left</source>
@@ -1535,7 +1913,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Misc</source>
-        <translation>杂项(&amp;M)</translation>
+        <translation type="vanished">杂项(&amp;M)</translation>
     </message>
     <message>
         <source>Disable lock to computer (scroll lock key)</source>
@@ -1563,7 +1941,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Network</source>
-        <translation>网络与安全(&amp;N)</translation>
+        <translation type="vanished">网络与安全(&amp;N)</translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables the network heartbeat to ping clients every &lt;span style=&quot; font-style:italic;&quot;&gt;n&lt;/span&gt; seconds. This may help to diagnose network problems by retrying the connection if the client becomes unresponsive.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
@@ -1587,7 +1965,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Switching</source>
-        <translation>切换(&amp;S)</translation>
+        <translation type="vanished">切换(&amp;S)</translation>
     </message>
     <message>
         <source>Switch &amp;after waiting</source>
@@ -1654,6 +2032,30 @@ Enabling this setting will disable the server config GUI.</source>
         <source>Sharing &amp; Switching</source>
         <translation>共享与切换</translation>
     </message>
+    <message>
+        <source>Computer layout</source>
+        <translation type="vanished">电脑布局</translation>
+    </message>
+    <message>
+        <source>No hotkeys configured</source>
+        <translation>尚未配置快捷键</translation>
+    </message>
+    <message>
+        <source>Select a hotkey to view its actions</source>
+        <translation>选择快捷键以查看对应动作</translation>
+    </message>
+    <message>
+        <source>Delete selected</source>
+        <translation>删除选中</translation>
+    </message>
+    <message>
+        <source>Arrange computer displays by dragging</source>
+        <translation>拖动排列计算机屏幕</translation>
+    </message>
+    <message>
+        <source>Double-click an existing computer to edit its settings. Add computer provides an alternative to dragging, including keyboard and screen-reader access.</source>
+        <translation>双击已有计算机可进入详细设置；“新增计算机”提供拖拽的替代入口，键盘和读屏用户也可使用。</translation>
+    </message>
 </context>
 <context>
     <name>SettingsDialog</name>
@@ -1667,11 +2069,11 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>Prevent this computer from going to sleep</source>
-        <translation>防止此计算机进入睡眠状态</translation>
+        <translation type="vanished">防止此计算机进入睡眠状态</translation>
     </message>
     <message>
         <source>Tray icon style</source>
-        <translation>托盘图标样式</translation>
+        <translation type="vanished">托盘图标样式</translation>
     </message>
     <message>
         <source>Colorful</source>
@@ -1735,7 +2137,11 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>Language</source>
-        <translation>语言</translation>
+        <translation>界面语言</translation>
+    </message>
+    <message>
+        <source>Follow system</source>
+        <translation>跟随系统</translation>
     </message>
     <message>
         <source>TLS Certificate Regenerated</source>
@@ -1831,7 +2237,7 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>When the main window is closed</source>
-        <translation>关闭主窗口时</translation>
+        <translation type="vanished">关闭主窗口时</translation>
     </message>
     <message>
         <source>Exit</source>
@@ -1843,7 +2249,7 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>When the application starts</source>
-        <translation>应用程序启动时</translation>
+        <translation type="vanished">应用程序启动时</translation>
     </message>
     <message>
         <source>Show the main window</source>
@@ -1851,11 +2257,11 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>Run command on enter</source>
-        <translation>按下回车键执行命令</translation>
+        <translation>进入屏幕时执行命令</translation>
     </message>
     <message>
         <source>Run command on exit</source>
-        <translation>退出时运行命令</translation>
+        <translation>离开屏幕时执行命令</translation>
     </message>
     <message>
         <source>Using a log level higher than Info may affect performance.</source>
@@ -1864,6 +2270,66 @@ Enabling this setting will disable the server config GUI.</source>
     <message>
         <source>Key length: %1 bits</source>
         <translation>密钥长度：%1 位</translation>
+    </message>
+    <message>
+        <source>General settings</source>
+        <translation type="vanished">通用设置</translation>
+    </message>
+    <message>
+        <source>Window behavior</source>
+        <translation type="vanished">窗口行为</translation>
+    </message>
+    <message>
+        <source>Logging</source>
+        <translation type="vanished">日志设置</translation>
+    </message>
+    <message>
+        <source>Network</source>
+        <translation type="vanished">网络连接</translation>
+    </message>
+    <message>
+        <source>Computer commands</source>
+        <translation type="vanished">电脑切换命令</translation>
+    </message>
+    <message>
+        <source>Immediately regenerate the saved certificate with this key length. Other changes remain unsaved.</source>
+        <translation>立即按此密钥长度重新生成已保存证书；其他修改仍未保存。</translation>
+    </message>
+    <message>
+        <source>View fingerprint</source>
+        <translation type="vanished">查看指纹</translation>
+    </message>
+    <message>
+        <source>Certificate unavailable</source>
+        <translation>证书不可用</translation>
+    </message>
+    <message>
+        <source>The saved certificate does not contain a valid SHA-256 fingerprint.</source>
+        <translation>已保存的证书不包含有效的 SHA-256 指纹。</translation>
+    </message>
+    <message>
+        <source>View saved certificate fingerprint</source>
+        <translation>查看已保存证书指纹</translation>
+    </message>
+    <message>
+        <source>Tray icon</source>
+        <translation>托盘图标</translation>
+    </message>
+    <message>
+        <source>Prevent sleep</source>
+        <translation>阻止此计算机进入睡眠</translation>
+    </message>
+    <message>
+        <source>On launch</source>
+        <translation>应用启动时</translation>
+    </message>
+    <message>
+        <source>On close</source>
+        <translation>关闭主窗口时</translation>
+    </message>
+    <message>
+        <source>The background service is available on Windows only.</source>
+        <translation>后台服务仅适用于 Windows。</translation>
     </message>
 </context>
 <context>
@@ -1947,6 +2413,29 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
 </context>
 <context>
+    <name>UpdateDialog</name>
+    <message>
+        <source>Download and Install</source>
+        <translation>下载并安装</translation>
+    </message>
+    <message>
+        <source>%1 MB — Waiting for network</source>
+        <translation>%1 MB — 正在等待网络</translation>
+    </message>
+    <message>
+        <source>Cancel download</source>
+        <translation>取消下载</translation>
+    </message>
+    <message>
+        <source>Open Release Page</source>
+        <translation type="obsolete">打开发布页</translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation type="obsolete">稍后</translation>
+    </message>
+</context>
+<context>
     <name>i18n</name>
     <message>
         <source>LocalizedName</source>
@@ -2000,6 +2489,18 @@ Enabling this setting will disable the server config GUI.</source>
 <context>
     <name>synergy::gui::update::UpdateDialog</name>
     <message>
+        <source>%1 / %2 MB · %4%
+%3 MB/s
+%5 s remaining</source>
+        <translation type="vanished">%1 / %2 MB · %4%
+%3 MB/s
+剩余 %5 秒</translation>
+    </message>
+    <message>
+        <source>Downloading update %1</source>
+        <translation>正在下载更新 %1</translation>
+    </message>
+    <message>
         <source>Update Available</source>
         <translation>有可用更新</translation>
     </message>
@@ -2009,7 +2510,7 @@ Enabling this setting will disable the server config GUI.</source>
 Current version: %1
 Latest version: %2
 Package: %3</source>
-        <translation>有新版本可用。
+        <translation type="vanished">有新版本可用。
 
 当前版本：%1
 最新版本：%2
@@ -2033,7 +2534,7 @@ Package: %3</source>
     </message>
     <message>
         <source>%1 / %2 MB — %3 MB/s — %4% — %5 s remaining</source>
-        <translation>%1 / %2 MB — %3 MB/s — %4% — 剩余 %5 秒</translation>
+        <translation type="vanished">%1 / %2 MB — %3 MB/s — %4% — 剩余 %5 秒</translation>
     </message>
     <message>
         <source>Download verified. Ready to install.</source>
@@ -2057,7 +2558,7 @@ Package: %3</source>
     </message>
     <message>
         <source>Downloading…</source>
-        <translation>正在下载…</translation>
+        <translation type="vanished">正在下载…</translation>
     </message>
     <message>
         <source>%1 / %2 MB — %3 MB/s</source>
@@ -2065,7 +2566,63 @@ Package: %3</source>
     </message>
     <message>
         <source>%1 MB — %2 MB/s</source>
-        <translation>%1 MB — %2 MB/s</translation>
+        <translation type="vanished">%1 MB — %2 MB/s</translation>
+    </message>
+    <message>
+        <source>Cancel download</source>
+        <translation>取消下载</translation>
+    </message>
+    <message>
+        <source>New version</source>
+        <translation>发现新版本</translation>
+    </message>
+    <message>
+        <source>Download progress</source>
+        <translation>下载进度</translation>
+    </message>
+    <message>
+        <source>Current version: %1
+Latest version: %2
+Package: %3</source>
+        <translation>当前版本：%1
+最新版本：%2
+安装包：%3</translation>
+    </message>
+    <message>
+        <source>Hide</source>
+        <translation>隐藏</translation>
+    </message>
+    <message>
+        <source>Show</source>
+        <translation>显示</translation>
+    </message>
+    <message>
+        <source>Verifying download…</source>
+        <translation>正在校验下载…</translation>
+    </message>
+    <message>
+        <source>%1 / %2 MB — Waiting for network</source>
+        <translation type="vanished">%1 / %2 MB — 正在等待网络</translation>
+    </message>
+    <message>
+        <source>%1 MB — Waiting for network</source>
+        <translation type="vanished">%1 MB — 正在等待网络</translation>
+    </message>
+    <message>
+        <source>Transfer speed</source>
+        <translation>实时网速</translation>
+    </message>
+    <message>
+        <source>Estimated remaining</source>
+        <translation>预计剩余</translation>
+    </message>
+    <message>
+        <source>Waiting for network</source>
+        <translation>正在等待网络</translation>
+    </message>
+    <message>
+        <source>%1 s remaining</source>
+        <translation>剩余 %1 秒</translation>
     </message>
 </context>
 <context>

@@ -12,6 +12,7 @@
 #include <QDialogButtonBox>
 #include <QGroupBox>
 #include <QLabel>
+#include <QListWidget>
 #include <QScrollArea>
 
 #include "widgets/KeySequenceWidget.h"
@@ -30,6 +31,11 @@ public:
   QLabel *label = nullptr;
   KeySequenceWidget *m_pKeySequenceWidgetHotkey = nullptr;
   QDialogButtonBox *buttonBox = nullptr;
+  QGroupBox *actionsCard = nullptr;
+  QListWidget *listAssociatedActions = nullptr;
+  QPushButton *btnAddAction = nullptr;
+  QPushButton *btnConfigureAction = nullptr;
+  QPushButton *btnRemoveAction = nullptr;
 };
 
 } // namespace Ui

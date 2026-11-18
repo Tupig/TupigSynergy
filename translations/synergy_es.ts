@@ -48,6 +48,30 @@ p, li { white-space: pre-wrap; }
         <translation type="unfinished">Desarrolladores importantes</translation>
     </message>
     <message>
+        <source>Project home</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Contributors</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Share one keyboard and mouse across computers.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GNU GPL Version 2 with the OpenSSL exception. Full copyright and third-party notices are available below.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copyright and licenses</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Third-party notices</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>&amp;Close</source>
         <translation type="unfinished">&amp;Cerrar</translation>
     </message>
@@ -66,6 +90,10 @@ Session: %1 (%2)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Copy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Copy version information</source>
         <translation type="unfinished"></translation>
     </message>
@@ -78,11 +106,55 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>When the hotkey is pressed</source>
-        <translation type="unfinished">Cuando se presiona la tecla de acceso rápido</translation>
+        <translation type="obsolete">Cuando se presiona la tecla de acceso rápido</translation>
     </message>
     <message>
         <source>When the hotkey is released</source>
-        <translation type="unfinished">Cuando se suelta la tecla de acceso rápido</translation>
+        <translation type="obsolete">Cuando se suelta la tecla de acceso rápido</translation>
+    </message>
+    <message>
+        <source>No computers available</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Trigger</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Action type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Key combination</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Target computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Direction</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cursor lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>All computers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Specified computers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On press</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On release</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Press key(s)</source>
@@ -93,8 +165,48 @@ Session: %1 (%2)</source>
         <translation type="unfinished">Tecla(s) de liberación</translation>
     </message>
     <message>
+        <source>Press and release keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Next computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change cursor lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Toggle lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enable lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disable lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Press and release key(s)</source>
-        <translation type="unfinished">Presione y suelte la(s) tecla(s)</translation>
+        <translation type="obsolete">Presione y suelte la(s) tecla(s)</translation>
     </message>
     <message>
         <source>Switch to a computer</source>
@@ -106,11 +218,11 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Switch to next computer</source>
-        <translation type="unfinished">Cambiar a la siguiente computadora</translation>
+        <translation type="obsolete">Cambiar a la siguiente computadora</translation>
     </message>
     <message>
         <source>Modify the cursor lock</source>
-        <translation type="unfinished">Modificar el bloqueo del cursor</translation>
+        <translation type="obsolete">Modificar el bloqueo del cursor</translation>
     </message>
     <message>
         <source>Restart the server</source>
@@ -118,31 +230,31 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Switch to the computer on the left</source>
-        <translation type="unfinished">Cambiar a la computadora de la izquierda</translation>
+        <translation type="obsolete">Cambiar a la computadora de la izquierda</translation>
     </message>
     <message>
         <source>Switch to the computer on the right</source>
-        <translation type="unfinished">Cambiar a la computadora de la derecha</translation>
+        <translation type="obsolete">Cambiar a la computadora de la derecha</translation>
     </message>
     <message>
         <source>Switch to the computer above</source>
-        <translation type="unfinished">Cambiar a la computadora de arriba</translation>
+        <translation type="obsolete">Cambiar a la computadora de arriba</translation>
     </message>
     <message>
         <source>Switch to the computer below</source>
-        <translation type="unfinished">Cambie a la computadora de abajo</translation>
+        <translation type="obsolete">Cambie a la computadora de abajo</translation>
     </message>
     <message>
         <source>Toggle the cursor lock</source>
-        <translation type="unfinished">Activar o desactivar el bloqueo del cursor</translation>
+        <translation type="obsolete">Activar o desactivar el bloqueo del cursor</translation>
     </message>
     <message>
         <source>Enable the cursor lock</source>
-        <translation type="unfinished">Habilitar el bloqueo del cursor</translation>
+        <translation type="obsolete">Habilitar el bloqueo del cursor</translation>
     </message>
     <message>
         <source>Disable the cursor lock</source>
-        <translation type="unfinished">Desactivar el bloqueo del cursor</translation>
+        <translation type="obsolete">Desactivar el bloqueo del cursor</translation>
     </message>
     <message>
         <source>Computers to receive this event</source>
@@ -150,14 +262,26 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Switch to %1</source>
-        <translation type="unfinished">Cambiar a %1</translation>
+        <translation type="obsolete">Cambiar a %1</translation>
+    </message>
+    <message>
+        <source>Unsupported action (%1) — read-only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose a computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (unavailable)</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>ClientConfigDialog</name>
     <message>
         <source>Client Configuration</source>
-        <translation type="obsolete">Configuración del cliente</translation>
+        <translation type="unfinished">Configuración del cliente</translation>
     </message>
     <message>
         <source>Use server&apos;s keyboard language on this computer</source>
@@ -165,23 +289,39 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Scroll Modifiers</source>
-        <translation type="obsolete">Modificadores de desplazamiento</translation>
+        <translation type="unfinished">Modificadores de desplazamiento</translation>
     </message>
     <message>
         <source>Invert</source>
-        <translation type="obsolete">Invertir</translation>
+        <translation type="unfinished">Invertir</translation>
     </message>
     <message>
         <source>Horizontal Scroll</source>
-        <translation type="obsolete">Desplazamiento horizontal</translation>
+        <translation type="unfinished">Desplazamiento horizontal</translation>
+    </message>
+    <message>
+        <source>Connection Behaviour</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Increase delay after failed connection attempts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use the server keyboard language</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Retries start at 1 second and increase to a maximum of 5 minutes.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Vertical Scroll</source>
-        <translation type="obsolete">Desplazamiento vertical</translation>
+        <translation type="unfinished">Desplazamiento vertical</translation>
     </message>
     <message>
         <source>Scale</source>
-        <translation type="obsolete">Escala</translation>
+        <translation type="unfinished">Escala</translation>
     </message>
     <message>
         <source>Close and save changes</source>
@@ -201,7 +341,7 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Allow the client to slow the rate it attempts to reconnect to the server when connections attempts are failing. The delay between connection attempts will  start at 1 second intervals and can be a maxium of 5 minutes between connection attempts.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="obsolete">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Permite que el cliente reduzca la frecuencia con la que intenta reconectarse al servidor cuando los intentos de conexión fallan. El intervalo entre intentos de conexión comenzará en 1 segundo y podrá alcanzar un máximo de 5 minutos.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Permite que el cliente reduzca la frecuencia con la que intenta reconectarse al servidor cuando los intentos de conexión fallan. El intervalo entre intentos de conexión comenzará en 1 segundo y podrá alcanzar un máximo de 5 minutos.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>Use dynamic reconnection time based on connection attempts</source>
@@ -210,6 +350,10 @@ Session: %1 (%2)</source>
 </context>
 <context>
     <name>FingerprintDialog</name>
+    <message>
+        <source>Saved certificate: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
     <message>
         <source>Local Fingerprints</source>
         <translation type="unfinished">Huellas dactilares locales</translation>
@@ -233,6 +377,10 @@ Only connect if they match!</source>
         <translation type="unfinished">cliente</translation>
     </message>
     <message>
+        <source>Trust client and allow connection?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Connecting to a new server</source>
         <translation type="unfinished">Conectarse a un nuevo servidor</translation>
     </message>
@@ -241,10 +389,22 @@ Only connect if they match!</source>
         <translation type="unfinished">servidor</translation>
     </message>
     <message>
+        <source>Do you want to connect to the server?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Trust after verification</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reject</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>
 Trust client and allow connection?
 </source>
-        <translation type="unfinished">
+        <translation type="obsolete">
 ¿Confiar en el cliente y permitir la conexión?
 </translation>
     </message>
@@ -252,7 +412,7 @@ Trust client and allow connection?
         <source>
 Do you want to connect to the server?
 </source>
-        <translation type="unfinished">
+        <translation type="obsolete">
 ¿Quieres conectarte al servidor?
 </translation>
     </message>
@@ -287,16 +447,178 @@ Do you want to connect to the server?
         <source>Invalid hash format</source>
         <translation type="unfinished">Formato hash no válido</translation>
     </message>
+    <message>
+        <source>Copy fingerprint</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>GuiPresentation</name>
+    <message>
+        <source>Record a shortcut</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Left mouse button</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Right mouse button</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Middle mouse button</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mouse X1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mouse X2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mouse button %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unsupported action (%1) — read-only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Press keys: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Release keys: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Press and release keys: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch to computer: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No computer selected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch direction: choose a direction</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch to next computer</source>
+        <translation type="unfinished">Cambiar a la siguiente computadora</translation>
+    </message>
+    <message>
+        <source>Toggle cursor lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Lock cursor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock cursor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cursor lock: choose a mode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restart server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Specified computers: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>All computers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On release</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On press</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>HotkeyDialog</name>
+    <message>
+        <source>No actions configured</source>
+        <translation type="unfinished"></translation>
+    </message>
     <message>
         <source>Hotkey</source>
         <translation type="unfinished">Tecla de acceso rápido</translation>
     </message>
     <message>
+        <source>Key combination</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Enter the specification for the hotkey:</source>
         <translation type="unfinished">Introduzca la especificación de la tecla de acceso rápido:</translation>
+    </message>
+    <message>
+        <source>Associated actions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add action</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Configure action</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove action</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Press a key combination. Escape restores the previous hotkey.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Click the field to record a keyboard or mouse shortcut.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>KeySequenceWidget</name>
+    <message>
+        <source>Record keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Recording… Press Esc to cancel</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -437,7 +759,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Running</source>
-        <translation type="unfinished">En ejecución</translation>
+        <translation type="obsolete">En ejecución</translation>
     </message>
     <message>
         <source>Expand Log</source>
@@ -527,12 +849,12 @@ Do you want to connect to the server?
     <message>
         <source>Ctrl+S</source>
         <extracomment>start / restart core shortcut</extracomment>
-        <translation type="unfinished">Ctrl+S</translation>
+        <translation type="obsolete">Ctrl+S</translation>
     </message>
     <message>
         <source>Ctrl+T</source>
         <extracomment>stop core shortcut</extracomment>
-        <translation type="unfinished">Ctrl+T</translation>
+        <translation type="obsolete">Ctrl+T</translation>
     </message>
     <message>
         <source>Local IP</source>
@@ -672,7 +994,7 @@ La dirección IP asignada ahora no es válida; es posible que deba reiniciar el 
     <message>
         <source>Ctrl+Q</source>
         <extracomment>Quit shortcut</extracomment>
-        <translation type="unfinished">Ctrl+Q</translation>
+        <translation type="obsolete">Ctrl+Q</translation>
     </message>
     <message>
         <source>Invalid Screen Name</source>
@@ -798,6 +1120,22 @@ Además, verifique que puede %1 el archivo de configuración del servidor: %2</t
     </message>
     <message>
         <source>OK</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Checking for updates…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1052,6 +1390,10 @@ Now you can connect your client computers to this server. You should see a promp
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Settings scope</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Choose where %1 stores its settings. Changes take effect when %1 restarts.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1148,6 +1490,14 @@ Now you can connect your client computers to this server. You should see a promp
         <translation type="unfinished">Editar el nombre de la computadora</translation>
     </message>
     <message>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Connect to:</source>
         <translation type="unfinished">Conectarse a:</translation>
     </message>
@@ -1187,68 +1537,96 @@ Now you can connect your client computers to this server. You should see a promp
         <source>Restart</source>
         <translation type="unfinished">Reanudar</translation>
     </message>
+    <message>
+        <source>Local</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Client</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ScreenSettingsDialog</name>
     <message>
         <source>Computer settings</source>
-        <translation type="obsolete">Información de la computadora</translation>
+        <translation type="unfinished">Información de la computadora</translation>
     </message>
     <message>
         <source>Computer Info</source>
-        <translation type="obsolete">Información de la computadora</translation>
+        <translation type="unfinished">Información de la computadora</translation>
     </message>
     <message>
         <source>Name</source>
-        <translation type="obsolete">Nombre</translation>
+        <translation type="unfinished">Nombre</translation>
     </message>
     <message>
         <source>Modifier Keys</source>
-        <translation type="obsolete">Teclas modificadoras</translation>
+        <translation type="unfinished">Teclas modificadoras</translation>
     </message>
     <message>
         <source>M&amp;eta</source>
-        <translation type="obsolete">M&amp;eta</translation>
+        <translation type="unfinished">M&amp;eta</translation>
     </message>
     <message>
         <source>&amp;Ctrl</source>
-        <translation type="obsolete">&amp;Ctrl</translation>
+        <translation type="unfinished">&amp;Ctrl</translation>
     </message>
     <message>
         <source>S&amp;uper</source>
-        <translation type="obsolete">S&amp;úper</translation>
+        <translation type="unfinished">S&amp;úper</translation>
     </message>
     <message>
         <source>Al&amp;t</source>
-        <translation type="obsolete">Al&amp;t</translation>
+        <translation type="unfinished">Al&amp;t</translation>
+    </message>
+    <message>
+        <source>The computer name must be unique in this layout.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Shift</source>
-        <translation type="obsolete">Shift</translation>
+        <translation type="unfinished">Shift</translation>
     </message>
     <message>
         <source>Ctrl</source>
-        <translation type="obsolete">Ctrl</translation>
+        <translation type="unfinished">Ctrl</translation>
     </message>
     <message>
         <source>Alt</source>
-        <translation type="obsolete">Alt</translation>
+        <translation type="unfinished">Alt</translation>
     </message>
     <message>
         <source>Meta</source>
-        <translation type="obsolete">Meta</translation>
+        <translation type="unfinished">Meta</translation>
     </message>
     <message>
         <source>Super</source>
-        <translation type="obsolete">Súper</translation>
+        <translation type="unfinished">Súper</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="obsolete">Ninguno</translation>
+        <translation type="unfinished">Ninguno</translation>
     </message>
     <message>
         <source>&amp;Shift</source>
-        <translation type="obsolete">&amp;Shift</translation>
+        <translation type="unfinished">&amp;Shift</translation>
+    </message>
+    <message>
+        <source>No aliases configured</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Corners and compatibility</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Alt &amp;Gr</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Alt Gr</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Dead Corners</source>
@@ -1256,55 +1634,55 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Top Left</source>
-        <translation type="obsolete">Arriba a la izquierda</translation>
+        <translation type="unfinished">Arriba a la izquierda</translation>
     </message>
     <message>
         <source>Top Right</source>
-        <translation type="obsolete">Arriba a la derecha</translation>
+        <translation type="unfinished">Arriba a la derecha</translation>
     </message>
     <message>
         <source>Corner si&amp;ze</source>
-        <translation type="obsolete">Tamaño de la e&amp;squina</translation>
+        <translation type="unfinished">Tamaño de la e&amp;squina</translation>
     </message>
     <message>
         <source>Bottom Left</source>
-        <translation type="obsolete">Abajo a la izquierda</translation>
+        <translation type="unfinished">Abajo a la izquierda</translation>
     </message>
     <message>
         <source>Bottom Right</source>
-        <translation type="obsolete">Abajo a la derecha</translation>
+        <translation type="unfinished">Abajo a la derecha</translation>
     </message>
     <message>
         <source>Fixes</source>
-        <translation type="obsolete">Correcciones</translation>
+        <translation type="unfinished">Correcciones</translation>
     </message>
     <message>
         <source>SCROLL LOCK key</source>
-        <translation type="obsolete">Tecla BLOQ DESPLAZAMIENTO</translation>
+        <translation type="unfinished">Tecla BLOQ DESPLAZAMIENTO</translation>
     </message>
     <message>
         <source>CAPS LOCK key</source>
-        <translation type="obsolete">Tecla BLOQ MAYÚS</translation>
+        <translation type="unfinished">Tecla BLOQ MAYÚS</translation>
     </message>
     <message>
         <source>NUM LOCK key</source>
-        <translation type="obsolete">Tecla BLOQ NUM</translation>
+        <translation type="unfinished">Tecla BLOQ NUM</translation>
     </message>
     <message>
         <source>XTest for Xinerama</source>
-        <translation type="obsolete">XTest para Xinerama</translation>
+        <translation type="unfinished">XTest para Xinerama</translation>
     </message>
     <message>
         <source>Aliases</source>
-        <translation type="obsolete">Alias</translation>
+        <translation type="unfinished">Alias</translation>
     </message>
     <message>
         <source>&amp;Add</source>
-        <translation type="obsolete">&amp;Agregar</translation>
+        <translation type="unfinished">&amp;Agregar</translation>
     </message>
     <message>
         <source>&amp;Remove</source>
-        <translation type="obsolete">Elimina&amp;r</translation>
+        <translation type="unfinished">Elimina&amp;r</translation>
     </message>
     <message>
         <source>Top-left</source>
@@ -1320,6 +1698,10 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Bottom-right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unsupported modifier (%1) — read-only</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1381,7 +1763,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Configure the layout of your computer displays by dragging to where you want.</source>
-        <translation type="unfinished">Configura el diseño de las pantallas de tu computadora arrastrándolas hacia donde quieras.</translation>
+        <translation type="obsolete">Configura el diseño de las pantallas de tu computadora arrastrándolas hacia donde quieras.</translation>
     </message>
     <message>
         <source>Drag to the grid to add a new computer.</source>
@@ -1390,6 +1772,18 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>Hotkeys</source>
         <translation type="unfinished">teclas de acceso rápido</translation>
+    </message>
+    <message>
+        <source>No hotkeys configured</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select a hotkey to view its actions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Double-click an existing computer to edit its settings. Add computer provides an alternative to dragging, including keyboard and screen-reader access.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>&amp;Hotkeys</source>
@@ -1429,7 +1823,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Dead corners (for this computer)</source>
-        <translation type="unfinished">Esquinas &amp;muertas (para esta computadora)</translation>
+        <translation type="obsolete">Esquinas &amp;muertas (para esta computadora)</translation>
     </message>
     <message>
         <source>&amp;Bottom-left</source>
@@ -1457,7 +1851,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Misc</source>
-        <translation type="unfinished">&amp;Misc</translation>
+        <translation type="obsolete">&amp;Misc</translation>
     </message>
     <message>
         <source>Disable lock to computer (scroll lock key)</source>
@@ -1466,6 +1860,10 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>Use &amp;relative mouse movements</source>
         <translation type="unfinished">Utilice movimientos &amp;relativos del ratón</translation>
+    </message>
+    <message>
+        <source>Arrange computer displays by dragging</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Don&apos;t take &amp;foreground window (Windows only)</source>
@@ -1485,7 +1883,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Network</source>
-        <translation type="unfinished">&amp;Red</translation>
+        <translation type="obsolete">&amp;Red</translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables the network heartbeat to ping clients every &lt;span style=&quot; font-style:italic;&quot;&gt;n&lt;/span&gt; seconds. This may help to diagnose network problems by retrying the connection if the client becomes unresponsive.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
@@ -1509,7 +1907,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Switching</source>
-        <translation type="unfinished">Traspue&amp;sta</translation>
+        <translation type="obsolete">Traspue&amp;sta</translation>
     </message>
     <message>
         <source>Switch &amp;after waiting</source>
@@ -1545,6 +1943,10 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
     </message>
     <message>
         <source>Add computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete selected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1589,11 +1991,11 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
     </message>
     <message>
         <source>Prevent this computer from going to sleep</source>
-        <translation type="unfinished">Evitar que esta computadora entre en modo de suspensión</translation>
+        <translation type="obsolete">Evitar que esta computadora entre en modo de suspensión</translation>
     </message>
     <message>
         <source>Tray icon style</source>
-        <translation type="unfinished">Estilo de icono de bandeja</translation>
+        <translation type="obsolete">Estilo de icono de bandeja</translation>
     </message>
     <message>
         <source>Colorful</source>
@@ -1602,6 +2004,22 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
     <message>
         <source>Monocolor</source>
         <translation type="unfinished">Monocolor</translation>
+    </message>
+    <message>
+        <source>Prevent sleep</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tray icon</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On launch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On close</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Enable TLS Encryption</source>
@@ -1620,8 +2038,16 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
         <translation type="unfinished">Regenerar certificado</translation>
     </message>
     <message>
+        <source>Immediately regenerate the saved certificate with this key length. Other changes remain unsaved.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Require client certificates</source>
         <translation type="unfinished">Requerir certificados de cliente</translation>
+    </message>
+    <message>
+        <source>The background service is available on Windows only.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>&amp;Advanced</source>
@@ -1708,6 +2134,18 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
         <translation type="unfinished">Certificado TLS regenerado</translation>
     </message>
     <message>
+        <source>Follow system</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Certificate unavailable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The saved certificate does not contain a valid SHA-256 fingerprint.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>TLS certificate regenerated successfully.</source>
         <translation type="unfinished">Certificado TLS regenerado exitosamente.</translation>
     </message>
@@ -1757,7 +2195,7 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
     </message>
     <message>
         <source>When the main window is closed</source>
-        <translation type="unfinished">Cuando la ventana principal está cerrada</translation>
+        <translation type="obsolete">Cuando la ventana principal está cerrada</translation>
     </message>
     <message>
         <source>Exit</source>
@@ -1769,7 +2207,7 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
     </message>
     <message>
         <source>When the application starts</source>
-        <translation type="unfinished">Cuando se inicia la aplicación</translation>
+        <translation type="obsolete">Cuando se inicia la aplicación</translation>
     </message>
     <message>
         <source>Show the main window</source>
@@ -1786,6 +2224,10 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
     <message>
         <source>Using a log level higher than Info may affect performance.</source>
         <translation type="unfinished">Utilizar un nivel de registro superior a Info puede afectar el rendimiento.</translation>
+    </message>
+    <message>
+        <source>View saved certificate fingerprint</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1870,6 +2312,21 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
     </message>
 </context>
 <context>
+    <name>UpdateDialog</name>
+    <message>
+        <source>Download and Install</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 MB — Waiting for network</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel download</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>i18n</name>
     <message>
         <source>LocalizedName</source>
@@ -1925,15 +2382,27 @@ Al habilitar esta opción, se deshabilitará la interfaz gráfica de usuario (GU
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>A newer version is available.
-
-Current version: %1
-Latest version: %2
-Package: %3</source>
+        <source>Release Notes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Release Notes</source>
+        <source>Hide</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Download progress</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Transfer speed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Estimated remaining</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1949,7 +2418,19 @@ Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>%1 / %2 MB — %3 MB/s — %4% — %5 s remaining</source>
+        <source>Downloading update %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Verifying download…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Waiting for network</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 s remaining</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1961,11 +2442,17 @@ Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Downloading…</source>
+        <source>Cancel download</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>%1 MB — %2 MB/s</source>
+        <source>New version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Current version: %1
+Latest version: %2
+Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

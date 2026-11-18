@@ -2,8 +2,13 @@
  * SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
+#include "UiRenderTestSupport.h"
+#include "common/RuntimeContext.h"
+#include "common/Settings.h"
 #include "gui/Action.h"
+#include "gui/AppStyle.h"
 #include "gui/Hotkey.h"
+#include "gui/Motion.h"
 #include "gui/config/ServerConfig.h"
 #include "gui/dialogs/ActionDialog.h"
 #include "gui/dialogs/ClientConfigDialog.h"
@@ -16,23 +21,34 @@
 #include "gui/update/UpdateDialog.h"
 #include "gui/widgets/KeySequenceWidget.h"
 #include "update/TestHttpServer.h"
+#include <QFileInfo>
+#include <QUuid>
 
 #include <QApplication>
 #include <QCryptographicHash>
+#include <QDialog>
 #include <QDir>
 #include <QListWidget>
 #include <QPixmap>
 #include <QProgressBar>
+#include <QPushButton>
+#include <QSignalSpy>
 #include <QTabWidget>
+#include <QTemporaryDir>
 #include <QtTest>
 
 namespace {
+QString updateText(const char *source)
+{
+  return QCoreApplication::translate("synergy::gui::update::UpdateDialog", source);
+}
 
 /// 离屏渲染页面并保存截图，避免向系统注入真实输入。
 void renderToFile(QWidget &widget, const QString &path)
 {
   widget.ensurePolished();
   widget.adjustSize();
+  QVERIFY2(settleStaticRender(widget), "Static capture did not settle within 1000ms");
   QPixmap pixmap(widget.size());
   pixmap.fill(Qt::transparent);
   widget.render(&pixmap);
@@ -50,11 +66,14 @@ private Q_SLOTS:
   void downloadsUpdateFromLoopback();
   void rendersUpdateAndFingerprint();
   void rendersConfigurationPages();
+  void animatedButtonStillDeliversClick();
 };
 
 void DialogRenderTests::rendersHotkeyAndAction()
 {
-  const QString outputDir = QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"));
+  const QString outputDir = qEnvironmentVariable(
+      "SYNERGY_UI_EVIDENCE_DIR", QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"))
+  );
   QDir().mkpath(outputDir);
 
   Hotkey hotkey;
@@ -81,7 +100,9 @@ void DialogRenderTests::rendersUpdateAndFingerprint()
   info.notes = QStringLiteral("- 修复日志面板高度\n- 新增卡片式配置页");
   info.releaseUrl = QUrl(QStringLiteral("https://github.com/Tupig/TupigSynergy/releases/tag/v1.22.0"));
   info.asset.name = QStringLiteral("synergy_1.22.0_mac_arm64.dmg");
-  const QString outputDir = QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"));
+  const QString outputDir = qEnvironmentVariable(
+      "SYNERGY_UI_EVIDENCE_DIR", QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"))
+  );
   QDir().mkpath(outputDir);
 
   synergy::gui::update::UpdateDialog updateDialog(info, nullptr);
@@ -141,13 +162,13 @@ void DialogRenderTests::downloadsUpdateFromLoopback()
   // 找到「下载并安装」按钮。
   QPushButton *downloadButton = nullptr;
   for (auto *button : dialog.findChildren<QPushButton *>()) {
-    if (button->text().contains(QStringLiteral("Download")))
+    if (button->text() == updateText("Download and Install"))
       downloadButton = button;
   }
   QVERIFY(downloadButton != nullptr);
   QTest::mouseClick(downloadButton, Qt::LeftButton);
 
-  QTRY_COMPARE_WITH_TIMEOUT(downloadButton->text(), QStringLiteral("Install Now"), 15000);
+  QTRY_COMPARE_WITH_TIMEOUT(downloadButton->text(), updateText("Install Now"), 15000);
   auto *progress = dialog.findChild<QProgressBar *>();
   QVERIFY(progress != nullptr);
   QCOMPARE(progress->value(), 100);
@@ -156,7 +177,9 @@ void DialogRenderTests::downloadsUpdateFromLoopback()
 
 void DialogRenderTests::rendersConfigurationPages()
 {
-  const QString outputDir = QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"));
+  const QString outputDir = qEnvironmentVariable(
+      "SYNERGY_UI_EVIDENCE_DIR", QDir(QDir::tempPath()).filePath(QStringLiteral("tupig-dialog-render"))
+  );
   QDir().mkpath(outputDir);
 
   synergy::gui::ServerConfig config;
@@ -186,5 +209,51 @@ void DialogRenderTests::rendersConfigurationPages()
   renderToFile(screenDialog, QDir(outputDir).filePath(QStringLiteral("screen.png")));
 }
 
-QTEST_MAIN(DialogRenderTests)
+void DialogRenderTests::animatedButtonStillDeliversClick()
+{
+  synergy::gui::setMotionModeForTesting(synergy::gui::MotionMode::Animated);
+  synergy::gui::installButtonFeedback();
+  QDialog dialog;
+  QPushButton button(QStringLiteral("Test"), &dialog);
+  button.resize(100, 32);
+  dialog.resize(120, 52);
+  dialog.show();
+  QCoreApplication::processEvents();
+  QSignalSpy clicked(&button, &QPushButton::clicked);
+  QTest::mousePress(&button, Qt::LeftButton);
+  auto *overlay = button.findChild<QWidget *>(QStringLiteral("buttonFeedbackOverlay"));
+  QVERIFY(overlay != nullptr);
+  QVERIFY(overlay->testAttribute(Qt::WA_TransparentForMouseEvents));
+  QTest::mouseRelease(&button, Qt::LeftButton);
+  QCOMPARE(clicked.count(), 1);
+  QTest::mouseClick(&button, Qt::LeftButton);
+  QCOMPARE(clicked.count(), 2);
+}
+
+int main(int argc, char **argv)
+{
+  // 构造任何读取 Settings 的对话框之前隔离设置，避免测试碰到日常配置。
+  QTemporaryDir directory;
+  if (!directory.isValid())
+    return 1;
+  // COMPLETE-R1 isolation lineage: preserve all inherited assertions and fixtures.
+  QString isolationError;
+  if (!synergy::runtime::configureIsolatedRuntime(
+          {QFileInfo(directory.path()).canonicalFilePath(),
+           "ts-complete-" + QUuid::createUuid().toString(QUuid::WithoutBraces)},
+          &isolationError
+      ))
+    return 2;
+  qputenv("XDG_CONFIG_HOME", directory.path().toUtf8());
+  qputenv("XDG_STATE_HOME", directory.path().toUtf8());
+  QApplication app(argc, argv);
+  auto font = app.font();
+  font.setPixelSize(13);
+  app.setFont(font);
+  Settings::setSettingsFile(directory.filePath(QStringLiteral("render.conf")));
+  Settings::setStateFile(directory.filePath(QStringLiteral("render.state")));
+  app.setStyleSheet(synergy::gui::appStyleSheet());
+  DialogRenderTests tests;
+  return QTest::qExec(&tests, argc, argv);
+}
 #include "DialogRenderTests.moc"

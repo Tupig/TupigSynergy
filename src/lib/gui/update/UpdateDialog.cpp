@@ -8,24 +8,58 @@
 
 #include "UpdateDownloader.h"
 #include "common/VersionInfo.h"
+#include "gui/StyleUtils.h"
 #include "gui/widgets/PageHost.h"
 #include "platform/UpdateInstaller.h"
 
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QDir>
+#include <QGridLayout>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QResizeEvent>
 #include <QStandardPaths>
+#include <QTextDocument>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <QVariant>
+#include <QtMath>
 
 namespace synergy::gui::update {
+
+namespace {
+class ReleaseNotes final : public QPlainTextEdit
+{
+public:
+  ReleaseNotes(const QString &notes, QWidget *parent) : QPlainTextEdit(notes, parent)
+  {
+    setReadOnly(true);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    fitDocument();
+  }
+
+private:
+  void resizeEvent(QResizeEvent *event) override
+  {
+    QPlainTextEdit::resizeEvent(event);
+    fitDocument();
+  }
+  void fitDocument()
+  {
+    QTextDocument measure;
+    measure.setDefaultFont(font());
+    measure.setPlainText(toPlainText());
+    measure.setTextWidth(qMax(120, viewport()->width()));
+    setFixedHeight(qBound(fontMetrics().height() + 14, qCeil(measure.size().height()) + 14 + 2 * frameWidth(), 180));
+  }
+};
+} // namespace
 
 UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const DownloadPolicy &policy)
     : QDialog(parent),
@@ -33,55 +67,125 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
       m_downloader(new UpdateDownloader(this, policy))
 {
   setWindowTitle(tr("Update Available"));
-  setMinimumWidth(520);
+  setMinimumWidth(0);
 
   auto *layout = new QVBoxLayout(this);
-  layout->setContentsMargins(12, 12, 12, 12);
+  layout->setContentsMargins(10, 10, 10, 10);
   layout->setSpacing(8);
 
+  auto *summaryCard = new QGroupBox(this);
+  summaryCard->setObjectName(QStringLiteral("updateSummaryCard"));
+  summaryCard->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+  auto *summaryLayout = new QVBoxLayout(summaryCard);
+  summaryLayout->setContentsMargins(12, 12, 12, 12);
+  summaryLayout->setSpacing(8);
+  auto *summaryHeading = new QLabel(tr("New version"), summaryCard);
+  summaryHeading->setObjectName(QStringLiteral("updateHeading"));
+  summaryHeading->setProperty("sectionHeading", true);
+  summaryLayout->addWidget(summaryHeading);
+
   m_summary = new QLabel(
-      tr("A newer version is available.\n\nCurrent version: %1\nLatest version: %2\nPackage: %3")
+      tr("Current version: %1\nLatest version: %2\nPackage: %3")
           .arg(QString::fromLatin1(kVersion), info.version, info.asset.name),
-      this
+      summaryCard
   );
   m_summary->setTextInteractionFlags(Qt::TextSelectableByMouse);
-  layout->addWidget(m_summary);
+  m_summary->setWordWrap(true);
+  m_summary->setTextFormat(Qt::PlainText);
+  m_summary->setProperty("muted", true);
+  summaryLayout->addWidget(m_summary);
+  layout->addWidget(summaryCard);
 
   if (!info.notes.trimmed().isEmpty()) {
-    m_notes = new QPlainTextEdit(info.notes, this);
-    m_notes->setReadOnly(true);
-    m_notes->setMaximumHeight(200);
-    auto *toggleNotes = new QPushButton(tr("Release Notes"), this);
+    auto *notesCard = new QWidget(summaryCard);
+    notesCard->setObjectName(QStringLiteral("updateNotesCard"));
+    notesCard->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+    auto *notesLayout = new QVBoxLayout(notesCard);
+    notesLayout->setContentsMargins(0, 0, 0, 0);
+    notesLayout->setSpacing(8);
+    m_notes = new ReleaseNotes(info.notes, notesCard);
+    m_notes->setObjectName(QStringLiteral("releaseNotes"));
+    auto *notesHeader = new QHBoxLayout;
+    auto *notesHeading = new QLabel(tr("Release Notes"), notesCard);
+    notesHeader->addWidget(notesHeading);
+    notesHeader->addStretch(1);
+    auto *toggleNotes = new QPushButton(tr("Hide"), notesCard);
+    toggleNotes->setObjectName(QStringLiteral("toggleReleaseNotes"));
+    toggleNotes->setProperty("small", true);
     toggleNotes->setCheckable(true);
     toggleNotes->setChecked(true);
     connect(toggleNotes, &QPushButton::toggled, m_notes, &QWidget::setVisible);
-    layout->addWidget(toggleNotes);
-    layout->addWidget(m_notes);
+    connect(toggleNotes, &QPushButton::toggled, this, [toggleNotes](bool expanded) {
+      toggleNotes->setText(expanded ? tr("Hide") : tr("Show"));
+    });
+    notesHeader->addWidget(toggleNotes);
+    notesLayout->addLayout(notesHeader);
+    notesLayout->addWidget(m_notes);
+    summaryLayout->addWidget(notesCard);
   }
 
-  m_progress = new QProgressBar(this);
+  auto *progressCard = new QWidget(summaryCard);
+  progressCard->setObjectName(QStringLiteral("updateProgressCard"));
+  progressCard->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+  progressCard->hide();
+  auto *progressLayout = new QVBoxLayout(progressCard);
+  progressLayout->setContentsMargins(0, 0, 0, 0);
+  progressLayout->setSpacing(8);
+  m_progress = new QProgressBar(progressCard);
+  m_progress->setObjectName(QStringLiteral("updateProgress"));
+  m_progress->setFixedHeight(8);
+  m_progress->setTextVisible(false);
   m_progress->setRange(0, 0);
   m_progress->setVisible(false);
-  layout->addWidget(m_progress);
+  progressLayout->addWidget(m_progress);
 
-  m_progressText = new QLabel(this);
+  m_progressText = new QLabel(progressCard);
+  m_progressText->setWordWrap(true);
+  m_progressText->setTextFormat(Qt::PlainText);
   m_progressText->setVisible(false);
-  layout->addWidget(m_progressText);
+  progressLayout->addWidget(m_progressText);
+  m_meter = new QWidget(progressCard);
+  auto *meterLayout = new QGridLayout(m_meter);
+  meterLayout->setContentsMargins(0, 0, 0, 0);
+  meterLayout->setHorizontalSpacing(12);
+  meterLayout->setVerticalSpacing(8);
+  meterLayout->setColumnStretch(1, 1);
+  const auto meterRow = [this, meterLayout](int row, const QString &caption, const QString &name) {
+    auto *label = new QLabel(caption, m_meter);
+    label->setObjectName(name.left(name.size() - 5) + QStringLiteral("Label"));
+    label->setProperty("muted", true);
+    meterLayout->addWidget(label, row, 0);
+    auto *value = new QLabel(m_meter);
+    value->setObjectName(name);
+    value->setProperty("meterValue", true);
+    value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    value->setTextFormat(Qt::PlainText);
+    meterLayout->addWidget(value, row, 1);
+    return value;
+  };
+  m_amount = meterRow(0, tr("Download progress"), QStringLiteral("downloadAmountValue"));
+  m_rate = meterRow(1, tr("Transfer speed"), QStringLiteral("downloadRateValue"));
+  m_eta = meterRow(2, tr("Estimated remaining"), QStringLiteral("downloadEtaValue"));
+  progressLayout->addWidget(m_meter);
+  summaryLayout->insertWidget(2, progressCard);
 
-  auto *buttons = new QWidget(this);
+  auto *buttons = new QWidget(summaryCard);
   auto *buttonLayout = new QHBoxLayout(buttons);
   buttonLayout->setContentsMargins(0, 0, 0, 0);
+  buttonLayout->addStretch(1);
 
   m_release = new QPushButton(tr("Open Release Page"), buttons);
+  m_release->setIcon(synergy::gui::appIcon(QStringLiteral("document-open")));
   connect(m_release, &QPushButton::clicked, this, &UpdateDialog::openReleasePage);
   buttonLayout->addWidget(m_release);
-  buttonLayout->addStretch();
+  buttonLayout->setSpacing(8);
 
   m_later = new QPushButton(tr("Later"), buttons);
-  connect(m_later, &QPushButton::clicked, this, &QDialog::reject);
+  connect(m_later, &QPushButton::clicked, this, &UpdateDialog::reject);
   buttonLayout->addWidget(m_later);
 
   m_install = new QPushButton(tr("Download and Install"), buttons);
+  m_install->setIcon(synergy::gui::appIcon(QStringLiteral("download")));
   m_install->setProperty("primary", true);
   m_install->setDefault(true);
   connect(m_install, &QPushButton::clicked, this, [this] {
@@ -92,34 +196,30 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
   });
   buttonLayout->addWidget(m_install);
 
-  layout->addWidget(buttons);
+  summaryLayout->addWidget(buttons);
 
+  m_rateTimer.setInterval(500);
+  connect(&m_rateTimer, &QTimer::timeout, this, &UpdateDialog::updateProgressText);
   connect(m_downloader, &UpdateDownloader::progress, this, [this](qint64 received, qint64 total) {
+    const auto now = m_downloadTimer.elapsed();
+    const auto interval = now - m_sampleTime;
+    const auto added = received - m_received;
+    // Sample recent byte movement, never a whole-download average that masks a stall.
+    m_bytesPerSecond = interval > 0 && added > 0 ? static_cast<double>(added) * 1000.0 / interval : 0.0;
+    m_received = received;
+    m_total = total;
+    m_sampleTime = now;
     if (total > 0) {
       m_progress->setRange(0, 100);
       m_progress->setValue(static_cast<int>(qBound(0.0, 100.0 * received / total, 100.0)));
     }
-    const auto elapsed = m_downloadTimer.elapsed();
-    const auto speed = elapsed > 0 ? static_cast<double>(received) * 1000.0 / static_cast<double>(elapsed) : 0.0;
-    if (total > 0) {
-      const auto remaining =
-          speed > 0 ? QString::number(qMax(0.0, (total - received) / speed), 'f', 0) : QStringLiteral("—");
-      m_progressText->setText(tr("%1 / %2 MB — %3 MB/s — %4% — %5 s remaining")
-                                  .arg(received / 1048576.0, 0, 'f', 1)
-                                  .arg(total / 1048576.0, 0, 'f', 1)
-                                  .arg(speed / 1048576.0, 0, 'f', 1)
-                                  .arg(m_progress->value())
-                                  .arg(remaining));
-    } else {
-      m_progressText->setText(
-          tr("%1 MB — %2 MB/s").arg(received / 1048576.0, 0, 'f', 1).arg(speed / 1048576.0, 0, 'f', 1)
-      );
-    }
+    updateProgressText();
   });
   // 信号只在构造时连接一次，失败重试不会重复交付进度或错误。
   connect(m_downloader, &UpdateDownloader::finished, this, [this](const QString &path) {
     m_downloadedPath = path;
     setBusy(false);
+    m_progress->parentWidget()->show();
     m_progress->setVisible(true);
     m_progress->setRange(0, 100);
     m_progress->setValue(100);
@@ -129,6 +229,9 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
   });
   connect(m_downloader, &UpdateDownloader::failed, this, [this](const QString &reason) {
     setBusy(false);
+    m_progress->parentWidget()->show();
+    m_progressText->setText(reason);
+    m_progressText->show();
     auto *message = new QMessageBox(QMessageBox::Critical, tr("Update Failed"), reason, QMessageBox::Ok, this);
     message->setTextFormat(Qt::PlainText);
     PageHost::present(this, message);
@@ -143,6 +246,7 @@ UpdateDialog::~UpdateDialog()
 
 void UpdateDialog::reject()
 {
+  m_rateTimer.stop();
   // 返回立即中止下载，不能等 deleteLater 后再阻止安装回调。
   delete m_downloader;
   m_downloader = nullptr;
@@ -151,20 +255,67 @@ void UpdateDialog::reject()
 
 void UpdateDialog::setBusy(bool busy)
 {
+  if (auto *heading = findChild<QLabel *>(QStringLiteral("updateHeading")))
+    heading->setText(busy ? tr("Downloading update %1").arg(m_info.version) : tr("New version"));
+  if (auto *toggle = findChild<QPushButton *>(QStringLiteral("toggleReleaseNotes")))
+    toggle->setChecked(!busy);
+  if (busy)
+    m_rateTimer.start();
+  else
+    m_rateTimer.stop();
+  m_later->setText(busy ? tr("Cancel download") : tr("Later"));
+  m_later->setIcon(busy ? synergy::gui::appIcon(QStringLiteral("window-close")) : QIcon());
+  m_progress->parentWidget()->setVisible(busy);
   m_install->setEnabled(!busy);
   m_release->setEnabled(!busy);
   m_progress->setVisible(busy);
-  m_progressText->setVisible(busy);
+  m_progressText->hide();
+  m_meter->setVisible(busy);
+}
+
+void UpdateDialog::updateProgressText()
+{
+  if (m_total > 0 && m_received >= m_total) {
+    m_meter->hide();
+    m_progressText->setText(tr("Verifying download…"));
+    m_progressText->show();
+    return;
+  }
+
+  // No new bytes for 1.5 seconds is a stalled interval, even if an earlier sample was fast.
+  const auto speed =
+      m_downloadTimer.isValid() && m_downloadTimer.elapsed() - m_sampleTime < 1500 ? m_bytesPerSecond : 0.0;
+  m_amount->setText(
+      m_total > 0 ? QStringLiteral("%1 / %2 MB · %3%")
+                        .arg(m_received / 1048576.0, 0, 'f', 1)
+                        .arg(m_total / 1048576.0, 0, 'f', 1)
+                        .arg(m_progress->value())
+                  : QStringLiteral("%1 MB").arg(m_received / 1048576.0, 0, 'f', 1)
+  );
+  m_rate->setText(
+      speed > 0 ? QStringLiteral("%1 MB/s").arg(QString::number(speed / 1048576.0, 'g', 3)) : tr("Waiting for network")
+  );
+  if (speed > 0 && m_total > 0) {
+    const auto remaining = qMax(0.0, (m_total - m_received) / speed);
+    m_eta->setText(tr("%1 s remaining").arg(remaining, 0, 'f', 0));
+  } else {
+    m_eta->setText(QStringLiteral("—"));
+  }
 }
 
 void UpdateDialog::startDownload()
 {
-  setBusy(true);
   m_downloadTimer.start();
+  m_received = 0;
+  m_total = -1;
+  m_sampleTime = 0;
+  m_bytesPerSecond = 0;
+  setBusy(true);
   m_progress->setRange(0, 0);
-  m_progressText->setText(tr("Downloading…"));
+  updateProgressText();
   if (!m_downloadDirectory.isValid()) {
     setBusy(false);
+    m_progressText->parentWidget()->show();
     m_progressText->setText(tr("Could not create a temporary download directory."));
     m_progressText->show();
     return;

@@ -1,0 +1,493 @@
+{
+  "date_utc": "2026-11-17T16:05:18.160648+00:00",
+  "scope": "Generated reproducible test executables and obsolete extracted app/DMG only. Explicit user request to reduce app/storage proliferation.",
+  "prior_evidence_directory": "build/ui-visual-r4-evidence already absent before this script; not removed by this cleanup.",
+  "kept_apps": [
+    "build/bin/R4VisualProbe.app",
+    "build/bin/TuPig Synergy.app"
+  ],
+  "kept_test_executables": [
+    "build/src/unittests/gui/DialogRenderTests",
+    "build/src/unittests/gui/R3VisualContractTests",
+    "build/src/unittests/gui/synergy-core"
+  ],
+  "removed": [
+    {
+      "path": "build/src/unittests/mt/MutexTests",
+      "sha256": "9660ddfdfa5aabbfc40b2ee016c4c41e9e37fc2207daacb6b932e893d7ad308b",
+      "allocated_bytes": 38354944,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/mt/CondVarTests",
+      "sha256": "63cd13ab16e3f70000abe9b940df52c951cf70f3f8ac5991c838870d52dba9b5",
+      "allocated_bytes": 38375424,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/mt/ThreadTests",
+      "sha256": "0e075a3233bfdc02ca554eeaa525c5c1f7dacea0f83e0e10561d4d09c182c2e3",
+      "allocated_bytes": 38359040,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/net/SecureUtilsTests",
+      "sha256": "91392c87f3d31e952eaf628e6e98d03ea65a23d2c51172ced879efd04a6b7db7",
+      "allocated_bytes": 44859392,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/net/SecureSocketTests",
+      "sha256": "6ec6056db328b0a74e44fefed63ea386c2fed5bb6bfece64a708299012740f84",
+      "allocated_bytes": 45363200,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/net/FingerprintDatabaseTests",
+      "sha256": "fe53e4aff4e1d788501abe061cdc484eeed0ac9773a25cc692625f9bb9a9c95f",
+      "allocated_bytes": 44986368,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/net/NetworkAddressTests",
+      "sha256": "161572193c72c5dc96f1a0bce4b778bf0f01859c1eec0a833ccc75c7f983a3e0",
+      "allocated_bytes": 44871680,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/net/FingerprintTests",
+      "sha256": "87d553c6d54f9bc0e62379bb1bcb15ae26703391c657dcf24a3607c47635e86a",
+      "allocated_bytes": 44838912,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/net/SocketMultiplexerTests",
+      "sha256": "ec87cfe3addbabafee743a9e93d587fcc89e2a6146acac93134bce3fce3b0d96",
+      "allocated_bytes": 45043712,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/net/QtSocketFactoryTests",
+      "sha256": "a3d84cc753df0c9238448d9d7572068fdbda921677f5a486d9dbf5e74777e559",
+      "allocated_bytes": 45363200,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/net/QtNetworkTransportTests",
+      "sha256": "e9cf68d5c41f616d75a6602ba214771ea825d8d5bae641fdc7da5fec81ac439b",
+      "allocated_bytes": 45056000,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/platform/MSWindowsDesksTests",
+      "sha256": "c0ac08f542b40b85981c265f6aed2e17ecf0de251bd929f498408dffcdfa303d",
+      "allocated_bytes": 38199296,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/platform/OSXClipboardTests",
+      "sha256": "70a3502c3b09b4c2cd4e2b853c6e9d953f5941fbc0984b54e4df778664ce8816",
+      "allocated_bytes": 44965888,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/platform/OSXKeyStateTests",
+      "sha256": "cf8846a7b8af73e6856fc3af63e0359b8e7e847deac0dc28af8d059ba02bb063",
+      "allocated_bytes": 45096960,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/platform/MSWindowsHookTests",
+      "sha256": "a2714eeb1ab4020bc07924038ccb33f1181ce07d69e0fa79306d03fb7c5b195d",
+      "allocated_bytes": 38199296,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/platform/MSWindowsWatchdogTests",
+      "sha256": "542bc294a63d7c90825178e64eb85a8f3e5e24989e098c15c27e313a86acc193",
+      "allocated_bytes": 38203392,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/server/ConfigReadTests",
+      "sha256": "5645fa1b17bc32fdfb3823053590bbbf4886828d7415300862885847e45333e6",
+      "allocated_bytes": 45244416,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/server/InputFilterTests",
+      "sha256": "1365edd6fc3348becc300c8f48e920787a9a2c581183cab9504c31394ca19d10",
+      "allocated_bytes": 45023232,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/server/ServerConfigTests",
+      "sha256": "48e3dbde69a98fccae5cd2716c3af874d13e174e00dcf87e218dfa2225c28faa",
+      "allocated_bytes": 45080576,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/server/ServerTests-runtime/ServerTests",
+      "sha256": "0a758da574dbebfea9361ae5c32bf33e3ccd5163b688f94a5049425ba2128cf2",
+      "allocated_bytes": 45789184,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/server/ClientProxyTests-runtime/ClientProxyTests",
+      "sha256": "5eddd10277c62ffeedcb049a2d9708b1e18c20d2759b4fd0fa5f68d991c54d46",
+      "allocated_bytes": 46088192,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/server/KeyInfoOwnershipTests-runtime/KeyInfoOwnershipTests",
+      "sha256": "e2f3b40f9d9419faa4c9042eb64b457bf7e3d044893787fe32aa2050e067c4e7",
+      "allocated_bytes": 46333952,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/server/EventPayloadOwnershipTests-runtime/EventPayloadOwnershipTests",
+      "sha256": "e6f5637deebb1d06da15c149c8a37d0398317172fb160f8ec010c81c1f0e96bc",
+      "allocated_bytes": 45981696,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/common/LogLevelTests",
+      "sha256": "502ce2413657362d48f29859bd5d7f329c6f83fb92ce0aee437ddd7cadd4e649",
+      "allocated_bytes": 38240256,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/common/IpcTokenTests",
+      "sha256": "90005200824864e70b424bae83bf884e10aace4d5fbedbc90355d132c03acc8e",
+      "allocated_bytes": 38420480,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/common/RelativePathTests",
+      "sha256": "7e6f3580af1f4fddceb55e477b461016ba8af12518601e804e84fbc58e46eaeb",
+      "allocated_bytes": 38219776,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/common/SettingsTests",
+      "sha256": "0dae90184b8cb5b29854de94b8c6d9bd58b2b1b42e01ea540ac84b9324309918",
+      "allocated_bytes": 38461440,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/common/QSettingsProxyTests",
+      "sha256": "9025513e5ad2b66de5bdef94411249c8e077e3cee023e656baae516f77b194b4",
+      "allocated_bytes": 38334464,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/common/I18NTests",
+      "sha256": "3b4aca9db7fcfe1701b5c8bb77b9a66a1ec8b5742b6f9938303950adaffe4568",
+      "allocated_bytes": 38518784,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/ValidatorTests",
+      "sha256": "e7305512497f1203fb0c5f1c25d3724ba18e28f50d0bb2947a2b1e39d89f71e2",
+      "allocated_bytes": 60948480,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/LoggerTests",
+      "sha256": "0680c2828cb3198c183593bcb68c25581e3c526f15718d00ee3db6e66c76604f",
+      "allocated_bytes": 61657088,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/R3OptionContractTests",
+      "sha256": "1d26ff56f78c1ac3e4048e1d8f1213e0315b00cb2ce0b90d12d77d027a0210ab",
+      "allocated_bytes": 62341120,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/R3StartupContractTests",
+      "sha256": "63cf1d9316ff652cd1faef20eb61a1a4c6daf29b2cbffaca45f9eda159eb602f",
+      "allocated_bytes": 60604416,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/NativeDesignTests",
+      "sha256": "9e3b280c295e7e8e6644c31bcb89d97ae3b0b5e675ca6a1919a5796a3bac7109",
+      "allocated_bytes": 63168512,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/R3MotionContractTests",
+      "sha256": "3745f150d8c40d59167be00d9ca6733dfe742fa4341231433c4bc7791644de0b",
+      "allocated_bytes": 62119936,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/SettingsMigrationTests",
+      "sha256": "d1fcf415aa090ad5bc62c67ce75394520fb68917d973ce5350e9c97442881c94",
+      "allocated_bytes": 60981248,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/R3RuntimeContextTests",
+      "sha256": "7b80aab53a713500d4f8a7f19633d6603d9ce29d2d2b46deb20a5b5056c2195a",
+      "allocated_bytes": 60719104,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/MainWindowFlowTests",
+      "sha256": "4ee10964a1e3b9ef724c203dc5db3e4b5779631685602d6ac8b99be84d084b2c",
+      "allocated_bytes": 63799296,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/LayoutAcceptanceTests",
+      "sha256": "aeefb4ee880770897e83c4faa10ac7c5854c3d7bade53ff88f634c580ba52f06",
+      "allocated_bytes": 63102976,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/ScreenSetupModelTests",
+      "sha256": "95714c87184d1787febecc81f9a85fc8d11199419bd4f46e053b0c428352c9f1",
+      "allocated_bytes": 61587456,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/R3TrayQuitTests",
+      "sha256": "44ff5db2ef437a4157ac9aee12f1dbd9b069559ff21439a51e9d10f0f035d415",
+      "allocated_bytes": 60923904,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/TlsUtilityTests",
+      "sha256": "289c24cde72902a1ac01c5ae6799cebe0486d8c8ca2edfc49554377f3b9e58b2",
+      "allocated_bytes": 61128704,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/PageHostTests",
+      "sha256": "46e4ea64033a070dceec1e76db2e088cb6fc528ddae13012a3db30f9e93342c3",
+      "allocated_bytes": 61624320,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/KeySequenceTests",
+      "sha256": "0f7efc188c1a7c15847c24462c4957dfc034d846ee6846e67b1909b9d11a45e1",
+      "allocated_bytes": 60928000,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/EditorTransactionTests",
+      "sha256": "8ba28cc72f52e516e9a8847316f987bf919c30bac38f65bc96dd19466fa4757a",
+      "allocated_bytes": 62464000,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/R3SerializationTests",
+      "sha256": "e4094a91080d86eb55e1164fdb417c562808a823c79ec274b306da32013143a0",
+      "allocated_bytes": 61865984,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/core/NetworkMonitorTests",
+      "sha256": "c567c65249adb3bffcb00bdfe1b1e1b4fab9d4e8ef84d7d1332b4a65706ca4c7",
+      "allocated_bytes": 61624320,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/update/UpdateDownloaderTests",
+      "sha256": "faeb2b889c6c596da9b17c425cb7d02ae189afbbcbacc8fe153dc9507ac7c2e3",
+      "allocated_bytes": 61677568,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/update/UpdateCheckerTests",
+      "sha256": "9d407ccfd3653c91da37718c26a0b58f9065f44823d57b905b2acd8ef4a9629c",
+      "allocated_bytes": 61698048,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/update/UpdateVersionTests",
+      "sha256": "6cabfe660dba7829daa4ff5247ec15a36c87dbf6842054781943cd05e5623063",
+      "allocated_bytes": 60538880,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/gui/config/ScreenTests",
+      "sha256": "8394dda9d351324836d5e296e434a49d45ead9cfb45e74a1a9b00b1dd728dbb2",
+      "allocated_bytes": 61091840,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/FileTransferSourceTests",
+      "sha256": "cb2064d95717dbee68ddeb344d3caab3fe1b7203931eaac7ab49566a880a0ab1",
+      "allocated_bytes": 44990464,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/FileTransferPathTests",
+      "sha256": "ab6d621bcb0c338e0255b44f2b00cf891fe6e4cda80754ffe3ad68cf43a30242",
+      "allocated_bytes": 44879872,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/ClipboardTests",
+      "sha256": "83a9ea9ea4eaa7b50cb078242e767080bbfd84a90ec01b9e43e5da5a6bdcd9b7",
+      "allocated_bytes": 44953600,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/FileTransferSenderTests",
+      "sha256": "8b4e48aa0bf2993dc721e5261b99f934e9275c56f62cd91a85f5b8461411cc0e",
+      "allocated_bytes": 45039616,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/FileTransferReceiverTests",
+      "sha256": "3516c95d167d21b7ae1856d06d5dd9df567db0170f9f407aae9431711e45a451",
+      "allocated_bytes": 45064192,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/IpcServerTests",
+      "sha256": "74d9cbceeb7252a82b2f2853b000c91cdfb25a618034996a36042a0430114990",
+      "allocated_bytes": 45199360,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/KeyMapTests",
+      "sha256": "64384845cb976e816698abee2b30055a5b22037cc8d1c9359246ae6be6a9d0f9",
+      "allocated_bytes": 44986368,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/KeyStateTests",
+      "sha256": "04a32fc3d1e9fb419dbade6f920f04c272a8f19e53bf9bcb41c53c3510abe8a3",
+      "allocated_bytes": 45060096,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/ProtocolUtilTests",
+      "sha256": "9f9680fcba25dfdef7970bca64863ace118c4121872ae1d98ba0bec5cf9c7acf",
+      "allocated_bytes": 44982272,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/FileTransferOutboundTests",
+      "sha256": "5162395ad7421bdfe894147551c3c4e5b8aedb5bfab8ef55dc94da3b20213197",
+      "allocated_bytes": 44998656,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/InputValidatorTests",
+      "sha256": "488a4595a327358198e23330cd5f0f583f59c53b3a841ca7aef99daf95d95c72",
+      "allocated_bytes": 44957696,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/FileChunkTests",
+      "sha256": "232cbc16f7507057beb6a217e2f2667bdbdeb6b16803a82fcbc84fefbd9203e1",
+      "allocated_bytes": 44978176,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/ClipboardChunksTests",
+      "sha256": "5aa41a48afc107deccb46131c21aa5f465371aeab809b72c140fc777105284fb",
+      "allocated_bytes": 44978176,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/IKeyStateTests",
+      "sha256": "ffc732e2915e01a00bd23718118174a78207fb647c397ba8f38c6e154a4cb5dd",
+      "allocated_bytes": 44838912,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/KeyboardLayoutManagerTests",
+      "sha256": "86070a259b2ef939e1cf1a774fcbe13527855c022d8b46c90f752329045477d2",
+      "allocated_bytes": 44937216,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/PacketStreamFilterTests",
+      "sha256": "fc9fe67c9c5b6e1b55f9603fbb8ffd699462907ddd5144254608cae8ec2803eb",
+      "allocated_bytes": 44863488,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/synergy/ProtocolUtilAllocationTests",
+      "sha256": "b6b9e757579da6becca4e12db2c728bc1c43dc087e3e1a7a6de857a6872d7621",
+      "allocated_bytes": 43909120,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/client/ClientTests",
+      "sha256": "1b2524471599e1aa3d32872bf4a1327b8a5557ffdfce22724c24b441d49eeadf",
+      "allocated_bytes": 45715456,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/client/ServerProxyTests",
+      "sha256": "f6bdb4958d846a6ac674ee50a8c1d05808c9e6f8dc9b392ca84579dec10bc8e0",
+      "allocated_bytes": 45690880,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/base/EventQueueTests",
+      "sha256": "ca96c4c599301bba8d5be5aa73c4cf96f63371de66465affcb1812f48ef2aa25",
+      "allocated_bytes": 38404096,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/base/StringTests",
+      "sha256": "6e58650f06c92a7eba80f68e17a4cc068e318af9c75a6e42e76681fd121b1055",
+      "allocated_bytes": 38223872,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/base/StopwatchTests",
+      "sha256": "1c9fe2e4ea5584f95bdd50c8408cb3473d9993fdb2351b3b24b5b946b3e8524d",
+      "allocated_bytes": 38219776,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/base/BaseExceptionTests",
+      "sha256": "c006b8c8678f539eee76d8b2cc3cab9366f14767ea0f93f5a4ec66ff3b95ea69",
+      "allocated_bytes": 38219776,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/base/UnicodeTests",
+      "sha256": "6a89199ed0df40a0e98016794a8adc058bbc4022d6cecda5841918af4b5b8f20",
+      "allocated_bytes": 38240256,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "build/src/unittests/base/LogTests",
+      "sha256": "0ee8ed87d826816c76e147be30063cdc619292276c9ae395b9a6af27e469508e",
+      "allocated_bytes": 38322176,
+      "regenerate": "Build matching CMake target in the same build tree."
+    },
+    {
+      "path": "/private/tmp/tupig-gh-43871951060-umnjxxkm/TuPig Synergy.app",
+      "sha256": "aa6694bc58104b8917297c235946c42aa5e0bcff7f01b5a48400fd96cb38eee4",
+      "allocated_bytes": 89047040,
+      "regenerate": "Download matching GitHub release asset and extract; historical identity retained in existing reports."
+    },
+    {
+      "path": "/private/tmp/tupig-gh-43871951060-umnjxxkm/synergy_2.1.6-dev+7216123c_mac_arm64.dmg",
+      "sha256": "d76354c64162bd19147589a0ceb029def3e156db5528bcc91b135a1735d80c17",
+      "allocated_bytes": 33308672,
+      "regenerate": "Download matching GitHub release asset and extract; historical identity retained in existing reports."
+    }
+  ],
+  "allocated_bytes_selected": 3793477632,
+  "preserved": "all source, design reference, reports, compiler objects, vcpkg installed/download/binary caches and remaining raw logs",
+  "verification": {
+    "remaining_selected_paths": [],
+    "removed_files_or_bundles": 78,
+    "allocated_bytes_reclaimed_from_selected_paths": 3793477632,
+    "kept_apps_exist": true,
+    "kept_tests_exist": true
+  }
+}

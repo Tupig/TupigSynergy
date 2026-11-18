@@ -51,13 +51,13 @@ inline void onPreInit()
   // setSettingsFile() instantiates Settings; that's expected here.
   if (synergy::gui::SettingsScope::preferSystem()) {
     if (synergy::gui::SettingsScope::isSystemWritable()) {
-      Settings::setSettingsFile(Settings::SystemSettingFile);
-    } else if (QFileInfo(Settings::SystemSettingFile).isReadable()) {
+      Settings::setSettingsFile(Settings::systemSettingsFile());
+    } else if (QFileInfo(Settings::systemSettingsFile()).isReadable()) {
       // An upgrade can leave the machine-wide file temporarily read-only.
       // Loading it keeps the user's settings visible; a later launch with
       // write access returns to the normal path, so do not clear the preference.
       qWarning("scope: system-scope is read-only, loading it without saving");
-      Settings::setSettingsFile(Settings::SystemSettingFile);
+      Settings::setSettingsFile(Settings::systemSettingsFile());
     } else {
       // Keep preferSystem: clearing it on a transient failure permanently
       // switches the user to the empty user-scope file and looks like data loss.

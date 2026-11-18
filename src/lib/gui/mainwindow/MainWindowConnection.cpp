@@ -145,8 +145,8 @@ void MainWindow::startCore()
   }
 #endif
 
-  m_actionStartCore->setVisible(false);
-  m_actionRestartCore->setVisible(true);
+  m_actionStartCore->setEnabled(false);
+  m_actionRestartCore->setEnabled(true);
 
   m_coreProcess.start();
 }
@@ -155,8 +155,7 @@ void MainWindow::stopCore()
 {
   qDebug() << "stopping core process";
   m_coreProcess.stop();
-  m_actionStartCore->setVisible(true);
-  m_actionRestartCore->setVisible(false);
+  toggleCanRunCore(canRunCore());
 }
 
 void MainWindow::handleLogLine(const QString &line)
@@ -322,10 +321,12 @@ void MainWindow::updateStatus()
   const auto connection = m_coreProcess.connectionState();
   const auto process = m_coreProcess.processState();
   const bool isServer = (m_coreProcess.mode() == CoreMode::Server);
-  if (process == Stopped || process == Started) {
+  if (process != Stopped && !ui->lineEditName->isHidden())
+    cancelHostNameEdit();
+  ui->btnEditName->setVisible(process == Stopped && ui->lineEditName->isHidden());
+  ui->btnEditName->setEnabled(Settings::isWritable());
+  if (process == Stopped || process == Started)
     updateNetworkInfo();
-    ui->btnEditName->setVisible(process == Stopped);
-  }
   m_statusBar->setStatus(connection, process, isServer);
 }
 
@@ -349,8 +350,8 @@ void MainWindow::coreProcessStateChanged(ProcessState state)
     connect(ui->btnToggleCore, &QPushButton::clicked, m_actionStopCore, &QAction::trigger, Qt::UniqueConnection);
 
     ui->btnRestartCore->setEnabled(true);
-    m_actionStartCore->setVisible(false);
-    m_actionRestartCore->setVisible(true);
+    m_actionStartCore->setEnabled(false);
+    m_actionRestartCore->setEnabled(true);
     m_actionStopCore->setEnabled(true);
 
     if (state == Starting) {
@@ -362,11 +363,12 @@ void MainWindow::coreProcessStateChanged(ProcessState state)
     connect(ui->btnToggleCore, &QPushButton::clicked, m_actionStartCore, &QAction::trigger, Qt::UniqueConnection);
 
     ui->btnRestartCore->setEnabled(false);
-    m_actionStartCore->setVisible(true);
-    m_actionRestartCore->setVisible(false);
+    m_actionStartCore->setEnabled(canRunCore());
+    m_actionRestartCore->setEnabled(false);
     m_actionStopCore->setEnabled(false);
   }
   updateModeControlLabels();
+  toggleCanRunCore(canRunCore());
 }
 
 void MainWindow::coreConnectionStateChanged(ConnectionState state)

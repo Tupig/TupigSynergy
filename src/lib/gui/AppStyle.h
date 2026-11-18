@@ -18,4 +18,7 @@ namespace synergy::gui {
  */
 QString appStyleSheet();
 
+/// 应用内按钮的轻量按下和释放过渡，不移动布局、不拦截点击。
+void installButtonFeedback();
+
 } // namespace synergy::gui

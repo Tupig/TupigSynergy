@@ -10,22 +10,114 @@
 #include "ServerConfigDialogDesign.h"
 
 #include "common/Constants.h"
+#include "common/I18N.h"
 #include "common/NetworkProtocol.h"
 #include "common/PlatformInfo.h"
 #include "common/Settings.h"
 #include "dialogs/ActionDialog.h"
 #include "dialogs/HotkeyDialog.h"
 #include "dialogs/ScreenSettingsDialog.h"
+#include "gui/ActionPresentation.h"
+#include "gui/StyleUtils.h"
 #include "widgets/PageHost.h"
 
+#include <QApplication>
 #include <QDebug>
+#include <QDragEnterEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QMessageBox>
+#include <QMimeData>
+#include <QMouseEvent>
+#include <QPointer>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QVBoxLayout>
 
 using enum synergy::gui::ScreenConfig::SwitchCorner;
+
+namespace {
+// One visible Add control retains both click and the existing drag payload.
+class AddComputerButton final : public QPushButton
+{
+public:
+  AddComputerButton(const QString &text, NewScreenWidget *source, QWidget *parent)
+      : QPushButton(text, parent),
+        m_source(source)
+  {
+  }
+
+protected:
+  void mousePressEvent(QMouseEvent *event) override
+  {
+    m_origin = event->pos();
+    m_dragged = false;
+    QPushButton::mousePressEvent(event);
+  }
+  void mouseMoveEvent(QMouseEvent *event) override
+  {
+    if (!m_dragged && m_source && (event->buttons() & Qt::LeftButton) &&
+        (event->pos() - m_origin).manhattanLength() >= QApplication::startDragDistance()) {
+      m_dragged = true;
+      setDown(false);
+      m_source->startDrag(this);
+      return;
+    }
+    QPushButton::mouseMoveEvent(event);
+  }
+  void mouseReleaseEvent(QMouseEvent *event) override
+  {
+    if (m_dragged)
+      event->accept();
+    else
+      QPushButton::mouseReleaseEvent(event);
+  }
+
+private:
+  QPointer<NewScreenWidget> m_source;
+  QPoint m_origin;
+  bool m_dragged = false;
+};
+
+class TrashDropProxy final : public QObject
+{
+public:
+  TrashDropProxy(QPushButton *button, TrashScreenWidget *target) : QObject(button), m_target(target)
+  {
+    button->setAcceptDrops(true);
+    button->installEventFilter(this);
+  }
+
+protected:
+  bool eventFilter(QObject *object, QEvent *event) override
+  {
+    if (event->type() != QEvent::DragEnter && event->type() != QEvent::DragMove && event->type() != QEvent::Drop)
+      return QObject::eventFilter(object, event);
+    // The existing selected-screen guard also protects the visible drop target.
+    if (!static_cast<QWidget *>(object)->isEnabled() || !m_target) {
+      event->ignore();
+      return true;
+    }
+    if (event->type() == QEvent::DragMove) {
+      auto *move = static_cast<QDragMoveEvent *>(event);
+      if (move->mimeData()->hasFormat(ScreenSetupModel::mimeType())) {
+        move->setDropAction(Qt::MoveAction);
+        move->accept();
+      } else {
+        move->ignore();
+      }
+    } else {
+      QCoreApplication::sendEvent(m_target, event);
+    }
+    return true;
+  }
+
+private:
+  QPointer<TrashScreenWidget> m_target;
+};
+} // namespace
 
 ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConfig &config)
     : QDialog(parent, Qt::WindowTitleHint | Qt::WindowSystemMenuHint),
@@ -37,7 +129,8 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConf
       m_screenSetupModel(m_serverConfig.screens(), m_serverConfig.numColumns(), m_serverConfig.numRows())
 {
   ui->setupUi(this);
-  setMinimumWidth(560);
+  connect(ui->cbExternalConfig, &QCheckBox::toggled, ui->groupExternalConfig, &QGroupBox::setChecked);
+  connect(ui->groupExternalConfig, &QGroupBox::toggled, ui->cbExternalConfig, &QCheckBox::setChecked);
 
   ui->labelProtocol->setWhatsThis(ui->labelProtocol->whatsThis().arg(kAppName));
 
@@ -45,33 +138,36 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConf
   connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &ServerConfigDialog::accept);
   connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &ServerConfigDialog::reject);
 
-  ui->lblRemoveScreen->setPixmap(QIcon::fromTheme("user-trash").pixmap(QSize(64, 64)));
+  ui->lblRemoveScreen->setPixmap(synergy::gui::appIcon("user-trash").pixmap(QSize(24, 24)));
   connect(ui->lblRemoveScreen, &TrashScreenWidget::screenRemoved, this, &ServerConfigDialog::onScreenRemoved);
 
   ui->lblNewScreen->setEnabled(!model().isFull());
-  auto *computerActions = new QHBoxLayout;
-  auto *addComputerButton = new QPushButton(tr("Add computer"), ui->tabComputers);
+  auto *addComputerButton = new AddComputerButton(tr("Add computer"), ui->lblNewScreen, ui->tabComputers);
   addComputerButton->setObjectName(QStringLiteral("addComputerButton"));
-  addComputerButton->setIcon(QIcon::fromTheme(QStringLiteral("list-add")));
+  addComputerButton->setIcon(synergy::gui::appIcon(QStringLiteral("list-add")));
+  addComputerButton->setIconSize(QSize(15, 15));
+  addComputerButton->setAutoDefault(false);
+  addComputerButton->setDefault(false);
   addComputerButton->setEnabled(!model().isFull());
   connect(addComputerButton, &QPushButton::clicked, this, [this] { addClient(); });
   connect(&m_screenSetupModel, &ScreenSetupModel::screensChanged, addComputerButton, [this, addComputerButton] {
     addComputerButton->setEnabled(!model().isFull());
   });
-  computerActions->addWidget(addComputerButton);
-  computerActions->addStretch();
-  if (auto *layout = qobject_cast<QVBoxLayout *>(ui->tabComputers->layout()))
-    layout->addLayout(computerActions);
-  ui->lblNewScreen->setPixmap(QIcon::fromTheme("video-display").pixmap(QSize(64, 64)));
+  if (auto *tools = ui->groupComputerLayout->findChild<QHBoxLayout *>(QStringLiteral("layoutComputers")))
+    tools->insertWidget(0, addComputerButton);
+  ui->lblNewScreen->setPixmap(synergy::gui::appIcon("video-display").pixmap(QSize(24, 24)));
 
   // 死角复选框按标签宽度收缩，避免网格拉伸后只剩指示框。
   for (auto *corner : {ui->cbCornerTopLeft, ui->cbCornerTopRight, ui->cbCornerBottomLeft, ui->cbCornerBottomRight}) {
     corner->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     corner->setMinimumWidth(corner->fontMetrics().horizontalAdvance(corner->text()) + 32);
   }
-  // 设计稿的网格按内容高度，工具行紧随其下，不能被拉伸挤出视口。
-  ui->screenSetupView->setMinimumHeight(180);
-  ui->screenSetupView->setMaximumHeight(260);
+  // 网格随页签可用高度伸缩；为说明、拖拽工具和底部操作保留空间。
+  ui->screenSetupView->setFixedHeight(180);
+  ui->lblRemoveScreen->setFixedSize(32, 32);
+  ui->lblRemoveScreen->setScaledContents(true);
+  ui->lblNewScreen->setFixedSize(32, 32);
+  ui->lblNewScreen->setScaledContents(true);
 
   connect(ui->btnNewHotkey, &QPushButton::clicked, this, &ServerConfigDialog::addHotkey);
   connect(ui->btnEditHotkey, &QPushButton::clicked, this, &ServerConfigDialog::editHotkey);
@@ -95,12 +191,28 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConf
   // the developer was looking at, and it's easy to accidentally save that.
   ui->tabWidget->setCurrentIndex(0);
 
-  ui->btnBrowseConfigFile->setIcon(QIcon::fromTheme(QStringLiteral("document-open")));
+  ui->btnBrowseConfigFile->setIcon(synergy::gui::appIcon(QStringLiteral("document-open")));
   ui->lineConfigFile->setText(serverConfig().configFile());
 
   ui->rbProtocolSynergy->setChecked(serverConfig().protocol() == NetworkProtocol::Synergy);
   ui->rbProtocolBarrier->setChecked(serverConfig().protocol() == NetworkProtocol::Barrier);
+  ui->comboProtocol->setCurrentIndex(ui->comboProtocol->findData(QVariant::fromValue(serverConfig().protocol())));
   connect(ui->rbProtocolBarrier, &QRadioButton::toggled, this, &ServerConfigDialog::toggleProtocol);
+  connect(ui->comboProtocol, qOverload<int>(&QComboBox::currentIndexChanged), this, [this] {
+    if (ui->comboProtocol->currentIndex() < 0)
+      return;
+    const auto protocol = ui->comboProtocol->currentData().value<NetworkProtocol>();
+    if (protocol == NetworkProtocol::Synergy)
+      ui->rbProtocolSynergy->setChecked(true);
+    else if (protocol == NetworkProtocol::Barrier)
+      ui->rbProtocolBarrier->setChecked(true);
+  });
+  connect(ui->rbProtocolBarrier, &QRadioButton::toggled, this, [this](bool barrier) {
+    const QSignalBlocker blocker(ui->comboProtocol);
+    ui->comboProtocol->setCurrentIndex(
+        ui->comboProtocol->findData(QVariant::fromValue(barrier ? NetworkProtocol::Barrier : NetworkProtocol::Synergy))
+    );
+  });
 
   ui->cbHeartbeat->setChecked(serverConfig().hasHeartbeat());
   connect(ui->cbHeartbeat, &QCheckBox::toggled, this, &ServerConfigDialog::toggleHeartbeat);
@@ -182,9 +294,43 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConf
   ui->sbClipboardSizeLimit->setEnabled(serverConfig().clipboardSharing());
 
   for (const Hotkey &hotkey : std::as_const(serverConfig().hotkeys()))
-    ui->listHotkeys->addItem(hotkey.text());
+    synergy::gui::appendHotkey(ui->listHotkeys, hotkey);
 
   ui->screenSetupView->setModel(&m_screenSetupModel);
+
+  auto *deleteComputer = new QPushButton(tr("Delete selected"), ui->groupComputerLayout);
+  deleteComputer->setObjectName(QStringLiteral("deleteSelectedComputerButton"));
+  deleteComputer->setIcon(synergy::gui::appIcon(QStringLiteral("user-trash")));
+  deleteComputer->setProperty("danger", true);
+  deleteComputer->setIconSize(QSize(15, 15));
+  deleteComputer->setAutoDefault(false);
+  deleteComputer->setDefault(false);
+  deleteComputer->setEnabled(false);
+  new TrashDropProxy(deleteComputer, ui->lblRemoveScreen);
+  ui->lblNewScreen->hide();
+  ui->lblRemoveScreen->hide();
+  if (auto *tools = ui->groupComputerLayout->findChild<QHBoxLayout *>(QStringLiteral("layoutComputers")))
+    tools->insertWidget(1, deleteComputer);
+  const auto updateDelete = [this, deleteComputer] {
+    const auto selected = ui->screenSetupView->currentIndex();
+    const bool removable = selected.isValid() && !model().screen(selected).isNull() &&
+                           !model().screen(selected).isPrimary() && !serverConfig().useExternalConfig();
+    deleteComputer->setEnabled(removable);
+  };
+  connect(ui->screenSetupView->selectionModel(), &QItemSelectionModel::currentChanged, this, updateDelete);
+  connect(&m_screenSetupModel, &ScreenSetupModel::screensChanged, this, updateDelete);
+  connect(ui->groupExternalConfig, &QGroupBox::toggled, this, updateDelete);
+  connect(deleteComputer, &QPushButton::clicked, this, [this, updateDelete] {
+    const auto selected = ui->screenSetupView->currentIndex();
+    if (!selected.isValid() || model().screen(selected).isNull() || model().screen(selected).isPrimary() ||
+        serverConfig().useExternalConfig())
+      return;
+    model().screen(selected) = synergy::gui::Screen();
+    Q_EMIT m_screenSetupModel.dataChanged(selected, selected);
+    Q_EMIT m_screenSetupModel.screensChanged();
+    onScreenRemoved();
+    updateDelete();
+  });
 
   auto &screens = serverConfig().screens();
   auto server = std::ranges::find_if(screens, [this](const synergy::gui::Screen &screen) {
@@ -203,6 +349,20 @@ ServerConfigDialog::ServerConfigDialog(QWidget *parent, synergy::gui::ServerConf
 
   // computers
   connect(&m_screenSetupModel, &ScreenSetupModel::screensChanged, this, &ServerConfigDialog::onChange);
+  connect(I18N::instance(), &I18N::languageChanged, this, [this, addComputerButton, deleteComputer] {
+    ui->retranslateUi(this);
+    ui->labelProtocol->setWhatsThis(ui->labelProtocol->whatsThis().arg(kAppName));
+    addComputerButton->setText(tr("Add computer"));
+    deleteComputer->setText(tr("Delete selected"));
+    for (int row = 0; row < ui->listHotkeys->count() && row < serverConfig().hotkeys().size(); ++row)
+      synergy::gui::presentHotkey(ui->listHotkeys->item(row), serverConfig().hotkeys().at(row));
+    const int hotkeyRow = ui->listHotkeys->currentRow();
+    if (hotkeyRow >= 0 && hotkeyRow < serverConfig().hotkeys().size()) {
+      const auto &actions = std::as_const(serverConfig()).hotkeys().at(hotkeyRow).actions();
+      for (int row = 0; row < ui->listActions->count() && row < actions.size(); ++row)
+        synergy::gui::presentAction(ui->listActions->item(row), actions.at(row));
+    }
+  });
 }
 
 ServerConfigDialog::~ServerConfigDialog() = default;
@@ -251,10 +411,10 @@ void ServerConfigDialog::reject()
 void ServerConfigDialog::addHotkey()
 {
   auto hotkey = std::make_shared<Hotkey>();
-  auto *dialog = new HotkeyDialog(this, *hotkey);
+  auto *dialog = new HotkeyDialog(this, *hotkey, &serverConfig());
   connect(dialog, &QDialog::accepted, this, [this, hotkey] {
     serverConfig().hotkeys().append(*hotkey);
-    ui->listHotkeys->addItem(hotkey->text());
+    synergy::gui::appendHotkey(ui->listHotkeys, *hotkey);
     onChange();
   });
   PageHost::present(this, dialog);
@@ -269,10 +429,11 @@ void ServerConfigDialog::editHotkey()
   }
 
   auto hotkey = std::make_shared<Hotkey>(serverConfig().hotkeys()[row]);
-  auto *dialog = new HotkeyDialog(this, *hotkey);
+  auto *dialog = new HotkeyDialog(this, *hotkey, &serverConfig());
   connect(dialog, &QDialog::accepted, this, [this, hotkey, row] {
     serverConfig().hotkeys()[row] = *hotkey;
-    ui->listHotkeys->item(row)->setText(hotkey->text());
+    synergy::gui::presentHotkey(ui->listHotkeys->item(row), *hotkey);
+    listHotkeysSelectionChanged(ui->listHotkeys->selectionModel()->selection(), {});
     onChange();
   });
   PageHost::present(this, dialog);
@@ -298,12 +459,14 @@ void ServerConfigDialog::listHotkeysSelectionChanged(const QItemSelection &selec
   ui->btnEditHotkey->setEnabled(itemsSelected);
   ui->btnRemoveHotkey->setEnabled(itemsSelected);
   ui->btnNewAction->setEnabled(itemsSelected);
+  ui->listActions->clear();
+  ui->btnEditAction->setEnabled(false);
+  ui->btnRemoveAction->setEnabled(false);
 
   if (itemsSelected && !serverConfig().hotkeys().isEmpty()) {
-    ui->listActions->clear();
     const Hotkey &hotkey = serverConfig().hotkeys().at(selected.indexes().first().row());
     for (const Action &action : hotkey.actions())
-      ui->listActions->addItem(action.text());
+      synergy::gui::appendAction(ui->listActions, action);
   }
 }
 
@@ -320,7 +483,7 @@ void ServerConfigDialog::addAction()
   auto *dialog = new ActionDialog(this, serverConfig(), *hotkey, *action);
   connect(dialog, &QDialog::accepted, this, [this, row, hotkey, action] {
     serverConfig().hotkeys()[row].actions().append(*action);
-    ui->listActions->addItem(action->text());
+    synergy::gui::appendAction(ui->listActions, *action);
     onChange();
   });
   PageHost::present(this, dialog);
@@ -345,7 +508,7 @@ void ServerConfigDialog::editAction()
   auto *dialog = new ActionDialog(this, serverConfig(), *hotkeyDraft, *action);
   connect(dialog, &QDialog::accepted, this, [this, hotkeyRow, actionRow, hotkeyDraft, action] {
     serverConfig().hotkeys()[hotkeyRow].actions()[actionRow] = *action;
-    ui->listActions->item(actionRow)->setText(action->text());
+    synergy::gui::presentAction(ui->listActions->item(actionRow), *action);
     onChange();
   });
   PageHost::present(this, dialog);

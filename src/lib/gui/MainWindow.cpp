@@ -69,23 +69,20 @@
 
 using namespace synergy::gui;
 
-MainWindow::MainWindow()
+MainWindow::MainWindow(const QString &instanceSocketName)
     : ui{std::make_unique<Ui::MainWindow>()},
+      m_guiSocketName(instanceSocketName),
       m_coreProcess(m_serverConfig),
       m_trayIcon{new QSystemTrayIcon(this)},
       m_guiDupeChecker{new QLocalServer(this)},
       m_daemonIpcClient{new ipc::DaemonIpcClient(this)},
-      m_menuFile{new QMenu(this)},
-      m_menuEdit{new QMenu(this)},
-      m_menuView{new QMenu(this)},
-      m_menuHelp{new QMenu(this)},
       m_actionAbout{new QAction(this)},
       m_actionCheckForUpdates{new QAction(this)},
       m_actionClearSettings{new QAction(this)},
       m_actionReportBug{new QAction(this)},
       m_actionMinimize{new QAction(this)},
       m_actionQuit{new QAction(this)},
-      m_actionTrayQuit{new QAction(this)},
+      m_actionLog{new QAction(this)},
       m_actionRestore{new QAction(this)},
       m_actionSettings{new QAction(this)},
       m_actionStartCore{new QAction(this)},
@@ -94,14 +91,14 @@ MainWindow::MainWindow()
       m_networkMonitor{new NetworkMonitor(this)}
 {
   ui->setupUi(this);
-  setMinimumWidth(600);
-  setMinimumHeight(360);
+  setMinimumWidth(540);
 
   setWindowIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
 
   m_logDock = ui->logPanel;
   m_statusBar = ui->statusBar;
   m_pageHost = ui->pageHost;
+  connect(m_pageHost, &PageHost::contentSizeChanged, this, &MainWindow::fitToCurrentPage);
 
   // 纯图标按钮：返回与导出；其余按钮使用设计稿的小号 26px 图标+文字。
   for (auto *button : {ui->btnBack, ui->btnSaveServerConfig}) {
@@ -125,12 +122,11 @@ MainWindow::MainWindow()
   });
 
   connect(ui->btnBack, &QPushButton::clicked, this, [this] {
-    if (auto *editor = ui->pageStack->currentWidget(); editor != ui->workspace) {
-      if (auto *area = qobject_cast<QScrollArea *>(editor)) {
-        if (auto *dialog = qobject_cast<QDialog *>(area->widget()))
-          dialog->reject();
-      }
-    }
+    // PageHost 把编辑器包在 QScrollArea 的容器里，必须按属性取回 QDialog。
+    auto *area = qobject_cast<QScrollArea *>(ui->pageStack->currentWidget());
+    auto *dialog = area ? area->property("pageEditor").value<QDialog *>() : nullptr;
+    if (dialog != nullptr)
+      dialog->reject();
   });
   connect(ui->pageHost, &PageHost::editorVisibilityChanged, this, [this](bool visible) {
     ui->btnBack->setVisible(visible);
@@ -145,45 +141,41 @@ MainWindow::MainWindow()
 
   // Setup Actions
   m_actionAbout->setMenuRole(QAction::AboutRole);
-  m_actionAbout->setIcon(QIcon::fromTheme(QStringLiteral("help-about")));
+  m_actionAbout->setIcon(synergy::gui::appIcon(QStringLiteral("help-about")));
 
-  m_actionMinimize->setIcon(QIcon::fromTheme(QStringLiteral("window-minimize-pip")));
-  m_actionRestore->setIcon(QIcon::fromTheme(QStringLiteral("window-restore-pip")));
+  m_actionMinimize->setIcon(synergy::gui::appIcon(QStringLiteral("window-minimize-pip")));
+  m_actionRestore->setIcon(synergy::gui::appIcon(QStringLiteral("window-restore-pip")));
 
   if (!synergy::platform::isWindows()) {
     m_actionQuit->setShortcut(QKeySequence::Quit);
-    m_actionTrayQuit->setShortcut(QKeySequence::Quit);
   }
 
-  m_actionQuit->setIcon(QIcon::fromTheme("application-exit"));
+  m_actionQuit->setIcon(synergy::gui::appIcon("application-exit"));
   m_actionQuit->setMenuRole(QAction::QuitRole);
 
-  m_actionTrayQuit->setIcon(QIcon::fromTheme("application-exit"));
-  m_actionTrayQuit->setMenuRole(QAction::NoRole);
-
-  m_actionClearSettings->setIcon(QIcon::fromTheme(QStringLiteral("edit-clear-all")));
+  m_actionClearSettings->setIcon(synergy::gui::appIcon(QStringLiteral("edit-clear-all")));
   // ApplicationSpecificRole is macOS-only: Qt merges these actions into the
   // application menu (updates and maintenance belong next to "Preferences").
   // Other platforms ignore the role and keep them in the Help menu.
   m_actionClearSettings->setMenuRole(QAction::ApplicationSpecificRole);
 
-  m_actionCheckForUpdates->setIcon(QIcon::fromTheme(QStringLiteral("system-software-update")));
+  m_actionCheckForUpdates->setIcon(synergy::gui::appIcon(QStringLiteral("system-software-update")));
   m_actionCheckForUpdates->setMenuRole(QAction::ApplicationSpecificRole);
 
-  m_actionSettings->setIcon(QIcon::fromTheme(QStringLiteral("configure")));
+  m_actionSettings->setIcon(synergy::gui::appIcon(QStringLiteral("configure")));
   m_actionSettings->setMenuRole(QAction::PreferencesRole);
 
-  m_actionStartCore->setIcon(QIcon::fromTheme(QStringLiteral("system-run")));
+  m_actionStartCore->setIcon(synergy::gui::appIcon(QStringLiteral("system-run")));
   m_actionStartCore->setMenuRole(QAction::NoRole);
 
-  m_actionRestartCore->setVisible(false);
-  m_actionRestartCore->setIcon(QIcon::fromTheme(QStringLiteral("view-refresh")));
+  m_actionRestartCore->setEnabled(false);
+  m_actionRestartCore->setIcon(synergy::gui::appIcon(QStringLiteral("view-refresh")));
   m_actionRestartCore->setMenuRole(QAction::NoRole);
 
-  m_actionStopCore->setIcon(QIcon::fromTheme(QStringLiteral("process-stop")));
+  m_actionStopCore->setIcon(synergy::gui::appIcon(QStringLiteral("process-stop")));
   m_actionStopCore->setMenuRole(QAction::NoRole);
 
-  m_actionReportBug->setIcon(QIcon::fromTheme(QStringLiteral("tools-report-bug")));
+  m_actionReportBug->setIcon(synergy::gui::appIcon(QStringLiteral("tools-report-bug")));
   m_actionReportBug->setMenuRole(QAction::NoRole);
 
   // Setup the Instance Checking
@@ -252,11 +244,12 @@ void MainWindow::restoreWindow()
   auto windowGeometry = Settings::value(Settings::Gui::WindowGeometry).toRect();
   const auto totalGeometry = QGuiApplication::primaryScreen()->availableGeometry();
   if (!windowGeometry.isValid()) {
-    adjustSize();
+    resize(Ui::MainWindow::kWindowWidth, height());
     windowGeometry = geometry();
   } else {
     setGeometry(windowGeometry);
   }
+  m_pageHost->requestContentFit();
   m_expandedSize = geometry().size();
 
   if (!totalGeometry.contains(windowGeometry)) {
@@ -269,8 +262,8 @@ void MainWindow::setupControls()
 {
   secureSocket(false);
 
-  ui->btnConfigureServer->setIcon(QIcon::fromTheme(QStringLiteral("configure")));
-  ui->btnConfigureClient->setIcon(QIcon::fromTheme(QStringLiteral("configure")));
+  ui->btnConfigureServer->setIcon(synergy::gui::appIcon(QStringLiteral("configure")));
+  ui->btnConfigureClient->setIcon(synergy::gui::appIcon(QStringLiteral("configure")));
 
   if (Settings::value(Settings::Core::LastVersion).toString() != kVersion) {
     Settings::setValue(Settings::Core::LastVersion, kVersion);
@@ -287,7 +280,11 @@ void MainWindow::setupControls()
 
   ui->lineEditName->setValidator(new QRegularExpressionValidator(m_nameRegEx, this));
   ui->lineEditName->setVisible(false);
+  ui->btnSaveName->hide();
+  ui->btnCancelName->hide();
   ui->lineEditName->installEventFilter(this);
+  ui->btnSaveName->installEventFilter(this);
+  ui->btnCancelName->installEventFilter(this);
 
   if (synergy::platform::isMac()) {
     ui->rbModeServer->setAttribute(Qt::WA_MacShowFocusRect, false);
@@ -330,7 +327,6 @@ void MainWindow::connectSlots()
   connect(m_actionMinimize, &QAction::triggered, this, &MainWindow::hide);
 
   connect(m_actionQuit, &QAction::triggered, this, &MainWindow::close);
-  connect(m_actionTrayQuit, &QAction::triggered, this, &MainWindow::close);
   connect(m_actionRestore, &QAction::triggered, this, &MainWindow::showAndActivate);
   connect(m_actionSettings, &QAction::triggered, this, &MainWindow::openSettings);
   connect(m_actionStartCore, &QAction::triggered, this, &MainWindow::startCore);
@@ -384,7 +380,10 @@ void MainWindow::connectSlots()
 
   connect(ui->btnEditName, &QPushButton::clicked, this, &MainWindow::showHostNameEditor);
 
-  connect(ui->lineEditName, &QLineEdit::editingFinished, this, &MainWindow::setHostName);
+  // Focus loss keeps the draft. Only the explicit Save/Enter path can commit it.
+  connect(ui->lineEditName, &QLineEdit::returnPressed, this, &MainWindow::setHostName);
+  connect(ui->btnSaveName, &QPushButton::clicked, this, &MainWindow::setHostName);
+  connect(ui->btnCancelName, &QPushButton::clicked, this, &MainWindow::cancelHostNameEdit);
 
   connect(m_networkMonitor, &NetworkMonitor::ipAddressesChanged, this, &MainWindow::updateIpLabel);
 }
@@ -558,7 +557,8 @@ void MainWindow::showFirstConnectedMessage()
 void MainWindow::updateText()
 {
   m_menuFile->setTitle(tr("&File"));
-  m_menuEdit->setTitle(tr("&Edit"));
+  if (m_menuEdit)
+    m_menuEdit->setTitle(tr("&Edit"));
   m_menuView->setTitle(tr("&View"));
 #if defined(Q_OS_MACOS)
   // AppKit injects a search field into the menu titled "Help" every time it
@@ -569,13 +569,12 @@ void MainWindow::updateText()
 #else
   m_menuHelp->setTitle(tr("&Help"));
 #endif
-
   m_actionClearSettings->setText(tr("Clear settings"));
   m_actionCheckForUpdates->setText(tr("Check for &Updates"));
   m_actionReportBug->setText(tr("Get help"));
   m_actionMinimize->setText(tr("&Minimize to tray"));
   m_actionQuit->setText(tr("&Quit"));
-  m_actionTrayQuit->setText(tr("&Quit"));
+  m_actionLog->setText(tr("Show &Log"));
   //: %1 will be the replaced with the appname
   m_actionRestore->setText(tr("&Open %1").arg(kAppName));
   m_actionSettings->setText(tr("&Preferences"));
@@ -584,28 +583,20 @@ void MainWindow::updateText()
   m_actionStopCore->setText(tr("S&top"));
   //: %1 will be the replaced with the appname
   m_actionAbout->setText(tr("About %1...").arg(kAppName));
-
-  //: start / restart core shortcut
-  m_actionStartCore->setShortcut(QKeySequence(tr("Ctrl+S")));
-  m_actionRestartCore->setShortcut(QKeySequence(tr("Ctrl+S")));
-
-  //: stop core shortcut
-  m_actionStopCore->setShortcut(QKeySequence(tr("Ctrl+T")));
-
-  if (synergy::platform::isWindows()) {
-    //: Quit shortcut
-    m_actionQuit->setShortcut(QKeySequence(tr("Ctrl+Q")));
-    m_actionTrayQuit->setShortcut(QKeySequence(tr("Ctrl+Q")));
-  }
 }
 
 void MainWindow::toggleCanRunCore(bool enableButtons)
 {
-  const bool isStarted = m_coreProcess.isStarted();
-  ui->btnToggleCore->setEnabled(enableButtons);
-  ui->btnRestartCore->setEnabled(enableButtons && isStarted);
-  m_actionStartCore->setEnabled(enableButtons);
-  m_actionStopCore->setEnabled(enableButtons && isStarted);
+  enableButtons = enableButtons && ui->lineEditName->isHidden();
+  const auto state = m_coreProcess.processState();
+  const bool active =
+      state == ProcessState::Starting || state == ProcessState::Started || state == ProcessState::RetryPending;
+  const bool stopped = state == ProcessState::Stopped;
+  ui->btnToggleCore->setEnabled(active || (enableButtons && stopped));
+  ui->btnRestartCore->setEnabled(enableButtons && active);
+  m_actionStartCore->setEnabled(enableButtons && stopped);
+  m_actionRestartCore->setEnabled(enableButtons && active);
+  m_actionStopCore->setEnabled(active);
 }
 
 void MainWindow::updateIpLabel(const QStringList &addresses)
@@ -615,12 +606,11 @@ void MainWindow::updateIpLabel(const QStringList &addresses)
     return;
   }
 
-  static const auto colorText = QStringLiteral(R"(<span style="color:%1;">%2</span>)");
   const bool serverStarted = m_coreProcess.isStarted();
   const bool fixedIP = !Settings::value(Settings::Core::Interface).toString().isEmpty();
 
   if ((!fixedIP && addresses.isEmpty() && !serverStarted) || (serverStarted && m_serverStartSuggestedIP.isEmpty())) {
-    ui->lblIpAddresses->setText(colorText.arg(palette().linkVisited().color().name(), tr("No IP Detected")));
+    ui->lblIpAddresses->setText(tr("No IP Detected"));
     ui->lblIpAddresses->setToolTip(tr("Unable to detect an IP address. Check your network connection is active."));
     return;
   }
@@ -642,7 +632,7 @@ void MainWindow::updateIpLabel(const QStringList &addresses)
     m_currentIpAddress = ipList.first();
     labelText.append(m_currentIpAddress);
   } else {
-    labelText.append(colorText.arg(palette().linkVisited().color().name(), m_serverStartSuggestedIP));
+    labelText.append(m_serverStartSuggestedIP);
     toolTipText.append(tr("\nA bound IP is now invalid, you may need to restart the server."));
   }
 

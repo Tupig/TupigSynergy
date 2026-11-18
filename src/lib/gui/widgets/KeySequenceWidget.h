@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <QPointer>
 #include <QPushButton>
 
 #include "KeySequence.h"
@@ -20,6 +21,7 @@ public:
 
 Q_SIGNALS:
   void keySequenceChanged();
+  void recordingChanged(bool recording);
 
 public:
   const QString &mousePrefix() const
@@ -65,10 +67,15 @@ public:
     return m_BackupSequence;
   }
   void setKeySequence(const KeySequence &seq);
+  QPushButton *createRecordButton(QWidget *parent);
 
   bool valid() const
   {
     return keySequence().valid();
+  }
+  bool isRecording() const
+  {
+    return m_Status == Recording;
   }
 
 protected:
@@ -88,7 +95,10 @@ private:
   };
   void setStatus(Status s)
   {
+    if (m_Status == s)
+      return;
     m_Status = s;
+    Q_EMIT recordingChanged(s == Recording);
   }
   Status status() const
   {
@@ -99,6 +109,7 @@ private:
   KeySequence m_KeySequence;
   KeySequence m_BackupSequence;
   Status m_Status = Status::Stopped;
+  QPointer<QPushButton> m_recordButton;
   QString m_MousePrefix = QStringLiteral("mousebutton(");
   QString m_MousePostfix = QStringLiteral(")");
   QString m_KeyPrefix = QStringLiteral("keystroke(");

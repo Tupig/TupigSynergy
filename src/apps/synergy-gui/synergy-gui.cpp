@@ -10,6 +10,7 @@
 #include "common/ExitCodes.h"
 #include "common/I18N.h"
 #include "common/PlatformInfo.h"
+#include "common/RuntimeContext.h"
 #include "common/UrlConstants.h"
 #include "common/VersionInfo.h"
 #include "gui/AppStyle.h"
@@ -17,6 +18,10 @@
 #include "gui/MainWindow.h"
 #include "gui/Messages.h"
 #include "gui/StyleUtils.h"
+
+#ifdef SYNERGY_STARTUP_PROBE
+#include "R3StartupProbeBootstrap.h"
+#endif
 
 #ifdef SYNERGY_EXTRA_HEADER
 #include "synergy/hooks/gui_hook.h"
@@ -70,7 +75,19 @@ int main(int argc, char *argv[])
   QCoreApplication::setOrganizationDomain(kOrgDomain); // used in prefix, can't be a url
   QGuiApplication::setDesktopFileName(kRevFqdnName);
 
+#ifdef SYNERGY_STARTUP_PROBE
+  QStringList probeArguments;
+  for (int index = 0; index < argc; ++index)
+    probeArguments.append(QString::fromLocal8Bit(argv[index]));
+  if (!synergy::testing::configureStartupProbe(probeArguments))
+    return s_exitFailed;
+#endif
+
   QApplication app(argc, argv);
+#ifdef SYNERGY_STARTUP_PROBE
+  synergy::testing::startupProbeApplicationReady(&app);
+  synergy::testing::startupProbePhase("application-ready");
+#endif
   {
     // 设计稿以 13px 为基准字号；Qt 默认按点值放大，这里统一成像素。
     auto font = app.font();
@@ -78,13 +95,25 @@ int main(int argc, char *argv[])
     app.setFont(font);
   }
   app.setStyleSheet(synergy::gui::appStyleSheet());
+  synergy::gui::installButtonFeedback();
+#ifdef SYNERGY_STARTUP_PROBE
+  synergy::testing::startupProbePhase("style-ready");
+#endif
 
 #ifdef SYNERGY_EXTRA_HEADER
   synergy::hooks::onPreInit();
 #endif
+#ifdef SYNERGY_STARTUP_PROBE
+  synergy::testing::startupProbePhase("preinit-ready");
+  if (!synergy::testing::afterStartupProbePreInit())
+    return s_exitFailed;
+#endif
 
   // Ensure the I18N object is made before strings
   QTextStream(stdout) << "initial language: " << I18N::currentLanguage() << '\n';
+#ifdef SYNERGY_STARTUP_PROBE
+  synergy::testing::startupProbePhase("i18n-ready");
+#endif
 
   // Add Command Line Options
   auto helpOption = QCommandLineOption({"h", "help"}, "Display Help on the command line");
@@ -114,7 +143,7 @@ int main(int argc, char *argv[])
     return s_exitSuccess;
   }
 
-  const auto shmId = QStringLiteral("%1-gui").arg(kAppId);
+  const auto shmId = synergy::runtime::runtimeInstanceKey(QStringLiteral("%1-gui").arg(kAppId));
   // Create a shared memory segment with a unique key
   // This is to prevent a new instance from running if one is already running
   QSharedMemory sharedMemory(shmId);
@@ -139,6 +168,10 @@ int main(int argc, char *argv[])
     socket.disconnectFromServer();
     return s_exitDuplicate;
   }
+
+#ifdef SYNERGY_STARTUP_PROBE
+  synergy::testing::startupProbePhase("instance-ready");
+#endif
 
   if (!synergy::platform::isMac() && qEnvironmentVariable("XDG_CURRENT_DESKTOP") != QLatin1String("KDE")) {
     QApplication::setStyle("fusion");
@@ -169,8 +202,12 @@ int main(int argc, char *argv[])
     diagnostic::clearSettings(false);
   }
 
-  MainWindow mainWindow;
+  MainWindow mainWindow(synergy::runtime::runtimeInstanceKey(QString::fromUtf8(kGuiSocketName)));
   mainWindow.open();
+#ifdef SYNERGY_STARTUP_PROBE
+  synergy::testing::startupProbePhase("mainwindow-ready");
+  synergy::testing::startupProbeWindowReady(&mainWindow);
+#endif
 
 #ifdef SYNERGY_EXTRA_HEADER
   if (!synergy::hooks::onAppStart()) {
@@ -178,5 +215,12 @@ int main(int argc, char *argv[])
   }
 #endif
 
-  return QApplication::exec();
+#ifdef SYNERGY_STARTUP_PROBE
+  synergy::testing::startupProbePhase("appstart-ready");
+#endif
+  const int exitCode = QApplication::exec();
+#ifdef SYNERGY_STARTUP_PROBE
+  synergy::testing::startupProbeFinished(exitCode);
+#endif
+  return exitCode;
 }

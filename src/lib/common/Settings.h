@@ -20,19 +20,10 @@ class Settings : public QObject
 {
   Q_OBJECT
 public:
-#if defined(Q_OS_WIN)
-  inline const static auto UserDir = QStringLiteral("%1/AppData/Roaming/%2").arg(QDir::homePath(), kAppName);
-  inline const static auto SystemDir = QStringLiteral("%1ProgramData/%2").arg(QDir::rootPath(), kAppName);
-#elif defined(Q_OS_MACOS)
-  inline const static auto UserDir = QStringLiteral("%1/Library/%2").arg(QDir::homePath(), kAppName);
-  inline const static auto SystemDir = QStringLiteral("/Library/%1").arg(kAppName);
-#else
-  inline const static auto UserDir = QStringLiteral("%1/.config/%2").arg(QDir::homePath(), kAppName);
-  inline const static auto SystemDir = QStringLiteral("/etc/%1").arg(kAppName);
-#endif
-
-  inline const static auto UserSettingFile = QStringLiteral("%1/%2.conf").arg(UserDir, kAppName);
-  inline const static auto SystemSettingFile = QStringLiteral("%1/%2.conf").arg(SystemDir, kAppName);
+  static QString userDir();
+  static QString systemDir();
+  static QString userSettingsFile();
+  static QString systemSettingsFile();
 
   struct Client
   {

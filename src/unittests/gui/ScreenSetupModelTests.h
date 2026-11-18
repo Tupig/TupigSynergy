@@ -16,4 +16,5 @@ private Q_SLOTS:
   void clampsGridSize();
   void outOfRangeIndexesAreInvalid();
   void inRangeIndexesHaveNames();
+  void emptyCellsAreSelectableDropTargetsWithoutDrag();
 };

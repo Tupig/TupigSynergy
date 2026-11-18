@@ -38,6 +38,10 @@ namespace Ui {
 class MainWindow;
 }
 
+namespace synergy::gui::update {
+class UpdateChecker;
+}
+
 namespace synergy::gui::ipc {
 class DaemonIpcClient;
 }
@@ -60,7 +64,7 @@ public:
   };
 
 public:
-  explicit MainWindow();
+  explicit MainWindow(const QString &instanceSocketName = QString::fromUtf8(kGuiSocketName));
   ~MainWindow() override;
 
   [[nodiscard]] CoreMode coreMode() const
@@ -76,7 +80,9 @@ public:
   void hide();
 
 protected:
+  virtual synergy::gui::update::UpdateChecker *createUpdateChecker();
   void changeEvent(QEvent *e) override;
+  void resizeEvent(QResizeEvent *event) override;
   bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
@@ -85,6 +91,8 @@ private:
    */
   void updateText();
   void showPage(QDialog *editor);
+  void fitToCurrentPage();
+  bool m_fittingPage = false;
   PageHost *m_pageHost = nullptr;
   void toggleLogVisible(bool visible);
 
@@ -142,6 +150,7 @@ private:
   void showAndActivate();
   void showHostNameEditor();
   void setHostName();
+  void cancelHostNameEdit();
   void daemonIpcClientConnectionFailed();
   void toggleCanRunCore(bool enableButtons);
   void remoteHostChanged(const QString &newRemoteHost);
@@ -176,7 +185,8 @@ private:
 
   void serverClientsChanged(const QStringList &clients);
 
-  inline static const auto m_guiSocketName = QString::fromUtf8(kGuiSocketName);
+  // An isolated observer supplies its own endpoint; normal startup keeps the production name.
+  const QString m_guiSocketName;
   inline static const auto m_nameRegEx = QRegularExpression(QStringLiteral("^[\\w\\-_\\.]{0,255}$"));
 
   bool m_secureSocket = false;
@@ -210,7 +220,7 @@ private:
   QAction *m_actionReportBug = nullptr;
   QAction *m_actionMinimize = nullptr;
   QAction *m_actionQuit = nullptr;
-  QAction *m_actionTrayQuit = nullptr;
+  QAction *m_actionLog = nullptr;
   QAction *m_actionRestore = nullptr;
   QAction *m_actionSettings = nullptr;
   QAction *m_actionStartCore = nullptr;

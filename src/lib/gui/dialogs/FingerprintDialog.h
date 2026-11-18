@@ -28,9 +28,13 @@ class FingerprintDialog : public QDialog
 public:
   explicit FingerprintDialog(
       QWidget *parent = nullptr, const Fingerprint &localFingerprint = {},
-      FingerprintDialogMode mode = FingerprintDialogMode::Local, const Fingerprint &remoteFingerprint = {}
+      FingerprintDialogMode mode = FingerprintDialogMode::Local, const Fingerprint &remoteFingerprint = {},
+      const QString &savedCertificatePath = {}
   );
   ~FingerprintDialog() override = default;
+
+protected:
+  bool eventFilter(QObject *object, QEvent *event) override;
 
 private:
   QLayout *makeLocalLayout(const Fingerprint &localFingerprint = {});
@@ -39,6 +43,7 @@ private:
   );
   void togglePreviewMode(bool hashMode);
   void updateModeButton(bool hashMode) const;
+  void restoreButtonCaptions();
   QLabel *m_lblHeader = nullptr;
   QLabel *m_lblFooter = nullptr;
   FingerprintPreview *m_localPreview = nullptr;

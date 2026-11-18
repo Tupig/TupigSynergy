@@ -5,6 +5,7 @@
  */
 
 #include "Settings.h"
+#include "RuntimeContext.h"
 
 #include "LogLevel.h"
 #include "NetworkProtocol.h"
@@ -43,8 +44,47 @@ QString defaultComputerName()
 }
 } // namespace
 
+QString Settings::userDir()
+{
+  const auto root = synergy::runtime::runtimeRoot();
+  if (!root.isEmpty())
+    return root + QStringLiteral("/user");
+#if defined(Q_OS_WIN)
+  return QStringLiteral("%1/AppData/Roaming/%2").arg(QDir::homePath(), kAppName);
+#elif defined(Q_OS_MACOS)
+  return QStringLiteral("%1/Library/%2").arg(QDir::homePath(), kAppName);
+#else
+  return QStringLiteral("%1/.config/%2").arg(QDir::homePath(), kAppName);
+#endif
+}
+
+QString Settings::systemDir()
+{
+  const auto root = synergy::runtime::runtimeRoot();
+  if (!root.isEmpty())
+    return root + QStringLiteral("/system");
+#if defined(Q_OS_WIN)
+  return QStringLiteral("%1ProgramData/%2").arg(QDir::rootPath(), kAppName);
+#elif defined(Q_OS_MACOS)
+  return QStringLiteral("/Library/%1").arg(kAppName);
+#else
+  return QStringLiteral("/etc/%1").arg(kAppName);
+#endif
+}
+
+QString Settings::userSettingsFile()
+{
+  return QStringLiteral("%1/%2.conf").arg(userDir(), kAppName);
+}
+
+QString Settings::systemSettingsFile()
+{
+  return QStringLiteral("%1/%2.conf").arg(systemDir(), kAppName);
+}
+
 Settings *Settings::instance()
 {
+  synergy::runtime::sealRuntimeContext();
   static Settings m;
   return &m;
 }
@@ -86,36 +126,42 @@ void Settings::setStateFile(const QString &stateFile)
 Settings::Settings(QObject *parent) : QObject(parent)
 {
   QString fileToLoad;
+  if (synergy::runtime::isIsolatedRuntime()) {
+    fileToLoad = userSettingsFile();
+  } else {
 #ifdef Q_OS_WIN
-  const auto portableFile = portableSettingsFile();
-  qDebug().noquote() << "checking for portable settings file at:" << portableFile;
-  if (isPortableMode())
-    fileToLoad = portableFile;
+    const auto portableFile = portableSettingsFile();
+    qDebug().noquote() << "checking for portable settings file at:" << portableFile;
+    if (isPortableMode())
+      fileToLoad = portableFile;
 #else
-  if (const auto xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME"); !xdgConfigHome.isEmpty())
-    fileToLoad = QStringLiteral("%1/%2/%2.conf").arg(xdgConfigHome, kAppName);
+    if (const auto xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME"); !xdgConfigHome.isEmpty())
+      fileToLoad = QStringLiteral("%1/%2/%2.conf").arg(xdgConfigHome, kAppName);
 #endif
-  else if (QFile(UserSettingFile).exists())
-    fileToLoad = UserSettingFile;
-  else if (QFile(SystemSettingFile).exists())
-    fileToLoad = SystemSettingFile;
-  else
-    fileToLoad = UserSettingFile;
+    else if (QFile(userSettingsFile()).exists())
+      fileToLoad = userSettingsFile();
+    else if (QFile(systemSettingsFile()).exists())
+      fileToLoad = systemSettingsFile();
+    else
+      fileToLoad = userSettingsFile();
+  }
 
   m_settings = new QSettings(fileToLoad, QSettings::IniFormat, this);
   m_settingsProxy = std::make_shared<QSettingsProxy>();
   m_settingsProxy->load(fileToLoad);
   qInfo().noquote() << "initial settings file:" << m_settings->fileName();
 
-  const auto xdgStateHome = qEnvironmentVariable("XDG_STATE_HOME");
+  auto stateFile = synergy::runtime::runtimeStateFile();
+  if (stateFile.isEmpty()) {
+    const auto xdgStateHome = qEnvironmentVariable("XDG_STATE_HOME");
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-  const auto stateDir = QStandardPaths::standardLocations(QStandardPaths::GenericStateLocation).at(0);
+    const auto stateDir = QStandardPaths::standardLocations(QStandardPaths::GenericStateLocation).at(0);
 #else
-  const auto stateDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+    const auto stateDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
 #endif
-  const auto stateBase = !xdgStateHome.isEmpty() ? xdgStateHome : stateDir;
-  const auto stateFile = QStringLiteral("%1/%2.state").arg(stateBase, kAppName);
-
+    const auto stateBase = !xdgStateHome.isEmpty() ? xdgStateHome : stateDir;
+    stateFile = QStringLiteral("%1/%2.state").arg(stateBase, kAppName);
+  }
   m_stateSettings = new QSettings(stateFile, QSettings::IniFormat, this);
 
   upgradeSettings();
@@ -215,8 +261,11 @@ QVariant Settings::defaultValue(const QString &key)
   if (key == Security::BlockedKeyCombos)
     return QStringList{QStringLiteral("0xEFFF:0x0006")};
 
-  if (key == Log::File)
-    return QStringLiteral("%1/%2.log").arg(QDir::homePath(), kAppId);
+  if (key == Log::File) {
+    const auto root = synergy::runtime::runtimeRoot();
+    return root.isEmpty() ? QStringLiteral("%1/%2.log").arg(QDir::homePath(), kAppId)
+                          : root + QStringLiteral("/logs/app.log");
+  }
 
   if (key == Log::Level)
     return QVariant::fromValue(LogLevel::Level::Info).toString();
@@ -290,6 +339,8 @@ bool Settings::isWritable()
 
 bool Settings::isPortableMode()
 {
+  if (synergy::runtime::isIsolatedRuntime())
+    return false;
   // The portable archive ships a marker instead of the settings file so that
   // extracting an update over an existing folder cannot overwrite the user's
   // configuration. Installs created before the marker keep working through the
@@ -306,9 +357,11 @@ QString Settings::settingsFile()
 
 QString Settings::settingsPath()
 {
+  if (synergy::runtime::isIsolatedRuntime())
+    return QFileInfo(instance()->m_settings->fileName()).absolutePath();
 #ifdef Q_OS_WIN
   if (!isPortableMode())
-    return SystemDir;
+    return systemDir();
 #endif
 
   return QFileInfo(instance()->m_settings->fileName()).absolutePath();

@@ -12,7 +12,7 @@ outputs:
     description: "X.Y.Z from Version.cmake, used as synergy_<base>.exe"
     value: ${{ steps.compute.outputs.base }}
   patch:
-    description: "Patch component used for this build (auto-incremented for releases)"
+    description: "Committed patch component used for this build"
     value: ${{ steps.compute.outputs.patch }}
 
 runs:
@@ -24,6 +24,7 @@ runs:
       # (cmake/..., build/) are relative to it.
       working-directory: .
       run: |
+        set -euo pipefail
         # Container jobs bind-mount the workspace owned by the host user while
         # running as root, so git rejects it as dubious-owned and the SHA lookup
         # in Version.cmake fails silently, degrading the version to a no-SHA form.
@@ -41,35 +42,7 @@ runs:
         compute
         base=$(cat build/VERSION_BASE)
 
-        # A release build must publish an incremented version: reuse the patch
-        # of a tag on this commit (idempotent retry), otherwise bump past both
-        # the committed patch and the newest existing tag.
-        if [ "${SYNERGY_VERSION_AUTO_BUMP:-false}" = "true" ]; then
-          current_tag=$(git tag --points-at HEAD --list 'v[0-9]*' --sort=-v:refname | head -1)
-          if [ -n "$current_tag" ]; then
-            patch=${current_tag#v}
-            patch=${patch##*.}
-          else
-            major_minor=${base%.*}
-            base_patch=${base##*.}
-            latest_tag=$(git tag --list "v${major_minor}.*" --sort=-v:refname | head -1)
-            latest_patch=0
-            if [ -n "$latest_tag" ]; then
-              latest_patch=${latest_tag#v}
-              latest_patch=${latest_patch##*.}
-            fi
-            if [ "$base_patch" -gt "$latest_patch" ]; then
-              patch=$((base_patch + 1))
-            else
-              patch=$((latest_patch + 1))
-            fi
-          fi
-          export SYNERGY_VERSION_PATCH="$patch"
-          compute
-          base=$(cat build/VERSION_BASE)
-        else
-          patch=${base##*.}
-        fi
+        patch=${base##*.}
 
         version=$(cat build/VERSION)
         echo "Computed version: $version"

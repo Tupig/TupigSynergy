@@ -45,4 +45,5 @@ private Q_SLOTS:
 private:
   std::unique_ptr<Ui::ScreenSettingsDialog> ui;
   synergy::gui::Screen *m_screen;
+  bool m_readOnly = false;
 };

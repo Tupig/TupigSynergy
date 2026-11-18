@@ -11,8 +11,21 @@
 #include <QSettings>
 #include <QTextStream>
 
+bool Action::isValidForSerialization() const
+{
+  if (type() < 0 || type() >= m_actionTypeNames.size())
+    return false;
+  if (type() == static_cast<int>(Type::switchInDirection))
+    return switchDirection() >= 0 && switchDirection() < m_switchDirectionNames.size();
+  if (type() == static_cast<int>(Type::lockCursorToScreen))
+    return lockCursorMode() >= 0 && lockCursorMode() < m_lockCursorModeNames.size();
+  return true;
+}
+
 QString Action::text() const
 {
+  if (!isValidForSerialization())
+    return {};
   auto text = QString(m_actionTypeNames.at(type()));
 
   switch (static_cast<Action::Type>(type())) {
@@ -100,6 +113,10 @@ void Action::saveSettings(QSettings &settings) const
 
 QTextStream &operator<<(QTextStream &outStream, const Action &action)
 {
+  if (!action.isValidForSerialization()) {
+    outStream.setStatus(QTextStream::WriteFailed);
+    return outStream;
+  }
   if (action.activeOnRelease())
     outStream << ";";
 

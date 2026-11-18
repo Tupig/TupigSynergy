@@ -20,6 +20,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSpinBox>
+#include <QTabWidget>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -31,6 +32,7 @@ public:
   void setupUi(QDialog *dialog);
   void retranslateUi(QDialog *dialog);
 
+  QTabWidget *tabWidget = nullptr;
   QVBoxLayout *_2 = nullptr;
   QScrollArea *scrollArea = nullptr;
   QWidget *scrollAreaWidgetContents = nullptr;

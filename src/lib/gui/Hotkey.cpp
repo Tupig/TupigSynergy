@@ -52,6 +52,12 @@ bool Hotkey::operator==(const Hotkey &hk) const
 
 QTextStream &operator<<(QTextStream &outStream, const Hotkey &hotkey)
 {
+  for (const auto &action : hotkey.actions()) {
+    if (!action.isValidForSerialization()) {
+      outStream.setStatus(QTextStream::WriteFailed);
+      return outStream;
+    }
+  }
   // Don't write a config if there is no actions
   if (hotkey.actions().size() == 0)
     return outStream;

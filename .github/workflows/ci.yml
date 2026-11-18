@@ -1,27 +1,8 @@
-# Single workflow, shown as "TuPig Synergy" (CMAKE_PROJECT_PROPER_NAME).
-# Jobs are ordered for reading; `needs` is what actually schedules them:
-#   1. prepare (version, encoding, clang-format, and the trigger plan below)
-#   2. build (Windows MSVC, macOS AppleClang arm64+x86_64, Linux gcc, Flatpak)
-#   3. publish (GitHub Release, optional S3, Slack on failure)
-#   4. analysis (only workflow_dispatch with analyze=true)
-#   5. ci-passed, the branch-protection gate
-#
-# Triggers - one run does not start another:
-#   pull_request to main  lint, then Windows, macOS, and the free Linux subset.
-#                         Unsigned snapshot artifacts. No publish or notifications.
-#                         A newer push to that PR cancels the older run.
-#   release published     Windows and macOS, clean version, attach packages. This fires
-#                         when a person publishes a Release. The publish job uses the
-#                         workflow token, and that token does not start a new workflow,
-#                         so it does not loop. Do not publish the same commit from the
-#                         UI and from workflow_dispatch; those are different refs and
-#                         both would build.
-#   workflow_dispatch     manual. package-type=release builds Windows and macOS and
-#                         publishes. package-type=snapshot honors platform and does
-#                         not publish. analyze is independent of package-type.
-# Merging a PR does not start another validation run: the PR run already covered
-# the change. PR and manual runs use different concurrency groups, so a free Linux
-# check cannot cancel a release build that is already going.
+# PRs validate only Windows x64 and macOS arm64.
+# Manual snapshots build the selected native platform(s), without publication.
+# Manual releases run at an existing exact version tag on integrated main.
+# Both native builds, contract checks and payload audits must pass before publication.
+# Release events do not start builds; publication creates a new draft then exposes it.
 
 name: TuPig Synergy
 
@@ -32,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       package-type:
-        description: "release: all platforms, clean version, publish the GitHub Release. snapshot: no publish; platform applies."
+        description: "release: exact existing version tag on main, Windows and macOS, new GitHub Release. snapshot: no publish; platform applies."
         required: false
         default: "snapshot"
         type: choice
@@ -48,34 +29,8 @@ on:
           - "all"
           - windows
           - macos
-      analyze:
-        description: "Also run clang-tidy, cppcheck, CodeQL, SonarCloud and Valgrind. Does not change which platforms build."
-        required: false
-        default: false
-        type: boolean
-      run-audit:
-        description: "按需运行依赖漏洞审计（cve-bin-tool）。"
-        required: false
-        default: false
-        type: boolean
-      run-codeql:
-        description: "按需运行 CodeQL 安全分析。"
-        required: false
-        default: false
-        type: boolean
-      run-msi:
-        description: "按需运行 MSI64 intake 测试。"
-        required: false
-        default: false
-        type: boolean
-      aws-s3-uri:
-        description: "Optional S3 override for a manual or release run. Unused when AWS secrets are unset."
-        required: false
-        type: string
   pull_request:
     branches: [main]
-  release:
-    types: [published]
 
 # Automatic PR runs cancel only their own older run. Manual and release runs
 # never cancel, and neither can cancel another run's group.
@@ -90,14 +45,11 @@ env:
   NODE_OPTIONS: --no-deprecation
 
   # Release shape, propagated to cmake (Synergy.cmake reads these as options).
-  # Release events and explicit package-type=release → clean X.Y.Z.
-  # Push to main + package-type=snapshot → snapshot build.
+  # Explicit package-type=release uses the committed clean X.Y.Z.
+  # Manual package-type=snapshot adds the snapshot suffix.
   # Pull requests fall through to the cmake dev default.
-  SYNERGY_VERSION_RELEASE: ${{ github.event_name == 'release' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'release') }}
+  SYNERGY_VERSION_RELEASE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'release' }}
   SYNERGY_VERSION_SNAPSHOT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'snapshot' }}
-  # A manual release must publish an incremented version; its patch is computed
-  # from existing tags so a new GitHub Release is created for every build.
-  SYNERGY_VERSION_AUTO_BUMP: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.package-type == 'release' }}
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -111,13 +63,10 @@ jobs:
       version: ${{ steps.get-version.outputs.version }}
       base: ${{ steps.get-version.outputs.base }}
       patch: ${{ steps.get-version.outputs.patch }}
-      linux_targets: ${{ steps.plan.outputs.targets }}
       windows_targets: ${{ steps.plan.outputs.windows_targets }}
       macos_targets: ${{ steps.plan.outputs.macos_targets }}
       build_windows: ${{ steps.plan.outputs.build_windows }}
       build_macos: ${{ steps.plan.outputs.build_macos }}
-      build_linux: ${{ steps.plan.outputs.build_linux }}
-      build_flatpak: ${{ steps.plan.outputs.build_flatpak }}
       publish_release: ${{ steps.plan.outputs.publish_release }}
       skip_unchanged: ${{ steps.plan.outputs.skip_unchanged }}
 
@@ -137,8 +86,7 @@ jobs:
 
       # One place decides what this event builds. Job `if`s only read these
       # outputs, so a platform is not accidentally both required and skipped.
-      # pull_request: free Linux. release and explicit package-type=release:
-      # Windows and macOS and a GitHub Release. snapshot: honor platform; all or legacy blank means all.
+      # Pull requests and releases build both native targets. Snapshots honor platform.
       - name: Plan builds for this event
         id: plan
         env:
@@ -148,77 +96,54 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          linux_key=free
           build_windows=false
           build_macos=false
-          build_linux=false
-          build_flatpak=false
           publish_release=false
           skip_unchanged=false
           case "$GITHUB_EVENT_NAME" in
             pull_request)
-              linux_key=free
               build_windows=true
               build_macos=true
-              build_linux=true
-              ;;
-            release)
-              # Release packaging is Windows and macOS only; Linux packages are
-              # validated by the free push/PR subset but not published.
-              build_windows=true
-              build_macos=true
-              publish_release=true
               ;;
             workflow_dispatch)
-              linux_key=full
-              if [ "$PACKAGE_TYPE" = "release" ]; then
-                # Release packaging is Windows and macOS only; Linux packages are
-                # validated by the free push/PR subset but not published.
-                build_windows=true
-                build_macos=true
-                publish_release=true
-              else
-                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "all" ] || [ "$PLATFORM" = "windows" ]; then
+              case "$PACKAGE_TYPE" in
+                release)
                   build_windows=true
-                fi
-                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "all" ] || [ "$PLATFORM" = "macos" ]; then
                   build_macos=true
-                fi
-                if [ -z "$PLATFORM" ] || [ "$PLATFORM" = "all" ] || [ "$PLATFORM" = "linux" ]; then
-                  build_linux=true
-                  build_flatpak=true
-                fi
-                if [ "$PLATFORM" = "flatpak" ]; then
-                  build_flatpak=true
-                fi
-              fi
+                  publish_release=true
+                  ;;
+                snapshot)
+                  case "$PLATFORM" in
+                    ''|all) build_windows=true; build_macos=true ;;
+                    windows) build_windows=true ;;
+                    macos) build_macos=true ;;
+                    *) echo "::error::unsupported snapshot platform"; exit 1 ;;
+                  esac
+                  ;;
+                *) echo "::error::unsupported package type"; exit 1 ;;
+              esac
               ;;
             *)
               echo "::error::unexpected event $GITHUB_EVENT_NAME"
               exit 1
               ;;
           esac
-          targets=$(jq -c --arg k "$linux_key" '.[$k] | map(. + {"expected-arch": (if (.name | endswith("-arm64")) then "arm64" elif (.name | endswith("-x86_64")) then "x64" else error("unsupported declared Linux target") end)})' .github/matrices/linux-targets.json)
-          # Release packaging ships Windows x64 and macOS arm64 only. Pull
-          # requests and snapshots keep the full architecture matrix.
-          # 交付只构建 Windows x64 与 macOS arm64，其余平台不构建。
+          if [ "$build_windows" != true ] && [ "$build_macos" != true ]; then
+            echo "::error::empty native build plan"
+            exit 1
+          fi
+          # Builds and distribution are limited to Windows x64 and macOS arm64.
           windows_targets='[{"name":"windows-2022-x64","runs-on":"windows-2022","vcpkg-triplet":"x64-windows-release","arch":"amd64","qt-version":"6.10.3"}]'
           macos_targets='[{"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.1","config-args":"-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}]'
-          targets='[]'
-          build_linux=false
-          build_flatpak=false
           {
-            echo "targets=$targets"
             echo "windows_targets=$windows_targets"
             echo "macos_targets=$macos_targets"
             echo "build_windows=$build_windows"
             echo "build_macos=$build_macos"
-            echo "build_linux=$build_linux"
-            echo "build_flatpak=$build_flatpak"
             echo "publish_release=$publish_release"
             echo "skip_unchanged=$skip_unchanged"
           } >> "$GITHUB_OUTPUT"
-          echo "plan event=$GITHUB_EVENT_NAME package=${PACKAGE_TYPE:-<none>} platform=${PLATFORM:-<none>} linux_matrix=$linux_key windows=$build_windows macos=$build_macos linux=$build_linux flatpak=$build_flatpak publish=$publish_release skip=$skip_unchanged"
+          echo "plan event=$GITHUB_EVENT_NAME package=${PACKAGE_TYPE:-<none>} platform=${PLATFORM:-<none>} windows=$build_windows macos=$build_macos publish=$publish_release skip=$skip_unchanged"
 
   lint-clang:
     needs: get-version
@@ -253,9 +178,29 @@ jobs:
       - name: Check Chinese translations
         run: python3 scripts/ci/check-translations.py
 
+  codeql:
+    name: Analyze C++
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: c-cpp
+          build-mode: none
+      - name: Analyze C++
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:c-cpp
+
   # ---------------------------------------------------------------------------
   # 2. Build. One CMake configure line per OS; the runner compiler differs.
-  # Windows: MSVC + Ninja. macOS: AppleClang (arm64 and x86_64). Linux: gcc.
+  # Windows x64: MSVC + Ninja. macOS arm64: AppleClang.
   # ---------------------------------------------------------------------------
   build-windows:
     needs: [get-version, lint-encoding]
@@ -268,7 +213,6 @@ jobs:
       actions: read
 
     env:
-      SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
       # SignPath Foundation holds the code-signing key. The API token is the only
       # secret. Organization id and project slug are Actions variables assigned
       # after the project is approved. Missing any of them leaves the package unsigned.
@@ -295,12 +239,6 @@ jobs:
           qt-version: 6.10.3
           vcpkg-triplet: x64-windows-release
 
-      - name: Update Windows Paths
-        shell: cmd
-        run: |
-          if exist "%ProgramFiles%\doxygen\bin\doxygen.exe" echo %ProgramFiles%\doxygen\bin>>"%GITHUB_PATH%"
-          if exist "%ProgramFiles(x86)%\doxygen\bin\doxygen.exe" echo %ProgramFiles(x86)%\doxygen\bin>>"%GITHUB_PATH%"
-
       # Stage: compile. GUI must be synergy_<X.Y.Z>.exe; core and daemon stay unversioned.
       - name: Configure
         run: ${{ env.CMAKE_CONFIGURE }} -G Ninja ${{ steps.get-deps.outputs.vcpkg-cmake-config }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
@@ -309,41 +247,60 @@ jobs:
         shell: bash
         run: cmake --build build --config Release -j8
 
-      - name: GUI configuration tests
+      - name: Use Windows host fonts for offscreen tests
+        shell: cmd
+        run: |
+          @echo off
+          if not defined SystemRoot exit /b 1
+          if not exist "%SystemRoot%\Fonts\" exit /b 1
+          dir /b /a-d "%SystemRoot%\Fonts\*.ttf" >nul 2>&1
+          if errorlevel 1 exit /b 1
+          echo QT_QPA_FONTDIR=%SystemRoot%\Fonts>>"%GITHUB_ENV%"
+
+      - name: GUI configuration and critical contract tests
+        timeout-minutes: 15
         env:
-          QT_QPA_PLATFORM: offscreen
+          QT_QPA_PLATFORM: windows
+          QT_STYLE_OVERRIDE: fusion
         shell: bash
         run: |
           set -euo pipefail
+          python3 scripts/ci/check-diagnostic-paths.py build/CMakeCache.txt \
+            build/r3-test-evidence build/src/unittests/test-results \
+            build/src/unittests/Testing/Temporary/LastTest.log
           cache=build/CMakeCache.txt
           test -f "$cache" || { echo 'Missing configured CMake cache'; exit 1; }
           value() { sed -n "s/^$1:[^=]*=//p" "$cache"; }
-          build_tests=$(value BUILD_TESTS)
-          skip_build_tests=$(value SKIP_BUILD_TESTS)
+          test "$(value BUILD_TESTS)" = ON || { echo 'Required native tests are disabled'; exit 1; }
           qt_dir=$(value QT_DIR)
-          case "$build_tests:$skip_build_tests" in
-            ON:ON|ON:OFF|OFF:ON|OFF:OFF) ;;
-            *) echo 'Unknown or conflicting test configuration'; exit 1 ;;
-          esac
-          qt_major=unknown
-          if [ -f "$qt_dir/Qt5Config.cmake" ] && [ ! -f "$qt_dir/Qt6Config.cmake" ]; then
-            qt_major=5
-          elif [ -f "$qt_dir/Qt6Config.cmake" ] && [ ! -f "$qt_dir/Qt5Config.cmake" ]; then
-            qt_major=6
-          else
-            echo 'Unknown or conflicting selected Qt configuration'; exit 1
-          fi
-          printf 'GUI configuration: BUILD_TESTS=%s SKIP_BUILD_TESTS=%s QT_DIR=%s QT_VERSION_MAJOR=%s\n' "$build_tests" "$skip_build_tests" "$qt_dir" "$qt_major"
-          if [ "$RUNNER_OS" = Linux ] && { [ "$build_tests" = OFF ] || [ "$qt_major" = 5 ]; }; then
-            echo 'Not Run: GUI configuration tests disabled by recorded CMake/Qt configuration'
-            exit 0
-          fi
-          if [ "$build_tests" != ON ] || [ "$qt_major" != 6 ]; then
-            echo 'Required native GUI configuration tests are unavailable'; exit 1
-          fi
-          test -d build/src/unittests || { echo 'Missing required Qt6 test directory'; exit 1; }
-          for suite in ScreenTests ScreenSetupModelTests ValidatorTests; do
-            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error -R "^${suite}$"
+          test -f "$qt_dir/Qt6Config.cmake" && test ! -f "$qt_dir/Qt5Config.cmake" || {
+            echo 'Required unambiguous Qt6 configuration is unavailable'; exit 1;
+          }
+          mkdir -p build/r3-test-evidence
+          suites=(PageHostTests EditorTransactionTests NativeDesignTests LayoutAcceptanceTests
+            R3RuntimeContextTests R3OptionContractTests R3SerializationTests R3MotionContractTests
+            R3StartupContractTests R3VisualContractTests R3TrayQuitTests
+            R4VisualContractTests MainWindowFlowTests DialogRenderTests)
+          for suite in "${suites[@]}"; do
+            target=$suite
+            if [ "$suite" = R4VisualContractTests ]; then target=R4VisualProbe; fi
+            python3 scripts/ci/check-diagnostic-paths.py "build/r3-test-evidence/${suite}-build.log"
+            cmake --build build --config Release --target "$target" -j8 2>&1 | tee "build/r3-test-evidence/${suite}-build.log"
+            python3 scripts/ci/check-diagnostic-paths.py --recursive \
+              build/src/unittests/Testing/Temporary "build/src/unittests/test-results/${suite}.txt" \
+              "build/r3-test-evidence/${suite}.xml" "build/r3-test-evidence/${suite}.log"
+            status=0
+            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error \
+              --output-junit "$PWD/build/r3-test-evidence/${suite}.xml" \
+              --output-log "$PWD/build/r3-test-evidence/${suite}.log" -R "^${suite}$" || status=$?
+            python3 scripts/ci/check-diagnostic-paths.py \
+              "build/src/unittests/test-results/${suite}.txt" build/src/unittests/Testing/Temporary/LastTest.log \
+              "build/r3-test-evidence/${suite}-${suite}.txt" "build/r3-test-evidence/${suite}-LastTest.log"
+            for raw in "build/src/unittests/test-results/${suite}.txt" \
+              build/src/unittests/Testing/Temporary/LastTest.log; do
+              if [ -f "$raw" ]; then cp "$raw" "build/r3-test-evidence/${suite}-$(basename "$raw")"; fi
+            done
+            test "$status" -eq 0 || exit "$status"
           done
 
       # Iron rule: the GUI file is synergy_<X.Y.Z>.exe. X.Y.Z is get-version's
@@ -433,7 +390,29 @@ jobs:
 
       - name: Package
         shell: bash
-        run: cmake --build build --config Release -j8 --target package
+        run: |
+          set -euo pipefail
+          if cmake --build build --config Release -j8 --target package; then
+            exit 0
+          fi
+          # CPack 默认只打印日志路径；失败时保留真正的 WiX 诊断。
+          while IFS= read -r -d '' logfile; do
+            printf '\n--- %s ---\n' "$logfile"
+            cat "$logfile"
+          done < <(find build/_CPack_Packages -type f -name '*.log' -print0)
+          exit 1
+
+      - name: Upload package failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-x64-package-diagnostics
+          path: |
+            build/_CPack_Packages/**/*.log
+            build/_CPack_Packages/**/*.wxs
+            build/_CPack_Packages/**/*.wxl
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Locate MSI
         if: env.SYNERGY_VERSION_RELEASE == 'true' && env.WINDOWS_SIGNING == 'true'
@@ -485,7 +464,9 @@ jobs:
       # Stage: test the build and the package, then upload it.
       - name: Unit tests
         uses: ./.github/actions/run-tests
-        timeout-minutes: 2
+        timeout-minutes: 15
+        with:
+          exclude-tests: '^(PageHostTests|EditorTransactionTests|NativeDesignTests|LayoutAcceptanceTests|R3RuntimeContextTests|R3OptionContractTests|R3SerializationTests|R3MotionContractTests|R3StartupContractTests|R3VisualContractTests|R3TrayQuitTests|R4VisualContractTests|MainWindowFlowTests|DialogRenderTests)$'
 
       - name: Test packaged build
         uses: ./.github/actions/test-package
@@ -501,57 +482,72 @@ jobs:
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
           retention-days: 14
 
-  bump-version:
-    needs: [build-macos]
-    if: ${{ needs.get-version.outputs.skip_unchanged != 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          fetch-depth: 0
-
-      - name: Bump patch version
+      - name: Preserve test probe identities
+        if: ${{ always() }}
+        shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PYEOF'
-          import json, pathlib, re
-          version_file = pathlib.Path("cmake/Version.cmake")
-          text = version_file.read_text()
-          match = re.search(r"set\(SYNERGY_VERSION_PATCH (\d+)\)", text)
-          patch = int(match.group(1)) + 1
-          text = re.sub(r"set\(SYNERGY_VERSION_PATCH \d+\)", f"set(SYNERGY_VERSION_PATCH {patch})", text)
-          version_file.write_text(text)
-          manifest = pathlib.Path("vcpkg.json")
-          data = json.loads(manifest.read_text())
-          major = int(re.search(r"set\(SYNERGY_VERSION_MAJOR (\d+)\)", text).group(1))
-          minor = int(re.search(r"set\(SYNERGY_VERSION_MINOR (\d+)\)", text).group(1))
-          new_version = f"{major}.{minor}.{patch}"
-          data["version-string"] = new_version
-          manifest.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-          pathlib.Path("build").mkdir(exist_ok=True)
-          pathlib.Path("build/next-version").write_text(new_version)
-          PYEOF
-          next=$(cat build/next-version)
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add cmake/Version.cmake vcpkg.json
-          git commit -m "chore: 构建版本升级到 ${next} [skip ci]"
-          git push origin HEAD
+          python3 scripts/ci/check-diagnostic-paths.py \
+            build/bin/R3StartupProbe.exe build/bin/R4VisualProbe.exe \
+            build/bin/R3StartupProbe.app/Contents/MacOS/R3StartupProbe \
+            build/bin/R4VisualProbe.app/Contents/MacOS/R4VisualProbe \
+            build/r3-test-evidence/R3StartupProbe-identity.json \
+            build/r3-test-evidence/R4VisualProbe-identity.json
+          mkdir -p build/r3-test-evidence
+          python3 - <<'PYTHON'
+          import hashlib, json
+          from pathlib import Path
+          candidates = (
+              Path('build/bin/R3StartupProbe.exe'), Path('build/bin/R4VisualProbe.exe'),
+              Path('build/bin/R3StartupProbe.app/Contents/MacOS/R3StartupProbe'),
+              Path('build/bin/R4VisualProbe.app/Contents/MacOS/R4VisualProbe'),
+          )
+          records = [{'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+                     for path in candidates if path.is_file()]
+          for probe in ('R3StartupProbe', 'R4VisualProbe'):
+              output = Path('build/r3-test-evidence/' + probe + '-identity.json')
+              selected = [record for record in records if Path(record['path']).name in (probe, probe + '.exe')]
+              output.write_text(json.dumps({'probe': probe, 'files': selected}, indent=2) + '\n')
+          PYTHON
+
+      - name: Validate diagnostic upload paths
+        id: diagnostics-safe
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/check-diagnostic-paths.py --recursive \
+            build/r3-test-evidence/ \
+            build/r3-test-evidence/R3StartupProbe-identity.json \
+            build/r3-test-evidence/R4VisualProbe-identity.json \
+            build/src/unittests/test-results/ \
+            build/src/unittests/test-results/ctest.xml \
+            build/src/unittests/Testing/Temporary/LastTest.log
+          echo 'safe=true' >> "$GITHUB_OUTPUT"
+
+      - name: Upload raw contract diagnostics
+        if: ${{ always() && steps.diagnostics-safe.outputs.safe == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: r3-test-evidence-windows-x64
+          path: |
+            build/r3-test-evidence/
+            build/r3-test-evidence/R3StartupProbe-identity.json
+            build/r3-test-evidence/R4VisualProbe-identity.json
+            build/src/unittests/test-results/
+            build/src/unittests/test-results/ctest.xml
+            build/src/unittests/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+          retention-days: 14
 
   build-macos:
-    needs: [get-version, build-windows]
+    needs: [get-version, lint-encoding]
     if: ${{ needs.get-version.outputs.build_macos == 'true' }}
     name: macos-arm64
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 60
 
     env:
-      SYNERGY_VERSION_PATCH: ${{ needs.get-version.outputs.patch }}
       MAC_SIGNING: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID != '' }}
       MAC_CODESIGN_ID: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}
 
@@ -580,41 +576,49 @@ jobs:
         shell: bash
         run: cmake --build build --config Release -j8
 
-      - name: GUI configuration tests
+      - name: GUI configuration and critical contract tests
+        timeout-minutes: 15
         env:
-          QT_QPA_PLATFORM: offscreen
+          QT_QPA_PLATFORM: cocoa
         shell: bash
         run: |
           set -euo pipefail
+          python3 scripts/ci/check-diagnostic-paths.py build/CMakeCache.txt \
+            build/r3-test-evidence build/src/unittests/test-results \
+            build/src/unittests/Testing/Temporary/LastTest.log
           cache=build/CMakeCache.txt
           test -f "$cache" || { echo 'Missing configured CMake cache'; exit 1; }
           value() { sed -n "s/^$1:[^=]*=//p" "$cache"; }
-          build_tests=$(value BUILD_TESTS)
-          skip_build_tests=$(value SKIP_BUILD_TESTS)
+          test "$(value BUILD_TESTS)" = ON || { echo 'Required native tests are disabled'; exit 1; }
           qt_dir=$(value QT_DIR)
-          case "$build_tests:$skip_build_tests" in
-            ON:ON|ON:OFF|OFF:ON|OFF:OFF) ;;
-            *) echo 'Unknown or conflicting test configuration'; exit 1 ;;
-          esac
-          qt_major=unknown
-          if [ -f "$qt_dir/Qt5Config.cmake" ] && [ ! -f "$qt_dir/Qt6Config.cmake" ]; then
-            qt_major=5
-          elif [ -f "$qt_dir/Qt6Config.cmake" ] && [ ! -f "$qt_dir/Qt5Config.cmake" ]; then
-            qt_major=6
-          else
-            echo 'Unknown or conflicting selected Qt configuration'; exit 1
-          fi
-          printf 'GUI configuration: BUILD_TESTS=%s SKIP_BUILD_TESTS=%s QT_DIR=%s QT_VERSION_MAJOR=%s\n' "$build_tests" "$skip_build_tests" "$qt_dir" "$qt_major"
-          if [ "$RUNNER_OS" = Linux ] && { [ "$build_tests" = OFF ] || [ "$qt_major" = 5 ]; }; then
-            echo 'Not Run: GUI configuration tests disabled by recorded CMake/Qt configuration'
-            exit 0
-          fi
-          if [ "$build_tests" != ON ] || [ "$qt_major" != 6 ]; then
-            echo 'Required native GUI configuration tests are unavailable'; exit 1
-          fi
-          test -d build/src/unittests || { echo 'Missing required Qt6 test directory'; exit 1; }
-          for suite in ScreenTests ScreenSetupModelTests ValidatorTests; do
-            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error -R "^${suite}$"
+          test -f "$qt_dir/Qt6Config.cmake" && test ! -f "$qt_dir/Qt5Config.cmake" || {
+            echo 'Required unambiguous Qt6 configuration is unavailable'; exit 1;
+          }
+          mkdir -p build/r3-test-evidence
+          suites=(PageHostTests EditorTransactionTests NativeDesignTests LayoutAcceptanceTests
+            R3RuntimeContextTests R3OptionContractTests R3SerializationTests R3MotionContractTests
+            R3StartupContractTests R3VisualContractTests R3TrayQuitTests
+            R4VisualContractTests MainWindowFlowTests DialogRenderTests)
+          for suite in "${suites[@]}"; do
+            target=$suite
+            if [ "$suite" = R4VisualContractTests ]; then target=R4VisualProbe; fi
+            python3 scripts/ci/check-diagnostic-paths.py "build/r3-test-evidence/${suite}-build.log"
+            cmake --build build --config Release --target "$target" -j8 2>&1 | tee "build/r3-test-evidence/${suite}-build.log"
+            python3 scripts/ci/check-diagnostic-paths.py --recursive \
+              build/src/unittests/Testing/Temporary "build/src/unittests/test-results/${suite}.txt" \
+              "build/r3-test-evidence/${suite}.xml" "build/r3-test-evidence/${suite}.log"
+            status=0
+            ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error \
+              --output-junit "$PWD/build/r3-test-evidence/${suite}.xml" \
+              --output-log "$PWD/build/r3-test-evidence/${suite}.log" -R "^${suite}$" || status=$?
+            python3 scripts/ci/check-diagnostic-paths.py \
+              "build/src/unittests/test-results/${suite}.txt" build/src/unittests/Testing/Temporary/LastTest.log \
+              "build/r3-test-evidence/${suite}-${suite}.txt" "build/r3-test-evidence/${suite}-LastTest.log"
+            for raw in "build/src/unittests/test-results/${suite}.txt" \
+              build/src/unittests/Testing/Temporary/LastTest.log; do
+              if [ -f "$raw" ]; then cp "$raw" "build/r3-test-evidence/${suite}-$(basename "$raw")"; fi
+            done
+            test "$status" -eq 0 || exit "$status"
           done
 
       # Stage: sign and notarize, only when APPLE_CODESIGN_ID is set.
@@ -718,7 +722,9 @@ jobs:
       # Stage: test the build and the package, then upload it.
       - name: Unit tests
         uses: ./.github/actions/run-tests
-        timeout-minutes: 2
+        timeout-minutes: 15
+        with:
+          exclude-tests: '^(PageHostTests|EditorTransactionTests|NativeDesignTests|LayoutAcceptanceTests|R3RuntimeContextTests|R3OptionContractTests|R3SerializationTests|R3MotionContractTests|R3StartupContractTests|R3VisualContractTests|R3TrayQuitTests|R4VisualContractTests|MainWindowFlowTests|DialogRenderTests)$'
 
       - name: Test packaged build
         uses: ./.github/actions/test-package
@@ -734,9 +740,67 @@ jobs:
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
           retention-days: 14
 
+      - name: Preserve test probe identities
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/check-diagnostic-paths.py \
+            build/bin/R3StartupProbe.exe build/bin/R4VisualProbe.exe \
+            build/bin/R3StartupProbe.app/Contents/MacOS/R3StartupProbe \
+            build/bin/R4VisualProbe.app/Contents/MacOS/R4VisualProbe \
+            build/r3-test-evidence/R3StartupProbe-identity.json \
+            build/r3-test-evidence/R4VisualProbe-identity.json
+          mkdir -p build/r3-test-evidence
+          python3 - <<'PYTHON'
+          import hashlib, json
+          from pathlib import Path
+          candidates = (
+              Path('build/bin/R3StartupProbe.exe'), Path('build/bin/R4VisualProbe.exe'),
+              Path('build/bin/R3StartupProbe.app/Contents/MacOS/R3StartupProbe'),
+              Path('build/bin/R4VisualProbe.app/Contents/MacOS/R4VisualProbe'),
+          )
+          records = [{'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+                     for path in candidates if path.is_file()]
+          for probe in ('R3StartupProbe', 'R4VisualProbe'):
+              output = Path('build/r3-test-evidence/' + probe + '-identity.json')
+              selected = [record for record in records if Path(record['path']).name in (probe, probe + '.exe')]
+              output.write_text(json.dumps({'probe': probe, 'files': selected}, indent=2) + '\n')
+          PYTHON
+
+      - name: Validate diagnostic upload paths
+        id: diagnostics-safe
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/check-diagnostic-paths.py --recursive \
+            build/r3-test-evidence/ \
+            build/r3-test-evidence/R3StartupProbe-identity.json \
+            build/r3-test-evidence/R4VisualProbe-identity.json \
+            build/src/unittests/test-results/ \
+            build/src/unittests/test-results/ctest.xml \
+            build/src/unittests/Testing/Temporary/LastTest.log
+          echo 'safe=true' >> "$GITHUB_OUTPUT"
+
+      - name: Upload raw contract diagnostics
+        if: ${{ always() && steps.diagnostics-safe.outputs.safe == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: r3-test-evidence-macos-arm64
+          path: |
+            build/r3-test-evidence/
+            build/r3-test-evidence/R3StartupProbe-identity.json
+            build/r3-test-evidence/R4VisualProbe-identity.json
+            build/src/unittests/test-results/
+            build/src/unittests/test-results/ctest.xml
+            build/src/unittests/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+          retention-days: 14
+
   github-release:
-    needs: [get-version, build-windows, build-macos]
-    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.publish_release == 'true' && (needs.build-windows.result == 'success' || needs.build-macos.result == 'success') }}
+    needs: [get-version, build-windows, build-macos, codeql]
+    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.publish_release == 'true' && needs.build-windows.result == 'success' && needs.build-macos.result == 'success' && needs.codeql.result == 'success' }}
     runs-on: ubuntu-latest
     # contents:write uploads the Release. id-token and attestations mint the
     # Sigstore provenance for those same bytes. Job permissions replace the
@@ -781,8 +845,19 @@ jobs:
           VERSION: ${{ needs.get-version.outputs.base }}
         run: |
           set -euo pipefail
-          shopt -s nullglob globstar
-          mapfile -t files < <(find dist -type f ! -name '*.digest' | sort)
+          if [ "$GITHUB_EVENT_NAME" != workflow_dispatch ] ||
+             [ "$GITHUB_REF" != "refs/tags/v${VERSION}" ]; then
+            echo "::error::release requires manual dispatch at the exact committed version tag"
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::invalid release identity"
+            exit 1
+          fi
+          files=()
+          while IFS= read -r file; do
+            files+=("$file")
+          done < <(find dist -type f ! -name '*.digest' | sort)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "::error::no package files to publish"
             exit 1
@@ -797,441 +872,48 @@ jobs:
           # signing. Keep both bilingual: the project is Chinese-first.
           notes="## 发布信息 / Release information"$'\n\n'
           notes+="- 每个安装包都附带 GitHub 构建来源证明 / Every package carries a GitHub build-provenance attestation:"$'\n'
-          notes+="  \`gh attestation verify FILE --repo Tupig/Tupig_synergy\`"$'\n'
+          notes+="  \`gh attestation verify FILE --repo ${GH_REPO}\`"$'\n'
           notes+="- Windows 包在 SignPath 审批前未签名 / Windows packages are unsigned until SignPath approval."$'\n'
           notes+="- macOS 包未使用 Developer ID 签名与公证，首次运行需在「系统设置 → 隐私与安全性 → 辅助功能」中授权；升级后如再次提示，请重新授权 / "
           notes+="macOS packages use an ad-hoc signature (no Developer ID, no notarization); grant Accessibility permission after the first launch and re-grant after an update if prompted."$'\n'
           marker="Built-From: ${GITHUB_SHA}"
-          # A published release must have an incremented version: reusing a tag
-          # for different code is exactly what the auto-bump prevents. A rerun
-          # of the same commit may still refresh its own assets.
-          if existing_sha=$(gh api "repos/${GH_REPO}/commits/${tag}" --jq .sha 2>/dev/null) &&
-             [ -n "$existing_sha" ] && [ "$existing_sha" != "$GITHUB_SHA" ]; then
+          # The validated integrated commit must already own this version tag.
+          # Never let release creation infer a target from the default branch.
+          if ! existing_sha=$(gh api "repos/${GH_REPO}/commits/${tag}" --jq .sha 2>/dev/null); then
+            echo "::error::Release ${tag} requires an existing validated source tag"
+            exit 1
+          fi
+          if [ "$existing_sha" != "$GITHUB_SHA" ]; then
             echo "::error::Release ${tag} already points to ${existing_sha}; bump the version before publishing"
             exit 1
           fi
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "${files[@]}" --clobber
-            existing=$(gh release view "$tag" --json body -q .body)
-            cleaned=$(printf '%s\n' "$existing" | tr -d '\r' | grep -v '^Built-From: ' || true)
-            if [ -z "${cleaned//[[:space:]]/}" ]; then
-              cleaned="$notes"
+          if ! main_sha=$(gh api "repos/${GH_REPO}/commits/main" --jq .sha); then
+            echo "::error::cannot resolve integrated main"
+            exit 1
+          fi
+          if [ "$main_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::release source is not the current integrated main commit"
+            exit 1
+          fi
+          # Any existing release (including a draft) is immutable to this run.
+          # A nonzero query is absence only when the actual HTTP status is 404.
+          if release_response=$(gh api --include "repos/${GH_REPO}/releases/tags/${tag}"); then
+            echo "::error::Release ${tag} already exists; no assets will be replaced"
+            exit 1
+          else
+            release_status=$(printf '%s\n' "$release_response" | tr -d '\r' | sed -n 's/^HTTP\/[^ ]* \([0-9][0-9][0-9]\)\( .*\)\{0,1\}$/\1/p' | tail -n 1)
+            if [ "$release_status" != 404 ]; then
+              echo "::error::cannot establish absence of Release ${tag} (HTTP ${release_status:-unknown})"
+              exit 1
             fi
-            gh release edit "$tag" --notes "${cleaned}"$'\n\n'"${marker}"
-          else
-            # --generate-notes lists the merged pull requests since the last
-            # release; the edit appends the provenance/signing footer.
-            gh release create "$tag" "${files[@]}" --title "$title" --generate-notes --latest
-            generated=$(gh release view "$tag" --json body -q .body)
-            gh release edit "$tag" --notes "${generated}"$'\n\n'"${notes}"$'\n\n'"${marker}"
           fi
-
-  # Upload release packages to AWS S3 for distribution. Snapshot validation
-  # never enters this job or reads AWS credentials. Release publication
-  # uploads whatever artifacts exist - one failed target must not block shipping
-  # the rest (a flaky distro should not discard other release artifacts).
-  # The publication decision comes from get-version, which supplies the path. Layout: <dir>/<dev|snapshot|release>/<version>/...
-  # No checkout (download-artifact only). Artifacts land at the workspace root under dist/.
-  # Secrets cannot be referenced from a job-level `if` (context unavailable
-  # there), so gate each AWS step individually: when secrets are unset the
-  # job still runs but every upload step is skipped - job stays green (A-30 (#54)).
-  s3-upload:
-    needs: [get-version, build-windows, build-macos]
-    # Publication only: push, pull request and snapshot runs never upload to S3.
-    if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.skip_unchanged != 'true' && needs.get-version.outputs.publish_release == 'true' && (github.event_name == 'workflow_dispatch' || github.event_name == 'release') }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check AWS secrets
-        id: aws
-        env:
-          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
-          if [ -n "$AWS_KEY" ] && [ -n "$AWS_SECRET" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "AWS secrets not configured; skipping S3 upload."
-          fi
-
-      - name: Download all artifacts
-        if: steps.aws.outputs.configured == 'true'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          pattern: package-*
-          path: dist
-          merge-multiple: true
-
-      - name: Upload to AWS S3
-        if: steps.aws.outputs.configured == 'true'
-        shell: bash
-        # The AWS CLI reads these from the environment; no third-party action.
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: us-east-2
-          AWS_DEFAULT_REGION: us-east-2
-        run: |
-          version="${{ needs.get-version.outputs.version }}"
-          s3_uri="${{ inputs.aws-s3-uri || format('s3://{0}/{1}', vars.AWS_S3_BUCKET, vars.AWS_S3_UPLOAD_DIR) }}"
-          s3_uri="${s3_uri%/}"
-
-          if [[ "${{ env.SYNERGY_VERSION_RELEASE }}" == "true" ]]; then
-            sub_dir="release"
-          elif [[ "${{ env.SYNERGY_VERSION_SNAPSHOT }}" == "true" ]]; then
-            # Group snapshots by base version, keeping the stage so the folder
-            # matches the release path (i.e. 1.21.2-beta/1.21.2-beta-snapshot+r42).
-            base_version="${version%%-snapshot*}"
-            sub_dir="snapshot/$base_version"
-          else
-            sub_dir="dev"
-          fi
-
-          url="$s3_uri/$sub_dir/$version"
-          echo "Uploading to AWS S3: $url"
-          aws s3 cp ./dist/ "$url" --recursive
-
-  report:
-    needs: [get-version, build-windows, build-macos, s3-upload]
-    if: ${{ !cancelled() && needs.get-version.outputs.publish_release == 'true' && github.event_name != 'pull_request' && contains(needs.*.result, 'failure') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-
-    steps:
-      - name: Build Slack message
-        id: message
-        shell: bash
-        run: |
-          link="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          {
-            echo "text<<EOF"
-            echo "<!channel>"
-            printf '\342\235\214 Synergy CI failed\n'
-            [ "${{ needs.build-windows.result }}" = "failure" ] && printf '\342\200\242 Windows build failed\n'
-            [ "${{ needs.build-macos.result }}" = "failure" ] && printf '\342\200\242 macOS build failed\n'
-            [ "${{ needs.s3-upload.result }}" = "failure" ] && printf '\342\200\242 S3 upload failed\n'
-            echo "<$link|View workflow>"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Check Slack secrets
-        id: slack
-        shell: bash
-        env:
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          SLACK_CHANNEL: ${{ secrets.SLACK_NOTIFY_CHANNEL_ID }}
-        run: |
-          if [ -n "$SLACK_TOKEN" ] && [ -n "$SLACK_CHANNEL" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "Slack secrets not configured; skipping notification."
-          fi
-
-      - name: Send Slack notification
-        if: steps.slack.outputs.configured == 'true'
-        shell: bash
-        env:
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          SLACK_CHANNEL: ${{ secrets.SLACK_NOTIFY_CHANNEL_ID }}
-          SLACK_TEXT: ${{ steps.message.outputs.text }}
-        run: |
-          payload=$(jq -n --arg channel "$SLACK_CHANNEL" --arg text "$SLACK_TEXT" '{channel: $channel, text: $text}')
-          curl --silent --show-error --fail \
-            --request POST https://slack.com/api/chat.postMessage \
-            --header "Authorization: Bearer $SLACK_TOKEN" \
-            --header "Content-type: application/json; charset=utf-8" \
-            --data "$payload"
-
-  # ---------------------------------------------------------------------------
-  # 4. Analysis. Manual dispatch with analyze=true only. Push and pull
-  # requests skip this whole group. Valgrind is the expensive container build.
-  # ---------------------------------------------------------------------------
-  clang-tidy:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.analyze }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            clang-tidy cmake ninja-build g++ \
-            libx11-dev libxi-dev libxtst-dev libxinerama-dev libxrandr-dev \
-            libxkbcommon-dev libglib2.0-dev libssl-dev \
-            libgl1-mesa-dev
-      - name: Install Qt
-        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4
-        with:
-          version: "6.9.3"
-          cache: false
-      - name: Generate compile commands
-        run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DSKIP_BUILD_TESTS=ON
-      - name: Run clang-tidy (errors only)
-        run: |
-          set -euo pipefail
-          find src/ -regex '.*\.\(cpp\|cc\|cxx\)' -print0 \
-            | xargs -0 -r clang-tidy -p build \
-              --checks='-*,bugprone-*,cert-*,cppcoreguidelines-*,clang-analyzer-*,-modernize-use-trailing-return-type' \
-              --warnings-as-errors='*' \
-            2>&1 | tee clang-tidy-output.txt
-      - name: Upload results
-        if: ${{ always() && env.SYNERGY_VERSION_RELEASE == 'true' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: clang-tidy-results
-          path: clang-tidy-output.txt
-          if-no-files-found: ignore
-
-  cppcheck:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.analyze }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends cppcheck
-      - name: Run cppcheck
-        run: |
-          cppcheck \
-            --enable=warning,style,performance,portability \
-            --std=c++20 \
-            --suppress=missingIncludeSystem \
-            --inline-suppr \
-            --error-exitcode=1 \
-            --output-file=cppcheck-results.txt \
-            --language=c++ \
-            src/
-          cat cppcheck-results.txt
-      - name: Upload results
-        if: ${{ always() && env.SYNERGY_VERSION_RELEASE == 'true' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: cppcheck-results
-          path: cppcheck-results.txt
-          if-no-files-found: ignore
-
-  codeql:
-    needs: [dependency-audit]
-    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && (inputs.analyze || inputs.run-codeql) }}
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    runs-on: ubuntu-latest
-    container: debian:trixie-slim
-    timeout-minutes: 20
-    steps:
-      - name: Install container dependencies
-        run: |
-          apt-get update -qqq > /dev/null
-          apt-get install -qqq git > /dev/null
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Install dependencies
-        uses: ./.github/actions/install-dependencies
-        with:
-          like: "debian"
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
-        with:
-          languages: cpp
-          build-mode: manual
-      - name: Build for CodeQL
-        run: |
-          cmake -B build -G "Ninja" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DSKIP_BUILD_TESTS=ON
-          cmake --build build -j"$(nproc)"
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
-
-  sonar:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.analyze && vars.SONAR_SCANNER_ENABLED }}
-    runs-on: ubuntu-latest
-    container: debian:trixie-slim
-    timeout-minutes: 20
-    env:
-      CPU_CORE_COUNT: 4
-    steps:
-      - name: Install container dependencies
-        run: |
-          apt-get update -qqq > /dev/null
-          apt-get install -qqq git curl unzip gcovr dirmngr gpg > /dev/null
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Install project dependencies
-        uses: ./.github/actions/install-dependencies
-        with:
-          like: "debian"
-      - name: Install Build Wrapper
-        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
-      - name: Configure
-        run: |
-          cmake -B build \
-            -G "Ninja" \
-            -DCMAKE_BUILD_TYPE="Debug" \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DSKIP_BUILD_TESTS=ON \
-            -DENABLE_COVERAGE=ON
-      - name: Build
-        run: |
-          build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build -j"${CPU_CORE_COUNT}"
-      - name: Test coverage
-        shell: bash
-        env:
-          QT_QPA_PLATFORM: offscreen
-        run: |
-          targets=$(cmake --build build --target help)
-          mapfile -t tests < <(printf '%s\n' "$targets" | grep -o "^coverage-[^:]*")
-          if [ "${#tests[@]}" -eq 0 ]; then
-            echo "Error: No coverage targets found"
-            exit 1
-          fi
-          for i in "${tests[@]}"; do
-            cmake --build build --target "$i"
-          done
-      - name: Get coverage report paths
-        id: coverage-paths
-        run: |
-          paths=$(find build -maxdepth 1 -name 'coverage-*.xml' -type f -printf '%p\n' | sort | paste -sd, -)
-          if [ -z "$paths" ]; then
-            echo "Error: No coverage files found"
-            exit 1
-          fi
-          echo "csv=$paths" >> "$GITHUB_OUTPUT"
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8
-        with:
-          args: >
-            -Dproject.settings=config/sonar-project.properties
-            -Dsonar.coverageReportPaths=${{ steps.coverage-paths.outputs.csv }}
-            -Dsonar.cfamily.threads=${{ env.CPU_CORE_COUNT }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-  valgrind:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.analyze }}
-    runs-on: ubuntu-latest
-    container: debian:trixie-slim
-    timeout-minutes: 30
-    steps:
-      - name: Install container dependencies
-        run: |
-          apt-get update -qqq > /dev/null
-          apt-get install -qqq git valgrind > /dev/null
-      - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Install dependencies
-        uses: ./.github/actions/install-dependencies
-        with:
-          like: "debian"
-      - name: Configure
-        run: cmake -B build -G "Ninja"
-      - name: Build
-        run: cmake --build build -j8
-      - name: Valgrind unit tests
-        id: unittests
-        uses: ./.github/actions/run-valgrind
-        with:
-          executable: ctest --test-dir  "build/src/unittests"
-      - name: Set job summary
-        run: |
-          backticks='```'
-          message=$(cat <<EOF
-          ## Valgrind summary
-
-          ### Unit tests
-          $backticks
-          ${{ steps.unittests.outputs.summary }}
-          $backticks
-          EOF
-          )
-          echo "$message" >> "$GITHUB_STEP_SUMMARY"
-  # ---------------------------------------------------------------------------
-  # 5. Gate. Branch protection watches this job. A skipped job counts as
-  # success: platform filters and analyze=false skip work on purpose.
-  # ---------------------------------------------------------------------------
-  # ---------------------------------------------------------------------------
-  # 按需分析：依赖审计 → CodeQL → MSI64 intake（手动触发，顺序执行）
-  # ---------------------------------------------------------------------------
-  dependency-audit:
-    needs: [bump-version]
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run-audit }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    env:
-      NO_EXIT_CVE_NUM: "1"
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Bootstrap vcpkg at the pinned baseline
-        run: ./scripts/bootstrap-vcpkg.sh
-      - name: Resolve locked dependency versions (dry run)
-        run: |
-          ./vendor/vcpkg/vcpkg install --dry-run --triplet=x64-linux | tee vcpkg-plan.txt
-          grep -q "@" vcpkg-plan.txt
-      - name: Generate CycloneDX SBOM
-        run: python3 scripts/ci/generate-vcpkg-sbom.py vcpkg-plan.txt synergy-deps.cdx.json
-      - name: Install cve-bin-tool
-        run: python3 -m pip install --disable-pip-version-check "git+https://github.com/intel/cve-bin-tool@b3176d820559d7ec30bd7a99b62cf0535fc16e00"
-      - name: Self-test with a known vulnerable fixture
-        run: |
-          cve-bin-tool --disable-version-check -n json-mirror \
-            --disable-data-source GAD,REDHAT,EPSS,CURL,OSV \
-            --sbom cyclonedx --sbom-file scripts/ci/testdata/known-vulnerable.cdx.json \
-            --format json2 --output-file selftest-report.json
-          python3 scripts/ci/check-cve-report.py selftest-report.json \
-            --expect-any CVE-2016-9840,CVE-2016-9841,CVE-2016-9842,CVE-2016-9843
-      - name: Scan the resolved dependency SBOM
-        run: |
-          cve-bin-tool --disable-version-check -n json-mirror \
-            --disable-data-source GAD,REDHAT,EPSS,CURL,OSV \
-            --sbom cyclonedx --sbom-file synergy-deps.cdx.json \
-            --format json2 --output-file cve-report.json
-          test -s cve-report.json
-      - name: Gate on critical findings
-        if: always()
-        run: python3 scripts/ci/check-cve-report.py cve-report.json --fail-severity critical --exceptions scripts/ci/cve-exceptions.json
-
-  msi64-intake:
-    needs: [codeql]
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run-msi }}
-    runs-on: windows-2022
-    timeout-minutes: 20
-    defaults:
-      run:
-        shell: cmd
-        working-directory: msi intake!
-    steps:
-      - name: Checkout frozen intake sources
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          path: msi intake!
-          persist-credentials: false
-      - name: Setup native VC++ environment
-        uses: TheMrMilchmann/setup-msvc-dev@368ef7d1ee4d1171b31d4a7f67f4d954f903f5a9 # v4.1.0
-        with:
-          arch: amd64
-      - name: Install exact WiX tool
-        run: dotnet tool install --global wix --version 5.0.2
-      - name: Intake through cmd
-        run: |
-          call ".\scripts\ci\test-msi64-intake.bat" "x64" run-cmd paired
-          exit /b %ERRORLEVEL%
-      - name: Intake through PowerShell caller
-        run: |
-          pwsh -NoLogo -NoProfile -NonInteractive -Command "$ErrorActionPreference = 'Stop'; $PSNativeCommandUseErrorActionPreference = $false; try { & '.\scripts\ci\test-msi64-intake.bat' 'x64' 'run-pwsh' 'paired'; $msiIntakeExit = $LASTEXITCODE; if ($null -eq $msiIntakeExit) { exit 2 }; exit $msiIntakeExit } catch { [Console]::Error.WriteLine([string]$_); exit 2 }"
-          exit /b %ERRORLEVEL%
+          # All packages are uploaded while private; expose the complete set only last.
+          gh release create "$tag" "${files[@]}" --verify-tag --target "$GITHUB_SHA" --title "$title" --generate-notes --draft
+          generated=$(gh release view "$tag" --json body -q .body)
+          notes_file=$(mktemp)
+          trap 'rm -f "$notes_file"' EXIT
+          printf '%s\n\n%s\n\n%s\n' "$generated" "$notes" "$marker" > "$notes_file"
+          gh release edit "$tag" --notes-file "$notes_file" --draft=false --latest
 
   ci-passed:
     runs-on: ubuntu-latest
@@ -1240,40 +922,62 @@ jobs:
         get-version,
         lint-clang,
         lint-encoding,
+        codeql,
         build-windows,
         build-macos,
-        bump-version,
-        dependency-audit,
-        codeql,
-        msi64-intake,
+        github-release,
       ]
     if: always()
 
     steps:
-      # 'skipped' is treated as passing because the plan step skips platforms
-      # on purpose (push/PR skip Windows, macOS and Flatpak; snapshot honors
-      # platform). package-type=release and a published Release do not skip a
-      # platform. A failed job is still a failure. get-version never filters
-      # out, so requiring it catches a build skipped by its failure.
-      # lint-clang and lint-encoding have no platform filter: a failed lint used
-      # to be invisible here (builds skip via needs:, skipped counted as ok).
-      # Always require both. No checkout: this job only inspects needs.* results.
+      # Reconstruct the selected route; a skipped required job is always a failure.
       - name: Check all jobs passed or were intentionally skipped
+        env:
+          PACKAGE_TYPE: ${{ inputs.package-type }}
+          PLATFORM: ${{ inputs.platform }}
         run: |
-          ok() {
-            [[ "$1" == "success" || "$1" == "skipped" ]]
+          set -euo pipefail
+          expected_windows=false
+          expected_macos=false
+          expected_release=false
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              expected_windows=true
+              expected_macos=true
+              ;;
+            workflow_dispatch)
+              case "$PACKAGE_TYPE" in
+                release)
+                  expected_windows=true
+                  expected_macos=true
+                  expected_release=true
+                  ;;
+                snapshot)
+                  case "$PLATFORM" in
+                    ''|all) expected_windows=true; expected_macos=true ;;
+                    windows) expected_windows=true ;;
+                    macos) expected_macos=true ;;
+                    *) echo 'Unsupported snapshot platform'; exit 1 ;;
+                  esac
+                  ;;
+                *) echo 'Unsupported package type'; exit 1 ;;
+              esac
+              ;;
+            *) echo 'Unsupported workflow event'; exit 1 ;;
+          esac
+          test "${{ needs.get-version.outputs.build_windows }}" = "$expected_windows" || exit 1
+          test "${{ needs.get-version.outputs.build_macos }}" = "$expected_macos" || exit 1
+          test "${{ needs.get-version.outputs.publish_release }}" = "$expected_release" || exit 1
+          test "${{ needs.get-version.result }}" = success || exit 1
+          test "${{ needs.lint-clang.result }}" = success || exit 1
+          test "${{ needs.lint-encoding.result }}" = success || exit 1
+          test "${{ needs.codeql.result }}" = success || exit 1
+          require_result() {
+            local selected="$1" result="$2" expected=skipped
+            if [ "$selected" = true ]; then expected=success; fi
+            test "$result" = "$expected"
           }
-          if ok "${{needs.get-version.result}}" \
-             && ok "${{needs.lint-clang.result}}" \
-             && ok "${{needs.lint-encoding.result}}" \
-             && ok "${{needs.build-windows.result}}" \
-             && ok "${{needs.build-macos.result}}" \
-             && ok "${{needs.bump-version.result}}" \
-             && ok "${{needs.dependency-audit.result}}" \
-             && ok "${{needs.codeql.result}}" \
-             && ok "${{needs.msi64-intake.result}}"; then
-            printf '\342\234\205 CI passed\n' > "$GITHUB_STEP_SUMMARY"
-          else
-            exit 1
-          fi
-
+          require_result "$expected_windows" "${{ needs.build-windows.result }}" || exit 1
+          require_result "$expected_macos" "${{ needs.build-macos.result }}" || exit 1
+          require_result "$expected_release" "${{ needs.github-release.result }}" || exit 1
+          printf '\342\234\205 CI passed\n' > "$GITHUB_STEP_SUMMARY"

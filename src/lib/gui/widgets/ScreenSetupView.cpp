@@ -10,8 +10,12 @@
 
 #include "PageHost.h"
 #include "ScreenSetupModel.h"
+#include "common/Settings.h"
 #include "dialogs/ScreenSettingsDialog.h"
+#include "gui/StyleUtils.h"
+#include <functional>
 #include <memory>
+#include <utility>
 
 #include <QDrag>
 #include <QDragEnterEvent>
@@ -19,7 +23,111 @@
 #include <QHeaderView>
 #include <QMimeData>
 #include <QMouseEvent>
+#include <QPainter>
 #include <QResizeEvent>
+#include <QStyle>
+#include <QStyleOptionViewItem>
+#include <QStyledItemDelegate>
+#include <QTextLayout>
+#include <QTextOption>
+
+namespace {
+
+// Presentation only: the table retains the model's indexes, flags and drag/drop hit areas.
+class ScreenTileDelegate final : public QStyledItemDelegate
+{
+public:
+  ScreenTileDelegate(QObject *parent, std::function<bool(const QModelIndex &)> isLocal)
+      : QStyledItemDelegate(parent),
+        m_isLocal(std::move(isLocal))
+  {
+  }
+
+  void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override
+  {
+    const bool dark = synergy::gui::isDarkMode();
+    const auto name = index.data(Qt::DisplayRole).toString();
+    const bool filled = !name.isEmpty();
+    const bool selected = option.state.testFlag(QStyle::State_Selected);
+    const bool local = filled && m_isLocal(index);
+    const QColor accent = local ? QColor(dark ? "#7aa2f7" : "#3c65b5") : QColor(dark ? "#4cc38a" : "#2f9e6b");
+    const QRectF tile = QRectF(option.rect).adjusted(3, 3, -3, -3);
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing);
+    painter->setClipRect(option.rect);
+    const qreal radius = dark ? 9 : 8;
+    QColor background(dark ? "#232428" : "#ececf0");
+    QColor border = accent;
+    if (filled) {
+      background = accent;
+      if (dark) {
+        background.setAlphaF(local ? 0.14 : 0.16);
+        border.setAlphaF(0.5);
+      } else {
+        background.setAlpha(24);
+      }
+    }
+    painter->setBrush(background);
+    painter->setPen(filled && !dark ? QPen(border, 1) : QPen(Qt::NoPen));
+    painter->drawRoundedRect(tile, radius, radius);
+    if (filled && dark) {
+      painter->setBrush(Qt::NoBrush);
+      painter->setPen(QPen(border, 1));
+      painter->drawRoundedRect(tile.adjusted(0.5, 0.5, -0.5, -0.5), radius - 0.5, radius - 0.5);
+    }
+    if (filled) {
+      QFont textFont = option.font;
+      textFont.setPixelSize(11);
+      textFont.setWeight(selected || local ? QFont::DemiBold : QFont::Normal);
+      painter->setFont(textFont);
+      painter->setPen(dark ? QColor(local ? "#cfdfff" : "#d9f3e6") : accent);
+      const QRectF textRect = tile.adjusted(6, 18, -6, -4);
+      QFont roleFont = option.font;
+      roleFont.setPixelSize(10);
+      painter->setFont(roleFont);
+      painter->drawText(
+          tile.adjusted(6, 3, -6, -3), Qt::AlignTop | Qt::AlignHCenter,
+          local ? QObject::tr("Local") : QObject::tr("Client")
+      );
+      painter->setFont(textFont);
+      QTextLayout text(name, textFont);
+      QTextOption textOption;
+      textOption.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+      textOption.setAlignment(Qt::AlignHCenter);
+      text.setTextOption(textOption);
+      text.beginLayout();
+      qreal height = 0;
+      while (true) {
+        auto line = text.createLine();
+        if (!line.isValid())
+          break;
+        line.setLineWidth(textRect.width());
+        line.setPosition(QPointF(0, height));
+        height += line.height();
+      }
+      text.endLayout();
+      painter->setClipRect(textRect, Qt::IntersectClip);
+      text.draw(painter, QPointF(textRect.left(), textRect.top() + qMax(0.0, (textRect.height() - height) / 2)));
+    } else {
+      painter->setPen(QPen(QColor(dark ? "#9a9aa0" : "#777782"), 1.8, Qt::SolidLine, Qt::RoundCap));
+      const auto center = tile.center();
+      painter->drawLine(center + QPointF(-4, 0), center + QPointF(4, 0));
+      painter->drawLine(center + QPointF(0, -4), center + QPointF(0, 4));
+    }
+    if (option.state.testFlag(QStyle::State_HasFocus)) {
+      painter->setClipping(false);
+      painter->setBrush(Qt::NoBrush);
+      painter->setPen(QPen(accent, 1, Qt::DashLine));
+      painter->drawRoundedRect(tile.adjusted(2, 2, -2, -2), radius - 2, radius - 2);
+    }
+    painter->restore();
+  }
+
+private:
+  std::function<bool(const QModelIndex &)> m_isLocal;
+};
+
+} // namespace
 
 ScreenSetupView::ScreenSetupView(QWidget *parent) : QTableView(parent)
 {
@@ -30,7 +138,16 @@ ScreenSetupView::ScreenSetupView(QWidget *parent) : QTableView(parent)
   setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-  setIconSize(QSize(96, 96));
+  setItemDelegate(new ScreenTileDelegate(this, [this](const QModelIndex &index) {
+    return model() && index.isValid() && model()->screen(index).isPrimary();
+  }));
+  setShowGrid(false);
+  setFrameShape(QFrame::NoFrame);
+  setStyleSheet(QStringLiteral(
+      "QTableView { background: transparent; border: 0; selection-background-color: transparent; }"
+      "QTableView::item, QTableView::item:selected, QTableView::item:hover { background: transparent; border: 0; }"
+  ));
+  setIconSize(QSize(16, 16));
   horizontalHeader()->hide();
   verticalHeader()->hide();
 }
@@ -59,17 +176,20 @@ void ScreenSetupView::showScreenConfig(int col, int row)
 
 void ScreenSetupView::setTableSize()
 {
-  for (int i = 0; i < model()->columnCount(); i++)
-    setColumnWidth(i, width() / model()->columnCount());
-
-  for (int i = 0; i < model()->rowCount(); i++)
-    setRowHeight(i, height() / model()->rowCount());
+  if (!model() || model()->columnCount() <= 0 || model()->rowCount() <= 0)
+    return;
+  const int columns = model()->columnCount();
+  const int rows = model()->rowCount();
+  for (int i = 0; i < columns; i++)
+    setColumnWidth(i, (i + 1) * viewport()->width() / columns - i * viewport()->width() / columns);
+  for (int i = 0; i < rows; i++)
+    setRowHeight(i, (i + 1) * viewport()->height() / rows - i * viewport()->height() / rows);
 }
 
 void ScreenSetupView::resizeEvent(QResizeEvent *event)
 {
+  QTableView::resizeEvent(event);
   setTableSize();
-  event->ignore();
 }
 
 void ScreenSetupView::mouseDoubleClickEvent(QMouseEvent *event)
@@ -135,11 +255,12 @@ void ScreenSetupView::startDrag(Qt::DropActions)
   if (pData == nullptr)
     return;
 
-  const QPixmap &pixmap = model()->screen(indexes[0]).pixmap();
+  const QPixmap pixmap = viewport()->grab(visualRect(indexes[0]));
   auto *pDrag = new QDrag(this);
   pDrag->setPixmap(pixmap);
   pDrag->setMimeData(pData);
-  pDrag->setHotSpot(QPoint(iconSize().width() / 2, iconSize().height() / 2));
+  const auto dragSize = QSizeF(pixmap.size()) / pixmap.devicePixelRatio();
+  pDrag->setHotSpot(QPoint(qRound(dragSize.width() / 2), qRound(dragSize.height() / 2)));
 
   if (pDrag->exec(Qt::MoveAction, Qt::MoveAction) == Qt::MoveAction) {
     selectionModel()->clear();
@@ -158,27 +279,20 @@ void ScreenSetupView::startDrag(Qt::DropActions)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 void ScreenSetupView::initViewItemOption(QStyleOptionViewItem *option) const
 {
-  // HACK make a basic widget and init from it
-  QWidget w;
-  option->initFrom(&w);
-
-  option->decorationSize = QSize(96, 96);
-  option->showDecorationSelected = true;
-  option->decorationPosition = QStyleOptionViewItem::Top;
-  option->decorationAlignment = Qt::AlignHCenter | Qt::AlignVCenter;
-  option->displayAlignment = Qt::AlignTop | Qt::AlignHCenter;
-  option->textElideMode = Qt::ElideMiddle;
+  QTableView::initViewItemOption(option);
+  option->decorationSize = QSize(16, 16);
+  option->textElideMode = Qt::ElideNone;
 }
 #else
 QStyleOptionViewItem ScreenSetupView::viewOptions() const
 {
   QStyleOptionViewItem option = QTableView::viewOptions();
-  option.decorationSize = QSize(96, 96);
+  option.decorationSize = QSize(16, 16);
   option.showDecorationSelected = true;
   option.decorationPosition = QStyleOptionViewItem::Top;
   option.decorationAlignment = Qt::AlignHCenter | Qt::AlignVCenter;
   option.displayAlignment = Qt::AlignTop | Qt::AlignHCenter;
-  option.textElideMode = Qt::ElideMiddle;
+  option.textElideMode = Qt::ElideNone;
   return option;
 }
 #endif

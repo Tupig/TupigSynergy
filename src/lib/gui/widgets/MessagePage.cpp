@@ -4,6 +4,7 @@
  */
 
 #include "MessagePage.h"
+#include "gui/StyleUtils.h"
 
 #include <QCheckBox>
 #include <QFrame>
@@ -22,9 +23,10 @@ MessagePage::MessagePage(QWidget *parent, Kind kind, const QString &title, const
 
   auto *card = new QFrame(this);
   card->setObjectName(QStringLiteral("card"));
+  card->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   auto *cardLayout = new QVBoxLayout(card);
   cardLayout->setContentsMargins(12, 12, 12, 12);
-  cardLayout->setSpacing(10);
+  cardLayout->setSpacing(8);
 
   auto *header = new QWidget(card);
   auto *headerLayout = new QHBoxLayout(header);
@@ -37,15 +39,28 @@ MessagePage::MessagePage(QWidget *parent, Kind kind, const QString &title, const
   const auto theme = kind == Kind::Question  ? QStringLiteral("dialog-question")
                      : kind == Kind::Warning ? QStringLiteral("dialog-warning")
                                              : QStringLiteral("dialog-information");
-  icon->setPixmap(QIcon::fromTheme(theme).pixmap(QSize(32, 32)));
+  icon->setPixmap(synergy::gui::appIcon(theme).pixmap(QSize(32, 32)));
   headerLayout->addWidget(icon, 0, Qt::AlignTop);
 
-  auto *text = new QLabel(message, header);
+  auto *body = new QWidget(header);
+  auto *bodyLayout = new QVBoxLayout(body);
+  bodyLayout->setContentsMargins(0, 0, 0, 0);
+  bodyLayout->setSpacing(6);
+  auto *heading = new QLabel(title, body);
+  heading->setObjectName(QStringLiteral("messageTitle"));
+  heading->setWordWrap(true);
+  heading->setTextFormat(Qt::PlainText);
+  auto headingFont = heading->font();
+  headingFont.setBold(true);
+  heading->setFont(headingFont);
+  bodyLayout->addWidget(heading);
+  auto *text = new QLabel(message, body);
   text->setObjectName(QStringLiteral("messageText"));
   text->setWordWrap(true);
   text->setTextFormat(richText ? Qt::RichText : Qt::PlainText);
   text->setTextInteractionFlags(Qt::TextSelectableByMouse);
-  headerLayout->addWidget(text, 1);
+  bodyLayout->addWidget(text);
+  headerLayout->addWidget(body, 1);
   cardLayout->addWidget(header);
 
   m_actions = new QWidget(card);
@@ -55,15 +70,22 @@ MessagePage::MessagePage(QWidget *parent, Kind kind, const QString &title, const
   actionsLayout->addStretch(1);
   cardLayout->addWidget(m_actions);
 
+  m_contentLayout = cardLayout;
   m_layout = new QVBoxLayout(this);
-  m_layout->setContentsMargins(0, 0, 0, 0);
+  m_layout->setContentsMargins(10, 10, 10, 10);
+  m_layout->setSpacing(8);
   m_layout->addWidget(card);
+}
+
+void MessagePage::addContentWidget(QWidget *widget)
+{
+  m_contentLayout->insertWidget(m_contentLayout->count() - 1, widget);
 }
 
 QCheckBox *MessagePage::addCheckBox(const QString &text)
 {
   auto *checkBox = new QCheckBox(text, this);
-  m_layout->insertWidget(m_layout->count() - 1, checkBox);
+  addContentWidget(checkBox);
   return checkBox;
 }
 

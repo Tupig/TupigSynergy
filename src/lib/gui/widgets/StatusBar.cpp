@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
 
+#include "gui/StyleUtils.h"
+
 #include "StatusBar.h"
 #include "common/Constants.h"
 #include "common/Settings.h"
@@ -11,7 +13,6 @@
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QPainter>
 #include <QPushButton>
 #include <QStyle>
 #include <QTimer>
@@ -26,6 +27,7 @@ StatusBar::StatusBar(QWidget *parent)
       m_retryTimer{new QTimer(this)}
 {
   setObjectName(QStringLiteral("statusBar"));
+  setAttribute(Qt::WA_StyledBackground);
   setFixedHeight(32);
 
   auto *layout = new QHBoxLayout(this);
@@ -33,17 +35,8 @@ StatusBar::StatusBar(QWidget *parent)
   layout->setSpacing(9);
 
   m_btnFingerprint->setProperty("iconButton", true);
-  // 设计稿：状态栏左侧是绿色对勾；点击仍可查看本地指纹。
-  // 系统主题的对勾在 macOS 上是红色取消符号，这里直接绘制品牌绿色对勾。
-  QPixmap check(14, 14);
-  check.fill(Qt::transparent);
-  QPainter painter(&check);
-  painter.setRenderHint(QPainter::Antialiasing);
-  painter.setPen(QPen(QColor(QStringLiteral("#4cc38a")), 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-  painter.drawPolyline(QPolygonF({QPointF(2.5, 7.5), QPointF(6, 11), QPointF(11.5, 3.5)}));
-  painter.end();
-  m_btnFingerprint->setIcon(QIcon(check));
-  m_btnFingerprint->setIconSize(QSize(14, 14));
+  m_btnFingerprint->setIcon(synergy::gui::appIcon(QStringLiteral("fingerprint")));
+  m_btnFingerprint->setIconSize(QSize(16, 16));
   connect(m_btnFingerprint, &QPushButton::clicked, this, &StatusBar::requestShowMyFingerprints);
 
   m_lblSecurityIcon->setVisible(false);
@@ -183,6 +176,7 @@ void StatusBar::changeEvent(QEvent *e)
 void StatusBar::updateText()
 {
   m_btnFingerprint->setToolTip(tr("View local fingerprint"));
+  m_btnFingerprint->setAccessibleName(tr("View local fingerprint"));
   setSecurityLevel(m_securityLevel);
 }
 
@@ -205,7 +199,7 @@ void StatusBar::updateSecurityInfo(bool encrypted)
 
 void StatusBar::setSecurityIcon(bool encrypted)
 {
-  const auto icon = QIcon::fromTheme(encrypted ? QStringLiteral("security-high") : QStringLiteral("security-low"));
+  const auto icon = synergy::gui::appIcon(encrypted ? QStringLiteral("security-high") : QStringLiteral("security-low"));
   m_lblSecurityIcon->setPixmap(icon.pixmap(QSize(32, 32)));
   m_encrypted = encrypted;
   setSecurityLevel(m_securityLevel);

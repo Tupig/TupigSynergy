@@ -176,7 +176,11 @@ void IpcServer::handleErrorOccurred()
   if (clientSocket == nullptr) {
     return;
   }
-  LOG_ERR("%s ipc server client error: %s", m_typeName.constData(), clientSocket->errorString().toUtf8().constData());
+  // 对端正常关闭连接会先发 PeerClosedError，再发 disconnected；不是协议错误。
+  if (clientSocket->error() == QLocalSocket::PeerClosedError)
+    LOG_DEBUG("%s ipc server peer closed", m_typeName.constData());
+  else
+    LOG_ERR("%s ipc server client error: %s", m_typeName.constData(), clientSocket->errorString().toUtf8().constData());
   m_clients.remove(clientSocket);
   m_authenticated.remove(clientSocket);
   m_readBuffers.remove(clientSocket);

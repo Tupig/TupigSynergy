@@ -48,6 +48,30 @@ p, li { white-space: pre-wrap; }
         <translation>주요 개발자</translation>
     </message>
     <message>
+        <source>Project home</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Contributors</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Share one keyboard and mouse across computers.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GNU GPL Version 2 with the OpenSSL exception. Full copyright and third-party notices are available below.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copyright and licenses</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Third-party notices</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>&amp;Close</source>
         <translation>닫기(&amp;C)</translation>
     </message>
@@ -66,6 +90,10 @@ Session: %1 (%2)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Copy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Copy version information</source>
         <translation type="unfinished"></translation>
     </message>
@@ -78,11 +106,55 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>When the hotkey is pressed</source>
-        <translation>단축키를 눌렀을 때</translation>
+        <translation type="vanished">단축키를 눌렀을 때</translation>
     </message>
     <message>
         <source>When the hotkey is released</source>
-        <translation>단축키를 뗐을 때</translation>
+        <translation type="vanished">단축키를 뗐을 때</translation>
+    </message>
+    <message>
+        <source>No computers available</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Trigger</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Action type</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Key combination</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Target computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Direction</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cursor lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>All computers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Specified computers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On press</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On release</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Press key(s)</source>
@@ -93,8 +165,48 @@ Session: %1 (%2)</source>
         <translation>키 떼기</translation>
     </message>
     <message>
+        <source>Press and release keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Next computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change cursor lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Toggle lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enable lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disable lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Press and release key(s)</source>
-        <translation>키 누르고 떼기</translation>
+        <translation type="vanished">키 누르고 떼기</translation>
     </message>
     <message>
         <source>Switch to a computer</source>
@@ -106,11 +218,11 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Switch to next computer</source>
-        <translation>다음 컴퓨터로 전환</translation>
+        <translation type="vanished">다음 컴퓨터로 전환</translation>
     </message>
     <message>
         <source>Modify the cursor lock</source>
-        <translation>커서 잠금 변경</translation>
+        <translation type="vanished">커서 잠금 변경</translation>
     </message>
     <message>
         <source>Restart the server</source>
@@ -118,31 +230,31 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Switch to the computer on the left</source>
-        <translation>왼쪽 컴퓨터로 전환</translation>
+        <translation type="vanished">왼쪽 컴퓨터로 전환</translation>
     </message>
     <message>
         <source>Switch to the computer on the right</source>
-        <translation>오른쪽 컴퓨터로 전환</translation>
+        <translation type="vanished">오른쪽 컴퓨터로 전환</translation>
     </message>
     <message>
         <source>Switch to the computer above</source>
-        <translation>위쪽 컴퓨터로 전환</translation>
+        <translation type="vanished">위쪽 컴퓨터로 전환</translation>
     </message>
     <message>
         <source>Switch to the computer below</source>
-        <translation>아래쪽 컴퓨터로 전환</translation>
+        <translation type="vanished">아래쪽 컴퓨터로 전환</translation>
     </message>
     <message>
         <source>Toggle the cursor lock</source>
-        <translation>커서 잠금 토글</translation>
+        <translation type="vanished">커서 잠금 토글</translation>
     </message>
     <message>
         <source>Enable the cursor lock</source>
-        <translation>커서 잠금 사용</translation>
+        <translation type="vanished">커서 잠금 사용</translation>
     </message>
     <message>
         <source>Disable the cursor lock</source>
-        <translation>커서 잠금 해제</translation>
+        <translation type="vanished">커서 잠금 해제</translation>
     </message>
     <message>
         <source>Computers to receive this event</source>
@@ -150,14 +262,26 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Switch to %1</source>
-        <translation>%1(으)로 전환</translation>
+        <translation type="vanished">%1(으)로 전환</translation>
+    </message>
+    <message>
+        <source>Unsupported action (%1) — read-only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose a computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (unavailable)</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>ClientConfigDialog</name>
     <message>
         <source>Client Configuration</source>
-        <translation type="obsolete">클라이언트 구성</translation>
+        <translation type="unfinished">클라이언트 구성</translation>
     </message>
     <message>
         <source>Use server&apos;s keyboard language on this computer</source>
@@ -165,23 +289,39 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>Scroll Modifiers</source>
-        <translation type="vanished">스크롤 제어자</translation>
+        <translation>스크롤 제어자</translation>
     </message>
     <message>
         <source>Invert</source>
-        <translation type="vanished">반전</translation>
+        <translation>반전</translation>
     </message>
     <message>
         <source>Horizontal Scroll</source>
-        <translation type="obsolete">가로 스크롤</translation>
+        <translation type="unfinished">가로 스크롤</translation>
+    </message>
+    <message>
+        <source>Connection Behaviour</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Increase delay after failed connection attempts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Use the server keyboard language</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Retries start at 1 second and increase to a maximum of 5 minutes.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Vertical Scroll</source>
-        <translation type="obsolete">세로 스크롤</translation>
+        <translation type="unfinished">세로 스크롤</translation>
     </message>
     <message>
         <source>Scale</source>
-        <translation type="obsolete">규모</translation>
+        <translation type="unfinished">규모</translation>
     </message>
     <message>
         <source>Close and save changes</source>
@@ -201,7 +341,7 @@ Session: %1 (%2)</source>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Allow the client to slow the rate it attempts to reconnect to the server when connections attempts are failing. The delay between connection attempts will  start at 1 second intervals and can be a maxium of 5 minutes between connection attempts.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="obsolete">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;연결 시도가 실패할 경우, 클라이언트가 서버 재연결 시도 주기를 늦추도록 허용합니다. 연결 시도 간 지연 시간은 1초 간격으로 시작되며, 최대 5분까지 늘어날 수 있습니다.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+        <translation type="unfinished">&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;연결 시도가 실패할 경우, 클라이언트가 서버 재연결 시도 주기를 늦추도록 허용합니다. 연결 시도 간 지연 시간은 1초 간격으로 시작되며, 최대 5분까지 늘어날 수 있습니다.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>Use dynamic reconnection time based on connection attempts</source>
@@ -236,7 +376,7 @@ Only connect if they match!</source>
         <source>
 Trust client and allow connection?
 </source>
-        <translation>
+        <translation type="vanished">
 클라이언트를 신뢰하고 연결을 허용할까요?
 </translation>
     </message>
@@ -252,9 +392,29 @@ Trust client and allow connection?
         <source>
 Do you want to connect to the server?
 </source>
-        <translation>
+        <translation type="vanished">
 이 서버에 연결할까요?
 </translation>
+    </message>
+    <message>
+        <source>Saved certificate: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Trust client and allow connection?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Do you want to connect to the server?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Trust after verification</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reject</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Server Fingerprint</source>
@@ -287,16 +447,178 @@ Do you want to connect to the server?
         <source>Invalid hash format</source>
         <translation>잘못된 해시 형식</translation>
     </message>
+    <message>
+        <source>Copy fingerprint</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>GuiPresentation</name>
+    <message>
+        <source>Record a shortcut</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Left mouse button</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Right mouse button</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Middle mouse button</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mouse X1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mouse X2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mouse button %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unsupported action (%1) — read-only</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Press keys: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Release keys: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Press and release keys: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch to computer: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No computer selected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch direction: choose a direction</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Switch to next computer</source>
+        <translation type="unfinished">다음 컴퓨터로 전환</translation>
+    </message>
+    <message>
+        <source>Toggle cursor lock</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Lock cursor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unlock cursor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cursor lock: choose a mode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restart server</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Specified computers: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>All computers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On release</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On press</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>HotkeyDialog</name>
+    <message>
+        <source>No actions configured</source>
+        <translation type="unfinished"></translation>
+    </message>
     <message>
         <source>Hotkey</source>
         <translation>단축키</translation>
     </message>
     <message>
+        <source>Key combination</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Enter the specification for the hotkey:</source>
         <translation>단축키를 지정하세요:</translation>
+    </message>
+    <message>
+        <source>Associated actions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add action</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Configure action</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove action</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Press a key combination. Escape restores the previous hotkey.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Click the field to record a keyboard or mouse shortcut.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>KeySequenceWidget</name>
+    <message>
+        <source>Record keys</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Recording… Press Esc to cancel</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -437,7 +759,7 @@ Do you want to connect to the server?
     </message>
     <message>
         <source>Running</source>
-        <translation type="unfinished">실행 중</translation>
+        <translation type="obsolete">실행 중</translation>
     </message>
     <message>
         <source>Expand Log</source>
@@ -649,17 +971,17 @@ A bound IP is now invalid, you may need to restart the server.</source>
     <message>
         <source>Ctrl+S</source>
         <extracomment>start / restart core shortcut</extracomment>
-        <translation>Ctrl+S</translation>
+        <translation type="vanished">Ctrl+S</translation>
     </message>
     <message>
         <source>Ctrl+T</source>
         <extracomment>stop core shortcut</extracomment>
-        <translation>Ctrl+T</translation>
+        <translation type="vanished">Ctrl+T</translation>
     </message>
     <message>
         <source>Ctrl+Q</source>
         <extracomment>Quit shortcut</extracomment>
-        <translation>Ctrl+Q</translation>
+        <translation type="vanished">Ctrl+Q</translation>
     </message>
     <message>
         <source>Local IP</source>
@@ -798,6 +1120,22 @@ Additionally, check you are able to %1 the server config file: %2</source>
     </message>
     <message>
         <source>OK</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check for Updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Checking for updates…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1052,6 +1390,10 @@ Now you can connect your client computers to this server. You should see a promp
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Settings scope</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Choose where %1 stores its settings. Changes take effect when %1 restarts.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1148,6 +1490,14 @@ Now you can connect your client computers to this server. You should see a promp
         <translation type="unfinished">컴퓨터 이름 편집</translation>
     </message>
     <message>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Connect to:</source>
         <translation type="unfinished">연결 대상:</translation>
     </message>
@@ -1187,68 +1537,96 @@ Now you can connect your client computers to this server. You should see a promp
         <source>Restart</source>
         <translation type="unfinished">재시작</translation>
     </message>
+    <message>
+        <source>Local</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Client</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ScreenSettingsDialog</name>
     <message>
         <source>Computer settings</source>
-        <translation type="vanished">컴퓨터 설정</translation>
+        <translation>컴퓨터 설정</translation>
     </message>
     <message>
         <source>Computer Info</source>
-        <translation type="vanished">컴퓨터 정보</translation>
+        <translation>컴퓨터 정보</translation>
     </message>
     <message>
         <source>Name</source>
-        <translation type="vanished">이름</translation>
+        <translation>이름</translation>
     </message>
     <message>
         <source>Modifier Keys</source>
-        <translation type="vanished">수정 키</translation>
+        <translation>수정 키</translation>
     </message>
     <message>
         <source>M&amp;eta</source>
-        <translation type="vanished">M&amp;eta</translation>
+        <translation>M&amp;eta</translation>
     </message>
     <message>
         <source>&amp;Ctrl</source>
-        <translation type="vanished">&amp;Ctrl</translation>
+        <translation>&amp;Ctrl</translation>
     </message>
     <message>
         <source>S&amp;uper</source>
-        <translation type="vanished">S&amp;uper</translation>
+        <translation>S&amp;uper</translation>
     </message>
     <message>
         <source>Al&amp;t</source>
-        <translation type="vanished">Al&amp;t</translation>
+        <translation>Al&amp;t</translation>
+    </message>
+    <message>
+        <source>The computer name must be unique in this layout.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Shift</source>
-        <translation type="vanished">Shift</translation>
+        <translation>Shift</translation>
     </message>
     <message>
         <source>Ctrl</source>
-        <translation type="vanished">Ctrl</translation>
+        <translation>Ctrl</translation>
     </message>
     <message>
         <source>Alt</source>
-        <translation type="vanished">Alt</translation>
+        <translation>Alt</translation>
     </message>
     <message>
         <source>Meta</source>
-        <translation type="vanished">Meta</translation>
+        <translation>Meta</translation>
     </message>
     <message>
         <source>Super</source>
-        <translation type="vanished">Super</translation>
+        <translation>Super</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="vanished">없음</translation>
+        <translation>없음</translation>
     </message>
     <message>
         <source>&amp;Shift</source>
-        <translation type="vanished">&amp;Shift</translation>
+        <translation>&amp;Shift</translation>
+    </message>
+    <message>
+        <source>No aliases configured</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Corners and compatibility</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Alt &amp;Gr</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Alt Gr</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Dead Corners</source>
@@ -1256,55 +1634,55 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Top Left</source>
-        <translation type="vanished">왼쪽 위</translation>
+        <translation>왼쪽 위</translation>
     </message>
     <message>
         <source>Top Right</source>
-        <translation type="vanished">오른쪽 위</translation>
+        <translation>오른쪽 위</translation>
     </message>
     <message>
         <source>Corner si&amp;ze</source>
-        <translation type="vanished">모서리 크기(&amp;Z)</translation>
+        <translation>모서리 크기(&amp;Z)</translation>
     </message>
     <message>
         <source>Bottom Left</source>
-        <translation type="vanished">왼쪽 아래</translation>
+        <translation>왼쪽 아래</translation>
     </message>
     <message>
         <source>Bottom Right</source>
-        <translation type="vanished">오른쪽 아래</translation>
+        <translation>오른쪽 아래</translation>
     </message>
     <message>
         <source>Fixes</source>
-        <translation type="vanished">수정</translation>
+        <translation>수정</translation>
     </message>
     <message>
         <source>SCROLL LOCK key</source>
-        <translation type="vanished">SCROLL LOCK 키</translation>
+        <translation>SCROLL LOCK 키</translation>
     </message>
     <message>
         <source>CAPS LOCK key</source>
-        <translation type="vanished">CAPS LOCK 키</translation>
+        <translation>CAPS LOCK 키</translation>
     </message>
     <message>
         <source>NUM LOCK key</source>
-        <translation type="vanished">NUM LOCK 키</translation>
+        <translation>NUM LOCK 키</translation>
     </message>
     <message>
         <source>XTest for Xinerama</source>
-        <translation type="vanished">Xinerama용 XTest</translation>
+        <translation>Xinerama용 XTest</translation>
     </message>
     <message>
         <source>Aliases</source>
-        <translation type="vanished">별칭</translation>
+        <translation>별칭</translation>
     </message>
     <message>
         <source>&amp;Add</source>
-        <translation type="vanished">추가(&amp;A)</translation>
+        <translation>추가(&amp;A)</translation>
     </message>
     <message>
         <source>&amp;Remove</source>
-        <translation type="vanished">삭제(&amp;R)</translation>
+        <translation>삭제(&amp;R)</translation>
     </message>
     <message>
         <source>Top-left</source>
@@ -1320,6 +1698,10 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Bottom-right</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unsupported modifier (%1) — read-only</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1381,7 +1763,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>Configure the layout of your computer displays by dragging to where you want.</source>
-        <translation>원하는 위치로 드래그하여 컴퓨터 화면 배치를 설정하세요.</translation>
+        <translation type="vanished">원하는 위치로 드래그하여 컴퓨터 화면 배치를 설정하세요.</translation>
     </message>
     <message>
         <source>Drag to the grid to add a new computer.</source>
@@ -1390,6 +1772,18 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>Hotkeys</source>
         <translation>단축키</translation>
+    </message>
+    <message>
+        <source>No hotkeys configured</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Select a hotkey to view its actions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Double-click an existing computer to edit its settings. Add computer provides an alternative to dragging, including keyboard and screen-reader access.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>&amp;Hotkeys</source>
@@ -1429,7 +1823,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Dead corners (for this computer)</source>
-        <translation>화면 걸림 방지(&amp;D) (이 컴퓨터)</translation>
+        <translation type="vanished">화면 걸림 방지(&amp;D) (이 컴퓨터)</translation>
     </message>
     <message>
         <source>&amp;Bottom-left</source>
@@ -1457,7 +1851,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Misc</source>
-        <translation>기타(&amp;M)</translation>
+        <translation type="vanished">기타(&amp;M)</translation>
     </message>
     <message>
         <source>Disable lock to computer (scroll lock key)</source>
@@ -1466,6 +1860,10 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>Use &amp;relative mouse movements</source>
         <translation>상대 좌표 마우스 이동 사용(&amp;R)</translation>
+    </message>
+    <message>
+        <source>Arrange computer displays by dragging</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Don&apos;t take &amp;foreground window (Windows only)</source>
@@ -1485,7 +1883,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Network</source>
-        <translation>네트워크(&amp;N)</translation>
+        <translation type="vanished">네트워크(&amp;N)</translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables the network heartbeat to ping clients every &lt;span style=&quot; font-style:italic;&quot;&gt;n&lt;/span&gt; seconds. This may help to diagnose network problems by retrying the connection if the client becomes unresponsive.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
@@ -1509,7 +1907,7 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
     <message>
         <source>&amp;Switching</source>
-        <translation>전환(&amp;S)</translation>
+        <translation type="vanished">전환(&amp;S)</translation>
     </message>
     <message>
         <source>Switch &amp;after waiting</source>
@@ -1545,6 +1943,10 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>Add computer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete selected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1589,11 +1991,11 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>Prevent this computer from going to sleep</source>
-        <translation>이 컴퓨터를 절전 모드로 전환하지 않음</translation>
+        <translation type="vanished">이 컴퓨터를 절전 모드로 전환하지 않음</translation>
     </message>
     <message>
         <source>Tray icon style</source>
-        <translation>트레이 아이콘 스타일</translation>
+        <translation type="vanished">트레이 아이콘 스타일</translation>
     </message>
     <message>
         <source>Colorful</source>
@@ -1602,6 +2004,22 @@ Enabling this setting will disable the server config GUI.</source>
     <message>
         <source>Monocolor</source>
         <translation>단색</translation>
+    </message>
+    <message>
+        <source>Prevent sleep</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tray icon</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On launch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On close</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Enable TLS Encryption</source>
@@ -1620,8 +2038,16 @@ Enabling this setting will disable the server config GUI.</source>
         <translation>인증서 재생성</translation>
     </message>
     <message>
+        <source>Immediately regenerate the saved certificate with this key length. Other changes remain unsaved.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Require client certificates</source>
         <translation>클라이언트 인증서 요구</translation>
+    </message>
+    <message>
+        <source>The background service is available on Windows only.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>&amp;Advanced</source>
@@ -1658,6 +2084,18 @@ Enabling this setting will disable the server config GUI.</source>
     <message>
         <source>Language</source>
         <translation>언어</translation>
+    </message>
+    <message>
+        <source>Follow system</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Certificate unavailable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The saved certificate does not contain a valid SHA-256 fingerprint.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <source>TLS Certificate Regenerated</source>
@@ -1757,7 +2195,7 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>When the main window is closed</source>
-        <translation type="unfinished">메인 창이 닫혔을 때</translation>
+        <translation type="obsolete">메인 창이 닫혔을 때</translation>
     </message>
     <message>
         <source>Exit</source>
@@ -1769,7 +2207,7 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
     <message>
         <source>When the application starts</source>
-        <translation type="unfinished">애플리케이션이 시작될 때</translation>
+        <translation type="obsolete">애플리케이션이 시작될 때</translation>
     </message>
     <message>
         <source>Show the main window</source>
@@ -1786,6 +2224,10 @@ Enabling this setting will disable the server config GUI.</source>
     <message>
         <source>Using a log level higher than Info may affect performance.</source>
         <translation type="unfinished">Info보다 높은 로그 레벨을 사용하면 성능에 영향을 미칠 수 있습니다.</translation>
+    </message>
+    <message>
+        <source>View saved certificate fingerprint</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1869,6 +2311,21 @@ Enabling this setting will disable the server config GUI.</source>
     </message>
 </context>
 <context>
+    <name>UpdateDialog</name>
+    <message>
+        <source>Download and Install</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 MB — Waiting for network</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel download</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>i18n</name>
     <message>
         <source>LocalizedName</source>
@@ -1924,15 +2381,27 @@ Enabling this setting will disable the server config GUI.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>A newer version is available.
-
-Current version: %1
-Latest version: %2
-Package: %3</source>
+        <source>Release Notes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Release Notes</source>
+        <source>Hide</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Download progress</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Transfer speed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Estimated remaining</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1948,7 +2417,19 @@ Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>%1 / %2 MB — %3 MB/s — %4% — %5 s remaining</source>
+        <source>Downloading update %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Verifying download…</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Waiting for network</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 s remaining</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1960,11 +2441,17 @@ Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Downloading…</source>
+        <source>Cancel download</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>%1 MB — %2 MB/s</source>
+        <source>New version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Current version: %1
+Latest version: %2
+Package: %3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

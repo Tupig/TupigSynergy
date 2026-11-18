@@ -14,9 +14,30 @@
 ClientConfigDialog::ClientConfigDialog(QWidget *parent) : QDialog(parent), ui(new Ui::ClientConfigDialog)
 {
   ui->setupUi(this);
-  setMinimumWidth(560);
-  // 设计稿：反转复选框保留完整文字，缩放控件固定 76px。
+
+  fitScrollFields();
+  updateText();
+  initConnections();
+  load();
+  setButtonBoxEnabledButtons();
+}
+
+void ClientConfigDialog::fitScrollFields()
+{
+  // Final QSS fonts must be ready before content widths are measured. A field
+  // narrower than its polished children makes QHBoxLayout squeeze its 8px gaps.
+  ensurePolished();
+  for (auto *field : {ui->scrollHorizontalField, ui->scrollVerticalField}) {
+    field->setMinimumWidth(0);
+    for (auto *child : field->findChildren<QWidget *>())
+      child->ensurePolished();
+  }
+  // Keep the real checkbox text and the 76px scale control visible.
   for (auto *checkBox : {ui->cbXScrollInvert, ui->cbYScrollInvert}) {
+    // Native optical layout insets exclude caption space that QSS still paints.
+    // The adjacent Scale label must follow the full widget, plus the real gap.
+    checkBox->setAttribute(Qt::WA_LayoutUsesWidgetRect);
+    checkBox->setMinimumWidth(0);
     checkBox->setMinimumWidth(checkBox->fontMetrics().horizontalAdvance(checkBox->text()) + 28);
   }
   for (auto *spinBox : {ui->sbXScrollScale, ui->sbYScrollScale}) {
@@ -25,13 +46,10 @@ ClientConfigDialog::ClientConfigDialog(QWidget *parent) : QDialog(parent), ui(ne
   // 标签 + 反转 + 缩放 必须完整放在一行，控件容器按内容取最小宽度。
   for (auto *field : {ui->scrollHorizontalField, ui->scrollVerticalField}) {
     field->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    field->layout()->invalidate();
     field->layout()->activate();
     field->setMinimumWidth(field->layout()->sizeHint().width());
   }
-  updateText();
-  initConnections();
-  load();
-  setButtonBoxEnabledButtons();
 }
 
 ClientConfigDialog::~ClientConfigDialog()
@@ -45,6 +63,7 @@ void ClientConfigDialog::changeEvent(QEvent *e)
   if (e->type() == QEvent::LanguageChange) {
     ui->retranslateUi(this);
     updateText();
+    fitScrollFields();
   }
 }
 

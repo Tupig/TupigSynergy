@@ -25,14 +25,25 @@ public:
   static void present(QWidget *origin, QDialog *editor);
   [[nodiscard]] bool hasEditor() const;
   bool activateEditor(const QMetaObject &type);
+  [[nodiscard]] int preferredContentHeight(int width);
+  void requestContentFit();
 
 Q_SIGNALS:
   void editorVisibilityChanged(bool visible);
   void titleChanged(const QString &title);
+  void contentSizeChanged();
+
+protected:
+  bool eventFilter(QObject *object, QEvent *event) override;
 
 private:
   QStackedWidget *m_stack = nullptr;
   QStackedWidget *stack();
   bool m_editorVisible = false;
   void updateNavigation();
+  void watchContent(QWidget *root);
+  bool m_fitPending = false;
+  bool m_measuring = false;
+  int m_lastPreferredHeight = -1;
+  int m_lastPreferredWidth = -1;
 };

@@ -6,9 +6,47 @@
 
 ## English
 
+### Fixed-version GitHub delivery and translation maintenance
+
+`cmake/Version.cmake` is the committed version authority (currently 2.1.1), matching
+`vcpkg.json`. Environment variables and cached patch values cannot override it.
+PR builds retain the development suffix and manual snapshots retain the snapshot suffix.
+CI never computes a new patch or commits generated changes back to a source branch.
+
+After the reviewed PR is integrated into protected `main`, verify the approved source
+manifest and bind a new `v2.1.1` tag to that integrated SHA. Dispatch `ci.yml` at that exact
+existing tag with `package-type=release`. The publication step requires manual dispatch,
+the exact version-tag ref, and tag SHA = run SHA = current integrated main SHA. Query errors
+fail closed; only an explicit HTTP 404 establishes that the Release is absent. Any existing
+Release, including a draft, is refused without replacing assets. A failed draft requires
+separate reviewed disposition; rerunning does not overwrite it. Both Windows x64 and macOS
+arm64 must pass their builds, contracts and extracted-payload audits. All packages are then
+uploaded to a new draft before it is made public. No published code/tag/assets are replaced;
+a later source fix needs a newly committed version and new tag.
+
+The 14 critical R2/R3/R4 and real-window contracts build and run explicitly with exact CTest
+names and `--no-tests=error`. The remaining complete native suite excludes those already run.
+Both test steps have a 15-minute budget. `r3-test-evidence-*` is uploaded even after failure,
+including per-suite logs/JUnit, Qt text, the remaining-suite `ctest.xml` and probe identities.
+Diagnostic probes are never installed or selected by the `package-*` release artifact glob.
+Diagnostic cache reads, tee/CTest outputs, raw copies and fixed probe hashes/writes use the
+metadata-only `scripts/ci/check-diagnostic-paths.py` guard before use. Before upload, all declared
+paths and directory descendants are checked again; only a successful check enables the always-run
+upload. Links, Windows reparse points, special files and workspace escapes are refused. Missing
+outputs remain valid for early-failure diagnostics. These checks do not provide atomic protection
+against active concurrent filesystem replacement.
+Only Windows x64 and macOS arm64 are built on GitHub; no Linux job or additional architecture is scheduled.
+
+Normal builds and `app_translations` only run lrelease on the reviewed `.ts` inputs, generating
+`.qm` files under the build directory. To refresh translation sources deliberately, run
+`cmake --build build --target update_translations`, review all catalogue changes, complete the
+Chinese translations, then run `python3 scripts/ci/check-translations.py`. The maintenance target
+is not part of ALL; English remains plural-only. No ordinary release build runs lupdate or
+silently changes the source identity.
+
 ### Ubuntu CI APT bootstrap
 
-The Linux CI job keeps its existing container images. On Ubuntu only, its pre-checkout Git bootstrap
+Historical Linux CI reference (not scheduled by the current two-platform workflow): on Ubuntu, its pre-checkout Git bootstrap
 changes active official archive/security `/ubuntu` and ports `/ubuntu-ports` source URIs from HTTP to
 HTTPS, preserving hosts, package selection, signing keys, disabled stanzas and other source text.
 A single public CA bundle from the Ubuntu runner is mounted read-only at
@@ -80,13 +118,13 @@ Build artifacts are **64-bit only**. `vcpkg.json` sets `"supports": "x64 | arm64
 
 | Platform | Architectures |
 |----------|----------------|
-| Windows | x64 (`vcvarsall.bat x64`, triplet `x64-windows-static`) and arm64 in CI |
+| Windows | x64 (`vcvarsall.bat x64`, triplet `x64-windows-static`); GitHub builds x64 only |
 | Linux | x86_64 and aarch64 |
-| macOS | arm64 locally (`arm64-osx`); Intel x86_64 in CI |
+| macOS | arm64 locally (`arm64-osx`) and on GitHub |
 
 x86_64 and x64 name the same 64-bit Intel/AMD architecture. They are not 32-bit.
 
-A pull request into `main` compiles and tests Windows, macOS, and the free Linux subset in the same run; automatic validation skips Flatpak, and merging the PR does not start another validation run. Manual snapshots use a snapshot version and pull requests use a development version. The Windows GUI filename remains `synergy_<X.Y.Z>.exe`, using the base version from `Version.cmake`. These runs upload unsigned Actions artifacts without signing, notarization, release publication, or external notifications. Manual snapshots support every platform, including Windows, and do not sign or publish. A `package-type=release` run (and a published Release) builds and publishes **Windows and macOS only**; Linux is validated by the free PR subset but is not part of the release packages. Release builds auto-increment the patch from existing `vX.Y.Z` tags, so each run publishes a new version; a tag that already points to another commit is refused. The GitHub Release is published by the daily 08:23 schedule, a manual `package-type=release` run, or a published Release.
+A pull request into `main` validates only Windows x64 and macOS arm64. Manual snapshots select Windows, macOS or both without publishing. The Windows GUI filename remains `synergy_<X.Y.Z>.exe`, derived from the committed base version. Only a manual exact-tag `package-type=release` run publishes Windows/macOS packages under the fixed-version procedure above; no schedule or published-Release event starts publication.
 
 The macOS and Linux vcpkg overlays use their platform system runtime (`VCPKG_CRT_LINKAGE=dynamic`) while retaining static Qt/OpenSSL libraries (`VCPKG_LIBRARY_LINKAGE=static`). This differs from the Windows release triplet, which uses `/MT`, and from CI's shared Qt distribution.
 
@@ -226,7 +264,7 @@ are set and `signtool verify` fails after SignPath returns the files, the job fa
 
 ---
 
-### 🍎 macOS (Apple Silicon locally, Intel in CI)
+### 🍎 macOS (Apple Silicon locally and on GitHub)
 
 Host tools are a full Xcode installation selected as the active developer directory,
 CMake 3.25+, Ninja, pkgconf, Autoconf with autoconf-archive, Automake, and GNU Libtool.
@@ -245,14 +283,14 @@ brew install cmake ninja pkgconf autoconf autoconf-archive automake libtool
 ```
 
 `./scripts/build.sh` selects preset `macos-release` (Ninja, triplet `arm64-osx`). That
-preset is Apple Silicon. Intel x86_64 is the Actions job `macos-x64`
-(`CMAKE_OSX_ARCHITECTURES=x86_64` on `macos-15-intel`), which produces a separate DMG
-(`mac_x64`), not a universal binary. Local builds default to a requested deployment
+preset is Apple Silicon, matching the current macOS arm64 GitHub job. Historical Intel
+`macos-x64`/`mac_x64` build notes describe a separate architecture, not a currently scheduled
+job or delivered artifact. Local builds default to a requested deployment
 target of macOS 14, matching the macOS overlay triplets' dependency build target;
 this is not a compatibility acceptance claim. Override the application target with
 `-DCMAKE_OSX_DEPLOYMENT_TARGET=<version>` when the selected dependencies need a newer
-OS. Both CI artifacts explicitly target macOS 15 because their provider archives
-require it. Configure checks selected Qt/OpenSSL slices and static archive members;
+OS. The current macOS arm64 CI artifact explicitly targets macOS 15 because its provider
+archives require it. Configure checks selected Qt/OpenSSL slices and static archive members;
 packaging checks every bundled Mach-O slice and the app's `LSMinimumSystemVersion`.
 Providers newer than the requested floor are rejected, never relabeled as compatible.
 An existing build cache retains an explicitly selected older target. To move that
@@ -341,14 +379,14 @@ the package it names and run the script again. Downloads already in
 | Platform | Formats |
 |----------|---------|
 | **All** | TGZ, TBZ2, TXZ, TZST |
-| **Linux** | DEB or RPM (auto-selected from `/etc/os-release`); Flatpak via CI `build-flatpak`; Arch via `deploy/linux/arch/PKGBUILD.in` |
+| **Linux local/source packaging** | DEB or RPM (auto-selected from `/etc/os-release`); retained Flatpak manifest and Arch template under `deploy/linux/`; no scheduled GitHub Linux build |
 | **macOS** | DMG (DragNDrop) |
 | **Windows** | 7Z (portable), MSI (WiX, see note) |
 
 > **Note**: AppImage is not implemented — no `appimage` reference exists in
 > `deploy/` or `.github/`. A Flatpak manifest exists under
-> `deploy/linux/flatpak/` and is consumed by the CI `build-flatpak`
-> job; the local `package` target does not produce a Flatpak bundle.
+> `deploy/linux/flatpak/` as retained source support; no current GitHub job consumes it.
+> The local `package` target does not produce a Flatpak bundle.
 > MSI generation uses the WiX toolset installed on the machine (CI pins
 > 5.0.2; CPack requests the WiX v4 schema).
 
@@ -464,9 +502,35 @@ Run package checks with `scripts\ci\verify-package-windows.bat build <x64-or-arm
 
 ## 中文
 
+### 固定版本GitHub交付与翻译维护
+
+`cmake/Version.cmake` 是已提交版本的唯一来源（当前2.1.1），须与 `vcpkg.json` 一致。
+环境变量及缓存补丁号不能覆盖它。PR保留开发版后缀，手动snapshot保留快照后缀；CI不再推算
+补丁号，也不把生成改动提交回源分支。
+
+已审核PR整合到受保护 `main` 后，先核对获准源码清单，再把新 `v2.1.1` 标签绑定到该整合SHA；
+以此已存在的准确标签触发 `ci.yml`，选择 `package-type=release`。发布步骤只接受手动触发及准确
+版本标签ref，要求标签SHA = 本次运行SHA = 当前整合main SHA。查询错误均拒绝，只有明确HTTP404
+才表示Release不存在。任何现存Release（包括草稿）都拒绝，绝不替换资产；失败草稿另行审核处置，
+重跑不覆盖它。Windows x64与macOS arm64必须构建、契约和解包载荷审计全部成功，才把完整资产上传
+新草稿并最后公开。不替换已发布代码/标签/资产；后续源码修正须提交新版本并使用新标签。
+
+14项关键R2/R3/R4与真实窗口契约均显式构建，按准确CTest名称执行并禁止空测试成功；其余完整
+原生套件排除已经执行的关键项，两类测试步骤各15分钟。失败后仍上传 `r3-test-evidence-*`，包括
+逐套件日志/JUnit、Qt文本、剩余套件 `ctest.xml` 及探针身份。探针不安装、不进入 `package-*`
+发布资产。cache读取、tee/CTest输出、raw复制及固定探针hash/写入前统一调用只检查元数据的
+`scripts/ci/check-diagnostic-paths.py`；上传前再次核全部声明路径及目录后代，只有成功后才允许始终运行的
+上传步骤。链接、Windows reparse、特殊文件与越出工作区路径均拒绝；早期失败的缺失输出允许。
+该检查不提供针对主动并发文件系统替换的原子保证。GitHub仅构建Windows x64和macOS arm64，不调度Linux或其他架构；绿灯仅证明记录中的编译/检查范围，不代表真实输入或硬件验收。
+
+普通构建及 `app_translations` 仅用lrelease编译已审核 `.ts`，在构建目录生成 `.qm`。需要有意更新
+翻译源时，运行 `cmake --build build --target update_translations`，审核所有目录变化并完成中文，
+再执行 `python3 scripts/ci/check-translations.py`。维护目标不加入ALL，英文仍仅复数；普通发布构建
+不会运行lupdate或静默改变源码身份。
+
 ### Ubuntu CI 的 APT 引导
 
-Linux CI 保留现有容器镜像。仅 Ubuntu 的 checkout 前 Git 引导将活跃的官方 archive/security
+历史Linux CI参考（现行双平台工作流不调度）：Ubuntu 的 checkout 前 Git 引导将活跃的官方 archive/security
 `/ubuntu` 与 ports `/ubuntu-ports` 源 URI 从 HTTP 改为 HTTPS，保持主机、包选择、签名密钥、
 禁用段落及其他源文本。Ubuntu runner 的单个公共 CA 文件只读挂载到
 `/run/synergy-ci/host-ca-certificates.crt`，不包含私钥，也不新增自定义信任根。引导在改源之前
@@ -528,13 +592,13 @@ Qt6，打包策略不变。真实 Qt 选择、下载量、耗时、构建及包�
 
 | 平台 | 架构 |
 |------|------|
-| Windows | x64（`vcvarsall.bat x64`，triplet `x64-windows-static`）；CI 另有 arm64 |
+| Windows | x64（`vcvarsall.bat x64`，triplet `x64-windows-static`）；GitHub仅构建x64 |
 | Linux | x86_64 与 aarch64 |
-| macOS | 本地 arm64（`arm64-osx`）；CI 另有 Intel x86_64 |
+| macOS | 本地与GitHub均为arm64（`arm64-osx`） |
 
 x86_64 与 x64 都是 64 位 Intel/AMD，不是 32 位。
 
-推送到 `main` 的 Pull Request 会在同一次运行里编译并测试 Windows、macOS 和精简 Linux 矩阵；自动验证跳过 Flatpak，合并 PR 不会重复触发验证。手动 snapshot 使用 snapshot 版本，PR 使用开发版本；Windows GUI 文件名仍取 `Version.cmake` 的基础版本，保持 `synergy_<X.Y.Z>.exe`。这些运行上传未签名 Actions 产物，不执行签名、公证、正式发布或外部通知。手动 snapshot 支持包括 Windows 在内的所有平台，同样不签名、不发布。`package-type=release`（以及已发布的 Release）只构建并发布 **Windows 与 macOS**；Linux 仅由 PR 的免费子集验证，不进入发布包。发布构建会基于已有 `vX.Y.Z` 标签自动把 patch 版本 +1，因此每次运行都会发布新版本；若标签已指向其他提交则拒绝发布。GitHub Release 由每天 08:23 的定时任务、手动的 `package-type=release`，或一次已发布的 Release 来发布。
+面向 `main` 的PR仅验证Windows x64和macOS arm64。手动snapshot选择Windows、macOS或两者，不发布。Windows GUI仍按已提交基础版本命名 `synergy_<X.Y.Z>.exe`。仅准确标签的手动 `package-type=release` 按上文固定版本流程交付Windows/macOS包；不再由定时任务或已公开Release事件启动发布。
 
 macOS 与 Linux 的 vcpkg overlay 使用平台系统运行库（`VCPKG_CRT_LINKAGE=dynamic`），Qt/OpenSSL 仍保持静态库（`VCPKG_LIBRARY_LINKAGE=static`）。这与 Windows 发布 triplet 的 `/MT`、以及 CI 的共享 Qt 分发分别不同。
 
@@ -655,7 +719,7 @@ Release CI 通过 [SignPath Foundation](https://signpath.org/) 签名 `synergy_<
 
 ---
 
-### 🍎 macOS（本地 Apple Silicon，Intel 由 CI 构建）
+### 🍎 macOS（本地与GitHub均为Apple Silicon）
 
 宿主工具是已选为活动开发者目录的完整 Xcode、CMake 3.25+、Ninja、pkgconf、Autoconf 及 autoconf-archive、Automake 和 GNU Libtool。Qt 子模块构建需要 Xcode 版本工具，只有 Command Line Tools 并不足够。先在 Xcode 的 Locations 设置中选择已安装的 Xcode，并确认 `xcodebuild -version` 成功。Qt、OpenSSL 及其库依赖来自仓库内 vcpkg；Homebrew 只提供这些宿主构建工具，不要把 CMake 指到 Homebrew 的 Qt。
 
@@ -667,7 +731,7 @@ brew install cmake ninja pkgconf autoconf autoconf-archive automake libtool
 ./scripts/build.sh release
 ```
 
-`./scripts/build.sh` 选择预设 `macos-release`（Ninja，triplet `arm64-osx`），这是 Apple Silicon。Intel x86_64 是 Actions 作业 `macos-x64`（`macos-15-intel` 上 `CMAKE_OSX_ARCHITECTURES=x86_64`），单独产出 `mac_x64` 的 DMG，不是一个通用二进制。本地构建默认请求 macOS 14，与 macOS overlay triplet 的依赖构建目标一致；这不是兼容性验收承诺。若选定依赖需要较新系统，可用 `-DCMAKE_OSX_DEPLOYMENT_TARGET=<版本>` 显式调整应用目标。两种 CI 产物因提供方归档的要求而明确以 macOS 15 为目标。配置阶段检查选定 Qt/OpenSSL 架构及静态归档成员；打包验证检查每个 Mach-O 架构和 app 的 `LSMinimumSystemVersion`。依赖要求高于请求目标时会拒绝构建，不能将其重新标注为兼容。已有构建缓存会保留显式选定的旧目标；若要转为当前默认，先运行 `cmake --preset macos-release -DCMAKE_OSX_DEPLOYMENT_TARGET=14`，再使用构建入口。triplet 部署目标变化后会重建旧依赖缓存；请保留下载及二进制缓存。
+`./scripts/build.sh` 选择预设 `macos-release`（Ninja，triplet `arm64-osx`），这是 Apple Silicon。历史 `macos-x64`/`mac_x64` 说明属于单独Intel架构记录，现行GitHub不调度、不交付该产物。本地构建默认请求 macOS 14，与 macOS overlay triplet 的依赖构建目标一致；这不是兼容性验收承诺。若选定依赖需要较新系统，可用 `-DCMAKE_OSX_DEPLOYMENT_TARGET=<版本>` 显式调整应用目标。现行macOS arm64 CI产物因提供方归档的要求而明确以macOS15为目标。配置阶段检查选定 Qt/OpenSSL 架构及静态归档成员；打包验证检查每个 Mach-O 架构和 app 的 `LSMinimumSystemVersion`。依赖要求高于请求目标时会拒绝构建，不能将其重新标注为兼容。已有构建缓存会保留显式选定的旧目标；若要转为当前默认，先运行 `cmake --preset macos-release -DCMAKE_OSX_DEPLOYMENT_TARGET=14`，再使用构建入口。triplet 部署目标变化后会重建旧依赖缓存；请保留下载及二进制缓存。
 
 产物：`build/bin/TuPig Synergy.app` 与 `build/bin/synergy-core`。
 
@@ -743,11 +807,11 @@ sudo pacman -S \
 | 平台 | 格式 |
 |------|------|
 | **所有平台** | TGZ, TBZ2, TXZ, TZST |
-| **Linux** | DEB 或 RPM（依 `/etc/os-release` 自动二选一）；Flatpak 经 CI `build-flatpak`；Arch 经 `deploy/linux/arch/PKGBUILD.in` |
+| **Linux本地/源码打包** | DEB或RPM（依 `/etc/os-release` 选择）；`deploy/linux/` 保留Flatpak清单与Arch模板；现行GitHub不调度Linux |
 | **macOS** | DMG (DragNDrop) |
 | **Windows** | 7Z（便携）、MSI (WiX，见说明) |
 
-> **说明**：AppImage **未实现** —— `deploy/`、`.github/` 中不存在任何 `appimage` 引用。Flatpak 清单位于 `deploy/linux/flatpak/`，由 CI 的 `build-flatpak` job 消费；本地 `package` 目标不产出 Flatpak 包。MSI 使用机器上已安装的 WiX（CI 固定 5.0.2；CPack 请求 WiX v4 schema）。
+> **说明**：AppImage **未实现** —— `deploy/`、`.github/` 中不存在任何 `appimage` 引用。Flatpak清单位于 `deploy/linux/flatpak/`，仅保留源码支持，现行GitHub没有消费它的任务；本地 `package` 目标不产出Flatpak包。MSI 使用机器上已安装的 WiX（CI 固定 5.0.2；CPack 请求 WiX v4 schema）。
 
 ---
 

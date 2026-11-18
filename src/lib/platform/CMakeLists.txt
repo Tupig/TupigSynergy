@@ -26,6 +26,8 @@ if(WIN32)
   set(PLATFORM_SOURCES
     UpdateInstaller.h
     win32/UpdateInstallerWin32.cpp
+    ReducedMotion.h
+    win32/ReducedMotion.cpp
     win32/IMSWindowsClipboardFacade.h
     win32/MSWindowsClipboard.cpp
     win32/MSWindowsClipboard.h
@@ -79,6 +81,8 @@ elseif(APPLE)
   set(PLATFORM_SOURCES
     UpdateInstaller.h
     macos/UpdateInstallerMac.cpp
+    ReducedMotion.h
+    macos/ReducedMotion.mm
     macos/IOSXKeyResource.cpp
     macos/IOSXKeyResource.h
     macos/OSXAutoTypes.h
@@ -129,6 +133,8 @@ elseif(UNIX)
   set(PLATFORM_SOURCES
     UpdateInstaller.h
     linux/UpdateInstallerLinux.cpp
+    ReducedMotion.h
+    linux/ReducedMotion.cpp
     linux/XDGPortalRegistry.h
     linux/XDGPowerManager.cpp
     linux/XDGPowerManager.h

@@ -53,7 +53,8 @@ private:
   static int levelIndex(const QString &line);
   static Record parse(const QString &line);
   void rebuild();
-  void updateVisibleHeight();
+  void updateVisibleHeight(bool refreshColumnWidth = false);
+  void requestTailScroll();
   int rowHeight() const;
 
   QTableWidget *m_table = nullptr;
@@ -62,4 +63,8 @@ private:
   QString m_filter;
   QString m_latestLine;
   int m_visibleLines = 6;
+  int m_messageColumnWidth = 1;
+  mutable bool m_followTail = true;
+  bool m_adjustingContents = false;
+  bool m_tailScrollPending = false;
 };

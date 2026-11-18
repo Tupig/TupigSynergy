@@ -35,6 +35,7 @@ public:
 
   void setupUi(QMainWindow *window);
   void retranslateUi(QMainWindow *window);
+  void updateShortcutPresentation(int width);
 
   QWidget *topLevelWidget = nullptr;
   QWidget *pageBar = nullptr;
@@ -50,6 +51,8 @@ public:
   QLabel *lblComputerName = nullptr;
   QLineEdit *lineEditName = nullptr;
   QPushButton *btnEditName = nullptr;
+  QPushButton *btnSaveName = nullptr;
+  QPushButton *btnCancelName = nullptr;
   QLabel *lblIpAddresses = nullptr;
 
   QWidget *groupBox = nullptr;

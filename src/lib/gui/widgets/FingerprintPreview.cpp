@@ -5,10 +5,14 @@
  */
 
 #include "FingerprintPreview.h"
+#include "gui/StyleUtils.h"
 
+#include <QClipboard>
 #include <QFont>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPushButton>
 
 #include <net/SecureUtils.h>
 
@@ -18,14 +22,12 @@ FingerprintPreview::FingerprintPreview(
     : QFrame(parent)
 {
   setFrameShape(QFrame::StyledPanel);
-  setFrameStyle(QFrame::Sunken);
-  setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+  setObjectName(QStringLiteral("card"));
+  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
 
   setLayout(
       fingerprint.type == QCryptographicHash::Sha256 ? sha256Layout(fingerprint, titleText, hashMode) : emptyLayout()
   );
-  adjustSize();
-  setFixedSize(size());
 }
 
 void FingerprintPreview::toggleMode(bool hashMode)
@@ -49,14 +51,23 @@ QLayout *FingerprintPreview::sha256Layout(const Fingerprint &fingerprint, const 
   auto labelTitle = new QLabel(titleText, this);
   auto f = font();
   f.setBold(true);
-  f.setItalic(true);
+  f.setItalic(false);
   labelTitle->setFont(f);
-  labelTitle->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
+  labelTitle->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+  labelTitle->setProperty("sectionHeading", true);
   labelTitle->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
   labelTitle->setVisible(!titleText.isEmpty());
 
-  m_lblHash = new QLabel(synergy::formatSSLFingerprintColumns(fingerprint.data), this);
-  m_lblHash->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
+  QString hash;
+  for (int offset = 0; offset < fingerprint.data.size(); offset += 16) {
+    if (!hash.isEmpty())
+      hash += QLatin1Char('\n');
+    hash += QString::fromLatin1(fingerprint.data.mid(offset, 16).toHex(':').toUpper());
+  }
+  m_lblHash = new QLabel(hash, this);
+  m_lblHash->setObjectName(QStringLiteral("fingerprintHash"));
+  m_lblHash->setTextFormat(Qt::PlainText);
+  m_lblHash->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
   m_lblHash->setTextInteractionFlags(Qt::TextSelectableByMouse);
   m_lblHash->setVisible(hashMode);
 
@@ -69,6 +80,7 @@ QLayout *FingerprintPreview::sha256Layout(const Fingerprint &fingerprint, const 
   f.setFamilies({"Hack", "Liberation Mono", "Monospace", "Andale Mono"});
   f.setStyleHint(QFont::Monospace);
   m_lblArt->setFont(f);
+  m_lblHash->setFont(f);
 
   auto innersha256Layout = new QHBoxLayout();
   innersha256Layout->setContentsMargins(0, 0, 0, 0);
@@ -78,17 +90,21 @@ QLayout *FingerprintPreview::sha256Layout(const Fingerprint &fingerprint, const 
   auto sha256Layout = new QVBoxLayout();
   sha256Layout->setContentsMargins(0, 0, 0, 0);
   sha256Layout->addWidget(labelTitle);
+  auto *algorithm = new QLabel(QStringLiteral("SHA-256"), this);
+  algorithm->setProperty("muted", true);
+  sha256Layout->addWidget(algorithm);
   sha256Layout->addLayout(innersha256Layout);
-  sha256Layout->addSpacerItem(new QSpacerItem(0, 0, QSizePolicy::Preferred, QSizePolicy::Expanding));
+  auto *copy = new QPushButton(tr("Copy fingerprint"), this);
+  copy->setAccessibleName(tr("Copy fingerprint"));
+  copy->setIcon(synergy::gui::appIcon(QStringLiteral("edit-copy")));
+  sha256Layout->addWidget(copy, 0, Qt::AlignLeft);
+  connect(copy, &QPushButton::clicked, this, [data = fingerprint.data] {
+    QGuiApplication::clipboard()->setText(QString::fromLatin1(data.toHex(':').toUpper()));
+  });
 
-  auto frameSha256 = new QFrame(this);
-  frameSha256->setFrameShape(QFrame::StyledPanel);
-  frameSha256->setFrameStyle(QFrame::Sunken);
-  frameSha256->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-  frameSha256->setLayout(sha256Layout);
-
-  auto layout = new QVBoxLayout();
-  layout->addWidget(frameSha256);
+  sha256Layout->setContentsMargins(12, 12, 12, 12);
+  sha256Layout->setSpacing(8);
+  auto *layout = sha256Layout;
 
   return layout;
 }

@@ -25,6 +25,7 @@ public:
   void extracted();
   SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig &serverConfig);
   ~SettingsDialog() override;
+  void reject() override;
 
 Q_SIGNALS:
   void shown();
@@ -33,7 +34,7 @@ protected:
   void changeEvent(QEvent *e) override;
 
 private:
-  void initConnections() const;
+  void initConnections();
   void regenCertificates();
   void browseCertificatePath();
   void browseLogPath();
@@ -54,9 +55,6 @@ private:
 
   /// @brief Enables controls when they should be.
   void updateControls();
-
-  /// @brief updates the setting vaule for key size.
-  void updateRequestedKeySize() const;
 
   /// @brief update if the log level warning is shown
   void logLevelChanged();
@@ -84,6 +82,8 @@ private:
    */
   void setButtonBoxEnabledButtons() const;
 
+  QString m_originalLanguage;
+  QString m_originalLanguageSetting;
   bool m_interfaceSetOnLoad = false;
   std::unique_ptr<Ui::SettingsDialog> ui;
   QCheckBox *m_checkForUpdates = nullptr;

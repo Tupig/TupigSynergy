@@ -117,7 +117,8 @@ set(CPACK_WIX_UPGRADE_GUID "027D1C8A-E7A5-4754-BB93-B2D45BFDBDC8")
 # the product is Chinese-first.
 set(CPACK_WIX_CULTURES "zh-CN;en-US")
 # CPack quotes each extra flag itself, so pass -loc and the path unquoted.
-set(CPACK_WIX_BUILD_EXTRA_FLAGS "-loc;${CMAKE_SOURCE_DIR}/deploy/windows/WixExtensions.zh-CN.wxl")
+set(CPACK_WIX_BUILD_EXTRA_FLAGS
+  "-loc;${CMAKE_SOURCE_DIR}/deploy/windows/WixExtensions.zh-CN.wxl;-loc;${CMAKE_SOURCE_DIR}/deploy/windows/Product.en-US.wxl")
 set(CPACK_WIX_UI_BANNER "${CMAKE_SOURCE_DIR}/deploy/windows/wix-banner.png")
 set(CPACK_WIX_UI_DIALOG "${CMAKE_SOURCE_DIR}/deploy/windows/wix-dialog.png")
 

@@ -20,6 +20,8 @@
 #include <chrono>
 #include <optional>
 
+class R3SerializationTests;
+
 namespace synergy::gui {
 
 namespace ipc {
@@ -29,6 +31,8 @@ class DaemonIpcClient;
 
 class CoreProcess : public QObject
 {
+  friend class ::R3SerializationTests;
+
   using ConnectionState = synergy::core::ConnectionState;
   using ProcessMode = Settings::ProcessMode;
   using ProcessState = synergy::core::ProcessState;

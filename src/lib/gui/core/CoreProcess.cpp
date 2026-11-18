@@ -183,13 +183,26 @@ void CoreProcess::checkExistingProcess()
   client->connectToServer();
 }
 
-void CoreProcess::onProcessFinished(int exitCode, QProcess::ExitStatus)
+void CoreProcess::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
   using enum ProcessState;
   setConnectionState(ConnectionState::Disconnected);
 
   if (m_retryTimer.isActive()) {
     m_retryTimer.stop();
+  }
+
+  // QProcess::close() 会终止进程；用户主动停止时不能把该退出误报为崩溃。
+  if (m_processState == Stopping) {
+    setProcessState(Stopped);
+    qInfo("core desktop process stopped");
+    return;
+  }
+
+  if (exitStatus == QProcess::CrashExit) {
+    setProcessState(Stopped);
+    qWarning("desktop process crashed");
+    return;
   }
 
   if (exitCode != s_exitSuccess) {
@@ -633,15 +646,11 @@ QPair<bool, QString> CoreProcess::persistServerConfig() const
   }
 
   const auto configFilePath = Settings::defaultValue(Settings::Server::ExternalConfigFile).toString();
-  QFile configFile(configFilePath);
-  if (!configFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-    qWarning() << "failed to open core config file for write:" << configFilePath;
-    return {false, configFile.fileName()};
+  if (!m_serverConfig.save(configFilePath)) {
+    qWarning() << "failed to persist core configuration:" << configFilePath;
+    return {false, configFilePath};
   }
-
-  m_serverConfig.save(configFile);
-  configFile.close();
-  return {Settings::isServerConfigFileReadable(), configFile.fileName()};
+  return {Settings::isServerConfigFileReadable(), configFilePath};
 }
 
 void CoreProcess::setConnectionState(ConnectionState state)

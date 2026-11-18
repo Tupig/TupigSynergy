@@ -2,90 +2,44 @@
 
 ## English
 
-### Scope
+Use the [documentation index](README.md) for navigation and the [current R4 report](reports/20261118-ui-visual-r4.md) for the identified local source, tests, captures and native observations. This page describes how evidence is read; it does not repeat changing pass totals or turn historical observations into current acceptance.
 
-The previous dialog stylesheet layer (`DialogStyle`) was deleted; every page now derives its spacing, radii and control heights from the single design-token stylesheet. Dialog `.ui` files are rebuilt as card + form-row structures instead of carrying legacy grid layouts.
+### Verification procedure
 
-The main window was compared against a headless render of the approved HTML at the same size. That comparison produced the following corrections: page-bar shortcuts are icon+label small buttons, the identity row uses an “Edit” button and a “Local IP” label, the action row reads “Configure Server / Start / Restart”, the log uses time/level/message columns with an always-visible search field, the log card uses `#212125` on `#34353b`, and the About page and informational prompts use card-based pages instead of an embedded `QMessageBox`. A shared design-token stylesheet defines the palette, radii (11/8) and control heights (32/30/26); the main window is now a declarative page bar, scrollable workspace and status bar. The log is an embedded card with toolbar, filter chips, records and footer instead of a dock widget.
+1. Bind the run to its exact source manifest, executable, compiled translation catalogue, isolated settings and capture method. Keep distributed package identity separate from a local real-main probe.
+2. Run applicable safe tests through CTest. Keep `SYNERGY_ENABLE_INTERACTIVE_TESTS=OFF` on the everyday host; `OSXClipboardTests` and `OSXKeyStateTests` are Disabled / Not Run, separate from passes. Direct invocation must not bypass that guard.
+3. Inspect individual original images for both languages and required widths, every page/tab/action type and affected state successors. Preserve filenames, hashes, findings and coverage limits. A Qt case count or `QWidget::grab` is not compositor or human acceptance.
+4. Check Save/Cancel, complete stored maps, typed selections, recording restoration and unchanged core grammar independently from appearance. Native pointer/keyboard observations and physical hardware/permission acceptance need their own evidence.
+5. Report fresh execution, explicitly reused results, disabled targets, failures and unavailable raw separately. Apply package dependency/architecture and isolated-startup verification to the actual distribution payload before claiming package acceptance.
 
-The UI refactor preserves the separate GUI, core and Windows daemon processes. `PageHost` embeds existing editor transactions in the main window, replacing blocking editor calls with accepted/rejected callbacks. Native file pickers and OS permission dialogs remain native.
+Reproduction entry points and host prerequisites remain in [the build guide](build.md). Repository layout and interactive/package constraints remain in [AGENTS.md](../AGENTS.md). Documentation consolidation itself does not build or launch an application.
 
-The home page contains selectable server/client cards, editable computer identity, connection controls and an address/port row. Server, client and preference layouts retain their existing configuration fields. Screen aliases are validated before replacement; cancelling the server editor restores its protocol. Explicit interface bindings are not replaced by automatic selection.
+### Current limits and history
 
-Update notes come from release metadata, not sample text. Download progress includes bytes, speed, percentage and estimated remaining time when a total is available. Each update page uses an independent temporary directory. A verified download requires a second explicit install action. Leaving the page aborts the download.
+R4 establishes bounded local macOS verification. Native drag has no observed successful Drop and remains unverified. Windows/Linux runtime, installed GitHub package/default startup, complete package dependencies, actual core/input/clipboard sharing and OS permissions require separate evidence. Synthetic messages establish component geometry only. Probe observations do not identify the shipped binary.
 
-### Verification evidence
+The [original verification document](archive/ui-20261117/ui-verification-before-20261118.md) is preserved byte-identically. Stage reports, including final tester closeout and image ledgers, are located through the [migration map](archive/ui-20261117/migration-map.json). The old `build/ui-visual-r4-evidence` raw directory was already unavailable before recorded cleanup; its historical hashes and reports do not recreate missing files.
 
-Local macOS arm64 static-Qt build verification on 2026-11-15:
-
-- Full CMake build passed.
-- CTest from `build/src/unittests`: 65 enabled targets passed. `OSXClipboardTests` and `OSXKeyStateTests` were Disabled / Not Run, not passes.
-- `PageHostTests`: embedded acceptance, back cancellation, deferred destruction and parent/child dismissal.
-- `EditorTransactionTests`: client save/cancel, alias replacement, stored/default protocol conversion, protocol cancellation, log filtering/counting/history cap and long-record height cap.
-- Encoding check passed; C++ formatting uses clang-format 20.1.0.
-- Actual GUI interaction used disposable settings: home, about, preferences (general/network/advanced/scope), server configuration (all four tabs), client configuration, screen settings, hotkey page and local fingerprint page were rendered and captured inside the single application window; the core was never started from that GUI.
-- `DialogRenderTests` renders the hotkey, action, update and fingerprint pages offscreen and writes PNGs to `$TMPDIR/tupig-dialog-render`, because macOS blocks synthetic key recording without granting Accessibility permission (which this project must not do automatically).
-- Fixed crash found by that run: `PageHost` looked up its page stack in the constructor, before `uic` created the child widgets, and reparenting cleared the editor title. Both are now handled (lazy lookup, captured title).
-- Package verification checked arm64 Mach-O dependency closure, clean-environment Cocoa startup and a TLS 1.3 loopback handshake with a disposable trusted identity. No Synergy input-sharing greeting was sent.
-
-### Platform scope
-
-Visual acceptance targets macOS and Windows only. Linux builds still run in CI to keep the shared code compiling, but no Linux visual or behavioural acceptance is claimed.
-
-### Not established
-
-- The main window, log card, about page and preferences page were inspected against the design and match its structure; the remaining configuration pages still need the same per-page comparison.
-- Native Windows/Linux rendering, DPI and hardware acceptance require their own environments. A macOS build is not proof of those platforms.
-- No second-machine input sharing, live clipboard replacement, secure-desktop/UAC acceptance, OS permission grant or installer launch was tested.
-- Hotkey recording and the update download/install flow were not exercised end to end: the first needs real key capture, the second needs a published release.
-- Core diagnostic messages retain their original text; translating panel labels does not translate every core log message.
-- Remote CI results must be checked against the pushed commit, not a previous green run.
-
-### Reproduction
-
-```sh
-cmake --build build -j 4
-ctest --test-dir build/src/unittests --output-on-failure -j 4
-python3 -I scripts/ci/check-encoding.py --fail
-scripts/ci/verify-package-macos.sh --expected-arch arm64 'build/bin/TuPig Synergy.app'
-```
-
-Keep `SYNERGY_ENABLE_INTERACTIVE_TESTS=OFF` on the everyday host. Do not bypass CTest by invoking interactive test executables directly.
+Final probe cleanup receipts are `build/ui-current-evidence-20261118/final-probe-cleanup-before.json` and `build/ui-current-evidence-20261118/final-probe-cleanup-after.json`; use these exact paths ahead of the older bare path in the frozen total report. Local ignored build receipts are not part of a public documentation upload.
 
 ## 中文
 
-### 范围
+从[文档索引](README.md)进入指南；当前本地源码、测试、截图及原生观察的精确身份见 [R4 总报告](reports/20261118-ui-visual-r4.md)。本页说明证据如何读取，不复制持续变化的通过数量，也不把历史观察改称当前验收。
 
-界面重构保留 GUI、core 和 Windows daemon 三个独立进程。`PageHost` 将原编辑器事务嵌入主窗口，以 accepted/rejected 回调替代阻塞式编辑器调用。原生文件选择器和系统权限窗口继续由系统提供。
+### 验证流程
 
-主页包含服务端/客户端模式卡片、可编辑计算机名称、连接控制及地址/端口同行。服务端、客户端和首选项保留原配置字段。计算机别名先完整校验再替换；取消服务端编辑恢复原协议。自动选择接口不覆盖明确设置的监听地址。
+1. 将运行绑定到准确的源码清单、可执行文件、编译翻译目录、隔离设置及抓图方法。分发包身份与本地真实 main 探针分别记录。
+2. 适用的安全测试通过 CTest 执行。日常宿主保持 `SYNERGY_ENABLE_INTERACTIVE_TESTS=OFF`；`OSXClipboardTests`、`OSXKeyStateTests` 单列为 Disabled / Not Run，不计通过，不直接执行程序绕过护栏。
+3. 逐张查看两语及要求宽度的完整原图，覆盖每页、每个标签、动作类型及受影响后继状态；保留文件名、摘要、发现和覆盖限制。Qt 案例数量或 `QWidget::grab` 不等于 compositor 或人工验收。
+4. 保存/取消、完整存储图、typed 选项、录制恢复与核心语法保持，应独立于外观检查。原生鼠标/键盘观察、物理硬件及系统权限验收分别需要证据。
+5. 新执行、明确复用、禁用目标、失败和缺失原件分别报告。只有对真实分发载荷完成依赖、架构和隔离启动验证后，才能声称包验收。
 
-更新说明来自真实发布元数据，而非示例文字。总大小已知时，下载显示数据量、网速、百分比及预计剩余时间。每个更新页使用独立临时目录，校验完成后仍需明确点击安装，离开页面立即中止下载。
+复现入口和宿主前置条件继续见[构建指南](build.md)，目录及交互/打包约束见 [AGENTS.md](../AGENTS.md)。本次文档整理不构建或启动应用。
 
-### 验证证据
+### 当前限制与历史
 
-2026年11月15日本机 macOS arm64 静态 Qt 构建验证：
+R4 证明的是本机 macOS 有界验证。原生拖拽尚无成功 Drop 观察，保持未验；Windows/Linux 运行、GitHub 安装包默认启动、包依赖完整性、真实 core/键鼠/剪贴板共享及系统权限仍需独立证据。合成消息只证明组件几何，探针观察不代表正式二进制身份。
 
-- 完整 CMake 构建通过。
-- 从 `build/src/unittests` 运行 CTest：65 个启用目标通过。`OSXClipboardTests` 和 `OSXKeyStateTests` 为 Disabled / Not Run，不计入通过。
-- `PageHostTests`：嵌入页接受、返回取消、延迟销毁及父子页关闭。
-- `EditorTransactionTests`：客户端保存/取消、别名替换、持久化/默认协议转换、取消协议、日志筛选/统计/历史上限及长记录高度上限。
-- 编码检查通过；C++ 使用 clang-format 20.1.0 格式化。
-- 使用一次性设置实际操作 GUI：主页→客户端配置→返回、首选项及网络页、服务端配置→新增计算机→返回，切换过程中保持一个应用窗口。未从该 GUI 启动 core。
-- 包验证覆盖 arm64 Mach-O 依赖闭包、干净环境 Cocoa 启动，以及使用临时可信身份的 TLS 1.3 回环握手。没有发送启用输入共享的 Synergy greeting。
+[原验证说明](archive/ui-20261117/ui-verification-before-20261118.md)已原字节保存。阶段报告，包括最终测试收尾和读图台账，通过[集中迁移映射](archive/ui-20261117/migration-map.json)定位。旧 `build/ui-visual-r4-evidence` 原始目录在记录的清理前已经不可用；历史摘要及报告不能重造缺失文件。
 
-### 平台范围
-
-界面验收只针对 macOS 与 Windows。Linux 构建仍在 CI 中运行以保持共享代码可编译，但不声称任何 Linux 视觉或行为验收。
-
-### 尚未证实
-
-- 尚未证明与批准的 HTML 设计稿逐像素一致。本机已生成截图，但本会话图像工具输出未提供可靠的视觉审阅条件。
-- Windows/Linux 原生渲染、DPI 和硬件验收需要对应环境，macOS 构建不能作为这些平台的证明。
-- 未测试真实双机输入共享、实时系统剪贴板替换、安全桌面/UAC、授予系统权限或启动安装器。
-- core 诊断日志保留原文；面板标签翻译不代表所有 core 日志均已翻译。
-- 远端 CI 必须核对本次推送的提交，不能沿用旧提交的绿灯。
-
-### 复现
-
-使用上方 English 小节中的命令。本机日常环境保持 `SYNERGY_ENABLE_INTERACTIVE_TESTS=OFF`，不得直接执行交互测试程序绕过 CTest 护栏。
+最后探针清理回执的准确位置是 `build/ui-current-evidence-20261118/final-probe-cleanup-before.json` 与 `build/ui-current-evidence-20261118/final-probe-cleanup-after.json`，优先采用这两条，不沿用冻结总报告中的较早裸路径。本地被忽略的 build 回执不属于公开文档上传内容。

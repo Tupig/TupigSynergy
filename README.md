@@ -98,9 +98,9 @@ The diagram names CMake targets. On disk the Windows GUI file is `synergy_<X.Y.Z
 
 ### One-command build / 一条命令构建
 
-Qt 与 OpenSSL 由仓库内 vcpkg 清单安装，不要再装一份系统 Qt，也不要设置 `VCPKG_ROOT`。版本号只来自 `cmake/Version.cmake`（当前 `1.21.2`）。`scripts\build.bat release` 与 `./scripts/build.sh release` 会打开 `SYNERGY_VERSION_RELEASE`，版本字符串是 `X.Y.Z`，不含 `-dev`。
+Qt 与 OpenSSL 由仓库内 vcpkg 清单安装，不要再装一份系统 Qt，也不要设置 `VCPKG_ROOT`。版本号只来自 `cmake/Version.cmake`。`scripts\build.bat release` 与 `./scripts/build.sh release` 会打开 `SYNERGY_VERSION_RELEASE`，版本字符串是 `X.Y.Z`，不含 `-dev`。
 
-Qt and OpenSSL come from the repository vcpkg manifest. Do not install a second Qt, and do not set `VCPKG_ROOT`. The version comes only from `cmake/Version.cmake` (currently `1.21.2`). `scripts\build.bat release` and `./scripts/build.sh release` set `SYNERGY_VERSION_RELEASE`, so the version string is `X.Y.Z` with no `-dev` suffix.
+Qt and OpenSSL come from the repository vcpkg manifest. Do not install a second Qt, and do not set `VCPKG_ROOT`. The version comes only from `cmake/Version.cmake`. `scripts\build.bat release` and `./scripts/build.sh release` set `SYNERGY_VERSION_RELEASE`, so the version string is `X.Y.Z` with no `-dev` suffix.
 
 ```bat
 git clone https://github.com/Tupig/Tupig_synergy.git
@@ -113,7 +113,7 @@ scripts\build.bat release
 
 ```bash
 # macOS Apple Silicon, or Linux. Host tools only: CMake 3.25+, Ninja, a C++ compiler.
-# macOS also needs Xcode Command Line Tools. Linux also needs the X11 / libei / libportal packages in docs/build.md.
+# macOS also needs full selected Xcode and the host tools in docs/build.md. Linux needs the documented X11 / libei / libportal packages.
 ./scripts/build.sh release
 ```
 
@@ -123,18 +123,17 @@ scripts\build.bat release
 | Linux | `build/bin/synergy` | `build/bin/synergy-core` | — |
 | macOS | `build/bin/TuPig Synergy.app` | `build/bin/synergy-core` | — |
 
-`./scripts/build.sh` on macOS uses the `macos-release` preset (`arm64-osx`). Intel x86_64 is the Actions job `macos-x64`, not that preset. Every shipped binary is 64-bit (`vcpkg.json` `supports`: `x64 | arm64`). There is no 32-bit build. Details, packaging, and tests: [docs/build.md](docs/build.md); the free self-signed setup that keeps Accessibility grants across updates: [docs/macos-signing.md](docs/macos-signing.md).
+`./scripts/build.sh` on macOS uses the `macos-release` preset (`arm64-osx`). GitHub builds only macOS arm64 and Windows x64. Other platform/architecture source support does not imply a current GitHub package. Every shipped binary is 64-bit (`vcpkg.json` `supports`: `x64 | arm64`). There is no 32-bit build. Details, packaging, and tests: [docs/build.md](docs/build.md); the free self-signed setup that keeps Accessibility grants across updates: [docs/macos-signing.md](docs/macos-signing.md).
 
-macOS 上 `./scripts/build.sh` 使用预设 `macos-release`（`arm64-osx`）。Intel x86_64 由 Actions 作业 `macos-x64` 构建，不是这个预设。发布的二进制都是 64 位（`vcpkg.json` 的 `supports` 为 `x64 | arm64`）。没有 32 位构建。打包与测试见 [docs/build.md](docs/build.md)；辅助功能授权跨版本保留的自签名方案见 [docs/macos-signing.md](docs/macos-signing.md)。
+macOS 上 `./scripts/build.sh` 使用预设 `macos-release`（`arm64-osx`）。GitHub 仅构建 macOS arm64 与 Windows x64，其他平台/架构的源码支持不代表有现行 GitHub 产物。发布的二进制都是 64 位（`vcpkg.json` 的 `supports` 为 `x64 | arm64`）。没有 32 位构建。打包与测试见 [docs/build.md](docs/build.md)；辅助功能授权跨版本保留的自签名方案见 [docs/macos-signing.md](docs/macos-signing.md)。
 
 ### Run / 运行
 
-日常使用打开 GUI。下面的命令对应当前 `Version.cmake`（1.21.2）。`server` 和 `client` 是位置参数，必须写上。没有 `--debug`，也没有 `--no-daemon`。详细键名见 [docs/configuration.md](docs/configuration.md)。
+日常使用打开 GUI。GUI 文件名按上表模式由 `cmake/Version.cmake` 生成；下面列出 core 命令。`server` 和 `client` 是位置参数，必须写上。没有 `--debug`，也没有 `--no-daemon`。详细键名见 [docs/configuration.md](docs/configuration.md)。
 
-Open the GUI for normal use. The commands below match the current `Version.cmake` (1.21.2). `server` and `client` are required positional arguments. There is no `--debug` flag and no `--no-daemon` flag. Key names are in [docs/configuration.md](docs/configuration.md).
+Open the GUI for normal use. Its filename follows the table above and is generated from `cmake/Version.cmake`; core commands are listed below. `server` and `client` are required positional arguments. There is no `--debug` flag and no `--no-daemon` flag. Key names are in [docs/configuration.md](docs/configuration.md).
 
 ```bat
-build\bin\Release\synergy_1.21.2.exe --version
 build\bin\Release\synergy-core.exe --version
 build\bin\Release\synergy-core.exe server
 build\bin\Release\synergy-core.exe client --settings "%APPDATA%\TuPig Synergy\TuPig Synergy.conf"
@@ -166,9 +165,9 @@ toFile=false
 
 ### Prebuilt packages / 预编译包
 
-Actions 工作流 **TuPig Synergy**（`.github/workflows/ci.yml`）在指向 `main` 的 pull request 上自动跑检查，同一次运行编译并测试 Windows、macOS 和精简 Linux 矩阵，跳过 Flatpak；合并 PR 不会重复触发验证。手动 snapshot 使用 snapshot 版本，PR 使用开发版本。产物作为未签名 Actions 工件上传，不执行签名、公证、正式发布或外部通知。手动运行时，`package-type=release` 只构建并发布 **Windows 与 macOS** Release（Windows MSVC、macOS AppleClang 的 arm64 与 x86_64）；发布构建会基于已有 `vX.Y.Z` 标签**自动把 patch 版本 +1**，因此每次发布都会产生新的标签，Linux 仅由 PR 的免费子集验证，不进入发布包。`package-type=snapshot` 按 `platform` 选择平台（包括 Windows，留空则全部构建），不签名、不发布；Windows GUI 文件名始终用基础版本 `synergy_<X.Y.Z>.exe`。在 GitHub 上发布一个 Release 也只会构建 Windows 与 macOS。打好的安装包会挂到 GitHub Release 标签 `v<X.Y.Z>`（例如 [v1.21.2](https://github.com/Tupig/Tupig_synergy/releases/tag/v1.21.2)）。仓库还没配置 SignPath Foundation 的 secret 和变量时，Windows 包会跳过签名并给出警告。发布作业会对这些安装包做 GitHub 构建来源证明；下载后可用 `gh attestation verify <文件> --repo Tupig/Tupig_synergy` 核对。已发布的 v1.21.2 是在加入该步骤之前构建的，没有这份证明。另外，每天 8:23（北京时间，UTC+8；cron 写成 UTC 的 `23 0 * * *`）会再走一遍同样的 Release 构建。标签 `v<X.Y.Z>` 的说明里如果已经有当前提交的 `Built-From`，或者标签本身就指向这次提交，这次定时就不编译、也不发布。
+构建入口、依赖来源、CI 与本地发布构建的差异及打包验证见[构建指南](docs/build.md)。发布版本与产物以对应的标签、提交和实际工作流回执为准。下载产物后，按其实际签名、摘要和构建来源证明核验；不能用文档中的旧版本示例推断当前发布状态。
 
-The **TuPig Synergy** Actions workflow (`.github/workflows/ci.yml`) runs automatically on a pull request into `main`. Those runs compile and test Windows, macOS, and the free Linux subset, skipping Flatpak; merging a PR does not start another validation run. Manual snapshots use snapshot versions and PRs use development versions. Packages are uploaded as unsigned Actions artifacts without signing, notarization, publication, or external notifications. A manual `package-type=release` builds and publishes **Windows and macOS only** (Windows MSVC, macOS AppleClang arm64 and x86_64), and **auto-increments the patch from existing `vX.Y.Z` tags** so every release gets a new tag; Linux is validated by the free PR subset but is not part of the release packages. `package-type=snapshot` honors `platform`, including Windows (blank builds all platforms), and does not sign or publish. The Windows GUI filename always uses the base version: `synergy_<X.Y.Z>.exe`. Publishing a Release in the GitHub UI also builds only Windows and macOS. The packages are attached to the GitHub Release tag `v<X.Y.Z>` (for example [v1.21.2](https://github.com/Tupig/Tupig_synergy/releases/tag/v1.21.2)). Until the SignPath Foundation secret and variables exist, those Windows packages are unsigned and the job says so. The publish job attaches a GitHub build-provenance attestation to those packages; after downloading one, check it with `gh attestation verify <file> --repo Tupig/Tupig_synergy`. The existing v1.21.2 assets were built before that step, so they have no attestation. The same Release build also runs every day at 08:23 China time (UTC+8; the cron is `23 0 * * *` in UTC). If the `v<X.Y.Z>` notes already contain `Built-From` for this commit, or the tag itself points at this commit, that scheduled run does not compile or publish.
+See the [build guide](docs/build.md) for entry points, dependency sources, CI/local release differences and package verification. Identify a release by its actual tag, commit and workflow receipts. Verify the downloaded asset's actual signature, digest and provenance; historical version examples do not establish current release state.
 
 ### Updates / 自动更新
 
@@ -205,7 +204,10 @@ TuPig Synergy (repo root / 仓库根目录)
 ├── cmake/                      # CMake modules, including version / CMake 模块，含版本号
 ├── config/                     # Tool config: SonarQube, sample settings / 工具配置：SonarQube、设置样例
 ├── deploy/                     # Packages: DEB/RPM, DMG, MSI/7Z, Flatpak / 安装包：DEB/RPM、DMG、MSI/7Z、Flatpak
-├── docs/                       # Documentation / 文档
+├── docs/                       # One entry: docs/README.md / 统一文档入口
+│   ├── reports/                # Current summary and cleanup receipts / 当前总报告与整理回执
+│   ├── archive/ui-20261117/     # Original stage reports and migration map / 历史报告原件及迁移映射
+│   └── aegis/                  # Immutable execution packages / 不可变执行包
 ├── scripts/                    # Build and CI scripts / 构建与 CI 脚本（build.bat、build.sh、ci/）
 ├── src/                        # Source / 源码
 │   ├── apps/                   # core, daemon, gui, and res/ branding / 入口与 res/ 品牌资源
@@ -233,15 +235,9 @@ Keys are defined in `src/lib/common/Settings.h`. The reference and runnable comm
 
 ## 📚 Documentation / 文档
 
-| Document / 文档 | Description / 说明 |
-|---|---|
-| [build.md](docs/build.md) | Detailed Build Guide / 编译指南 |
-| [protocol.md](docs/protocol.md) | Protocol Reference / 协议参考 (v1.8) |
-| [configuration.md](docs/configuration.md) | Configuration Reference / 配置参考 |
-| [troubleshooting.md](docs/troubleshooting.md) | Troubleshooting Guide / 故障排查 |
-| [security.md](docs/security.md) | Security Policy / 安全策略 |
-| [CONTRIBUTING.md](.github/CONTRIBUTING.md) | Branches, reviews, commit format / 分支、审查和提交格式 |
-| [Wiki](https://github.com/Tupig/Tupig_synergy/wiki) | Short map of these docs / 上述文档的简短索引 |
+[文档索引 / Documentation index](docs/README.md) 是统一维护入口，包含用户指南、当前验证与整理回执，以及历史报告的集中迁移映射。用户指南路径、源码目录和不可变 Aegis 包保持原位。
+
+The [documentation index](docs/README.md) is the maintained entry point for user guides, current verification and cleanup receipts, and the historical report migration map. User guide paths, source directories and immutable Aegis packages stay in place.
 
 ---
 

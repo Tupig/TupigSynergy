@@ -11,6 +11,7 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QGroupBox>
+#include <QLabel>
 #include <QListWidget>
 #include <QScrollArea>
 
@@ -27,12 +28,21 @@ public:
   QScrollArea *scrollArea = nullptr;
   QWidget *scrollAreaWidgetContents = nullptr;
   QGroupBox *actionCard = nullptr;
+  QLabel *labelTrigger = nullptr;
+  QLabel *labelActionType = nullptr;
+  QLabel *labelKeys = nullptr;
+  QLabel *labelTarget = nullptr;
+  QLabel *labelDirection = nullptr;
+  QLabel *labelCursor = nullptr;
+  QLabel *labelRecipients = nullptr;
+  QComboBox *comboRecipients = nullptr;
   QComboBox *comboTriggerOn = nullptr;
   QComboBox *comboActionType = nullptr;
   QComboBox *comboSwitchToScreen = nullptr;
   QComboBox *comboSwitchInDirection = nullptr;
   QComboBox *comboLockCursorToScreen = nullptr;
   KeySequenceWidget *keySequenceWidget = nullptr;
+  QWidget *keySequenceField = nullptr;
   QGroupBox *groupScreens = nullptr;
   QListWidget *listScreens = nullptr;
   QDialogButtonBox *buttonBox = nullptr;
