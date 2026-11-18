@@ -120,6 +120,7 @@ void EditorTransactionTests::logsFilterCountAndBoundHistory()
   auto *table = log.findChild<QTableWidget *>();
   QVERIFY(table != nullptr);
   QCOMPARE(table->item(0, 0)->text(), QStringLiteral("2026-11-18 18:17:28"));
+  QVERIFY(log.allText().startsWith(QStringLiteral("[2026-11-18T18:17:28.518] INFO: first\n")));
   QCOMPARE(table->item(0, 0)->font(), table->item(0, 1)->font());
   QCOMPARE(table->item(0, 1)->font(), table->item(0, 2)->font());
   const std::array<int, 3> counts{1, 1, 1};

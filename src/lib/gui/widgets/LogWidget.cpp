@@ -305,11 +305,9 @@ QString LogWidget::allText() const
 {
   QStringList lines;
   lines.reserve(m_table->rowCount());
-  for (int row = 0; row < m_table->rowCount(); ++row) {
-    const auto time = m_table->item(row, 0) ? m_table->item(row, 0)->text() : QString();
-    const auto level = m_table->item(row, 1) ? m_table->item(row, 1)->text() : QString();
-    const auto message = m_table->item(row, 2) ? m_table->item(row, 2)->text() : QString();
-    lines.append(QStringLiteral("[%1] %2: %3").arg(time, level, message));
+  for (const auto &line : m_history) {
+    if (m_filter.isEmpty() || levelOf(line) == m_filter)
+      lines.append(line);
   }
   return lines.join(QLatin1Char('\n'));
 }
