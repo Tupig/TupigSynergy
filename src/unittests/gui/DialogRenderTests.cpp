@@ -218,11 +218,13 @@ void DialogRenderTests::animatedButtonStillDeliversClick()
   dialog.show();
   QCoreApplication::processEvents();
   QSignalSpy clicked(&button, &QPushButton::clicked);
-  QTest::mouseClick(&button, Qt::LeftButton);
-  QCOMPARE(clicked.count(), 1);
+  QTest::mousePress(&button, Qt::LeftButton);
+  QCoreApplication::processEvents();
   auto *overlay = button.findChild<QWidget *>(QStringLiteral("buttonFeedbackOverlay"));
   QVERIFY(overlay != nullptr);
   QVERIFY(overlay->testAttribute(Qt::WA_TransparentForMouseEvents));
+  QTest::mouseRelease(&button, Qt::LeftButton);
+  QCOMPARE(clicked.count(), 1);
   QTest::mouseClick(&button, Qt::LeftButton);
   QCOMPARE(clicked.count(), 2);
 }
