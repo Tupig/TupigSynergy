@@ -112,7 +112,7 @@ void MainWindow::fitToCurrentPage()
   const int menuHeight = menuBar()->isNativeMenuBar() ? 0 : menuBar()->sizeHint().height();
   const int chrome = ui->pageBar->height() + ui->statusBar->height() + menuHeight;
   const int bodyCap = qMax(1, qMin(660, available - chrome - frame));
-  const int target = chrome + qMin(preferred, bodyCap);
+  const int target = qMax(minimumHeight(), chrome + qMin(preferred, bodyCap));
   if (height() != target)
     resize(width(), target);
 }

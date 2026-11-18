@@ -91,7 +91,7 @@ MainWindow::MainWindow(const QString &instanceSocketName)
       m_networkMonitor{new NetworkMonitor(this)}
 {
   ui->setupUi(this);
-  setMinimumWidth(540);
+  setMinimumSize(540, 535);
 
   setWindowIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
 
@@ -244,7 +244,7 @@ void MainWindow::restoreWindow()
   auto windowGeometry = Settings::value(Settings::Gui::WindowGeometry).toRect();
   const auto totalGeometry = QGuiApplication::primaryScreen()->availableGeometry();
   if (!windowGeometry.isValid()) {
-    resize(Ui::MainWindow::kWindowWidth, height());
+    resize(minimumSize());
     windowGeometry = geometry();
   } else {
     setGeometry(windowGeometry);
