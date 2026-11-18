@@ -302,16 +302,22 @@ void MainWindow::showEvent(QShowEvent *event)
 void MainWindow::closeEvent(QCloseEvent *event)
 {
   if (Settings::value(Settings::Gui::CloseToTray).toBool() && event->spontaneous()) {
+    if (auto *reminder = findChild<QMessageBox *>(QStringLiteral("closeToTrayReminder"), Qt::FindDirectChildrenOnly)) {
+      event->ignore();
+      reminder->raise();
+      return;
+    }
     if (Settings::value(Settings::Gui::CloseReminder).toBool()) {
       event->ignore();
-      Settings::setValue(Settings::Gui::CloseReminder, false);
       auto *message = new QMessageBox(
           QMessageBox::NoIcon, kAppName,
           tr("%1 will continue to run in the background. Use the tray icon to reopen the window.").arg(kAppName),
           QMessageBox::Ok, this
       );
+      message->setObjectName(QStringLiteral("closeToTrayReminder"));
       message->setAttribute(Qt::WA_DeleteOnClose);
       connect(message, &QDialog::finished, this, [this] {
+        Settings::setValue(Settings::Gui::CloseReminder, false);
         Settings::setValue(Settings::Gui::WindowGeometry, geometry());
         hide();
       });
