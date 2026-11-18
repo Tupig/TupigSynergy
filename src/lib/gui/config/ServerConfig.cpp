@@ -294,7 +294,7 @@ QTextStream &operator<<(QTextStream &outStream, const ServerConfig &config)
     outStream << "\t" << "heartbeat = " << config.heartbeat() << '\n';
 
   if (config.protocol() == NetworkProtocol::Unknown)
-    qCritical() << QCoreApplication::translate("GuiLogMessages", "unrecognized protocol when writing config");
+    qCritical().noquote() << QCoreApplication::translate("GuiLogMessages", "unrecognized protocol when writing config");
   outStream << "\t" << "protocol = " << networkProtocolToOption(config.protocol()) << '\n';
 
   outStream << "\t"

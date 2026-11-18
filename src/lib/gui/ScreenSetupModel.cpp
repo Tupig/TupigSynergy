@@ -30,7 +30,7 @@ ScreenSetupModel::ScreenSetupModel(synergy::gui::ScreenList &screens, int numCol
   // bound rows and columns to prevent multiply overflow.
   // this is unlikely to happen, as the grid size is only 3x9.
   if (m_NumColumns > 100 || m_NumRows > 100) {
-    qWarning(
+    qWarning().noquote(
     ) << QCoreApplication::translate("GuiLogMessages", "grid size out of bounds: %1 columns x %2 rows, clamping to 100")
              .arg(m_NumColumns)
              .arg(m_NumRows);
@@ -40,12 +40,13 @@ ScreenSetupModel::ScreenSetupModel(synergy::gui::ScreenList &screens, int numCol
 
   const long span = static_cast<long>(m_NumColumns) * m_NumRows;
   if (span > screens.size()) {
-    qWarning() << QCoreApplication::translate(
-                      "GuiLogMessages", "screen list (%1) too small for %2 columns x %3 rows, clamping the grid"
+    qWarning().noquote() << QCoreApplication::translate(
+                                "GuiLogMessages",
+                                "screen list (%1) too small for %2 columns x %3 rows, clamping the grid"
     )
-                      .arg(static_cast<qlonglong>(screens.size()))
-                      .arg(m_NumColumns)
-                      .arg(m_NumRows);
+                                .arg(static_cast<qlonglong>(screens.size()))
+                                .arg(m_NumColumns)
+                                .arg(m_NumRows);
     m_NumRows = static_cast<int>(screens.size() / std::max(1, m_NumColumns));
   }
 }

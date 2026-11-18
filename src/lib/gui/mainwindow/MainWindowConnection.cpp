@@ -442,7 +442,8 @@ void MainWindow::generateCertificateAsync()
             self->m_fingerprint = {QCryptographicHash::Sha256, TlsUtility::certFingerprint()};
             self->updateLocalFingerprint();
           } else {
-            qCritical() << QCoreApplication::translate("GuiLogMessages", "failed to generate a tls certificate");
+            qCritical().noquote(
+            ) << QCoreApplication::translate("GuiLogMessages", "failed to generate a tls certificate");
           }
         },
         Qt::QueuedConnection

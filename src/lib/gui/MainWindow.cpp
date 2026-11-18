@@ -408,7 +408,7 @@ void MainWindow::settingsChanged(const QString &key)
   if ((key == Settings::Security::Certificate) || (key == Settings::Security::KeySize) ||
       (key == Settings::Security::TlsEnabled) || (key == Settings::Security::CheckPeers)) {
     if (TlsUtility::isEnabled() && !TlsUtility::isCertValid()) {
-      qWarning() << tr("invalid certificate, generating a new one");
+      qWarning().noquote() << tr("invalid certificate, generating a new one");
       TlsUtility::generateCertificate();
     }
     updateSecurityIcon(m_statusBar->securityIconVisible());
@@ -534,13 +534,14 @@ void MainWindow::open()
 
   if (Settings::value(Settings::Gui::AutoStartCore).toBool()) {
     if (!m_certificateReady) {
-      qWarning() << QCoreApplication::translate(
+      qWarning().noquote() << QCoreApplication::translate(
           "GuiLogMessages", "skipping core auto start, tls certificate is still being generated"
       );
       return;
     }
     if (m_coreProcess.mode() == CoreMode::None) {
-      qWarning() << QCoreApplication::translate("GuiLogMessages", "skipping core auto start, mode is not set");
+      qWarning().noquote(
+      ) << QCoreApplication::translate("GuiLogMessages", "skipping core auto start, mode is not set");
       return;
     }
     if (ui->rbModeClient->isChecked() && ui->lineHostname->text().isEmpty())

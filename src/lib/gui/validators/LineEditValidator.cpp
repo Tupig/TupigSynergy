@@ -23,7 +23,7 @@ LineEditValidator::LineEditValidator(QLineEdit *lineEdit, ValidationError *error
 {
 
   if (!m_pLineEdit) {
-    qCritical() << QCoreApplication::translate("GuiLogMessages", "validator line edit not set");
+    qCritical().noquote() << QCoreApplication::translate("GuiLogMessages", "validator line edit not set");
   }
 }
 
