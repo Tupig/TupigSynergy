@@ -102,6 +102,10 @@ bool activatePopup(QComboBox *control, int row, bool mouse)
   control->showPopup();
   QCoreApplication::processEvents();
   auto *view = control->view();
+  QElapsedTimer opening;
+  opening.start();
+  while (view && !view->isVisible() && opening.elapsed() < 1000)
+    QTest::qWait(10);
   qInfo() << "Popup activation diagnostic: opened" << "viewVisible" << (view && view->isVisible()) << "enabled"
           << (view && view->isEnabled()) << "class" << (view ? view->metaObject()->className() : "null")
           << "parentClass" << (view && view->parent() ? view->parent()->metaObject()->className() : "null");
