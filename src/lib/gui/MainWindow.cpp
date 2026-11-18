@@ -132,6 +132,9 @@ MainWindow::MainWindow(const QString &instanceSocketName)
   connect(ui->pageHost, &PageHost::editorVisibilityChanged, this, [this](bool visible) {
     ui->btnBack->setVisible(visible);
     ui->logPanel->setVisible(!visible);
+    ui->btnSettingsShortcut->setVisible(!visible);
+    ui->btnUpdatesShortcut->setVisible(!visible);
+    ui->btnAboutShortcut->setVisible(!visible);
   });
   connect(ui->pageHost, &PageHost::titleChanged, this, [this](const QString &title) {
     ui->pageTitle->setText(title.isEmpty() ? tr("Devices & Connection") : title);

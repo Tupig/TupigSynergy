@@ -137,8 +137,7 @@ void PageHost::push(QDialog *editor)
   auto *container = new QWidget;
   auto *containerLayout = new QVBoxLayout(container);
   containerLayout->setContentsMargins(10, 10, 10, 10);
-  containerLayout->addWidget(editor);
-  containerLayout->setAlignment(Qt::AlignTop);
+  containerLayout->addWidget(editor, 0, Qt::AlignTop);
   editor->setWindowFlags(Qt::Widget);
   // PageHost owns the sole workspace inset; standalone dialog margins remain intact.
   if (editor->layout()) {
