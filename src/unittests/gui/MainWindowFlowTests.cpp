@@ -44,9 +44,13 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QRegularExpression>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QSpinBox>
+#include <QStackedWidget>
+#include <QTabBar>
 #include <QTabWidget>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -289,6 +293,102 @@ private Q_SLOTS:
     QCOMPARE(window.focusWidget(), pageBar);
     QTest::keyClick(pageBar, Qt::Key_Tab);
     QCOMPARE(window.focusWidget(), preferences);
+  }
+  void preferencesMouseAndKeyboardNavigationHideHomeShortcuts()
+  {
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *pageBar = window.findChild<QWidget *>("pageBar");
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    auto *updates = window.findChild<QPushButton *>("btnUpdatesShortcut");
+    auto *about = window.findChild<QPushButton *>("btnAboutShortcut");
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(pageBar && preferences && updates && about && back && pages);
+    const auto homeShortcutsVisible = [&] {
+      return preferences->isVisibleTo(&window) && updates->isVisibleTo(&window) && about->isVisibleTo(&window);
+    };
+    const auto homeShortcutsHidden = [&] {
+      return preferences->isHidden() && updates->isHidden() && about->isHidden();
+    };
+    QTRY_VERIFY(homeShortcutsVisible());
+    QSignalSpy activated(preferences, &QPushButton::clicked);
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    QTRY_COMPARE(activated.count(), 1);
+    QTRY_VERIFY(window.findChild<SettingsDialog *>() != nullptr);
+    QPointer<SettingsDialog> editor = window.findChild<SettingsDialog *>();
+    QTRY_VERIFY(editor && editor->isVisibleTo(&window));
+    QTRY_VERIFY(back->isVisibleTo(&window));
+    QVERIFY(pageBar->isVisibleTo(&window));
+    QTRY_VERIFY(homeShortcutsHidden());
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 0);
+    QTRY_VERIFY(homeShortcutsVisible());
+    QTRY_VERIFY(!back->isVisibleTo(&window));
+    QTRY_VERIFY(editor.isNull());
+
+    pageBar->setFocus();
+    QTest::keyClick(pageBar, Qt::Key_Tab);
+    QTRY_COMPARE(window.focusWidget(), preferences);
+    QTest::keyClick(preferences, Qt::Key_Space);
+    QTRY_COMPARE(activated.count(), 2);
+    QTRY_VERIFY(window.findChild<SettingsDialog *>() != nullptr);
+    editor = window.findChild<SettingsDialog *>();
+    QTRY_VERIFY(editor && editor->isVisibleTo(&window));
+    QTRY_VERIFY(back->isVisibleTo(&window));
+    QTRY_VERIFY(homeShortcutsHidden());
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 0);
+    QTRY_VERIFY(homeShortcutsVisible());
+    QTRY_VERIFY(editor.isNull());
+  }
+  void preferencesTabStripKeepsWorkspaceInsetAtMinimumHeight()
+  {
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    window.resize(m_width, 535);
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    auto *pageBar = window.findChild<QWidget *>("pageBar");
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(preferences && pageBar && pages);
+    QTRY_VERIFY(preferences->isVisibleTo(&window));
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    QTRY_VERIFY(window.findChild<SettingsDialog *>() != nullptr);
+    auto *editor = window.findChild<SettingsDialog *>();
+    auto *tabs = editor->findChild<QTabWidget *>("tabWidget");
+    auto *area = qobject_cast<QScrollArea *>(pages->currentWidget());
+    QVERIFY(tabs && area);
+    QCOMPARE(area->property("pageEditor").value<QDialog *>(), static_cast<QDialog *>(editor));
+    QTRY_COMPARE(tabs->currentIndex(), 0);
+    QCOMPARE(tabs->currentWidget()->objectName(), QStringLiteral("tabGeneral"));
+    auto *tabBar = tabs->tabBar();
+    QVERIFY(tabBar);
+    QTRY_VERIFY(editor->isVisibleTo(&window) && tabBar->isVisibleTo(&window));
+    QTRY_COMPARE(window.size(), QSize(m_width, 535));
+    QVERIFY(settleStaticRender(window));
+    QRect previousTabRect;
+    QRect previousViewportRect;
+    QElapsedTimer stable;
+    const auto topInsetSettled = [&] {
+      const QRect tabRect(tabBar->mapTo(&window, QPoint()), tabBar->size());
+      const QRect viewportRect(area->viewport()->mapTo(&window, QPoint()), area->viewport()->size());
+      if (!stable.isValid() || tabRect != previousTabRect || viewportRect != previousViewportRect) {
+        previousTabRect = tabRect;
+        previousViewportRect = viewportRect;
+        stable.start();
+      }
+      const int headerBottom = pageBar->mapTo(&window, QPoint()).y() + pageBar->height();
+      return stable.elapsed() >= 50 && tabRect.height() > 0 && area->verticalScrollBar()->value() == 0 &&
+             qAbs(viewportRect.top() - headerBottom) <= 2 && qAbs(tabRect.top() - viewportRect.top() - 10) <= 2 &&
+             qAbs(tabRect.top() - headerBottom - 10) <= 2;
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(topInsetSettled(), 1000);
+    QCOMPARE(window.size(), QSize(m_width, 535));
+    capture(window, "preferences-general-top-inset");
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    QVERIFY(back);
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 0);
   }
   void nameChangesRequireExplicitCommit()
   {
