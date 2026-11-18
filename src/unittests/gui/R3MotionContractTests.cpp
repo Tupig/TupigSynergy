@@ -13,6 +13,7 @@
 #include <QAccessible>
 #include <QApplication>
 #include <QComboBox>
+#include <QDebug>
 #include <QDialog>
 #include <QDir>
 #include <QElapsedTimer>
@@ -21,6 +22,7 @@
 #include <QLabel>
 #include <QPointer>
 #include <QPushButton>
+#include <QScopedValueRollback>
 #include <QSignalSpy>
 #include <QStackedWidget>
 #include <QTabWidget>
@@ -29,9 +31,125 @@
 #include <QVBoxLayout>
 #include <QVariantAnimation>
 #include <QtTest>
+#include <array>
 #include <memory>
 
 namespace {
+enum class ButtonTraceEvent
+{
+  Activation,
+  Pressed,
+  Released,
+  Clicked,
+  CaptureEntry
+};
+
+struct ButtonOverlaySnapshot
+{
+  bool present = false;
+  bool visible = false;
+  QRect geometry;
+  bool animationPresent = false;
+  bool recursiveLookupPresent = false;
+  bool recursiveLookupMatches = false;
+  int state = -1;
+  int currentTime = -1;
+  qreal value = -1;
+  qreal opacity = -1;
+};
+
+ButtonOverlaySnapshot buttonOverlaySnapshot(QWidget &button)
+{
+  ButtonOverlaySnapshot result;
+  const QPointer<QWidget> overlay = button.findChild<QWidget *>("buttonFeedbackOverlay", Qt::FindDirectChildrenOnly);
+  const QPointer<QVariantAnimation> recursive = button.findChild<QVariantAnimation *>("buttonFeedbackAnimation");
+  result.recursiveLookupPresent = !recursive.isNull();
+  if (!overlay)
+    return result;
+  result.present = true;
+  result.visible = overlay->isVisible();
+  result.geometry = overlay->geometry();
+  result.opacity = overlay->property("motionOpacity").toDouble();
+  const QPointer<QVariantAnimation> animation =
+      overlay->findChild<QVariantAnimation *>("buttonFeedbackAnimation", Qt::FindDirectChildrenOnly);
+  result.animationPresent = !animation.isNull();
+  result.recursiveLookupMatches = animation && recursive == animation;
+  if (animation) {
+    result.state = static_cast<int>(animation->state());
+    result.currentTime = animation->currentTime();
+    result.value = animation->currentValue().toDouble();
+  }
+  return result;
+}
+
+struct ButtonFrameTrace : QObject
+{
+  struct Event
+  {
+    ButtonTraceEvent kind = ButtonTraceEvent::Activation;
+    qint64 milliseconds = -1;
+  };
+  struct Grab
+  {
+    qint64 beforeMilliseconds = -1;
+    qint64 afterMilliseconds = -1;
+    ButtonOverlaySnapshot before;
+    ButtonOverlaySnapshot after;
+  };
+  explicit ButtonFrameTrace(QWidget *button) : target(button)
+  {
+  }
+
+  void begin()
+  {
+    clock.start();
+    collecting = true;
+    record(ButtonTraceEvent::Activation);
+  }
+  void record(ButtonTraceEvent kind)
+  {
+    if (!collecting)
+      return;
+    if (eventCount == static_cast<int>(events.size())) {
+      eventOverflow = true;
+      return;
+    }
+    events.at(static_cast<std::size_t>(eventCount++)) = {kind, clock.elapsed()};
+  }
+  void beforeGrab(QWidget &widget)
+  {
+    if (!collecting || target.data() != &widget)
+      return;
+    if (grabCount == static_cast<int>(grabs.size())) {
+      grabOverflow = true;
+      return;
+    }
+    auto &grab = grabs.at(static_cast<std::size_t>(grabCount));
+    grab.before = buttonOverlaySnapshot(widget);
+    grab.beforeMilliseconds = clock.elapsed();
+  }
+  void afterGrab(QWidget &widget)
+  {
+    if (!collecting || target.data() != &widget || grabCount == static_cast<int>(grabs.size()))
+      return;
+    auto &grab = grabs.at(static_cast<std::size_t>(grabCount++));
+    grab.afterMilliseconds = clock.elapsed();
+    grab.after = buttonOverlaySnapshot(widget);
+  }
+
+  QPointer<QWidget> target;
+  QElapsedTimer clock;
+  std::array<Event, 16> events;
+  std::array<Grab, 13> grabs;
+  int eventCount = 0;
+  int grabCount = 0;
+  bool eventOverflow = false;
+  bool grabOverflow = false;
+  bool collecting = false;
+};
+
+QPointer<ButtonFrameTrace> activeButtonFrameTrace;
+
 QStackedWidget *prepareHost(PageHost &host)
 {
   auto *stack = new QStackedWidget(&host);
@@ -60,10 +178,18 @@ QDialog *page(const QString &color)
 QList<QImage> collectFrames(QWidget &widget, int milliseconds = 240)
 {
   QList<QImage> result;
+  if (activeButtonFrameTrace)
+    activeButtonFrameTrace->beforeGrab(widget);
   result << widget.grab().toImage();
+  if (activeButtonFrameTrace)
+    activeButtonFrameTrace->afterGrab(widget);
   for (int elapsed = 0; elapsed < milliseconds; elapsed += 15) {
     QTest::qWait(15);
+    if (activeButtonFrameTrace)
+      activeButtonFrameTrace->beforeGrab(widget);
     result << widget.grab().toImage();
+    if (activeButtonFrameTrace)
+      activeButtonFrameTrace->afterGrab(widget);
   }
   return result;
 }
@@ -84,6 +210,69 @@ void saveFrames(const QList<QImage> &frames, const QString &name)
   QDir().mkpath(path + "/motion");
   for (int i = 0; i < frames.size(); ++i)
     frames[i].save(path + "/motion/" + name + QStringLiteral("-%1.png").arg(i, 2, 10, QLatin1Char('0')));
+}
+
+qint64 differentFramePixels(const QImage &left, const QImage &right)
+{
+  if (left.isNull() || right.isNull() || left.size() != right.size() ||
+      left.devicePixelRatio() != right.devicePixelRatio())
+    return -1;
+  const auto a = left.convertToFormat(QImage::Format_ARGB32);
+  const auto b = right.convertToFormat(QImage::Format_ARGB32);
+  qint64 different = 0;
+  for (int y = 0; y < a.height(); ++y) {
+    const auto *aRow = reinterpret_cast<const QRgb *>(a.constScanLine(y));
+    const auto *bRow = reinterpret_cast<const QRgb *>(b.constScanLine(y));
+    for (int x = 0; x < a.width(); ++x)
+      different += aRow[x] != bRow[x];
+  }
+  return different;
+}
+
+void writeOverlaySnapshot(QDebug &output, const char *label, const ButtonOverlaySnapshot &snapshot)
+{
+  output << ' ' << label << "={present:" << snapshot.present << ",visible:" << snapshot.visible
+         << ",geometry:" << snapshot.geometry << ",animation:" << snapshot.animationPresent
+         << ",lookupPresent:" << snapshot.recursiveLookupPresent << ",lookupSame:" << snapshot.recursiveLookupMatches
+         << ",state:" << snapshot.state << ",time:" << snapshot.currentTime << ",value:" << snapshot.value
+         << ",opacity:" << snapshot.opacity << '}';
+}
+
+void summarizeButtonFrames(const ButtonFrameTrace &trace, const QList<QImage> &frames, const QString &activation)
+{
+  const int count = qMin(static_cast<int>(frames.size()), static_cast<int>(trace.grabs.size()));
+  int unique = 0;
+  for (int index = 0; index < count; ++index) {
+    bool seen = false;
+    for (int earlier = 0; earlier < index; ++earlier)
+      seen = seen || frames.at(index) == frames.at(earlier);
+    unique += !seen;
+  }
+  qInfo().nospace() << "MD1 summary activation=" << activation << " qt=" << qVersion()
+                    << " platform=" << QGuiApplication::platformName() << " frames=" << frames.size()
+                    << " traced=" << trace.grabCount << " events=" << trace.eventCount
+                    << " eventOverflow=" << trace.eventOverflow << " grabOverflow=" << trace.grabOverflow
+                    << " uniqueByQImageEquality=" << unique << " intermediateByOriginalRule=" << hasIntermediate(frames)
+                    << " incomparablePixelDifference=-1";
+  static constexpr std::array<const char *, 5> names{"activation", "pressed", "released", "clicked", "capture-entry"};
+  for (int index = 0; index < trace.eventCount; ++index) {
+    const auto &event = trace.events.at(static_cast<std::size_t>(index));
+    qInfo().nospace() << "MD1 event activation=" << activation
+                      << " kind=" << names.at(static_cast<std::size_t>(event.kind)) << " ms=" << event.milliseconds;
+  }
+  for (int index = 0; index < count; ++index) {
+    const auto &image = frames.at(index);
+    const auto &grab = trace.grabs.at(static_cast<std::size_t>(index));
+    auto output = qInfo().nospace();
+    output << "MD1 frame activation=" << activation << " index=" << index << " size=" << image.size()
+           << " dpr=" << image.devicePixelRatio() << " grabBeforeMs=" << grab.beforeMilliseconds
+           << " grabAfterMs=" << grab.afterMilliseconds
+           << " differentFromFirst=" << differentFramePixels(image, frames.first())
+           << " differentFromLast=" << differentFramePixels(image, frames.last())
+           << " differentFromPrevious=" << (index == 0 ? -1 : differentFramePixels(image, frames.at(index - 1)));
+    writeOverlaySnapshot(output, "before", grab.before);
+    writeOverlaySnapshot(output, "after", grab.after);
+  }
 }
 } // namespace
 class R3MotionContractTests : public QObject
@@ -159,6 +348,17 @@ void R3MotionContractTests::buttonStandardActivation()
   const auto geometry = button->geometry();
   auto *focus = QApplication::focusWidget();
   QSignalSpy clicked(button, &QPushButton::clicked);
+  ButtonFrameTrace trace(button);
+  QScopedValueRollback<QPointer<ButtonFrameTrace>> traceHook(
+      activeButtonFrameTrace, QPointer<ButtonFrameTrace>(&trace)
+  );
+  // Destroy the connection context and restore the hook before captured state.
+  QObject traceContext;
+  connect(button, &QPushButton::pressed, &traceContext, [&trace] { trace.record(ButtonTraceEvent::Pressed); });
+  connect(button, &QPushButton::released, &traceContext, [&trace] { trace.record(ButtonTraceEvent::Released); });
+  connect(button, &QPushButton::clicked, &traceContext, [&trace] { trace.record(ButtonTraceEvent::Clicked); });
+  if (activation != "accessible-press")
+    trace.begin();
   if (activation == "mouse")
     QTest::mouseClick(button, Qt::LeftButton);
   else if (activation == "Space")
@@ -193,6 +393,7 @@ void R3MotionContractTests::buttonStandardActivation()
     QVERIFY(actions->actionNames().contains(QAccessibleActionInterface::pressAction()));
     QElapsedTimer activationClock;
     activationClock.start();
+    trace.begin();
     actions->doAction(QAccessibleActionInterface::pressAction());
     QTRY_COMPARE_WITH_TIMEOUT(clicked.count(), 1, 250);
     QVERIFY2(
@@ -209,7 +410,10 @@ void R3MotionContractTests::buttonStandardActivation()
   auto *overlay = button->findChild<QWidget *>("buttonFeedbackOverlay");
   QVERIFY(overlay);
   QVERIFY(overlay->testAttribute(Qt::WA_TransparentForMouseEvents));
+  trace.record(ButtonTraceEvent::CaptureEntry);
   const auto frames = collectFrames(*button, 180);
+  trace.collecting = false;
+  summarizeButtonFrames(trace, frames, activation);
   saveFrames(frames, activation);
   QVERIFY2(hasIntermediate(frames), "Standard activation must paint a non-endpoint feedback frame");
   QCOMPARE(clicked.count(), 1);
