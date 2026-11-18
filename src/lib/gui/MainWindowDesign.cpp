@@ -81,6 +81,9 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   );
   btnAboutShortcut =
       smallButton(pageBar, QStringLiteral("btnAboutShortcut"), QObject::tr("About"), QStringLiteral("help-about"));
+  btnSettingsShortcut->setFocusPolicy(Qt::StrongFocus);
+  btnUpdatesShortcut->setFocusPolicy(Qt::StrongFocus);
+  btnAboutShortcut->setFocusPolicy(Qt::StrongFocus);
   pageBarLayout->addWidget(btnSettingsShortcut);
   pageBarLayout->addWidget(btnUpdatesShortcut);
   pageBarLayout->addWidget(btnAboutShortcut);
