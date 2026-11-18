@@ -113,8 +113,7 @@ void Ui::ClientConfigDialog::setupUi(QDialog *dialog)
   sbXScrollScale->setMaximum(10.0);
   sbXScrollScale->setSingleStep(0.1);
   sbXScrollScale->setValue(1.0);
-  sbXScrollScale->setMinimumSize(76, 0);
-  sbXScrollScale->setMaximumSize(76, 16777215);
+  sbXScrollScale->setFixedWidth(88);
   horizontalLayout_3->addWidget(sbXScrollScale);
 
   gridLayout->setWidget(0, QFormLayout::FieldRole, scrollHorizontalField);
@@ -155,8 +154,7 @@ void Ui::ClientConfigDialog::setupUi(QDialog *dialog)
   sbYScrollScale->setMaximum(10.0);
   sbYScrollScale->setSingleStep(0.1);
   sbYScrollScale->setValue(1.0);
-  sbYScrollScale->setMinimumSize(76, 0);
-  sbYScrollScale->setMaximumSize(76, 16777215);
+  sbYScrollScale->setFixedWidth(88);
   horizontalLayout_2->addWidget(sbYScrollScale);
 
   gridLayout->setWidget(1, QFormLayout::FieldRole, scrollVerticalField);
