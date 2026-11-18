@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 #if defined(Q_OS_WIN)
     // Show warning if not running as admin as daemon will behave differently.
     if (!ArchMiscWindows::isProcessElevated()) {
-      LOG_WARN("not running as admin, some features may not work");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "not running as admin, some features may not work"));
     }
 #endif
 

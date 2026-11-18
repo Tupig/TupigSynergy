@@ -177,7 +177,7 @@ void ClientListener::handleClientConnecting()
 
 void ClientListener::handleClientAccepted(IDataSocket *socket)
 {
-  LOG_INFO("accepted client connection");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "accepted client connection"));
 
   if (m_server == nullptr) {
     throw SocketException(QStringLiteral("client listener has no server"));

@@ -156,7 +156,9 @@ bool staysInside(const std::filesystem::path &directory, const std::filesystem::
 FileTransferReceiver::FileTransferReceiver(Options options) : m_options(std::move(options))
 {
   if (m_options.dropDirectory.empty()) {
-    LOG_WARN("file transfer: no drop directory configured, every transfer will be refused");
+    LOG_WARN(QT_TRANSLATE_NOOP(
+        "EngineLogMessages", "file transfer: no drop directory configured, every transfer will be refused"
+    ));
   }
 }
 
@@ -171,7 +173,7 @@ bool FileTransferReceiver::onDragInfo(synergy::IStream *stream)
   uint32_t announcedCount = 0;
   std::string payload;
   if (!ProtocolUtil::readf(stream, kMsgDDragInfo + 4, &announcedCount, &payload)) {
-    LOG_ERR("file transfer: unreadable drag announce");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: unreadable drag announce"));
     return false;
   }
 
@@ -185,7 +187,9 @@ bool FileTransferReceiver::onDragInfo(synergy::IStream *stream)
   // joined with a name yields a RELATIVE path, which would silently land in the
   // process working directory.
   if (m_options.dropDirectory.empty()) {
-    LOG_ERR("file transfer: no drop directory configured, refusing the whole drag");
+    LOG_ERR(
+        QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: no drop directory configured, refusing the whole drag")
+    );
     return false;
   }
 
@@ -194,7 +198,7 @@ bool FileTransferReceiver::onDragInfo(synergy::IStream *stream)
   // Trust the name list over the count field; they disagree only for a malformed
   // or hostile sender, and the list is what actually gets written.
   if (names.empty()) {
-    LOG_ERR("file transfer: drag announced no usable names");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: drag announced no usable names"));
     return false;
   }
 
@@ -209,7 +213,7 @@ bool FileTransferReceiver::onDragInfo(synergy::IStream *stream)
     if (safe.empty()) {
       // Refuse outright: writing under a substitute name would put a file
       // somewhere the peer never asked for and hide the attempt.
-      LOG_WARN("file transfer: refused unsafe file name from peer");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: refused unsafe file name from peer"));
       ++m_refused;
       continue;
     }
@@ -217,7 +221,7 @@ bool FileTransferReceiver::onDragInfo(synergy::IStream *stream)
   }
 
   if (m_acceptedNames.empty()) {
-    LOG_ERR("file transfer: every announced name was refused");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: every announced name was refused"));
     return false;
   }
 
@@ -276,14 +280,16 @@ void FileTransferReceiver::writeCurrentFile()
   // directory would resolve to a relative path and escape into the working
   // directory rather than fail.
   if (m_options.dropDirectory.empty()) {
-    LOG_ERR("file transfer: no drop directory configured, discarding received content");
+    LOG_ERR(QT_TRANSLATE_NOOP(
+        "EngineLogMessages", "file transfer: no drop directory configured, discarding received content"
+    ));
     ++m_refused;
     return;
   }
 
   if (m_nextName >= m_acceptedNames.size()) {
     // More transfers than announced names: the peer is not following the protocol.
-    LOG_ERR("file transfer: received a file with no announced name");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: received a file with no announced name"));
     ++m_refused;
     return;
   }
@@ -313,13 +319,13 @@ void FileTransferReceiver::writeCurrentFile()
 
   const auto target = uniqueTargetPath(safeName);
   if (target.empty()) {
-    LOG_ERR("file transfer: no free target path for an accepted name");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: no free target path for an accepted name"));
     ++m_refused;
     return;
   }
 
   if (!staysInside(pathFromUtf8(m_options.dropDirectory), pathFromUtf8(target))) {
-    LOG_ERR("file transfer: refusing to write outside the drop directory");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: refusing to write outside the drop directory"));
     ++m_refused;
     return;
   }
@@ -334,7 +340,7 @@ void FileTransferReceiver::writeCurrentFile()
     }
   }
   if (staged == nullptr) {
-    LOG_ERR("file transfer: cannot open a staging file in the drop directory");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: cannot open a staging file in the drop directory"));
     ++m_refused;
     return;
   }
@@ -347,7 +353,7 @@ void FileTransferReceiver::writeCurrentFile()
   wrote = wrote && std::fflush(staged) == 0;
   std::fclose(staged);
   if (!wrote) {
-    LOG_ERR("file transfer: failed while writing the staging file");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: failed while writing the staging file"));
     std::filesystem::remove(staging, ec);
     ++m_refused;
     return;

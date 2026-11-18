@@ -30,6 +30,7 @@
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
 #include <QFileDialog>
@@ -604,7 +605,8 @@ bool SettingsDialog::isClientMode() const
 void SettingsDialog::updateKeyLengthOnFile(const QString &path)
 {
   if (!QFile(path).exists()) {
-    qCritical("tls certificate file not found: %s", qUtf8Printable(path));
+    qCritical().noquote(
+    ) << QCoreApplication::translate("GuiLogMessages", "tls certificate file not found: %1").arg(path);
     return;
   }
 

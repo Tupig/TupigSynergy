@@ -268,7 +268,7 @@ void OSXScreen::displayReconfigurationCallback(
   if (flags & mask) { /* Something actually did change */
     LOG_VERBOSE("event: screen changed shape; refreshing dimensions");
     if (!screen->updateScreenShape(displayID, flags)) {
-      LOG_ERR("failed to update screen shape during display reconfiguration");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to update screen shape during display reconfiguration"));
     }
   }
 }
@@ -386,7 +386,7 @@ void OSXScreen::onMediaKey(CGEventRef event)
   bool isRepeat;
 
   if (!getMediaKeyEventInfo(event, &keyID, &down, &isRepeat)) {
-    LOG_ERR("Failed to decode media key event");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "Failed to decode media key event"));
     return;
   }
 
@@ -487,11 +487,11 @@ CGEventRef OSXScreen::handleCGInputEvent(CGEventTapProxy, CGEventType type, CGEv
     // Re-enable our event-tap if we still have accessibility permissions
     if (screen->checkAXPermissions()) {
       CGEventTapEnable(screen->m_eventTapPort, true);
-      LOG_INFO("quartz event tap was disabled by timeout, re-enabling");
+      LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "quartz event tap was disabled by timeout, re-enabling"));
     }
     break;
   case kCGEventTapDisabledByUserInput:
-    LOG_ERR("quartz event tap was disabled by user input");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "quartz event tap was disabled by user input"));
     break;
   case NX_NULLEVENT:
     break;

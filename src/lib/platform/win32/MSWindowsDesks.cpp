@@ -495,7 +495,7 @@ void MSWindowsDesks::waitForDesk() const
   // bound the wait so a stalled desk thread cannot hang the caller forever
   while (!(bool)m_deskReady) {
     if (!m_deskReady.wait(kDeskReadyTimeout)) {
-      LOG_ERR("timed out waiting for desk thread; desk may be stalled");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "timed out waiting for desk thread; desk may be stalled"));
       break;
     }
   }

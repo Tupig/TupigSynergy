@@ -145,7 +145,7 @@ bool fingerprintIsTrusted(const Fingerprint &fingerprint, const QString &databas
     LOG_DEBUG("read %d fingerprint(s) from file: %s", db.fingerprints().size(), qPrintable(databasePath));
   }
   if (!db.isTrusted(fingerprint)) {
-    LOG_WARN("fingerprint does not match trusted fingerprint");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "fingerprint does not match trusted fingerprint"));
     return false;
   }
 

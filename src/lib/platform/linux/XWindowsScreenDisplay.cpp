@@ -86,7 +86,7 @@ Display *XWindowsScreen::openDisplay(const char *displayName)
     int firstEvent;
     int firstError;
     if (!XQueryExtension(display, XTestExtensionName, &majorOpcode, &firstEvent, &firstError)) {
-      LOG_ERR("the XTest extension is not available");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "the XTest extension is not available"));
       XCloseDisplay(display);
       throw ScreenOpenFailureException();
     }
@@ -237,7 +237,7 @@ void XWindowsScreen::openIM()
   // open the input methods
   XIM im = XOpenIM(m_display, nullptr, nullptr, nullptr);
   if (im == nullptr) {
-    LOG_INFO("no support for IM");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "no support for IM"));
     return;
   }
 
@@ -245,7 +245,7 @@ void XWindowsScreen::openIM()
   // only at the moment.
   XIMStyles *styles;
   if (XGetIMValues(im, XNQueryInputStyle, &styles, nullptr) != nullptr || styles == nullptr) {
-    LOG_WARN("cannot get IM styles");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot get IM styles"));
     XCloseIM(im);
     return;
   }
@@ -258,7 +258,7 @@ void XWindowsScreen::openIM()
   }
   XFree(styles);
   if (style == 0) {
-    LOG_INFO("no supported IM styles");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "no supported IM styles"));
     XCloseIM(im);
     return;
   }
@@ -266,7 +266,7 @@ void XWindowsScreen::openIM()
   // create an input context for the style and tell it about our window
   XIC ic = XCreateIC(im, XNInputStyle, style, XNClientWindow, m_window, nullptr);
   if (ic == nullptr) {
-    LOG_WARN("cannot create IC");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot create IC"));
     XCloseIM(im);
     return;
   }
@@ -274,7 +274,7 @@ void XWindowsScreen::openIM()
   // find out the events we must select for and do so
   unsigned long mask;
   if (XGetICValues(ic, XNFilterEvents, &mask, nullptr) != nullptr) {
-    LOG_WARN("cannot get IC filter events");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot get IC filter events"));
     XDestroyIC(ic);
     XCloseIM(im);
     return;

@@ -117,7 +117,7 @@ CoreProcess::CoreProcess(const synergy::gui::ServerConfig &serverConfig)
 {
   m_appPath = QStringLiteral("%1/%2").arg(QCoreApplication::applicationDirPath(), kCoreBinName);
   if (!QFile::exists(m_appPath)) {
-    qCritical("core server binary does not exist");
+    qCritical().noquote() << tr("core server binary does not exist");
     return;
   }
 
@@ -158,26 +158,26 @@ void CoreProcess::daemonIpcClientConnected()
 
 void CoreProcess::checkExistingProcess()
 {
-  qInfo("checking existing core");
+  qInfo().noquote() << tr("Checking the existing core");
 
   auto *client = new ipc::CoreIpcClient(this);
   connect(client, &ipc::CoreIpcClient::connected, this, [client] {
-    qInfo("existing core has matching version, leaving it running");
+    qInfo().noquote() << tr("The existing core version matches; leaving it running");
     client->deleteLater();
   });
   connect(client, &ipc::CoreIpcClient::versionMismatch, this, [client] {
-    qInfo("existing core has mismatched version, asking it to stop");
+    qInfo().noquote() << tr("The existing core version does not match; requesting it to stop");
     client->sendStop();
   });
   connect(client, &ipc::CoreIpcClient::serverShutdown, this, [this, client] {
-    qInfo("existing core stopped successfully");
+    qInfo().noquote() << tr("The existing core stopped successfully");
     client->deleteLater();
     setProcessState(ProcessState::RetryPending);
     m_retryTimer.setSingleShot(true);
     m_retryTimer.start(kRetryDelay);
   });
   connect(client, &ipc::CoreIpcClient::connectionFailed, this, [client] {
-    qCritical("could not contact existing core");
+    qCritical().noquote() << tr("could not contact existing core");
     client->deleteLater();
   });
   client->connectToServer();
@@ -195,13 +195,13 @@ void CoreProcess::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatu
   // QProcess::close() 会终止进程；用户主动停止时不能把该退出误报为崩溃。
   if (m_processState == Stopping) {
     setProcessState(Stopped);
-    qInfo("core desktop process stopped");
+    qInfo().noquote() << tr("The core desktop process stopped");
     return;
   }
 
   if (exitStatus == QProcess::CrashExit) {
     setProcessState(Stopped);
-    qWarning("desktop process crashed");
+    qWarning().noquote() << tr("The desktop process crashed");
     return;
   }
 
@@ -211,7 +211,7 @@ void CoreProcess::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatu
       checkExistingProcess();
       return;
     }
-    qWarning("desktop process exited with code: %d", exitCode);
+    qWarning().noquote() << tr("The desktop process exited with code: %1").arg(exitCode);
     return;
   }
 
@@ -248,14 +248,14 @@ void CoreProcess::startForegroundProcess(const QStringList &args)
   using enum ProcessState;
 
   if (m_processState != Starting) {
-    qCritical("core process must be in starting state");
+    qCritical().noquote() << tr("core process must be in starting state");
     return;
   }
 
   // only make quoted args for printing the command for convenience; so that the
   // core command can be easily copy/pasted to the terminal for testing.
   const auto quoted = makeQuotedArgs(m_appPath, args);
-  qInfo("running command: %s", qPrintable(quoted));
+  qInfo().noquote() << tr("Running command: %1").arg(quoted);
 
 #ifdef Q_OS_LINUX
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -281,7 +281,7 @@ void CoreProcess::startForegroundProcess(const QStringList &args)
 void CoreProcess::startProcessFromDaemon()
 {
   if (m_processState != ProcessState::Starting) {
-    qCritical("core process must be in starting state");
+    qCritical().noquote() << tr("core process must be in starting state");
     return;
   }
 
@@ -293,7 +293,7 @@ void CoreProcess::startProcessFromDaemon()
     const auto fileName = QFileInfo(source).fileName();
     const auto dest = synergy::resolveRelativePath(settingsDir, fileName);
     if (dest.isEmpty() || !QFileInfo::exists(source) || !QDir().mkpath(settingsDir)) {
-      qCritical("cannot copy settings into %s", qPrintable(settingsDir));
+      qCritical().noquote() << tr("cannot copy settings into %1").arg(settingsDir);
       setProcessState(ProcessState::Stopped);
       Q_EMIT error(Error::StartFailed);
       return;
@@ -302,10 +302,10 @@ void CoreProcess::startProcessFromDaemon()
     // users cannot tamper with the daemon's config; best effort, the copied
     // file is explicitly restricted below
     if (!synergy::restrictSystemDirectoryPermissions(settingsDir)) {
-      qWarning("failed to restrict the settings directory: %s", qPrintable(settingsDir));
+      qWarning().noquote() << tr("Failed to restrict the settings directory: %1").arg(settingsDir);
     }
     if ((QFileInfo::exists(dest) && !QFile::remove(dest)) || !QFile::copy(source, dest)) {
-      qCritical("cannot copy settings into %s", qPrintable(settingsDir));
+      qCritical().noquote() << tr("cannot copy settings into %1").arg(settingsDir);
       setProcessState(ProcessState::Stopped);
       Q_EMIT error(Error::StartFailed);
       return;
@@ -313,14 +313,14 @@ void CoreProcess::startProcessFromDaemon()
     // the config that the SYSTEM service executes must not be modifiable by
     // other local users (it can carry screen enter/exit commands)
     if (!synergy::restrictSecretFilePermissions(dest)) {
-      qCritical("cannot restrict the copied settings file: %s", qPrintable(dest));
+      qCritical().noquote() << tr("cannot restrict the copied settings file: %1").arg(dest);
       setProcessState(ProcessState::Stopped);
       Q_EMIT error(Error::StartFailed);
       return;
     }
     configFile = fileName;
   }
-  qInfo("sending start to daemon (config file: %s)", qPrintable(configFile));
+  qInfo().noquote() << tr("Sending start request to the service (configuration: %1)").arg(configFile);
 
   auto sendStart = [this, configFile] {
     m_daemonIpcClient->sendConfigFile(configFile);
@@ -353,16 +353,16 @@ void CoreProcess::startProcessFromDaemon()
 void CoreProcess::stopForegroundProcess() const
 {
   if (m_processState != ProcessState::Stopping) {
-    qCritical("core process must be in stopping state");
+    qCritical().noquote() << tr("core process must be in stopping state");
     return;
   }
 
   if (!m_process) {
-    qCritical("process not set, cannot stop");
+    qCritical().noquote() << tr("process not set, cannot stop");
     return;
   }
 
-  qInfo("stopping core desktop process");
+  qInfo().noquote() << tr("Stopping the core desktop process");
 
   if (m_process->state() == QProcess::ProcessState::Running) {
     qDebug("process is running, closing");
@@ -375,7 +375,7 @@ void CoreProcess::stopForegroundProcess() const
 void CoreProcess::stopProcessFromDaemon()
 {
   if (m_processState != ProcessState::Stopping) {
-    qCritical("core process must be in stopping state");
+    qCritical().noquote() << tr("core process must be in stopping state");
     return;
   }
 
@@ -444,12 +444,12 @@ void CoreProcess::handleLogLines(const QString &text)
 void CoreProcess::start(std::optional<ProcessMode> processModeOption)
 {
   if (m_processState == ProcessState::Started) {
-    qCritical("core process already started");
+    qCritical().noquote() << tr("core process already started");
     return;
   }
 
   if (m_mode == Settings::CoreMode::None) {
-    qCritical("core mode is not set, skipping core start");
+    qCritical().noquote() << tr("core mode is not set, skipping core start");
     return;
   }
 
@@ -457,9 +457,9 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
 
   const auto currentMode = Settings::value(Settings::Core::ProcessMode).value<ProcessMode>();
   const auto processMode = processModeOption.value_or(currentMode);
-  const auto coreMode = QVariant::fromValue(m_mode).toString().toLower();
-
-  qInfo().noquote() << QString("starting %1 process (%2 mode)").arg(coreMode, processModeToString(processMode));
+  const auto coreMode = m_mode == Settings::CoreMode::Server ? tr("server") : tr("client");
+  const auto modeLabel = processMode == ProcessMode::Service ? tr("service mode") : tr("desktop mode");
+  qInfo().noquote() << tr("Starting %1 process (%2)").arg(coreMode, modeLabel);
 
   setProcessState(ProcessState::Starting);
 
@@ -504,7 +504,7 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
   if (m_mode == Settings::CoreMode::Server) {
     const auto [hasNeededPermissions, configFilename] = persistServerConfig();
     if (configFilename.isEmpty()) {
-      qCritical("config file name empty for server args");
+      qCritical().noquote() << tr("config file name empty for server args");
       return;
     }
     if (!hasNeededPermissions) {
@@ -513,7 +513,7 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
       Q_EMIT error(Error::StartFailed);
       return;
     }
-    qInfo("core config file: %s", qPrintable(configFilename));
+    qInfo().noquote() << tr("Core configuration file: %1").arg(configFilename);
   }
 
   qDebug().noquote() << "log level:" << Settings::logLevelText();
@@ -521,7 +521,7 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
   if (Settings::value(Settings::Log::ToFile).toBool()) {
     const auto logFile = Settings::value(Settings::Log::File).toString();
     QDir(QFileInfo(logFile).absolutePath()).mkpath(".");
-    qInfo().noquote() << "log file:" << logFile;
+    qInfo().noquote() << tr("Log file: %1").arg(logFile);
   }
 
   // Wired before the start calls so it catches Started from both sync (desktop) and async (service) paths.
@@ -547,7 +547,7 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
             qDebug("connected to core ipc server");
           });
           connect(m_coreIpcClient, &ipc::CoreIpcClient::connectionFailed, this, [] {
-            qWarning("failed to establish core ipc connection");
+            qWarning().noquote() << tr("Failed to establish the core IPC connection");
           });
           connect(m_coreIpcClient, &ipc::CoreIpcClient::serverShutdown, this, [] {
             qDebug("core ipc server shut down cleanly");
@@ -579,7 +579,8 @@ void CoreProcess::stop(std::optional<ProcessMode> processModeOption)
   const auto currentMode = Settings::value(Settings::Core::ProcessMode).value<ProcessMode>();
   const auto processMode = processModeOption.value_or(currentMode);
 
-  qInfo("stopping core process (%s mode)", qPrintable(processModeToString(processMode)));
+  const auto modeLabel = processMode == ProcessMode::Service ? tr("service mode") : tr("desktop mode");
+  qInfo().noquote() << tr("Stopping core process (%1)").arg(modeLabel);
 
   if (m_coreIpcClient) {
     m_coreIpcClient->disconnectFromServer();
@@ -600,7 +601,7 @@ void CoreProcess::stop(std::optional<ProcessMode> processModeOption)
     }
 
   } else {
-    qWarning("core process already stopped");
+    qWarning().noquote() << tr("The core process is already stopped");
   }
 
   setConnectionState(ConnectionState::Disconnected);
@@ -630,7 +631,7 @@ void CoreProcess::restart()
 
 void CoreProcess::cleanup()
 {
-  qInfo("cleaning up core process");
+  qInfo().noquote() << tr("Cleaning up the core process");
 
   const auto isDesktop = Settings::value(Settings::Core::ProcessMode).value<ProcessMode>() == ProcessMode::Desktop;
   const auto isRunning = m_processState == ProcessState::Started;
@@ -647,7 +648,7 @@ QPair<bool, QString> CoreProcess::persistServerConfig() const
 
   const auto configFilePath = Settings::defaultValue(Settings::Server::ExternalConfigFile).toString();
   if (!m_serverConfig.save(configFilePath)) {
-    qWarning() << "failed to persist core configuration:" << configFilePath;
+    qWarning().noquote() << tr("Failed to persist the core configuration: %1").arg(configFilePath);
     return {false, configFilePath};
   }
   return {Settings::isServerConfigFileReadable(), configFilePath};
@@ -684,7 +685,7 @@ void CoreProcess::onCoreIpcMessageReceived(const QString &command, const QString
     bool ok = false;
     const auto state = static_cast<ConnectionState>(metaEnum.keyToValue(args.toUtf8().constData(), &ok));
     if (!ok) {
-      qWarning("core ipc got unknown connection state: %s", args.toUtf8().constData());
+      qWarning().noquote() << tr("Core IPC received an unknown connection state: %1").arg(args);
       return;
     }
     setConnectionState(state);
@@ -707,7 +708,7 @@ void CoreProcess::onCoreIpcMessageReceived(const QString &command, const QString
     if (ok) {
       Q_EMIT connectionRefused(reason);
     } else {
-      qWarning("core ipc got unknown connection refusal: %s", args.toUtf8().constData());
+      qWarning().noquote() << tr("Core IPC received an unknown connection refusal: %1").arg(args);
     }
   } else if (command == "retryIn") {
     Q_EMIT retryIn(args.toInt());
@@ -747,7 +748,7 @@ void CoreProcess::setupDaemonLogTail(const QString &logPath)
   if (QFileInfo logFile(logPath); !logFile.isFile()) {
     auto file = QFile(logPath);
     if (!file.open(QFile::ReadWrite)) {
-      qCritical() << "daemon log path file can not be written:" << logPath;
+      qCritical().noquote() << tr("Cannot write to the service log file: %1").arg(logPath);
       return;
     }
     file.write(""); // Create an empty file
@@ -770,11 +771,11 @@ void CoreProcess::clearSettings()
   }
 
   if (processMode != ProcessMode::Service) {
-    qCritical("invalid process mode");
+    qCritical().noquote() << tr("invalid process mode");
     return;
   }
 
-  qInfo("clearing core settings through daemon");
+  qInfo().noquote() << tr("Clearing core settings through the daemon");
   m_daemonIpcClient->sendClearSettings();
 }
 

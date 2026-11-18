@@ -125,7 +125,8 @@ public:
       QObject::disconnect(hostname, &QLineEdit::returnPressed, nullptr, nullptr);
     setAttribute(Qt::WA_DontShowOnScreen, !showOnScreen);
     open();
-    resize(width, height());
+    if (width > 0)
+      resize(width, height());
   }
   int checks = 0;
 
@@ -265,6 +266,29 @@ private Q_SLOTS:
     Settings::setValue(Settings::Gui::CloseReminder, false);
     Settings::setValue(Settings::Security::TlsEnabled, false);
     Settings::setValue(Settings::Log::ToFile, false);
+  }
+  void windowUsesMinimumWidthUnlessGeometryWasSaved()
+  {
+    if (m_width > 540)
+      Settings::setValue(Settings::Gui::WindowGeometry, QRect(0, 0, m_width, 570));
+    ControlledHttp server;
+    IsolatedWindow window(server, 0);
+    QCOMPARE(window.minimumSize(), QSize(540, 535));
+    QCOMPARE(window.width(), m_width);
+    QVERIFY(window.height() >= window.minimumHeight());
+    window.resize(200, 200);
+    QCOMPARE(window.size(), window.minimumSize());
+  }
+  void pageShortcutReceivesFocusOnTab()
+  {
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *pageBar = window.findChild<QWidget *>("pageBar");
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    QVERIFY(pageBar && preferences);
+    QCOMPARE(window.focusWidget(), pageBar);
+    QTest::keyClick(pageBar, Qt::Key_Tab);
+    QCOMPARE(window.focusWidget(), preferences);
   }
   void nameChangesRequireExplicitCommit()
   {

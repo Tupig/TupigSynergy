@@ -121,14 +121,14 @@ synergy::Screen *ClientApp::createScreen()
 #else
   if (synergy::platform::isWayland()) {
 #if WINAPI_LIBEI
-    LOG_INFO("using ei screen for wayland");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "using ei screen for wayland"));
     return new synergy::Screen(new synergy::EiScreen(false, getEvents(), true), getEvents());
 #else
     throw XNoEiSupport();
 #endif
   }
 #if WINAPI_XWINDOWS
-  LOG_INFO("using legacy x windows screen");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "using legacy x windows screen"));
   return new synergy::Screen(
       new XWindowsScreen(qPrintable(Settings::value(Settings::Core::Display).toString()), false, getEvents()),
       getEvents()
@@ -287,7 +287,7 @@ bool ClientApp::startClient()
           clientScreen
       );
       m_clientScreen = clientScreen;
-      LOG_INFO("started client");
+      LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "started client"));
     }
 
     m_client->setServerAddress(getCurrentServerAddress());
@@ -339,7 +339,7 @@ int ClientApp::mainLoop()
   // close down
   LOG_DEBUG("stopping client");
   stopClient();
-  LOG_INFO("stopped client");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "stopped client"));
 
   return exitCode;
 }

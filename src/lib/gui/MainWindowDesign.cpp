@@ -63,7 +63,6 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   pageBarLayout->setSpacing(kGap);
 
   btnBack = iconButton(pageBar, QStringLiteral("btnBack"), QStringLiteral("go-previous"));
-  btnBack->setToolTip(QObject::tr("Back"));
   btnBack->setAccessibleName(QObject::tr("Back"));
   btnBack->setVisible(false);
   pageBarLayout->addWidget(btnBack);
@@ -82,6 +81,9 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   );
   btnAboutShortcut =
       smallButton(pageBar, QStringLiteral("btnAboutShortcut"), QObject::tr("About"), QStringLiteral("help-about"));
+  btnSettingsShortcut->setFocusPolicy(Qt::StrongFocus);
+  btnUpdatesShortcut->setFocusPolicy(Qt::StrongFocus);
+  btnAboutShortcut->setFocusPolicy(Qt::StrongFocus);
   pageBarLayout->addWidget(btnSettingsShortcut);
   pageBarLayout->addWidget(btnUpdatesShortcut);
   pageBarLayout->addWidget(btnAboutShortcut);
@@ -260,7 +262,6 @@ void Ui::MainWindow::retranslateUi(QMainWindow *window)
 {
   if (!pageHost->hasEditor())
     pageTitle->setText(QObject::tr("Devices & Connection"));
-  btnBack->setToolTip(QObject::tr("Back"));
   btnBack->setAccessibleName(QObject::tr("Back"));
   btnSettingsShortcut->setText(QObject::tr("Preferences"));
   btnUpdatesShortcut->setText(QObject::tr("Updates"));

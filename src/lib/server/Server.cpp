@@ -148,10 +148,10 @@ Server::Server(
   // Determine if scroll lock is already set. If so, lock the cursor to the
   // primary screen (unless the user has disabled lock to screen in config)
   if (!m_disableLockToScreen && (m_primaryClient->getToggleMask() & KeyModifierScrollLock)) {
-    LOG_INFO("scroll lock is on, locking cursor to screen");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "scroll lock is on, locking cursor to screen"));
     m_lockedToScreen = true;
   } else if (m_defaultLockToScreenState) {
-    LOG_INFO("default screen lock is on, locking cursor to screen");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "default screen lock is on, locking cursor to screen"));
     m_lockedToScreen = true;
   }
 }
@@ -451,7 +451,7 @@ void Server::processOptions()
     } else if (id == kOptionClipboardSharing) {
       m_enableClipboard = value;
       if (!m_enableClipboard) {
-        LOG_INFO("clipboard sharing is disabled");
+        LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "clipboard sharing is disabled"));
       }
     } else if (id == kOptionClipboardSharingSize) {
       if (value <= 0) {

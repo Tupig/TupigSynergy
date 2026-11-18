@@ -5,5 +5,5 @@ SPDX-License-Identifier: MIT
 -->
 <WixLocalization Culture="en-us" Codepage="1252" xmlns="http://wixtoolset.org/schemas/v4/wxl">
   <!-- 英文作为可覆盖默认值，允许中文资源覆盖同名本地化标识。 -->
-  <String Id="LaunchAfterInstall" Overridable="yes" Value="Run [ProductName] when finished" />
+  <String Id="LaunchAfterInstall" Overridable="yes" Value="Run TuPig Synergy when finished" />
 </WixLocalization>

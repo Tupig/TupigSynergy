@@ -275,18 +275,18 @@ void ClientProxyUnknown::handleData()
 
 void ClientProxyUnknown::handleWriteError()
 {
-  LOG_INFO("error communicating with new client");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "error communicating with new client"));
   sendFailure();
 }
 
 void ClientProxyUnknown::handleTimeout()
 {
-  LOG_INFO("new client is unresponsive");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "new client is unresponsive"));
   sendFailure();
 }
 
 void ClientProxyUnknown::handleDisconnect()
 {
-  LOG_INFO("new client disconnected");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "new client disconnected"));
   sendFailure();
 }

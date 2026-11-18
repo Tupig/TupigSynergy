@@ -70,7 +70,7 @@ void ServerApp::parseArgs()
   } else {
     // No interface selected: bind every network interface so LAN clients can
     // connect out of the box.  Say so explicitly - this is an exposure surface.
-    LOG_WARN("core/interface is not set: listening on all network interfaces");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "core/interface is not set: listening on all network interfaces"));
     *m_synergyAddress = NetworkAddress(Settings::value(Settings::Core::Port).toInt());
   }
 
@@ -95,7 +95,7 @@ void ServerApp::reloadConfig()
     if (m_server != nullptr) {
       m_server->setConfig(*m_config);
     }
-    LOG_INFO("reloaded configuration");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "reloaded configuration"));
   }
 }
 
@@ -103,7 +103,7 @@ void ServerApp::loadConfig()
 {
   const auto path = Settings::serverConfigFile();
   if (path.isEmpty()) {
-    LOG_CRIT("no configuration path provided");
+    LOG_CRIT(QT_TRANSLATE_NOOP("EngineLogMessages", "no configuration path provided"));
     bye(s_exitConfig);
   }
 
@@ -263,7 +263,7 @@ void ServerApp::retryHandler()
   case Uninitialized:
   case Initialized:
   case Started:
-    LOG_ERR("retry: bad internal server state");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "retry: bad internal server state"));
     break;
 
   case Initializing:
@@ -403,14 +403,14 @@ synergy::Screen *ServerApp::createScreen()
 #else
   if (synergy::platform::isWayland()) {
 #if WINAPI_LIBEI
-    LOG_INFO("using ei screen for wayland");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "using ei screen for wayland"));
     return new synergy::Screen(new synergy::EiScreen(true, getEvents(), true), getEvents());
 #else
     throw XNoEiSupport();
 #endif
   }
 #if WINAPI_XWINDOWS
-  LOG_INFO("using legacy x windows screen");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "using legacy x windows screen"));
   return new synergy::Screen(
       new XWindowsScreen(qPrintable(Settings::value(Settings::Core::Display).toString()), true, getEvents()),
       getEvents()
@@ -428,7 +428,7 @@ PrimaryClient *ServerApp::openPrimaryClient(const std::string &name, synergy::Sc
 void ServerApp::handleSuspend()
 {
   if (!m_suspended) {
-    LOG_INFO("suspend");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "suspend"));
     stopServer();
     m_suspended = true;
   }
@@ -437,7 +437,7 @@ void ServerApp::handleSuspend()
 void ServerApp::handleResume()
 {
   if (m_suspended) {
-    LOG_INFO("resume");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "resume"));
     startServer();
     m_suspended = false;
   }
@@ -451,7 +451,9 @@ ClientListener *ServerApp::openClientListener(const NetworkAddress &address)
     // TLS-without-peer-authentication accepted any client on the same network.
     // TLS stays peer-authenticated even when checkPeers is turned off.
     if (!Settings::value(Settings::Security::CheckPeers).toBool()) {
-      LOG_WARN("security/checkPeers is off; peer certificates are still required");
+      LOG_WARN(
+          QT_TRANSLATE_NOOP("EngineLogMessages", "security/checkPeers is off; peer certificates are still required")
+      );
     }
     securityLevel = PeerAuth;
   }
@@ -563,7 +565,7 @@ int ServerApp::mainLoop()
   getEvents()->removeHandler(EventTypes::ServerAppForceReconnect, getEvents()->getSystemTarget());
   getEvents()->removeHandler(EventTypes::ServerAppReloadConfig, getEvents()->getSystemTarget());
   cleanupServer();
-  LOG_INFO("stopped server");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "stopped server"));
 
   return exitCode;
 }

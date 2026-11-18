@@ -179,7 +179,7 @@ bool MSWindowsScreen::onPreDispatchPrimary(HWND, UINT message, WPARAM wParam, LP
     return true;
 
   case SYNERGY_MSG_POST_WARP:
-    LOG_WARN("unmatched post warp");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "unmatched post warp"));
     return true;
 
   case WM_HOTKEY:

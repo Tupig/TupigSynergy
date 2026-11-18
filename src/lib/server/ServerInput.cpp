@@ -146,7 +146,7 @@ void Server::handleToggleScreenEvent(const Event &)
   getClients(screens);
 
   if (screens.size() < 2) {
-    LOG_ERR("not enough screens to toggle");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "not enough screens to toggle"));
     return;
   }
 
@@ -154,7 +154,7 @@ void Server::handleToggleScreenEvent(const Event &)
   std::string currentScreen = getName(m_active);
   auto it = std::ranges::find(screens, currentScreen);
   if (it == screens.end()) {
-    LOG_ERR("current screen not found in list");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "current screen not found in list"));
     return;
   }
 
@@ -167,7 +167,7 @@ void Server::handleToggleScreenEvent(const Event &)
   // Find the client for the next screen
   ClientList::const_iterator clientIt = m_clients.find(*nextIt);
   if (clientIt == m_clients.end()) {
-    LOG_ERR("next screen not active");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "next screen not active"));
     return;
   }
 

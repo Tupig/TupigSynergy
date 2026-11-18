@@ -65,7 +65,7 @@ void EiKeyState::init(int fd, size_t len)
   buffer[len] = '\0'; // guarantee null-termination
   auto keymap = xkb_keymap_new_from_string(m_xkb, buffer.get(), XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
   if (!keymap) {
-    LOG_WARN("failed to compile keymap, falling back to defaults");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to compile keymap, falling back to defaults"));
     // Falling back to layout "us" is a lot more useful than segfaulting
     initDefaultKeymap();
     return;

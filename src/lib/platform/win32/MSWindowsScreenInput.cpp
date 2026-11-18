@@ -429,7 +429,7 @@ void MSWindowsScreen::updateMouseKeys()
   // causes the mouse cursor to be come stuck in an invisible state even when there is a real mouse.
   // we may want to reintroduce it (restore old mouse keys flags) as a user option in the future,
   // e.g. for users who use periodically use their windows client directly and use the numpad for cursor keys.
-  LOG_INFO("enabling mouse keys for cursor visibility");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "enabling mouse keys for cursor visibility"));
   LOG_DEBUG("setting mouse keys flags: 0x%08x", m_mouseKeys.dwFlags);
   const auto ok = SystemParametersInfo(SPI_SETMOUSEKEYS, m_mouseKeys.cbSize, &m_mouseKeys, SPIF_SENDCHANGE);
   if (!ok) {
@@ -453,7 +453,9 @@ void MSWindowsScreen::fakeLocalKey(KeyButton button, bool press) const
     static bool s_loggedBlock = false;
     if (!s_loggedBlock) {
       s_loggedBlock = true;
-      LOG_WARN("SendInput blocked, input dropped (target window may run elevated)");
+      LOG_WARN(
+          QT_TRANSLATE_NOOP("EngineLogMessages", "SendInput blocked, input dropped (target window may run elevated)")
+      );
     }
   }
 }

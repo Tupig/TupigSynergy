@@ -5,7 +5,8 @@
  */
 
 #include "LogWidget.h"
-#include "common/PlatformInfo.h"
+#include "EngineLogTranslation.h"
+#include "common/LogLevel.h"
 #include "gui/StyleUtils.h"
 
 #include <gui/Logger.h>
@@ -75,8 +76,7 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_table{new QTableWidge
     }
   });
 
-  QFont font = synergy::platform::isWindows() ? QFont(QStringLiteral("Consolas"))
-                                              : QFontDatabase::systemFont(QFontDatabase::FixedFont);
+  QFont font = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
   font.setPixelSize(12);
   m_table->setFont(font);
 
@@ -104,12 +104,22 @@ LogWidget::Record LogWidget::parse(const QString &line)
   const auto close = line.indexOf(QLatin1String("] "));
   if (close > 0 && line.startsWith(QLatin1Char('['))) {
     record.time = line.mid(1, close - 1);
-    if (record.time.size() >= 19)
-      record.time = record.time.mid(11, 8);
+    if (record.time.size() >= 19 && record.time.at(10) == QLatin1Char('T')) {
+      record.time.truncate(19);
+      record.time[10] = QLatin1Char(' ');
+    }
     const auto colon = line.indexOf(QLatin1Char(':'), close + 2);
     if (colon > 0) {
       record.level = line.mid(close + 2, colon - close - 2).trimmed();
+      const auto level = LogLevel::indexOfOption(record.level);
+      if (level >= 0)
+        record.level = LogLevel::toString(static_cast<int>(level));
+      else if (record.level == QStringLiteral("CRITICAL"))
+        record.level = tr("Critical");
       record.message = line.mid(colon + 1).trimmed();
+      // Engine and service processes send raw data even when the GUI uses another language.
+      // Only an exact catalogue match is translated. Raw history stays available for copy.
+      record.message = synergy::gui::translateEngineLogMessage(record.message);
     }
   }
   return record;
@@ -137,10 +147,6 @@ void LogWidget::appendLine(const QString &msg)
     time->setForeground(QColor(QStringLiteral("#6f6f78")));
     auto *level = new QTableWidgetItem(record.level);
     level->setForeground(levelColor(levelOf(msg)));
-    QFont levelFont = m_table->font();
-    levelFont.setBold(true);
-    levelFont.setPixelSize(11);
-    level->setFont(levelFont);
     auto *message = new QTableWidgetItem(record.message);
     message->setForeground(QColor(synergy::gui::isDarkMode() ? QStringLiteral("#cfcfd6") : QStringLiteral("#3a3a40")));
     m_table->setItem(row, 0, time);
@@ -156,6 +162,13 @@ void LogWidget::setVisibleLines(int lines)
 {
   m_visibleLines = qMax(1, lines);
   updateVisibleHeight();
+}
+
+void LogWidget::changeEvent(QEvent *event)
+{
+  QWidget::changeEvent(event);
+  if (event->type() == QEvent::LanguageChange && !m_history.empty())
+    rebuild(false);
 }
 
 bool LogWidget::eventFilter(QObject *watched, QEvent *event)
@@ -254,9 +267,12 @@ int LogWidget::levelIndex(const QString &line)
   return level == QStringLiteral("warn") ? 1 : level == QStringLiteral("error") ? 2 : 0;
 }
 
-void LogWidget::rebuild()
+void LogWidget::rebuild(bool resetScroll)
 {
   const QScopedValueRollback<bool> adjusting(m_adjustingContents, true);
+  auto *scrollBar = m_table->verticalScrollBar();
+  const int anchorRow = m_table->rowAt(0);
+  const int anchorOffset = anchorRow < 0 ? 0 : -m_table->rowViewportPosition(anchorRow);
   m_table->setRowCount(0);
   m_latestLine.clear();
   QList<QString> visible;
@@ -276,10 +292,6 @@ void LogWidget::rebuild()
     time->setForeground(QColor(QStringLiteral("#6f6f78")));
     auto *level = new QTableWidgetItem(record.level);
     level->setForeground(levelColor(levelOf(visible.at(index))));
-    QFont levelFont = m_table->font();
-    levelFont.setBold(true);
-    levelFont.setPixelSize(11);
-    level->setFont(levelFont);
     auto *message = new QTableWidgetItem(record.message);
     message->setForeground(QColor(synergy::gui::isDarkMode() ? QStringLiteral("#cfcfd6") : QStringLiteral("#3a3a40")));
     m_table->setItem(row, 0, time);
@@ -287,7 +299,12 @@ void LogWidget::rebuild()
     m_table->setItem(row, 2, message);
   }
   updateVisibleHeight(true);
-  scrollToBottom();
+  if (resetScroll || m_followTail) {
+    scrollToBottom();
+  } else if (anchorRow >= 0 && anchorRow < m_table->rowCount()) {
+    m_table->scrollToItem(m_table->item(anchorRow, 0), QAbstractItemView::PositionAtTop);
+    scrollBar->setValue(scrollBar->value() + anchorOffset);
+  }
   Q_EMIT historyChanged(m_latestLine);
 }
 
@@ -307,13 +324,19 @@ QString LogWidget::allText() const
 {
   QStringList lines;
   lines.reserve(m_table->rowCount());
-  for (int row = 0; row < m_table->rowCount(); ++row) {
-    const auto time = m_table->item(row, 0) ? m_table->item(row, 0)->text() : QString();
-    const auto level = m_table->item(row, 1) ? m_table->item(row, 1)->text() : QString();
-    const auto message = m_table->item(row, 2) ? m_table->item(row, 2)->text() : QString();
-    lines.append(QStringLiteral("[%1] %2: %3").arg(time, level, message));
+  for (const auto &line : m_history) {
+    if (m_filter.isEmpty() || levelOf(line) == m_filter)
+      lines.append(line);
   }
   return lines.join(QLatin1Char('\n'));
+}
+
+QString LogWidget::latestDisplayText() const
+{
+  const auto record = parse(m_latestLine);
+  if (record.level.isEmpty())
+    return record.message;
+  return QStringLiteral("[%1] %2: %3").arg(record.time, record.level, record.message);
 }
 
 std::array<int, 3> LogWidget::levelCounts() const

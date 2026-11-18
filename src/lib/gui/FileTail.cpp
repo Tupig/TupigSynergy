@@ -7,6 +7,7 @@
 
 #include "FileTail.h"
 
+#include <QCoreApplication>
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
@@ -38,7 +39,7 @@ void FileTail::setWatchedFile(const QString &filePath)
 
   m_file.setFileName(filePath);
   if (!m_file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-    qCritical() << "failed to open file for tail:" << filePath;
+    qCritical().noquote() << QCoreApplication::translate("GuiLogMessages", "failed to open file for tail:") << filePath;
     return;
   }
 
@@ -66,14 +67,14 @@ void FileTail::handleFileChanged(const QString &path)
   if (replaced || m_file.size() < m_lastPos) {
     m_file.close();
     if (!m_file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-      qWarning() << "failed to reopen tailed file:" << path;
+      qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "failed to reopen tailed file:") << path;
       return;
     }
     m_lastPos = 0;
   }
 
   if (!m_file.seek(m_lastPos)) {
-    qWarning() << "failed to seek in tailed file:" << path;
+    qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "failed to seek in tailed file:") << path;
     return;
   }
   QTextStream stream(&m_file);

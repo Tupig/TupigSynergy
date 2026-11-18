@@ -29,7 +29,7 @@ void IClipboard::unmarshall(IClipboard *clipboard, const std::string_view &data,
 
     // read the number of formats
     if (end - index < 4) {
-      LOG_ERR("clipboard unmarshall: truncated header");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "clipboard unmarshall: truncated header"));
       clipboard->close();
       return;
     }

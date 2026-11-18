@@ -156,12 +156,12 @@ io_connect_t getEventDriver()
       if (!IOServiceGetMatchingServices(masterPort, dict, &iter)) {
         sEventDrvrRef = getService(iter);
       } else {
-        LOG_WARN("io service not found");
+        LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "io service not found"));
       }
 
       IOObjectRelease(iter);
     } else {
-      LOG_WARN("couldn't get io master port");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "couldn't get io master port"));
     }
   }
 
@@ -367,7 +367,7 @@ int32_t OSXKeyState::pollActiveGroup() const
   // every key event, which otherwise floods the log during normal typing.
   static std::atomic<bool> warned{false};
   if (!warned.exchange(true)) {
-    LOG_WARN("can't get the active group, use the first group instead");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "can't get the active group, use the first group instead"));
   }
 
   return 0;
@@ -478,7 +478,7 @@ void OSXKeyState::postKeyboardKey(CGKeyCode virtualKey, bool keyDown)
     CGEventPost(kCGHIDEventTap, event);
     CFRelease(event);
   } else {
-    LOG_CRIT("unable to create keyboard event for keystroke");
+    LOG_CRIT(QT_TRANSLATE_NOOP("EngineLogMessages", "unable to create keyboard event for keystroke"));
   }
 }
 
@@ -498,7 +498,7 @@ void OSXKeyState::fakeKey(const Keystroke &keystroke)
 
     setKeyboardModifiers(virtualKey, keyDown);
     if (postHIDVirtualKey(virtualKey, keyDown) != KERN_SUCCESS) {
-      LOG_WARN("fail to post hid event");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "fail to post hid event"));
       postKeyboardKey(virtualKey, keyDown);
     }
 
@@ -517,7 +517,7 @@ void OSXKeyState::fakeKey(const Keystroke &keystroke)
       }
 
       if (pollActiveGroup() != group) {
-        LOG_WARN("failed to set new keyboard layout");
+        LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to set new keyboard layout"));
       }
     }
     break;

@@ -306,7 +306,7 @@ void SocketMultiplexer::updateJobState(const std::vector<JobTransition> &transit
           LOG_ERR("exception in socket job, dropping connection: %s", e.what());
           newJob = nullptr;
         } catch (...) {
-          LOG_ERR("unknown exception in socket job, dropping connection");
+          LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "unknown exception in socket job, dropping connection"));
           newJob = nullptr;
         }
 

@@ -47,7 +47,7 @@ TCPListenSocket::~TCPListenSocket()
     }
   } catch (...) {
     // ignore
-    LOG_WARN("error while closing TCP socket");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "error while closing TCP socket"));
   }
 }
 

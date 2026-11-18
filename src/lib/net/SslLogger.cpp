@@ -102,12 +102,12 @@ void SslLogger::logSecureConnectInfo(const SSL *ssl)
         LOG_DEBUG("network encryption protocol: %s", parts[1].c_str());
         ipcSendToClient("secureSocket", parts[1].c_str());
       } else {
-        LOG_ERR("could not split cipher for protocol");
+        LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not split cipher for protocol"));
         LOG_DEBUG("network encryption protocol: %s", msg);
         ipcSendToClient("secureSocket", msg);
       }
     } else {
-      LOG_ERR("could not get secure socket cipher");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not get secure socket cipher"));
     }
   }
 }
@@ -153,15 +153,15 @@ void SslLogger::logErrorByCode(int code, int retry)
     break;
 
   case SSL_ERROR_SYSCALL:
-    LOG_ERR("tls error occurred (system call failure)");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "tls error occurred (system call failure)"));
     break;
 
   case SSL_ERROR_SSL:
-    LOG_ERR("tls error occurred (generic failure)");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "tls error occurred (generic failure)"));
     break;
 
   default:
-    LOG_ERR("tls error occurred (unknown failure)");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "tls error occurred (unknown failure)"));
     break;
   }
 }

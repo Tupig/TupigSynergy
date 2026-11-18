@@ -20,10 +20,10 @@ SynergyXkbKeyboard::SynergyXkbKeyboard()
 
   if (display) {
     if (!XkbRF_GetNamesProp(display.get(), nullptr, &m_data)) {
-      LOG_WARN("error reading keyboard layouts");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "error reading keyboard layouts"));
     }
   } else {
-    LOG_WARN("can't open xkb display during reading languages");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "can't open xkb display during reading languages"));
   }
 }
 

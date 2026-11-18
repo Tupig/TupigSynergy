@@ -36,6 +36,7 @@
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
 #include "widgets/StatusBar.h"
+#include <QCoreApplication>
 #include <QDebug>
 #include <QMessageBox>
 
@@ -112,7 +113,7 @@ void MainWindow::fitToCurrentPage()
   const int menuHeight = menuBar()->isNativeMenuBar() ? 0 : menuBar()->sizeHint().height();
   const int chrome = ui->pageBar->height() + ui->statusBar->height() + menuHeight;
   const int bodyCap = qMax(1, qMin(660, available - chrome - frame));
-  const int target = chrome + qMin(preferred, bodyCap);
+  const int target = qMax(minimumHeight(), chrome + qMin(preferred, bodyCap));
   if (height() != target)
     resize(width(), target);
 }
@@ -210,7 +211,7 @@ void MainWindow::checkForUpdates(bool manual)
           });
           showPage(page);
         } else {
-          qWarning().noquote() << "update check failed:" << reason;
+          qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "update check failed:") << reason;
         }
       }
   );
@@ -301,19 +302,26 @@ void MainWindow::showEvent(QShowEvent *event)
 void MainWindow::closeEvent(QCloseEvent *event)
 {
   if (Settings::value(Settings::Gui::CloseToTray).toBool() && event->spontaneous()) {
+    if (auto *reminder = findChild<QMessageBox *>(QStringLiteral("closeToTrayReminder"), Qt::FindDirectChildrenOnly)) {
+      event->ignore();
+      reminder->raise();
+      return;
+    }
     if (Settings::value(Settings::Gui::CloseReminder).toBool()) {
       event->ignore();
-      Settings::setValue(Settings::Gui::CloseReminder, false);
       auto *message = new QMessageBox(
-          QMessageBox::Information, kAppName,
+          QMessageBox::NoIcon, kAppName,
           tr("%1 will continue to run in the background. Use the tray icon to reopen the window.").arg(kAppName),
           QMessageBox::Ok, this
       );
+      message->setObjectName(QStringLiteral("closeToTrayReminder"));
+      message->setAttribute(Qt::WA_DeleteOnClose);
       connect(message, &QDialog::finished, this, [this] {
+        Settings::setValue(Settings::Gui::CloseReminder, false);
         Settings::setValue(Settings::Gui::WindowGeometry, geometry());
         hide();
       });
-      showPage(message);
+      message->open();
       return;
     }
     Settings::setValue(Settings::Gui::WindowGeometry, geometry());

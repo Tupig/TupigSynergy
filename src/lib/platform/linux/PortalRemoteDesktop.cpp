@@ -76,7 +76,7 @@ void PortalRemoteDesktop::reconnect(unsigned int timeout)
 
 void PortalRemoteDesktop::handleSessionClosed(XdpSession *session)
 {
-  LOG_ERR("portal remote desktop session was closed, reconnecting");
+  LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "portal remote desktop session was closed, reconnecting"));
   g_signal_handler_disconnect(session, m_sessionSignalId);
   m_sessionSignalId = 0;
   m_events->addEvent(Event(EventTypes::EISessionClosed, m_screen->getEventTarget()));
@@ -100,7 +100,10 @@ void PortalRemoteDesktop::handleSessionStarted(GObject *object, GAsyncResult *re
 
 #ifdef HAVE_LIBPORTAL_CLIPBOARD
   if (!xdp_session_is_clipboard_enabled(session)) {
-    LOG_WARN("clipboard not enabled on remote desktop session, discarding restore token to force a fresh session");
+    LOG_WARN(QT_TRANSLATE_NOOP(
+        "EngineLogMessages",
+        "clipboard not enabled on remote desktop session, discarding restore token to force a fresh session"
+    ));
     Settings::setValue(Settings::Client::XdpRestoreToken, QString());
     free(m_sessionRestoreToken);
     m_sessionRestoreToken = nullptr;
@@ -229,7 +232,9 @@ void PortalRemoteDesktop::claimClipboard()
     return;
   }
   if (!xdp_session_is_clipboard_enabled(m_session)) {
-    LOG_WARN("portal remote desktop clipboard not enabled on session, cannot claim");
+    LOG_WARN(
+        QT_TRANSLATE_NOOP("EngineLogMessages", "portal remote desktop clipboard not enabled on session, cannot claim")
+    );
     return;
   }
   PortalClipboard::claimOwnership(m_screen->getClipboardCache(), m_session);

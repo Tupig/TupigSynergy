@@ -23,7 +23,7 @@ uint64_t FileTransferOutbound::sendPaths(
 
   auto entries = FileTransferSource::inspectAll(paths, options.maxFileSize);
   if (entries.empty()) {
-    LOG_WARN("file transfer outbound: no readable files in the selection");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer outbound: no readable files in the selection"));
     return 0;
   }
 

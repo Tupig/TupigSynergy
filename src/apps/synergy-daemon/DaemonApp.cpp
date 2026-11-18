@@ -64,7 +64,7 @@ void DaemonApp::applyWatchdogCommand() const
 {
 #if defined(Q_OS_WIN)
   if (m_configFile.isEmpty()) {
-    LOG_ERR("cannot apply watchdog command: no config file set");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot apply watchdog command: no config file set"));
     return;
   }
 
@@ -103,7 +103,7 @@ void DaemonApp::applyWatchdogCommand() const
   LOG_DEBUG("applying watchdog command (elevate: %s)", elevate ? "yes" : "no");
   m_watchdog->setProcessConfig(command, elevate);
 #else
-  LOG_ERR("applying watchdog command not implemented on this platform");
+  LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "applying watchdog command not implemented on this platform"));
 #endif
 }
 
@@ -118,13 +118,13 @@ void DaemonApp::clearWatchdogCommand()
 #if defined(Q_OS_WIN)
   m_watchdog->setProcessConfig("", false);
 #else
-  LOG_ERR("clearing watchdog command not implemented on this platform");
+  LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "clearing watchdog command not implemented on this platform"));
 #endif
 }
 
 void DaemonApp::clearSettings()
 {
-  LOG_INFO("clearing daemon settings");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "clearing daemon settings"));
   m_configFile.clear();
   Settings::setValue(Settings::Daemon::ConfigFile);
   Settings::setValue(Settings::Daemon::LogFile);
@@ -152,7 +152,7 @@ void DaemonApp::connectIpcServer(const ipc::DaemonIpcServer *ipcServer) const
 
 void DaemonApp::run(QThread &daemonThread)
 {
-  LOG_INFO("starting daemon");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "starting daemon"));
 
   // Important: Move the daemon app to the daemon thread before creating any more Qt objects
   // owned by the daemon app, as they will be created on the daemon thread.
@@ -212,7 +212,7 @@ int DaemonApp::mainLoop()
 {
 #if defined(Q_OS_WIN)
   if (m_watchdog == nullptr) {
-    LOG_ERR("watchdog not initialized");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "watchdog not initialized"));
     return s_exitFailed;
   }
   ArchDaemonWindows::daemonRunning(true);
@@ -229,15 +229,15 @@ int DaemonApp::mainLoop()
     m_watchdog->startAsync();
 #endif
 
-    LOG_INFO("daemon is running");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "daemon is running"));
     m_events.loop();
   } catch (std::exception &e) { // NOSONAR - Catching all exceptions
     LOG_CRIT("daemon error: %s", e.what());
   } catch (...) { // NOSONAR - Catching remaining exceptions
-    LOG_CRIT("daemon unknown error");
+    LOG_CRIT(QT_TRANSLATE_NOOP("EngineLogMessages", "daemon unknown error"));
   }
 
-  LOG_INFO("daemon is stopping");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "daemon is stopping"));
 
 #if defined(Q_OS_WIN)
   try {
@@ -246,7 +246,7 @@ int DaemonApp::mainLoop()
   } catch (std::exception &e) { // NOSONAR - Catching all exceptions
     LOG_CRIT("daemon stop watchdog error: %s", e.what());
   } catch (...) { // NOSONAR - Catching remaining exceptions
-    LOG_CRIT("daemon stop watchdog unknown error");
+    LOG_CRIT(QT_TRANSLATE_NOOP("EngineLogMessages", "daemon stop watchdog unknown error"));
   }
   ArchDaemonWindows::daemonRunning(false);
 #endif

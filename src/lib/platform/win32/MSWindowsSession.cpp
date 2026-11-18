@@ -22,7 +22,7 @@ bool MSWindowsSession::isProcessInSession(const wchar_t *name, PHANDLE process =
   // first we need to take a snapshot of the running processes
   MSWindowsHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
   if (snapshot.get() == INVALID_HANDLE_VALUE) {
-    LOG_ERR("could not get process snapshot");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not get process snapshot"));
     throw std::runtime_error(windowsErrorToString(GetLastError()));
   }
 
@@ -33,7 +33,7 @@ bool MSWindowsSession::isProcessInSession(const wchar_t *name, PHANDLE process =
   // unlikely we can go any further
   BOOL gotEntry = Process32First(snapshot.get(), &entry);
   if (!gotEntry) {
-    LOG_ERR("could not get first process entry");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not get first process entry"));
     throw std::runtime_error(windowsErrorToString(GetLastError()));
   }
 
@@ -115,7 +115,7 @@ MSWindowsSession::getUserToken(LPSECURITY_ATTRIBUTES security)
           sourceToken, TOKEN_ASSIGN_PRIMARY | TOKEN_ALL_ACCESS, security, SecurityImpersonation, TokenPrimary, &newToken
       )) {
     CloseHandle(sourceToken);
-    LOG_ERR("could not duplicate token");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not duplicate token"));
     throw std::runtime_error(windowsErrorToString(GetLastError()));
   }
 
@@ -150,7 +150,7 @@ BOOL MSWindowsSession::nextProcessEntry(HANDLE snapshot, LPPROCESSENTRY32 entry)
     // only throw if it's not the end of the snapshot, if not the 'no more
     // files' error then it's probably something serious.
     if (err != ERROR_NO_MORE_FILES) {
-      LOG_ERR("could not get next process entry");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "could not get next process entry"));
       throw std::runtime_error(windowsErrorToString(GetLastError()));
     }
   }

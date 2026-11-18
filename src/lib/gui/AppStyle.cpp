@@ -176,6 +176,22 @@ QString appStyleSheet()
     QProgressBar#updateProgress::chunk { border-radius: 4px; background: %11; }
     QComboBox::drop-down { border: 0; width: 18px; }
     QComboBox::down-arrow { image: url(%22); width: 12px; height: 12px; }
+    QSpinBox, QDoubleSpinBox { padding-right: 25px; }
+    QSpinBox::up-button, QSpinBox::down-button,
+    QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+      subcontrol-origin: padding; width: 22px; height: 14px;
+      background: %8; border: 0; border-left: 1px solid %7;
+    }
+    QSpinBox::up-button, QDoubleSpinBox::up-button {
+      subcontrol-position: top right; border-top-right-radius: 6px;
+    }
+    QSpinBox::down-button, QDoubleSpinBox::down-button {
+      subcontrol-position: bottom right; border-bottom-right-radius: 6px;
+    }
+    QSpinBox::up-button:hover, QSpinBox::down-button:hover,
+    QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover { background: %9; }
+    QSpinBox::up-arrow, QDoubleSpinBox::up-arrow { image: url(%23); width: 11px; height: 11px; }
+    QSpinBox::down-arrow, QDoubleSpinBox::down-arrow { image: url(%22); width: 11px; height: 11px; }
     QComboBox QAbstractItemView {
       background: %5; border: 1px solid %7; border-radius: 8px; padding: 4px;
       selection-background-color: %10;
@@ -241,28 +257,29 @@ QString appStyleSheet()
     QLabel#statusText { font-size: 12px; }
     QLabel#statusRight { font-size: 11px; color: %4; }
   )")
-      .arg(t.text)                                                                       // 1
-      .arg(t.app)                                                                        // 2
-      .arg(t.textSecondary)                                                              // 3
-      .arg(t.muted)                                                                      // 4
-      .arg(t.panel)                                                                      // 5
-      .arg(t.textSecondary)                                                              // 6
-      .arg(t.line)                                                                       // 7
-      .arg(t.panelAlt)                                                                   // 8
-      .arg(t.controlHover)                                                               // 9
-      .arg(t.panelAlt)                                                                   // 10
-      .arg(t.accent)                                                                     // 11
-      .arg(t.accentInk)                                                                  // 12
-      .arg(t.danger)                                                                     // 13
-      .arg(t.dangerText)                                                                 // 14
-      .arg(t.panelAlt)                                                                   // 15
-      .arg(t.control)                                                                    // 16
-      .arg(isDarkMode() ? QStringLiteral("#212125") : t.panel)                           // 17
-      .arg(t.accentSoft)                                                                 // 18
-      .arg(isDarkMode() ? QStringLiteral("#232326") : t.panelAlt)                        // 19
-      .arg(isDarkMode() ? QStringLiteral("#31443a") : t.accentSoft)                      // 20
-      .arg(isDarkMode() ? QStringLiteral("#1e1f23") : t.control)                         // 21
-      .arg(QStringLiteral(":/icons/synergy-%1/actions/16/go-down.svg").arg(iconMode())); // 22
+      .arg(t.text)                                                                      // 1
+      .arg(t.app)                                                                       // 2
+      .arg(t.textSecondary)                                                             // 3
+      .arg(t.muted)                                                                     // 4
+      .arg(t.panel)                                                                     // 5
+      .arg(t.textSecondary)                                                             // 6
+      .arg(t.line)                                                                      // 7
+      .arg(t.panelAlt)                                                                  // 8
+      .arg(t.controlHover)                                                              // 9
+      .arg(t.panelAlt)                                                                  // 10
+      .arg(t.accent)                                                                    // 11
+      .arg(t.accentInk)                                                                 // 12
+      .arg(t.danger)                                                                    // 13
+      .arg(t.dangerText)                                                                // 14
+      .arg(t.panelAlt)                                                                  // 15
+      .arg(t.control)                                                                   // 16
+      .arg(isDarkMode() ? QStringLiteral("#212125") : t.panel)                          // 17
+      .arg(t.accentSoft)                                                                // 18
+      .arg(isDarkMode() ? QStringLiteral("#232326") : t.panelAlt)                       // 19
+      .arg(isDarkMode() ? QStringLiteral("#31443a") : t.accentSoft)                     // 20
+      .arg(isDarkMode() ? QStringLiteral("#1e1f23") : t.control)                        // 21
+      .arg(QStringLiteral(":/icons/synergy-%1/actions/16/go-down.svg").arg(iconMode())) // 22
+      .arg(QStringLiteral(":/icons/synergy-%1/actions/16/go-up.svg").arg(iconMode()));  // 23
 }
 
 } // namespace synergy::gui

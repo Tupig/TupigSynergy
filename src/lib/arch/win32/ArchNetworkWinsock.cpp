@@ -637,7 +637,7 @@ void ArchNetworkWinsock::setKeepAliveOnSocket(ArchSocket s, bool keepAlive)
 
 bool ArchNetworkWinsock::setReuseAddrOnSocket(ArchSocket, bool)
 {
-  LOG_ERR("socket re-use not supported on windows");
+  LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "socket re-use not supported on windows"));
   return false;
 }
 

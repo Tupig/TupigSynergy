@@ -410,7 +410,7 @@ void XWindowsScreen::resetOptions()
 void XWindowsScreen::setOptions(const OptionsList &options)
 {
   if (options.size() % 2 != 0) {
-    LOG_ERR("options are the incorrect size, can not process them");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "options are the incorrect size, can not process them"));
     return;
   }
   for (uint32_t i = 0, n = options.size(); i < n; i += 2) {
@@ -594,7 +594,7 @@ int XWindowsScreen::ioErrorHandler(Display *)
   // mark the display as lost and notify the application so it can attempt
   // recovery or gracefully shut down.
   if (s_screen != nullptr) {
-    LOG_ERR("X11 display connection lost (ioErrorHandler fired)");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "X11 display connection lost (ioErrorHandler fired)"));
     s_screen->onError();
   }
   // Return non-zero — some Xlib versions exit on 0 return anyway,

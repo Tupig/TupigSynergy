@@ -133,6 +133,9 @@ add_library(${target} STATIC
   widgets/LogPanel.h
   widgets/LogWidget.h
   widgets/LogWidget.cpp
+  widgets/EngineLogTranslation.cpp
+  widgets/EngineLogTranslation.h
+  widgets/EngineLogFormats.h
   widgets/MessagePage.cpp
   widgets/MessagePage.h
   widgets/ModeCard.cpp

@@ -301,7 +301,9 @@ void EiScreen::handleSystemEvent(const Event &)
       //
       // We must release the xdg-portal InputCapture in case it is still active
       // so that the cursor is usable and not stuck on the Synergy server.
-      LOG_WARN("disconnected from eis, will afterwards commence attempt to reconnect");
+      LOG_WARN(
+          QT_TRANSLATE_NOOP("EngineLogMessages", "disconnected from eis, will afterwards commence attempt to reconnect")
+      );
       if (m_isPrimary) {
         LOG_DEBUG("re-allocating portal input capture connection and releasing active captures");
 #ifdef WINAPI_LIBPORTAL

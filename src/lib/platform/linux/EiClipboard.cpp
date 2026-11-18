@@ -19,7 +19,7 @@ EiClipboard::EiClipboard(ClipboardID id) : m_id(id)
 bool EiClipboard::empty()
 {
   if (!m_open) {
-    LOG_WARN("cannot empty clipboard, not open");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot empty clipboard, not open"));
     return false;
   }
 
@@ -41,12 +41,12 @@ bool EiClipboard::empty()
 void EiClipboard::add(Format format, const std::string &data)
 {
   if (!m_open) {
-    LOG_WARN("cannot add to clipboard, not open");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot add to clipboard, not open"));
     return;
   }
 
   if (!m_owner) {
-    LOG_WARN("cannot add to clipboard, no owner");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot add to clipboard, no owner"));
     return;
   }
 
@@ -71,7 +71,7 @@ bool EiClipboard::open(Time time) const
 void EiClipboard::close() const
 {
   if (!m_open) {
-    LOG_WARN("clipboard is not open");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "clipboard is not open"));
   }
   m_open = false;
 }
@@ -84,7 +84,7 @@ EiClipboard::Time EiClipboard::getTime() const
 bool EiClipboard::has(Format format) const
 {
   if (!m_open) {
-    LOG_WARN("cannot check for clipboard format, not open");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot check for clipboard format, not open"));
     return false;
   }
   return m_added[static_cast<int>(format)];
@@ -93,7 +93,7 @@ bool EiClipboard::has(Format format) const
 std::string EiClipboard::get(Format format) const
 {
   if (!m_open) {
-    LOG_WARN("cannot get clipboard format, not open");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot get clipboard format, not open"));
     return "";
   }
   return m_data[static_cast<int>(format)];

@@ -104,7 +104,7 @@ void OSXScreen::watchSystemPowerThread(const void *)
   // install system power change callback
   m_pmRootPort = IORegisterForSystemPower(this, &notificationPortRef, powerChangeCallback, &notifier);
   if (m_pmRootPort == 0) {
-    LOG_WARN("IORegisterForSystemPower failed");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "IORegisterForSystemPower failed"));
   } else {
     runloopSourceRef = IONotificationPortGetRunLoopSource(notificationPortRef);
     CFRunLoopAddSource(m_pmRunloop, runloopSourceRef, kCFRunLoopCommonModes);
@@ -121,7 +121,7 @@ void OSXScreen::watchSystemPowerThread(const void *)
   // setting m_pmThreadReady to true otherwise the parent thread will
   // block waiting for it.
   if (m_pmRootPort == 0) {
-    LOG_WARN("failed to init watchSystemPowerThread");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to init watchSystemPowerThread"));
     return;
   }
 
@@ -216,7 +216,7 @@ bool OSXScreen::checkAXPermissions()
   if (AXIsProcessTrusted()) {
     return true;
   }
-  LOG_CRIT("process is not trusted anymore, quitting");
+  LOG_CRIT(QT_TRANSLATE_NOOP("EngineLogMessages", "process is not trusted anymore, quitting"));
   disable();
   App &app = App::instance();
   app.getEvents()->addEvent(Event(EventTypes::Quit, nullptr, new ExitEventData(s_exitFailed)));
@@ -310,7 +310,7 @@ void logCursorVisibility()
 {
   // CGCursorIsVisible is probably deprecated because its unreliable.
   if (!CGCursorIsVisible()) {
-    LOG_WARN("cursor may not be visible");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cursor may not be visible"));
   }
 }
 

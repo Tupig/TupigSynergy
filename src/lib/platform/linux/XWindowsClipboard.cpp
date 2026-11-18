@@ -155,7 +155,7 @@ bool XWindowsClipboard::addSimpleRequest(Window requestor, Atom target, ::Time t
           type = converter->getAtom();
         } catch (...) {
           // ignore -- cannot convert
-          LOG_WARN("error while converting clipboard data");
+          LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "error while converting clipboard data"));
         }
       }
     }
@@ -278,7 +278,7 @@ void XWindowsClipboard::add(Format format, const std::string &data)
 bool XWindowsClipboard::open(Time time) const
 {
   if (m_open) {
-    LOG_WARN("failed to open clipboard: already opened");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to open clipboard: already opened"));
     return false;
   }
 

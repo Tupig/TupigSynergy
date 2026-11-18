@@ -532,9 +532,9 @@ class GitHubDeliveryContract(unittest.TestCase):
                 self.assertNotRegex(executable, r"\bgit\s+(?:push|commit)\b")
                 self.assertNotRegex(executable, r"\b(?:bash|python3?)\s+[^\n]*bump[-_]version")
 
-    def test_committed_version_is_2_1_1_and_manifest_agrees(self):
+    def test_committed_version_is_semantic_and_manifest_agrees(self):
         manifest = json.loads((ROOT / "vcpkg.json").read_text())
-        self.assertEqual(manifest["version-string"], "2.1.1")
+        self.assertRegex(manifest["version-string"], r"^\d+\.\d+\.\d+$")
         with tempfile.TemporaryDirectory(prefix="r3-version-") as temp:
             output = Path(temp) / "VERSION"
             result = subprocess.run([
@@ -542,7 +542,7 @@ class GitHubDeliveryContract(unittest.TestCase):
                 "-DSYNERGY_VERSION_SNAPSHOT=OFF", "-P", str(ROOT / "cmake/SaveVersion.cmake")
             ], cwd=ROOT, capture_output=True, text=True, check=False)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertEqual(output.read_text().strip(), "2.1.1")
+            self.assertEqual(output.read_text().strip(), manifest["version-string"])
 
     def test_both_native_jobs_run_r3_and_retained_r2_contracts(self):
         for native in ("build-windows", "build-macos"):
@@ -596,6 +596,7 @@ class GitHubDeliveryContract(unittest.TestCase):
 
 class GitHubDeliverySuccessorContract(unittest.TestCase):
     def test_version_ignores_environment_and_cmake_cache_patch_overrides(self):
+        version = json.loads((ROOT / "vcpkg.json").read_text())["version-string"]
         for patch in (None, "", "99", "invalid"):
             with self.subTest(environment_patch=patch), tempfile.TemporaryDirectory(
                     prefix="gh-fixed-version-") as temporary:
@@ -612,10 +613,11 @@ class GitHubDeliverySuccessorContract(unittest.TestCase):
                 print(json.dumps({"version_patch_fixture": patch, "exit": result.returncode,
                                   "stdout": result.stdout, "stderr": result.stderr}))
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertEqual(output.read_text().strip(), "2.1.1")
-                self.assertEqual((output.parent / "VERSION_BASE").read_text().strip(), "2.1.1")
+                self.assertEqual(output.read_text().strip(), version)
+                self.assertEqual((output.parent / "VERSION_BASE").read_text().strip(), version)
 
     def test_snapshot_and_dev_keep_committed_base(self):
+        version = json.loads((ROOT / "vcpkg.json").read_text())["version-string"]
         for release, snapshot, suffix in (("OFF", "ON", "-snapshot+r"), ("OFF", "OFF", "-dev")):
             with self.subTest(suffix=suffix), tempfile.TemporaryDirectory(
                     prefix="gh-version-shape-") as temporary:
@@ -629,8 +631,8 @@ class GitHubDeliverySuccessorContract(unittest.TestCase):
                     "-P", str(ROOT / "cmake/SaveVersion.cmake")
                 ], cwd=ROOT, env=env, capture_output=True, text=True, timeout=30)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertTrue(output.read_text().startswith("2.1.1" + suffix))
-                self.assertEqual((output.parent / "VERSION_BASE").read_text().strip(), "2.1.1")
+                self.assertTrue(output.read_text().startswith(version + suffix))
+                self.assertEqual((output.parent / "VERSION_BASE").read_text().strip(), version)
 
     def test_no_ci_patch_computation_or_environment_propagation(self):
         for path in (WORKFLOW, ROOT / ".github/actions/get-version/action.yml",

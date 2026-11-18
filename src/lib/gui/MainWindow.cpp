@@ -41,6 +41,7 @@
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QCloseEvent>
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDesktopServices>
 #include <QFileDialog>
@@ -91,7 +92,7 @@ MainWindow::MainWindow(const QString &instanceSocketName)
       m_networkMonitor{new NetworkMonitor(this)}
 {
   ui->setupUi(this);
-  setMinimumWidth(540);
+  setMinimumSize(540, 535);
 
   setWindowIcon(QIcon(QStringLiteral(":/image/app-icon.png")));
 
@@ -244,7 +245,7 @@ void MainWindow::restoreWindow()
   auto windowGeometry = Settings::value(Settings::Gui::WindowGeometry).toRect();
   const auto totalGeometry = QGuiApplication::primaryScreen()->availableGeometry();
   if (!windowGeometry.isValid()) {
-    resize(Ui::MainWindow::kWindowWidth, height());
+    resize(minimumSize());
     windowGeometry = geometry();
   } else {
     setGeometry(windowGeometry);
@@ -407,7 +408,7 @@ void MainWindow::settingsChanged(const QString &key)
   if ((key == Settings::Security::Certificate) || (key == Settings::Security::KeySize) ||
       (key == Settings::Security::TlsEnabled) || (key == Settings::Security::CheckPeers)) {
     if (TlsUtility::isEnabled() && !TlsUtility::isCertValid()) {
-      qWarning() << tr("invalid certificate, generating a new one");
+      qWarning().noquote() << tr("invalid certificate, generating a new one");
       TlsUtility::generateCertificate();
     }
     updateSecurityIcon(m_statusBar->securityIconVisible());
@@ -513,13 +514,16 @@ void MainWindow::serverConnectionConfigureClient(const QString &clientName)
 
 void MainWindow::open()
 {
-  if (!Settings::value(Settings::Gui::Autohide).toBool())
+  if (!Settings::value(Settings::Gui::Autohide).toBool()) {
     showAndActivate();
-  else if (synergy::platform::isMac())
+    // Start on the page bar. Tab still reaches its shortcuts in order.
+    ui->pageBar->setFocus(Qt::OtherFocusReason);
+  } else if (synergy::platform::isMac()) {
     // macOS to call hide after this function ends
     QTimer::singleShot(1, this, &MainWindow::hide);
-  else
+  } else {
     hide();
+  }
 
   // if a critical error was shown just before the main window (i.e. on app
   // load), it will be hidden behind the main window. therefore we need to raise
@@ -533,11 +537,14 @@ void MainWindow::open()
 
   if (Settings::value(Settings::Gui::AutoStartCore).toBool()) {
     if (!m_certificateReady) {
-      qWarning() << "skipping core auto start, tls certificate is still being generated";
+      qWarning().noquote() << QCoreApplication::translate(
+          "GuiLogMessages", "skipping core auto start, tls certificate is still being generated"
+      );
       return;
     }
     if (m_coreProcess.mode() == CoreMode::None) {
-      qWarning() << "skipping core auto start, mode is not set";
+      qWarning().noquote(
+      ) << QCoreApplication::translate("GuiLogMessages", "skipping core auto start, mode is not set");
       return;
     }
     if (ui->rbModeClient->isChecked() && ui->lineHostname->text().isEmpty())

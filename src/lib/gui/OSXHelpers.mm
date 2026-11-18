@@ -14,7 +14,8 @@
 #import <UserNotifications/UNNotificationTrigger.h>
 #import <UserNotifications/UNUserNotificationCenter.h>
 
-#import <QtGlobal>
+#import <QCoreApplication>
+#import <QDebug>
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -23,20 +24,21 @@ void requestOSXNotificationPermission()
 {
 #if OSX_DEPLOYMENT_TARGET >= 1014
   if (isOSXDevelopmentBuild()) {
-    qWarning("Not requesting notification permission in dev build");
+    qWarning().noquote(
+    ) << QCoreApplication::translate("GuiLogMessages", "Not requesting notification permission in dev build");
     return;
   }
 
   UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
-  [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert + UNAuthorizationOptionSound)
-                        completionHandler:^(BOOL granted, NSError *_Nullable error) {
-                          if (error != nil) {
-                            qWarning(
-                                "Notification permission request error: %s",
-                                [[NSString stringWithFormat:@"%@", error] UTF8String]
-                            );
-                          }
-                        }];
+  [center
+      requestAuthorizationWithOptions:(UNAuthorizationOptionAlert + UNAuthorizationOptionSound)
+                    completionHandler:^(BOOL granted, NSError *_Nullable error) {
+                      if (error != nil) {
+                        qWarning().noquote(
+                        ) << QCoreApplication::translate("GuiLogMessages", "Notification permission request error: %1")
+                                 .arg(QString::fromNSString(error.description));
+                      }
+                    }];
 #endif
 }
 
@@ -53,7 +55,7 @@ bool showOSXNotification(const QString &title, const QString &body)
   // application shutodown (in this case, server) and cannot be caught
   // to avoid issues with it need to first check if this is a dev build
   if (isOSXDevelopmentBuild()) {
-    qWarning("Not showing notification in dev build");
+    qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "Not showing notification in dev build");
     return false;
   }
 
@@ -70,13 +72,14 @@ bool showOSXNotification(const QString &title, const QString &body)
                                                                         content:content
                                                                         trigger:nil];
 
-  [center
-      addNotificationRequest:request
-       withCompletionHandler:^(NSError *_Nullable error) {
-         if (error != nil) {
-           qWarning("Notification display request error: %s", [[NSString stringWithFormat:@"%@", error] UTF8String]);
-         }
-       }];
+  [center addNotificationRequest:request
+           withCompletionHandler:^(NSError *_Nullable error) {
+             if (error != nil) {
+               qWarning().noquote(
+               ) << QCoreApplication::translate("GuiLogMessages", "Notification display request error: %1")
+                        .arg(QString::fromNSString(error.description));
+             }
+           }];
 #else
   NSUserNotification *notification = [[NSUserNotification alloc] init];
   notification.title = title.toNSString();

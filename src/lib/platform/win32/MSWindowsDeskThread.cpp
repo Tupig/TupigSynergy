@@ -95,7 +95,9 @@ static void send_keyboard_input(WORD wVk, WORD wScan, DWORD dwFlags)
     static bool s_loggedBlock = false;
     if (!s_loggedBlock) {
       s_loggedBlock = true;
-      LOG_WARN("SendInput blocked, input dropped (target window may run elevated)");
+      LOG_WARN(
+          QT_TRANSLATE_NOOP("EngineLogMessages", "SendInput blocked, input dropped (target window may run elevated)")
+      );
     }
   }
 }
@@ -114,7 +116,9 @@ void send_mouse_input(DWORD dwFlags, DWORD dx, DWORD dy, DWORD dwData)
     static bool s_loggedBlock = false;
     if (!s_loggedBlock) {
       s_loggedBlock = true;
-      LOG_WARN("SendInput blocked, input dropped (target window may run elevated)");
+      LOG_WARN(
+          QT_TRANSLATE_NOOP("EngineLogMessages", "SendInput blocked, input dropped (target window may run elevated)")
+      );
     }
   }
 }

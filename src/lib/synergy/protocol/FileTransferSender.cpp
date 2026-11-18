@@ -17,7 +17,7 @@ uint64_t FileTransferSender::send(const std::vector<FileTransferSource::Entry> &
   }
 
   if (!emitter.dragInfo || !emitter.chunk) {
-    LOG_ERR("cannot send a file transfer without both emitter callbacks");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot send a file transfer without both emitter callbacks"));
     return 0;
   }
 

@@ -254,7 +254,7 @@ ServerProxy::ConnectionResult ServerProxy::parseHandshakeMessage(const uint8_t *
   }
 
   else if (memcmp(code, kMsgEBad, 4) == 0) {
-    LOG_ERR("server disconnected due to a protocol error");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "server disconnected due to a protocol error"));
     m_client->refuseConnection(ProtocolError, "server reported a protocol error");
     return Disconnect;
   } else if (memcmp(code, kMsgDLanguageSynchronisation, 4) == 0) {
@@ -416,7 +416,7 @@ ServerProxy::ConnectionResult ServerProxy::parseMessage(const uint8_t *code)
     m_client->disconnect(nullptr);
     return Disconnect;
   } else if (memcmp(code, kMsgEBad, 4) == 0) {
-    LOG_ERR("server disconnected due to a protocol error");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "server disconnected due to a protocol error"));
     m_client->disconnect("server reported a protocol error");
     return Disconnect;
   } else {
@@ -432,7 +432,7 @@ ServerProxy::ConnectionResult ServerProxy::parseMessage(const uint8_t *code)
 
 void ServerProxy::handleKeepAliveAlarm()
 {
-  LOG_INFO("server is dead");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "server is dead"));
   m_client->disconnect("server is not responding");
 }
 
@@ -542,7 +542,7 @@ bool ServerProxy::setClipboard()
     m_clipboardDataCached.clear();
     m_clipboardDataCached.shrink_to_fit();
 
-    LOG_INFO("clipboard was updated");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "clipboard was updated"));
   } else if (r == TransferState::Error) {
     m_client->disconnect("invalid clipboard data from server");
     return false;
@@ -611,7 +611,7 @@ bool ServerProxy::setOptions()
   LOG_VERBOSE("recv set options size=%d", options.size());
 
   if (options.size() % 2 != 0) {
-    LOG_ERR("options are the incorrect size, can not process them");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "options are the incorrect size, can not process them"));
     return true;
   }
 
@@ -682,20 +682,20 @@ void ServerProxy::fileChunk()
   if (m_fileTransferReceiver == nullptr) {
     // Should not happen: the receiver is also what drains the message body, so
     // without it the stream would go out of step.
-    LOG_ERR("file transfer: no receiver to hand the chunk to");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: no receiver to hand the chunk to"));
     return;
   }
 
   switch (m_fileTransferReceiver->onFileChunk(m_stream)) {
   case TransferState::Finished:
-    LOG_INFO("file transfer: received a file");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: received a file"));
     if (m_fileTransferReceiver->writtenFiles().size() == m_fileTransferReceiver->acceptedNames().size() &&
         !m_fileTransferReceiver->writtenFiles().empty()) {
       m_client->offerReceivedFiles(m_fileTransferReceiver->writtenFiles());
     }
     break;
   case TransferState::Error:
-    LOG_WARN("file transfer: the server sent a chunk this client rejected");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: the server sent a chunk this client rejected"));
     break;
   case TransferState::Started:
   case TransferState::InProgress:
@@ -723,7 +723,7 @@ void ServerProxy::setActiveServerLanguage(const std::string_view &language)
 
     if (!layoutManager().isLayoutInstalled(m_serverLayout)) {
       if (!m_isUserNotifiedAboutLayoutSyncError) {
-        LOG_WARN("current server layout is not installed on client");
+        LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "current server layout is not installed on client"));
         m_isUserNotifiedAboutLayoutSyncError = true;
       }
     } else {

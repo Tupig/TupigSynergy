@@ -315,7 +315,7 @@ bool synergy::win32::startDraggingFiles(const std::vector<std::string> &utf8Path
   FORMATETC fmt = hdropFormat();
   if (dataObject->QueryGetData(&fmt) != S_OK) {
     dataObject->Release();
-    LOG_ERR("startDraggingFiles: failed to build CF_HDROP");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "startDraggingFiles: failed to build CF_HDROP"));
     return false;
   }
 

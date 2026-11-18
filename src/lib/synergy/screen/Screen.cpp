@@ -32,14 +32,16 @@ bool runScreenCommand(const QString &commandLine)
 {
   const auto args = QProcess::splitCommand(commandLine);
   if (args.isEmpty()) {
-    LOG_ERR("refusing empty screen command");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "refusing empty screen command"));
     return false;
   }
 
   const auto program =
       QFileInfo(synergy::resolveRelativePath(Settings::settingsPath(), args.constFirst())).canonicalFilePath();
   if (!synergy::canonicalFileIsInsideDirectory(Settings::settingsPath(), program)) {
-    LOG_ERR("screen command must be an existing file under the settings directory");
+    LOG_ERR(
+        QT_TRANSLATE_NOOP("EngineLogMessages", "screen command must be an existing file under the settings directory")
+    );
     return false;
   }
 
@@ -107,9 +109,9 @@ Screen::~Screen()
          m_entered ? "yes" : "no", m_isPrimary ? "yes" : "no")
     );
     if (m_isPrimary) {
-      LOG_WARN("current primary screen is not entered on shutdown");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "current primary screen is not entered on shutdown"));
     } else {
-      LOG_WARN("current secondary screen is entered on shutdown");
+      LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "current secondary screen is entered on shutdown"));
     }
   }
 
@@ -156,10 +158,10 @@ void Screen::disable()
 
 void Screen::enter(KeyModifierMask toggleMask)
 {
-  LOG_INFO("entering screen");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "entering screen"));
 
   if (m_entered) {
-    LOG_WARN("screen already entered");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "screen already entered"));
   }
 
   // now on screen
@@ -176,16 +178,16 @@ void Screen::enter(KeyModifierMask toggleMask)
     const auto commandLine = Settings::value(Settings::Core::ScreenEnterCommand).toString();
     LOG_DEBUG("running screen enter command: %s", qPrintable(commandLine));
     if (!runScreenCommand(commandLine))
-      LOG_ERR("failed to run screen enter command");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to run screen enter command"));
   }
 }
 
 bool Screen::leave()
 {
-  LOG_INFO("leaving screen");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "leaving screen"));
 
   if (!m_entered) {
-    LOG_WARN("screen already left");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "screen already left"));
   }
 
   if (!m_screen->canLeave()) {
@@ -203,7 +205,7 @@ bool Screen::leave()
     const auto commandLine = Settings::value(Settings::Core::ScreenExitCommand).toString();
     LOG_DEBUG("running screen exit command: %s", qPrintable(commandLine));
     if (!runScreenCommand(commandLine))
-      LOG_ERR("failed to run screen exit command");
+      LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to run screen exit command"));
   }
 
   // make sure our idea of clipboard ownership is correct
@@ -305,7 +307,7 @@ void Screen::resetOptions()
 void Screen::setOptions(const OptionsList &options)
 {
   if (options.size() % 2 != 0) {
-    LOG_ERR("options are the incorrect size, can not process them");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "options are the incorrect size, can not process them"));
     return;
   }
 

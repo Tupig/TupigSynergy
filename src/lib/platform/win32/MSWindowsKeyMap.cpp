@@ -356,7 +356,7 @@ void MSWindowsKeyState::setWindowGroup(int32_t group)
   // character set.
 
   if (!PostMessage(targetWindow, WM_INPUTLANGCHANGEREQUEST, sysCharSet ? 1 : 0, (LPARAM)m_groups[group])) {
-    LOG_WARN("failed to post change language message");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to post change language message"));
   }
 
   // XXX -- use a short delay to let the target window process the message

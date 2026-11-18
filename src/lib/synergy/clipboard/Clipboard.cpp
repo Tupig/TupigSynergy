@@ -22,7 +22,7 @@ Clipboard::Clipboard()
 bool Clipboard::empty()
 {
   if (!m_open) {
-    LOG_WARN("cannot empty clipboard, not open");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot empty clipboard, not open"));
     return false;
   }
 
@@ -44,12 +44,12 @@ bool Clipboard::empty()
 void Clipboard::add(Format format, const std::string &data)
 {
   if (!m_open) {
-    LOG_WARN("cannot add to clipboard, not open");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot add to clipboard, not open"));
     return;
   }
 
   if (!m_owner) {
-    LOG_WARN("cannot add to clipboard, no owner");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot add to clipboard, no owner"));
     return;
   }
 
@@ -74,7 +74,7 @@ bool Clipboard::open(Time time) const
 void Clipboard::close() const
 {
   if (!m_open) {
-    LOG_WARN("clipboard is not open");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "clipboard is not open"));
   }
   m_open = false;
 }
@@ -87,7 +87,7 @@ Clipboard::Time Clipboard::getTime() const
 bool Clipboard::has(Format format) const
 {
   if (!m_open) {
-    LOG_WARN("cannot check for clipboard format, not open");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot check for clipboard format, not open"));
     return false;
   }
   return m_added[static_cast<int>(format)];
@@ -96,7 +96,7 @@ bool Clipboard::has(Format format) const
 std::string Clipboard::get(Format format) const
 {
   if (!m_open) {
-    LOG_WARN("cannot get clipboard format, not open");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "cannot get clipboard format, not open"));
     return "";
   }
   return m_data[static_cast<int>(format)];

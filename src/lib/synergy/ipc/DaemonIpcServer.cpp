@@ -52,14 +52,14 @@ void DaemonIpcServer::processCommand(QLocalSocket *clientSocket, const QString &
 void DaemonIpcServer::processLogLevel(QLocalSocket *&clientSocket, const QStringList &messageParts)
 {
   if (messageParts.size() < 2) {
-    LOG_ERR("daemon ipc server got invalid log level message");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "daemon ipc server got invalid log level message"));
     writeToClientSocket(clientSocket, kErrorMessage);
     return;
   }
 
   const auto &logLevel = messageParts.at(1);
   if (logLevel.isEmpty()) {
-    LOG_ERR("daemon ipc server got empty log level");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "daemon ipc server got empty log level"));
     writeToClientSocket(clientSocket, kErrorMessage);
     return;
   }
@@ -72,14 +72,14 @@ void DaemonIpcServer::processLogLevel(QLocalSocket *&clientSocket, const QString
 void DaemonIpcServer::processConfigFile(QLocalSocket *&clientSocket, const QStringList &messageParts)
 {
   if (messageParts.size() < 2) {
-    LOG_ERR("daemon ipc server got invalid config file message");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "daemon ipc server got invalid config file message"));
     writeToClientSocket(clientSocket, kErrorMessage);
     return;
   }
 
   const auto &configFile = messageParts.at(1);
   if (configFile.isEmpty()) {
-    LOG_ERR("daemon ipc server got empty config file path");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "daemon ipc server got empty config file path"));
     writeToClientSocket(clientSocket, kErrorMessage);
     return;
   }

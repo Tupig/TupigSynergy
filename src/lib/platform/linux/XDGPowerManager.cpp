@@ -33,7 +33,7 @@ void XDGPowerManager::disableSleep() const
 {
   if (!sleepInhibitCall(true, InhibitScreenServices::kScreenSaver) &&
       !sleepInhibitCall(true, InhibitScreenServices::kSessionManager)) {
-    LOG_WARN("failed to prevent system from going to sleep");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to prevent system from going to sleep"));
   }
 }
 
@@ -41,7 +41,7 @@ void XDGPowerManager::enableSleep() const
 {
   if (!sleepInhibitCall(false, InhibitScreenServices::kScreenSaver) &&
       !sleepInhibitCall(false, InhibitScreenServices::kSessionManager)) {
-    LOG_WARN("failed to enable system idle sleep");
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to enable system idle sleep"));
   }
 }
 

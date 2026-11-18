@@ -359,7 +359,7 @@ void Client::resetOptions()
 void Client::setOptions(const OptionsList &options)
 {
   if (options.size() % 2 != 0) {
-    LOG_ERR("options are the incorrect size, can not process them");
+    LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "options are the incorrect size, can not process them"));
     return;
   }
 
@@ -369,7 +369,7 @@ void Client::setOptions(const OptionsList &options)
       index++;
       if (index != options.end()) {
         if (!*index) {
-          LOG_INFO("clipboard sharing disabled by server");
+          LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "clipboard sharing disabled by server"));
         }
         m_enableClipboard = *index;
       }
@@ -383,7 +383,9 @@ void Client::setOptions(const OptionsList &options)
 
   if (m_enableClipboard && !m_maximumClipboardSize) {
     m_enableClipboard = false;
-    LOG_INFO("clipboard sharing is disabled because the server set the maximum clipboard size to 0");
+    LOG_INFO(QT_TRANSLATE_NOOP(
+        "EngineLogMessages", "clipboard sharing is disabled because the server set the maximum clipboard size to 0"
+    ));
   }
 
   m_screen->setOptions(options);
@@ -607,7 +609,7 @@ void Client::handleOutputError()
   cleanupTimer();
   cleanupScreen();
   cleanupConnection();
-  LOG_WARN("error sending to server");
+  LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "error sending to server"));
   sendEvent(EventTypes::ClientDisconnected);
 }
 
@@ -699,7 +701,7 @@ void Client::handleHello()
 void Client::handleSuspend()
 {
   if (!m_suspended) {
-    LOG_INFO("suspend");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "suspend"));
     m_suspended = true;
     bool wasConnected = isConnected();
     disconnect(nullptr);
@@ -710,7 +712,7 @@ void Client::handleSuspend()
 void Client::handleResume()
 {
   if (m_suspended) {
-    LOG_INFO("resume");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "resume"));
     m_suspended = false;
     if (m_connectOnResume) {
       m_connectOnResume = false;
