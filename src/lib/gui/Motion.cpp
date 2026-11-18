@@ -67,7 +67,7 @@ public:
     m_animation.setStartValue(m_opacity);
     m_animation.setEndValue(0.0);
     m_animation.setDuration(m_content ? 160 : 110);
-    m_animation.setEasingCurve(QEasingCurve::OutCubic);
+    m_animation.setEasingCurve(m_content ? QEasingCurve::OutCubic : QEasingCurve::Linear);
     show();
     raise();
     m_animation.start();

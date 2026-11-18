@@ -291,6 +291,8 @@ private Q_SLOTS:
   void pagePushAndBackHaveNonEndpointFrames();
   void buttonStandardActivation_data();
   void buttonStandardActivation();
+  void buttonFeedbackRendersDeterministicInteriorFrame_data();
+  void buttonFeedbackRendersDeterministicInteriorFrame();
   void tabAndOptionTransitionsPaint();
   void interruptionResizeBackAndDestruction();
   void reducedMotionSettlesImmediately();
@@ -419,6 +421,67 @@ void R3MotionContractTests::buttonStandardActivation()
   QCOMPARE(clicked.count(), 1);
   QCOMPARE(button->geometry(), geometry);
   QCOMPARE(QApplication::focusWidget(), focus);
+}
+void R3MotionContractTests::buttonFeedbackRendersDeterministicInteriorFrame_data()
+{
+  QTest::addColumn<int>("interiorMilliseconds");
+  QTest::newRow("88ms") << 88;
+  QTest::newRow("95ms") << 95;
+}
+void R3MotionContractTests::buttonFeedbackRendersDeterministicInteriorFrame()
+{
+  QFETCH(int, interiorMilliseconds);
+  QDialog dialog;
+  auto *layout = new QVBoxLayout(&dialog);
+  auto *button = new QPushButton("Deterministic feedback");
+  layout->addWidget(button);
+  dialog.resize(260, 100);
+  dialog.setAttribute(Qt::WA_DontShowOnScreen);
+  dialog.show();
+  button->setFocus();
+  QCoreApplication::processEvents();
+  const auto geometry = button->geometry();
+  auto *focus = QApplication::focusWidget();
+  QSignalSpy clicked(button, &QPushButton::clicked);
+
+  button->click();
+  QCOMPARE(clicked.count(), 1);
+  QCOMPARE(button->findChildren<QWidget *>("buttonFeedbackOverlay", Qt::FindDirectChildrenOnly).size(), 1);
+  auto *overlay = button->findChild<QWidget *>("buttonFeedbackOverlay", Qt::FindDirectChildrenOnly);
+  QVERIFY(overlay);
+  QVERIFY(overlay->testAttribute(Qt::WA_TransparentForMouseEvents));
+  auto *animation = overlay->findChild<QVariantAnimation *>("buttonFeedbackAnimation", Qt::FindDirectChildrenOnly);
+  QVERIFY(animation);
+  QCOMPARE(animation->duration(), 110);
+  QVERIFY(animation->state() == QAbstractAnimation::Running);
+
+  animation->setCurrentTime(0);
+  QCoreApplication::processEvents();
+  const auto start = button->grab().toImage();
+  const auto startOpacity = overlay->property("motionOpacity").toDouble();
+  const auto animationStart = animation->startValue().toDouble();
+  QVERIFY2(qAbs(startOpacity - animationStart) < 0.000001, "Overlay opacity must begin at its animation start value");
+
+  animation->setCurrentTime(interiorMilliseconds);
+  QCoreApplication::processEvents();
+  const auto interior = button->grab().toImage();
+  const auto interiorOpacity = overlay->property("motionOpacity").toDouble();
+  QVERIFY2(animation->state() == QAbstractAnimation::Running, "Interior sample must be inside the running animation");
+
+  animation->setCurrentTime(110);
+  QCoreApplication::processEvents();
+  const auto end = button->grab().toImage();
+  qInfo().nospace() << "MD2 deterministic interiorMs=" << interiorMilliseconds << " startOpacity=" << startOpacity
+                    << " interiorOpacity=" << interiorOpacity << " startDiff=" << differentFramePixels(interior, start)
+                    << " endDiff=" << differentFramePixels(interior, end);
+  QVERIFY2(differentFramePixels(interior, start) > 0, "Interior frame must differ from the animation start image");
+  QVERIFY2(differentFramePixels(interior, end) > 0, "Interior frame must differ from the completed image");
+  QCOMPARE(clicked.count(), 1);
+  QCOMPARE(button->geometry(), geometry);
+  QCOMPARE(QApplication::focusWidget(), focus);
+
+  QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+  QCOMPARE(button->findChildren<QWidget *>("buttonFeedbackOverlay", Qt::FindDirectChildrenOnly).size(), 0);
 }
 void R3MotionContractTests::tabAndOptionTransitionsPaint()
 {
