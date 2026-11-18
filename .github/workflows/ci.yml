@@ -260,7 +260,8 @@ jobs:
       - name: GUI configuration and critical contract tests
         timeout-minutes: 15
         env:
-          QT_QPA_PLATFORM: offscreen
+          QT_QPA_PLATFORM: windows
+          QT_STYLE_OVERRIDE: fusion
         shell: bash
         run: |
           set -euo pipefail
@@ -578,7 +579,7 @@ jobs:
       - name: GUI configuration and critical contract tests
         timeout-minutes: 15
         env:
-          QT_QPA_PLATFORM: offscreen
+          QT_QPA_PLATFORM: cocoa
         shell: bash
         run: |
           set -euo pipefail

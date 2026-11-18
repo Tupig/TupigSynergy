@@ -223,6 +223,14 @@ def native_critical_case(native, mode, unsafe=None):
             outcome = "false" if mode == "failed" and name == "R3StartupContractTests" else "true"
             definitions.append('add_test(' + name + ' "' + cmake.replace('\\', '/')
                                + '" "-E" "' + outcome + '")\n')
+            if mode.startswith("backend"):
+                definitions[-1] = ('add_test(' + name + ' "' + sys.executable.replace('\\', '/')
+                                   + '" "' + str(temp / "bin/cmake").replace('\\', '/')
+                                   + '" "--nb-env" "' + name + '")\n')
+        if mode in ("backend-environment", "backend-modification"):
+            prop, value = (("ENVIRONMENT", "QT_QPA_PLATFORM=offscreen") if mode == "backend-environment"
+                           else ("ENVIRONMENT_MODIFICATION", "QT_QPA_PLATFORM=set:offscreen"))
+            definitions.append('set_tests_properties(PageHostTests PROPERTIES ' + prop + ' "' + value + '")\n')
         (tests / "CTestTestfile.cmake").write_text("".join(definitions))
         sentinel = Path(temporary) / "outside.txt"
         sentinel_bytes = b"OUTSIDE_DIAGNOSTIC_SENTINEL_DO_NOT_READ_OR_WRITE\n"
@@ -244,6 +252,19 @@ def native_critical_case(native, mode, unsafe=None):
             if path.exists():
                 path.unlink()
             path.symlink_to(sentinel)
+        backend_witness = r'''if sys.argv[1:2] == ["--nb-env"]:
+    expected = json.loads(os.environ["NB_EXPECTED_ENV"])
+    observed = {key: os.environ.get(key) for key in expected}
+    child = subprocess.run([sys.executable, "-c",
+        'import json,os; print(json.dumps({k:os.environ.get(k) for k in ("QT_QPA_PLATFORM","QT_STYLE_OVERRIDE")}))'],
+        capture_output=True, text=True)
+    inherited = json.loads(child.stdout) if child.returncode == 0 else {}
+    proof = {"suite": sys.argv[2], "self": observed, "child": inherited,
+             "ok": observed == expected and inherited == expected and child.returncode == 0}
+    with Path(os.environ["NB_ENV_PROOF"]).open("a") as output:
+        output.write(json.dumps(proof) + "\n")
+    sys.exit(0 if proof["ok"] else 1)
+'''
         for tool in ("cmake", "ctest", "sed", "cp", "tee", "python3"):
             wrapper = temp / "bin" / tool
             real = shutil.which(tool)
@@ -254,6 +275,7 @@ def native_critical_case(native, mode, unsafe=None):
                 'from pathlib import Path\n'
                 'with Path(os.environ["COMMAND_LOG"]).open("a") as output:\n'
                 '    output.write(json.dumps([Path(sys.argv[0]).name]+sys.argv[1:])+"\\n")\n'
+                + backend_witness +
                 # Only the compile boundary is replaced. CTest and its synthetic
                 # cmake -E true/false tests execute real installed tools.
                 'if Path(sys.argv[0]).name == "cmake":\n'
@@ -266,6 +288,14 @@ def native_critical_case(native, mode, unsafe=None):
                     "COMMAND_LOG": str(temp / "calls.jsonl"), "REAL_CTEST": ctest,
                     "RUNNER_OS": "Windows" if native == "build-windows" else "macOS",
                     "GITHUB_OUTPUT": str(temp / "output")})
+        if mode.startswith("backend"):
+            if len(blocks) != 1:
+                raise RuntimeError("EXTRACTION: backend witness requires one critical step")
+            actual_env = dict(re.findall(r"(?m)^          (QT_QPA_PLATFORM|QT_STYLE_OVERRIDE):\s*(\S+)\s*$", blocks[0]))
+            expected_env = {"QT_QPA_PLATFORM": "windows" if native == "build-windows" else "cocoa",
+                            "QT_STYLE_OVERRIDE": "fusion" if native == "build-windows" else None}
+            env.update(actual_env)
+            env.update({"NB_EXPECTED_ENV": json.dumps(expected_env), "NB_ENV_PROOF": str(temp / "backend-proof.jsonl")})
         result = subprocess.run([bash, "-euo", "pipefail", "-c", "\n".join(scripts)],
                                 cwd=temp, env=env, capture_output=True, text=True, timeout=60)
         calls = [json.loads(line) for line in (temp / "calls.jsonl").read_text().splitlines()] \
@@ -281,6 +311,11 @@ def native_critical_case(native, mode, unsafe=None):
                          if path.is_file() and not path.is_symlink())
             return result, calls, {"outside_unchanged": sentinel.read_bytes() == sentinel_bytes,
                                    "outside_content_copied": leaked}
+        if mode.startswith("backend"):
+            proof = temp / "backend-proof.jsonl"
+            records = [json.loads(line) for line in proof.read_text().splitlines()] if proof.exists() else []
+            print(json.dumps({"actual_native_backend_inheritance": native, "fixture": mode, "records": records}))
+            return result, calls, records
         return result, calls
 
 
@@ -675,6 +710,68 @@ class GitHubDeliverySuccessorContract(unittest.TestCase):
             timeout = re.search(r"^        timeout-minutes:\s*(\d+)\s*$", unit[0], re.M)
             self.assertIsNotNone(timeout)
             self.assertGreaterEqual(int(timeout.group(1)), 10)
+
+    def test_native_critical_backend_scope_and_effective_child_environment(self):
+        keys = r"\b(?:QT_QPA_PLATFORM|QT_STYLE_OVERRIDE)\b"
+        workflow = WORKFLOW.read_text()
+        self.assertNotRegex(workflow.split("\njobs:\n", 1)[0], keys)
+        for path in ("src/unittests/CMakeLists.txt", "src/unittests/gui/CMakeLists.txt"):
+            source = (ROOT / path).read_text()
+            native_source = re.sub(r"(?ms)^(?P<i> *)if[ \t]*\(UNIX AND NOT APPLE\)\n.*?^(?P=i)endif\(\)", "", source)
+            self.assertNotRegex(native_source, keys + r"|\bENVIRONMENT_MODIFICATION\b", path)
+        startup = (ROOT / "src/unittests/gui/R3StartupContractTests.cpp").read_text()
+        inherited = re.search(r"auto environment = QProcessEnvironment::systemEnvironment\(\);(.*?)"
+                              r"process\.setProcessEnvironment\(environment\);", startup, re.S)
+        self.assertIsNotNone(inherited)
+        inserts = re.findall(r'\s*environment\.insert\("(SYNERGY_R3_PROBE_\w+)", [^\n]+\);', inherited.group(1))
+        self.assertEqual(inserts, ["SYNERGY_R3_PROBE_ROOT", "SYNERGY_R3_PROBE_FIXTURE",
+                                   "SYNERGY_R3_PROBE_KEY", "SYNERGY_R3_PROBE_AUTOMATED"])
+        self.assertEqual(re.sub(r'\s*environment\.insert\("SYNERGY_R3_PROBE_\w+", [^\n]+\);', "",
+                                inherited.group(1)).strip(), "")
+        self.assertEqual(startup.count("process.setProcessEnvironment("), 1)
+        for name in CRITICAL_SUITES + ("R3StartupProbeBootstrap",):
+            self.assertNotRegex((ROOT / "src/unittests/gui" / (name + ".cpp")).read_text(),
+                                keys + r"|--platform\b|--style\b", name)
+        action = (ROOT / ".github/actions/run-tests/action.yml").read_text()
+        remaining = [b for b in re.split(r"^    - ", action, flags=re.M) if b.startswith("name: Unit Tests\n")]
+        self.assertEqual(len(remaining), 1)
+        self.assertEqual(re.findall(r"(?m)^        QT_QPA_PLATFORM:\s*(\S+)\s*$", remaining[0]), ["offscreen"])
+        self.assertNotIn("QT_STYLE_OVERRIDE", action)
+        self.assertEqual(len(re.findall(keys, action)), 1, "remaining action must not reassign its backend")
+        for native in ("build-windows", "build-macos"):
+            with self.subTest(job=native):
+                body = job(native)
+                critical = [b for b in steps(body) if b.startswith("name: GUI configuration and critical contract tests\n")]
+                self.assertEqual(len(critical), 1)
+                block = critical[0]
+                env = re.search(r"(?m)^        env:\n((?:          [^\n]+\n)+)", block)
+                self.assertIsNotNone(env)
+                pairs = [line.strip().split(":", 1) for line in env.group(1).splitlines()]
+                expected = {"QT_QPA_PLATFORM": "windows", "QT_STYLE_OVERRIDE": "fusion"} if native == "build-windows" else {"QT_QPA_PLATFORM": "cocoa"}
+                self.assertEqual(len(pairs), len(expected), "missing or duplicate backend/style")
+                self.assertEqual({key: value.strip() for key, value in pairs}, expected)
+                self.assertNotRegex(body.split("    steps:", 1)[0], keys)
+                self.assertNotRegex("".join(b for b in steps(body) if b != block), keys)
+                self.assertNotRegex(block, r"(?m)^\s*(?:if|continue-on-error):")
+                script = actual_run(block)
+                self.assertNotRegex(script, keys)
+                suites = re.search(r"\bsuites=\((.*?)\)", script, re.S)
+                self.assertIsNotNone(suites)
+                self.assertEqual(tuple(suites.group(1).split()), CRITICAL_SUITES)
+                units = [b for b in steps(body) if "uses: ./.github/actions/run-tests" in b]
+                self.assertEqual(len(units), 1)
+                self.assertEqual(re.findall(r"(?m)^          exclude-tests:\s*'([^']+)'\s*$", units[0]),
+                                 ["^(" + "|".join(CRITICAL_SUITES) + ")$"])
+                for mode in ("backend", "backend-environment", "backend-modification"):
+                    with self.subTest(job=native, fixture=mode):
+                        result, _, records = native_critical_case(native, mode)
+                        if mode == "backend":
+                            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                            self.assertEqual([r["suite"] for r in records], list(CRITICAL_SUITES))
+                            self.assertTrue(all(r["ok"] for r in records))
+                        else:
+                            self.assertNotEqual(result.returncode, 0)
+                            self.assertTrue(records and not records[0]["ok"], "CTest override was not observed")
 
     def test_actual_native_critical_steps_execute_exact_suites_and_propagate_errors(self):
         for native in ("build-windows", "build-macos"):
