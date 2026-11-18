@@ -62,7 +62,7 @@ public:
 
   void start()
   {
-    m_opacity = m_content ? 0.18 : 0.22;
+    m_opacity = m_content ? 0.06 : 0.22;
     setProperty("motionOpacity", m_opacity);
     m_animation.setStartValue(m_opacity);
     m_animation.setEndValue(0.0);

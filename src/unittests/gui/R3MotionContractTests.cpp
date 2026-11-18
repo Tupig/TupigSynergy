@@ -293,6 +293,7 @@ private Q_SLOTS:
   void buttonStandardActivation();
   void buttonFeedbackRendersDeterministicInteriorFrame_data();
   void buttonFeedbackRendersDeterministicInteriorFrame();
+  void contentTransitionBoundsRenderedBrightness();
   void tabAndOptionTransitionsPaint();
   void interruptionResizeBackAndDestruction();
   void reducedMotionSettlesImmediately();
@@ -482,6 +483,68 @@ void R3MotionContractTests::buttonFeedbackRendersDeterministicInteriorFrame()
 
   QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
   QCOMPARE(button->findChildren<QWidget *>("buttonFeedbackOverlay", Qt::FindDirectChildrenOnly).size(), 0);
+}
+void R3MotionContractTests::contentTransitionBoundsRenderedBrightness()
+{
+  QWidget surface;
+  surface.setObjectName("contentBrightnessFixture");
+  surface.setStyleSheet("QWidget#contentBrightnessFixture { background-color: #102030; }");
+  surface.resize(240, 120);
+  surface.setAttribute(Qt::WA_DontShowOnScreen);
+  surface.show();
+  QCoreApplication::processEvents();
+  const auto geometry = surface.geometry();
+  auto *focus = QApplication::focusWidget();
+  const auto start = surface.grab().toImage();
+
+  synergy::gui::animateContentTransition(&surface);
+  QCOMPARE(surface.findChildren<QWidget *>("contentTransitionOverlay", Qt::FindDirectChildrenOnly).size(), 1);
+  QPointer<QWidget> overlay = surface.findChild<QWidget *>("contentTransitionOverlay", Qt::FindDirectChildrenOnly);
+  QVERIFY(overlay);
+  QVERIFY(overlay->isVisible());
+  QVERIFY(overlay->testAttribute(Qt::WA_TransparentForMouseEvents));
+  auto *animation = overlay->findChild<QVariantAnimation *>("contentTransitionAnimation", Qt::FindDirectChildrenOnly);
+  QVERIFY(animation);
+  QCOMPARE(animation->duration(), 160);
+  QCOMPARE(animation->state(), QAbstractAnimation::Running);
+  animation->pause();
+  animation->setCurrentTime(0);
+  const auto firstOpacity = overlay->property("motionOpacity").toDouble();
+  const auto peak = surface.grab().toImage();
+  animation->setCurrentTime(80);
+  QCOMPARE(animation->currentTime(), 80);
+  const auto middleOpacity = overlay->property("motionOpacity").toDouble();
+  const auto middle = surface.grab().toImage();
+  animation->setCurrentTime(160);
+  const auto end = surface.grab().toImage();
+
+  QVERIFY(!start.isNull());
+  QCOMPARE(peak.size(), start.size());
+  QCOMPARE(middle.size(), start.size());
+  QCOMPARE(end.size(), start.size());
+  const QPoint sample(start.width() / 2, start.height() / 2);
+  const auto startColor = start.pixelColor(sample);
+  const auto peakColor = peak.pixelColor(sample);
+  const auto middleColor = middle.pixelColor(sample);
+  const auto endColor = end.pixelColor(sample);
+  const std::array<int, 3> increments{
+      peakColor.red() - startColor.red(), peakColor.green() - startColor.green(), peakColor.blue() - startColor.blue()
+  };
+  qInfo().nospace() << "CCF1 firstOpacity=" << firstOpacity << " middleOpacity=" << middleOpacity
+                    << " startColor=" << startColor << " peakColor=" << peakColor << " middleColor=" << middleColor
+                    << " endColor=" << endColor;
+  saveFrames({start, peak, middle, end}, "content-brightness");
+  for (const int increment : increments) {
+    QVERIFY2(increment > 0, "Content transition must visibly brighten the owned dark surface");
+    QVERIFY2(increment <= 16, "Content transition peak must add no more than 16 per 8-bit color channel");
+  }
+  QVERIFY2(middle != peak && middle != end, "Content transition must retain a rendered non-endpoint frame");
+  QCOMPARE(end, start);
+  QCOMPARE(surface.geometry(), geometry);
+  QCOMPARE(QApplication::focusWidget(), focus);
+  QCOMPARE(surface.findChildren<QWidget *>("contentTransitionOverlay", Qt::FindDirectChildrenOnly).size(), 0);
+  QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+  QVERIFY(overlay.isNull());
 }
 void R3MotionContractTests::tabAndOptionTransitionsPaint()
 {
