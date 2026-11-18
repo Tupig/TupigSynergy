@@ -279,6 +279,17 @@ private Q_SLOTS:
     window.resize(200, 200);
     QCOMPARE(window.size(), window.minimumSize());
   }
+  void pageShortcutReceivesFocusOnTab()
+  {
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *pageBar = window.findChild<QWidget *>("pageBar");
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    QVERIFY(pageBar && preferences);
+    QCOMPARE(window.focusWidget(), pageBar);
+    QTest::keyClick(pageBar, Qt::Key_Tab);
+    QCOMPARE(window.focusWidget(), preferences);
+  }
   void nameChangesRequireExplicitCommit()
   {
     ControlledHttp server;
