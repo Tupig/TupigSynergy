@@ -11,7 +11,7 @@ the values are translated.
 -->
 <WixLocalization Culture="zh-cn" Codepage="936" xmlns="http://wixtoolset.org/schemas/v4/wxl">
   <!-- 安装完成页的项目自定义文案 -->
-  <String Id="LaunchAfterInstall" Value="安装完成后运行 [ProductName]" />
+  <String Id="LaunchAfterInstall" Value="安装完成后运行 TuPig Synergy" />
 
   <!-- Firewall extension -->
   <String Id="msierrFirewallCannotConnect" Overridable="yes" Value="无法连接 Windows 防火墙。([2] [3] [4] [5])" />
