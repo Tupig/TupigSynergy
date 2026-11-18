@@ -8,6 +8,7 @@
 #include "gui/Action.h"
 #include "gui/AppStyle.h"
 #include "gui/Hotkey.h"
+#include "gui/Motion.h"
 #include "gui/config/ServerConfig.h"
 #include "gui/dialogs/ActionDialog.h"
 #include "gui/dialogs/ClientConfigDialog.h"
@@ -210,6 +211,7 @@ void DialogRenderTests::rendersConfigurationPages()
 
 void DialogRenderTests::animatedButtonStillDeliversClick()
 {
+  synergy::gui::setMotionModeForTesting(synergy::gui::MotionMode::Animated);
   synergy::gui::installButtonFeedback();
   QDialog dialog;
   QPushButton button(QStringLiteral("Test"), &dialog);
@@ -219,7 +221,6 @@ void DialogRenderTests::animatedButtonStillDeliversClick()
   QCoreApplication::processEvents();
   QSignalSpy clicked(&button, &QPushButton::clicked);
   QTest::mousePress(&button, Qt::LeftButton);
-  QCoreApplication::processEvents();
   auto *overlay = button.findChild<QWidget *>(QStringLiteral("buttonFeedbackOverlay"));
   QVERIFY(overlay != nullptr);
   QVERIFY(overlay->testAttribute(Qt::WA_TransparentForMouseEvents));

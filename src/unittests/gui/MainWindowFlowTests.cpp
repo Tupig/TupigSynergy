@@ -103,7 +103,7 @@ public:
 class IsolatedWindow final : public MainWindow
 {
 public:
-  explicit IsolatedWindow(ControlledHttp &http, int width)
+  explicit IsolatedWindow(ControlledHttp &http, int width, bool showOnScreen = false)
       : MainWindow("ts-flow-" + QUuid::createUuid().toString(QUuid::WithoutBraces)),
         server(http)
   {
@@ -123,7 +123,7 @@ public:
       }
     if (auto *hostname = findChild<QLineEdit *>("lineHostname"))
       QObject::disconnect(hostname, &QLineEdit::returnPressed, nullptr, nullptr);
-    setAttribute(Qt::WA_DontShowOnScreen);
+    setAttribute(Qt::WA_DontShowOnScreen, !showOnScreen);
     open();
     resize(width, height());
   }
@@ -322,10 +322,8 @@ private Q_SLOTS:
     Settings::setValue(Settings::Core::ScreenExitCommand, QStringLiteral(""));
     Settings::setValue(Settings::Log::Level, QStringLiteral("INFO"));
     ControlledHttp server;
-    IsolatedWindow window(server, m_width);
-    window.setAttribute(Qt::WA_DontShowOnScreen, false);
-    window.show();
-    QCoreApplication::processEvents();
+    IsolatedWindow window(server, m_width, true);
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
     auto *serverMode = window.findChild<ModeCard *>("rbModeServer");
     auto *clientMode = window.findChild<ModeCard *>("rbModeClient");
     auto *exportConfig = window.findChild<QPushButton *>("btnSaveServerConfig");

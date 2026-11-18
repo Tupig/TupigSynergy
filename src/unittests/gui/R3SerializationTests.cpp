@@ -204,7 +204,9 @@ void R3SerializationTests::validCanonicalEncodings()
   QTemporaryDir dir;
   const auto path = dir.filePath("valid.conf");
   QVERIFY(config.save(path));
-  const auto bytes = readFile(path);
+  QFile file(path);
+  QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+  const auto bytes = file.readAll();
   QVERIFY(bytes.startsWith("section: screens\n"));
   QVERIFY(bytes.contains(expected.toUtf8()));
   QVERIFY(bytes.endsWith("end\n\n"));
