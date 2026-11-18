@@ -5,12 +5,12 @@
  */
 
 #include "LogWidget.h"
+#include "EngineLogTranslation.h"
 #include "common/LogLevel.h"
 #include "gui/StyleUtils.h"
 
 #include <gui/Logger.h>
 
-#include <QCoreApplication>
 #include <QEvent>
 #include <QFontDatabase>
 #include <QHeaderView>
@@ -119,7 +119,7 @@ LogWidget::Record LogWidget::parse(const QString &line)
       record.message = line.mid(colon + 1).trimmed();
       // Engine and service processes send raw data even when the GUI uses another language.
       // Only an exact catalogue match is translated. Raw history stays available for copy.
-      record.message = QCoreApplication::translate("EngineLogMessages", qUtf8Printable(record.message));
+      record.message = synergy::gui::translateEngineLogMessage(record.message);
     }
   }
   return record;

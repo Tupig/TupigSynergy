@@ -3934,4 +3934,1021 @@ Package: %3</source>
         <translation>看门狗未初始化</translation>
     </message>
 </context>
+<context>
+    <name>EngineLogFormats</name>
+    <message>
+        <source>%s ipc client hello missing version</source>
+        <translation>%s IPC 客户端的 hello 消息缺少版本信息</translation>
+    </message>
+    <message>
+        <source>%s ipc client version mismatch (client: %s, server: %s)</source>
+        <translation>%s IPC 客户端版本不匹配（客户端：%s，服务器：%s）</translation>
+    </message>
+    <message>
+        <source>%s ipc command before hello: %s</source>
+        <translation>%s IPC 在 hello 握手前收到命令：%s</translation>
+    </message>
+    <message>
+        <source>%s ipc message exceeds %d bytes</source>
+        <translation>%s IPC 消息超过 %d 字节</translation>
+    </message>
+    <message>
+        <source>%s ipc server client error: %s</source>
+        <translation>%s IPC 服务器的客户端出错：%s</translation>
+    </message>
+    <message>
+        <source>%s ipc server failed to get new connection</source>
+        <translation>%s IPC 服务器无法获取新连接</translation>
+    </message>
+    <message>
+        <source>%s ipc server failed to listen on: %s</source>
+        <translation>%s IPC 服务器无法监听：%s</translation>
+    </message>
+    <message>
+        <source>%s ipc server failed to write full message to client socket</source>
+        <translation>%s IPC 服务器无法向客户端套接字写入完整消息</translation>
+    </message>
+    <message>
+        <source>%s ipc server failed to write its hello token</source>
+        <translation>%s IPC 服务器无法写入自己的 hello 令牌</translation>
+    </message>
+    <message>
+        <source>%s ipc server got empty message</source>
+        <translation>%s IPC 服务器收到空消息</translation>
+    </message>
+    <message>
+        <source>%s ipc server got invalid message: %s</source>
+        <translation>%s IPC 服务器收到无效消息：%s</translation>
+    </message>
+    <message>
+        <source>%s ipc server ready-read without a socket</source>
+        <translation>%s IPC 服务器触发就绪读取事件时没有套接字</translation>
+    </message>
+    <message>
+        <source>%s ipc server rejected hello</source>
+        <translation>%s IPC 服务器拒绝了 hello 握手</translation>
+    </message>
+    <message>
+        <source>%s: %s</source>
+        <translation>%s：%s</translation>
+    </message>
+    <message>
+        <source>%s: failed to load config: %s</source>
+        <translation>%s：无法加载配置：%s</translation>
+    </message>
+    <message>
+        <source>%s: no valid server addresses specified</source>
+        <translation>%s：未指定有效的服务器地址</translation>
+    </message>
+    <message>
+        <source>%s: unrecognized log level `%s'</source>
+        <translation>%s：无法识别日志级别“%s”</translation>
+    </message>
+    <message>
+        <source>CF_HDROP GlobalLock failed: %lu</source>
+        <translation>CF_HDROP 的 GlobalLock 调用失败：%lu</translation>
+    </message>
+    <message>
+        <source>QtDataSocket: %s</source>
+        <translation>QtDataSocket：%s</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport: cannot open certificate "%s"</source>
+        <translation>QtNetworkTransport：无法打开证书“%s”</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport: connected%s</source>
+        <translation>QtNetworkTransport：已连接%s</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport: error: %s</source>
+        <translation>QtNetworkTransport：错误：%s</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport: no certificate in "%s"</source>
+        <translation>QtNetworkTransport：“%s”中没有证书</translation>
+    </message>
+    <message>
+        <source>QtNetworkTransport: no private key in "%s"</source>
+        <translation>QtNetworkTransport：“%s”中没有私钥</translation>
+    </message>
+    <message>
+        <source>QtTransportListenSocket: failed to listen: %s</source>
+        <translation>QtTransportListenSocket：监听失败：%s</translation>
+    </message>
+    <message>
+        <source>QtTransportListenSocket: listening on %s:%d (tls=%d)</source>
+        <translation>QtTransportListenSocket：正在监听 %s:%d（tls=%d）</translation>
+    </message>
+    <message>
+        <source>RegisterDragDrop failed: 0x%08lx</source>
+        <translation>RegisterDragDrop 调用失败：0x%08lx</translation>
+    </message>
+    <message>
+        <source>a client with name "%s" is already connected</source>
+        <translation>名为“%s”的客户端已连接</translation>
+    </message>
+    <message>
+        <source>a display invalid exception error occurred: %s
+</source>
+        <translation>发生显示无效异常：%s
+</translation>
+    </message>
+    <message>
+        <source>a runtime error occurred: %s
+</source>
+        <translation>发生运行时错误：%s
+</translation>
+    </message>
+    <message>
+        <source>an error occurred: %s
+</source>
+        <translation>发生错误：%s
+</translation>
+    </message>
+    <message>
+        <source>an instance of %s is already running</source>
+        <translation>%s 的一个实例已在运行</translation>
+    </message>
+    <message>
+        <source>application "%s" is blocking the keyboard</source>
+        <translation>应用程序“%s”正在阻止键盘输入</translation>
+    </message>
+    <message>
+        <source>bad alloc, unable to allocate memory %d bytes</source>
+        <translation>内存分配失败，无法分配 %d 字节内存</translation>
+    </message>
+    <message>
+        <source>blocked key combinations configured: %zu</source>
+        <translation>已配置的屏蔽组合键数量：%zu</translation>
+    </message>
+    <message>
+        <source>cannot apply watchdog command: config file must be a relative path: %s</source>
+        <translation>无法应用看门狗命令：配置文件必须使用相对路径：%s</translation>
+    </message>
+    <message>
+        <source>cannot apply watchdog command: config file must stay inside the settings directory: %s</source>
+        <translation>无法应用看门狗命令：配置文件必须位于设置目录内：%s</translation>
+    </message>
+    <message>
+        <source>cannot apply watchdog command: invalid core mode in config: %d</source>
+        <translation>无法应用看门狗命令：配置中的核心模式无效：%d</translation>
+    </message>
+    <message>
+        <source>cannot listen for clients: %s</source>
+        <translation>无法监听客户端连接：%s</translation>
+    </message>
+    <message>
+        <source>cannot open "%s" for transfer: %s</source>
+        <translation>无法打开“%s”进行传输：%s</translation>
+    </message>
+    <message>
+        <source>cannot open configuration "%s"</source>
+        <translation>无法打开配置文件“%s”</translation>
+    </message>
+    <message>
+        <source>cannot read configuration "%s": %s</source>
+        <translation>无法读取配置文件“%s”：%s</translation>
+    </message>
+    <message>
+        <source>cannot send a file transfer: %zu files exceeds the 16-bit count field</source>
+        <translation>无法发送文件：%zu 个文件超出 16 位计数字段的范围</translation>
+    </message>
+    <message>
+        <source>cannot send drag info to "%s": no stream</source>
+        <translation>无法向“%s”发送拖拽信息：没有数据流</translation>
+    </message>
+    <message>
+        <source>cannot send file chunk to "%s": no stream</source>
+        <translation>无法向“%s”发送文件数据块：没有数据流</translation>
+    </message>
+    <message>
+        <source>cleared undefined modifier bits in key down mask 0x%04x -&gt; 0x%04x</source>
+        <translation>已清除按键按下掩码中未定义的修饰键位：0x%04x -&gt; 0x%04x</translation>
+    </message>
+    <message>
+        <source>cleared undefined modifier bits in key repeat mask 0x%04x -&gt; 0x%04x</source>
+        <translation>已清除按键重复掩码中未定义的修饰键位：0x%04x -&gt; 0x%04x</translation>
+    </message>
+    <message>
+        <source>cleared undefined modifier bits in key up mask 0x%04x -&gt; 0x%04x</source>
+        <translation>已清除按键释放掩码中未定义的修饰键位：0x%04x -&gt; 0x%04x</translation>
+    </message>
+    <message>
+        <source>client "%s" has incompatible version %d.%d)</source>
+        <translation>客户端“%s”的版本 %d.%d 不兼容</translation>
+    </message>
+    <message>
+        <source>clipboard chunk invalid id: %d</source>
+        <translation>剪贴板数据块的 ID 无效：%d</translation>
+    </message>
+    <message>
+        <source>clipboard invalid size header: %s</source>
+        <translation>剪贴板大小数据头无效：%s</translation>
+    </message>
+    <message>
+        <source>clipboard pipe write returned %lld</source>
+        <translation>剪贴板管道写入返回 %lld</translation>
+    </message>
+    <message>
+        <source>clipboard size exceeds declared, size: %zu, declared: %zu</source>
+        <translation>剪贴板数据大小超出声明值，实际大小：%zu，声明大小：%zu</translation>
+    </message>
+    <message>
+        <source>clipboard size exceeds limit, size: %zu, limit: %zu</source>
+        <translation>剪贴板数据大小超出限制，实际大小：%zu，上限：%zu</translation>
+    </message>
+    <message>
+        <source>clipboard unmarshall: payload size %u exceeds remaining %zd</source>
+        <translation>剪贴板反序列化失败：载荷大小 %u 超出剩余字节数 %zd</translation>
+    </message>
+    <message>
+        <source>clipboard unmarshall: truncated format header at %u/%u</source>
+        <translation>剪贴板反序列化失败：格式数据头在 %u/%u 处不完整</translation>
+    </message>
+    <message>
+        <source>config file must be a relative path under the settings directory: %s</source>
+        <translation>配置文件必须使用设置目录下的相对路径：%s</translation>
+    </message>
+    <message>
+        <source>configured %zu server address(es)</source>
+        <translation>已配置 %zu 个服务器地址</translation>
+    </message>
+    <message>
+        <source>convert image from: depth=%d comp=%d</source>
+        <translation>正在转换图像，原始位深=%d，压缩方式=%d</translation>
+    </message>
+    <message>
+        <source>core ipc server got unknown command: %s</source>
+        <translation>核心 IPC 服务器收到未知命令：%s</translation>
+    </message>
+    <message>
+        <source>core stopped with error code: %d</source>
+        <translation>核心进程已停止，错误码：%d</translation>
+    </message>
+    <message>
+        <source>corrupted clipboard data, expected size=%zu actual size=%zu</source>
+        <translation>剪贴板数据损坏，预期大小=%zu，实际大小=%zu</translation>
+    </message>
+    <message>
+        <source>corrupted file data, expected size=%llu actual size=%zu</source>
+        <translation>文件数据损坏，预期大小=%llu，实际大小=%zu</translation>
+    </message>
+    <message>
+        <source>could not create SAS event, error: %s</source>
+        <translation>无法创建 SAS 事件，错误：%s</translation>
+    </message>
+    <message>
+        <source>could not create environment block, error: %s</source>
+        <translation>无法创建环境块，错误：%s</translation>
+    </message>
+    <message>
+        <source>could not duplicate token %i</source>
+        <translation>无法复制令牌 %i</translation>
+    </message>
+    <message>
+        <source>could not get base name of loaded module %d</source>
+        <translation>无法获取已加载模块 %d 的基本名称</translation>
+    </message>
+    <message>
+        <source>could not get first process entry (error: %i)</source>
+        <translation>无法获取首个进程条目（错误：%i）</translation>
+    </message>
+    <message>
+        <source>could not get process snapshot (error: %i)</source>
+        <translation>无法获取进程快照（错误：%i）</translation>
+    </message>
+    <message>
+        <source>could not get session user token: %s</source>
+        <translation>无法获取会话用户令牌：%s</translation>
+    </message>
+    <message>
+        <source>could not get token from session %d</source>
+        <translation>无法从会话 %d 获取令牌</translation>
+    </message>
+    <message>
+        <source>could not open process handle for kill, pid=%u, error=%s</source>
+        <translation>无法打开用于终止进程的句柄，进程 ID=%u，错误=%s</translation>
+    </message>
+    <message>
+        <source>could not open token, process handle: %d</source>
+        <translation>无法打开令牌，进程句柄：%d</translation>
+    </message>
+    <message>
+        <source>could not post message %i to desk thread (error: %i)</source>
+        <translation>无法向桌面线程投递消息 %i（错误：%i）</translation>
+    </message>
+    <message>
+        <source>could not read from output pipe, error: %s</source>
+        <translation>无法读取输出管道，错误：%s</translation>
+    </message>
+    <message>
+        <source>could not resolve address '%s': %s (will retry later)</source>
+        <translation>无法解析地址“%s”：%s（稍后重试）</translation>
+    </message>
+    <message>
+        <source>could not shut down existing processes: %s</source>
+        <translation>无法关闭现有进程：%s</translation>
+    </message>
+    <message>
+        <source>could not start process as session user, error: %s</source>
+        <translation>无法以会话用户身份启动进程，错误：%s</translation>
+    </message>
+    <message>
+        <source>couldn't open SAS event, unable to simulate ctrl+alt+del, error: %s</source>
+        <translation>无法打开 SAS 事件，无法模拟 Ctrl+Alt+Del，错误：%s</translation>
+    </message>
+    <message>
+        <source>cursor %s current screen</source>
+        <translation>光标对当前屏幕的锁定状态：%s</translation>
+    </message>
+    <message>
+        <source>daemon error: %s</source>
+        <translation>守护进程错误：%s</translation>
+    </message>
+    <message>
+        <source>daemon failed to run command, error: %s</source>
+        <translation>守护进程执行命令失败，错误：%s</translation>
+    </message>
+    <message>
+        <source>daemon failed to start process, error: %s</source>
+        <translation>守护进程启动进程失败，错误：%s</translation>
+    </message>
+    <message>
+        <source>daemon ipc server got unknown command: %s</source>
+        <translation>daemon IPC 服务器收到未知命令：%s</translation>
+    </message>
+    <message>
+        <source>daemon stop watchdog error: %s</source>
+        <translation>daemon 停止看门狗时出错：%s</translation>
+    </message>
+    <message>
+        <source>detected application not running, pid=%d</source>
+        <translation>检测到应用程序未运行，PID=%d</translation>
+    </message>
+    <message>
+        <source>disconnecting client "%s"</source>
+        <translation>正在断开客户端“%s”的连接</translation>
+    </message>
+    <message>
+        <source>drag info for "%s" declared %u file(s) but carries %zu; sending %zu</source>
+        <translation>“%s”的拖放信息声明有 %u 个文件，实际包含 %zu 个；将发送 %zu 个</translation>
+    </message>
+    <message>
+        <source>ei init error: %s</source>
+        <translation>ei 初始化错误：%s</translation>
+    </message>
+    <message>
+        <source>ei: %s</source>
+        <translation>ei：%s</translation>
+    </message>
+    <message>
+        <source>error closing socket: %s</source>
+        <translation>关闭套接字时出错：%s</translation>
+    </message>
+    <message>
+        <source>error communicating with client "%s": %s</source>
+        <translation>与客户端“%s”通信时出错：%s</translation>
+    </message>
+    <message>
+        <source>error in socket multiplexer: %s</source>
+        <translation>套接字多路复用器出错：%s</translation>
+    </message>
+    <message>
+        <source>error reading socket: %s</source>
+        <translation>读取套接字时出错：%s</translation>
+    </message>
+    <message>
+        <source>error waiting for process %d to exit, error: %s</source>
+        <translation>等待进程 %d 退出时出错，错误：%s</translation>
+    </message>
+    <message>
+        <source>error writing socket: %s</source>
+        <translation>写入套接字时出错：%s</translation>
+    </message>
+    <message>
+        <source>error writing to client "%s"</source>
+        <translation>向客户端“%s”写入数据时出错</translation>
+    </message>
+    <message>
+        <source>exception in socket job, dropping connection: %s</source>
+        <translation>套接字任务发生异常，正在断开连接：%s</translation>
+    </message>
+    <message>
+        <source>exception on thread 0x%08x: %s</source>
+        <translation>线程 0x%08x 发生异常：%s</translation>
+    </message>
+    <message>
+        <source>failed to add the clipboard format listener: %d</source>
+        <translation>添加剪贴板格式监听器失败：%d</translation>
+    </message>
+    <message>
+        <source>failed to apply barrier %d (%d/%d-%d/%d)</source>
+        <translation>应用指针屏障 %d（%d/%d-%d/%d）失败</translation>
+    </message>
+    <message>
+        <source>failed to clear clipboard: error %i</source>
+        <translation>清空剪贴板失败：错误 %i</translation>
+    </message>
+    <message>
+        <source>failed to connect to eis: %s</source>
+        <translation>连接 EIS 失败：%s</translation>
+    </message>
+    <message>
+        <source>failed to connect to server: %s</source>
+        <translation>连接服务器失败：%s</translation>
+    </message>
+    <message>
+        <source>failed to connect to server=%s, trying next resolved address</source>
+        <translation>连接服务器 %s 失败，正在尝试下一个解析地址</translation>
+    </message>
+    <message>
+        <source>failed to connect to server=%s, trying next server in list</source>
+        <translation>连接服务器 %s 失败，正在尝试列表中的下一个服务器</translation>
+    </message>
+    <message>
+        <source>failed to convert layout lang code: "%s"</source>
+        <translation>转换键盘布局语言代码失败：“%s”</translation>
+    </message>
+    <message>
+        <source>failed to create clipboard reference: error %i</source>
+        <translation>创建剪贴板引用失败：错误 %i</translation>
+    </message>
+    <message>
+        <source>failed to create drop window: %d</source>
+        <translation>创建拖放窗口失败：%d</translation>
+    </message>
+    <message>
+        <source>failed to create window: %d</source>
+        <translation>创建窗口失败：%d</translation>
+    </message>
+    <message>
+        <source>failed to create xkb context: %s</source>
+        <translation>创建 XKB 上下文失败：%s</translation>
+    </message>
+    <message>
+        <source>failed to disconnect: %s</source>
+        <translation>断开连接失败：%s</translation>
+    </message>
+    <message>
+        <source>failed to get exit code after process exit for process %d, error: %s</source>
+        <translation>进程 %d 退出后获取退出码失败，错误：%s</translation>
+    </message>
+    <message>
+        <source>failed to get exit code, error: %lu</source>
+        <translation>获取退出码失败，错误：%lu</translation>
+    </message>
+    <message>
+        <source>failed to get process exit code for process %d, error: %s</source>
+        <translation>获取进程 %d 的退出码失败，错误：%s</translation>
+    </message>
+    <message>
+        <source>failed to grab clipboard %d</source>
+        <translation>获取剪贴板 %d 的所有权失败</translation>
+    </message>
+    <message>
+        <source>failed to hide cursor, error=%d</source>
+        <translation>隐藏光标失败，错误=%d</translation>
+    </message>
+    <message>
+        <source>failed to init %s.dll, another program may be using it</source>
+        <translation>初始化 %s.dll 失败，可能有其他程序正在使用它</translation>
+    </message>
+    <message>
+        <source>failed to initialize input capture session, quitting: %s</source>
+        <translation>初始化输入捕获会话失败，正在退出：%s</translation>
+    </message>
+    <message>
+        <source>failed to initialize remote desktop session: %s</source>
+        <translation>初始化远程桌面会话失败：%s</translation>
+    </message>
+    <message>
+        <source>failed to open clipboard after %d attempts: %d</source>
+        <translation>尝试 %d 次后仍无法打开剪贴板：%d</translation>
+    </message>
+    <message>
+        <source>failed to open trusted fingerprints file: %s</source>
+        <translation>打开受信任指纹文件失败：%s</translation>
+    </message>
+    <message>
+        <source>failed to read layoutList in %s</source>
+        <translation>读取 %s 中的 layoutList 失败</translation>
+    </message>
+    <message>
+        <source>failed to read xkbConfigRegistry in %s</source>
+        <translation>读取 %s 中的 xkbConfigRegistry 失败</translation>
+    </message>
+    <message>
+        <source>failed to register hotkey %s (id=%04x mask=%04x)</source>
+        <translation>注册快捷键 %s 失败（ID=%04x 掩码=%04x）</translation>
+    </message>
+    <message>
+        <source>failed to remove the clipboard format listener: %d</source>
+        <translation>移除剪贴板格式监听器失败：%d</translation>
+    </message>
+    <message>
+        <source>failed to restrict the trust store directory: %s</source>
+        <translation>限制信任库目录的访问权限失败：%s</translation>
+    </message>
+    <message>
+        <source>failed to restrict the trust store file: %s</source>
+        <translation>限制信任库文件的访问权限失败：%s</translation>
+    </message>
+    <message>
+        <source>failed to set SAS event, unable to simulate ctrl+alt+del, error: %s</source>
+        <translation>设置 SAS 事件失败，无法模拟 Ctrl+Alt+Del，错误：%s</translation>
+    </message>
+    <message>
+        <source>failed to set mouse keys, error: %d</source>
+        <translation>设置鼠标键功能失败，错误：%d</translation>
+    </message>
+    <message>
+        <source>failed to set up ei: %s</source>
+        <translation>设置 ei 失败：%s</translation>
+    </message>
+    <message>
+        <source>failed to show cursor, error=%d</source>
+        <translation>显示光标失败，错误=%d</translation>
+    </message>
+    <message>
+        <source>failed to start client: %s</source>
+        <translation>启动客户端失败：%s</translation>
+    </message>
+    <message>
+        <source>failed to start input capture session, quitting: %s</source>
+        <translation>启动输入捕获会话失败，正在退出：%s</translation>
+    </message>
+    <message>
+        <source>failed to start portal remote desktop session, quitting: %s</source>
+        <translation>启动 portal 远程桌面会话失败，正在退出：%s</translation>
+    </message>
+    <message>
+        <source>failed to start server: %s</source>
+        <translation>启动服务器失败：%s</translation>
+    </message>
+    <message>
+        <source>failed to syncronize clipboard: error %i</source>
+        <translation>同步剪贴板失败：错误 %i</translation>
+    </message>
+    <message>
+        <source>failed to terminate process %d, error: %s</source>
+        <translation>终止进程 %d 失败，错误：%s</translation>
+    </message>
+    <message>
+        <source>failed to unregister hotkey id=%d</source>
+        <translation>注销快捷键失败，ID=%d</translation>
+    </message>
+    <message>
+        <source>file exceeds declared size, got: %zu, declared: %llu</source>
+        <translation>文件超过声明的大小，已收到：%zu，声明大小：%llu</translation>
+    </message>
+    <message>
+        <source>file exceeds size limit, size: %llu, limit: %llu</source>
+        <translation>文件超过大小上限，大小：%llu，上限：%llu</translation>
+    </message>
+    <message>
+        <source>file transfer invalid size header: %s</source>
+        <translation>文件传输的大小头部无效：%s</translation>
+    </message>
+    <message>
+        <source>file transfer outbound: trimming selection from %zu to %zu file(s)</source>
+        <translation>发送文件：将所选文件数从 %zu 个缩减为 %zu 个</translation>
+    </message>
+    <message>
+        <source>file transfer: cannot create the drop directory: %s</source>
+        <translation>文件传输：无法创建接收目录：%s</translation>
+    </message>
+    <message>
+        <source>file transfer: cannot move the staged file into place: %s</source>
+        <translation>文件传输：无法将暂存文件移动到目标位置：%s</translation>
+    </message>
+    <message>
+        <source>file transfer: drag of %zu files exceeds the limit of %zu</source>
+        <translation>文件传输：拖放的 %zu 个文件超过 %zu 个的上限</translation>
+    </message>
+    <message>
+        <source>file transfer: offering %zu received file(s) for local drop</source>
+        <translation>文件传输：正在提供收到的 %zu 个文件以供本地拖放</translation>
+    </message>
+    <message>
+        <source>file transfer: server is offering %zu file(s)</source>
+        <translation>文件传输：服务器正在提供 %zu 个文件</translation>
+    </message>
+    <message>
+        <source>file transfer: total of %llu bytes would exceed the limit of %llu</source>
+        <translation>文件传输：总大小 %llu 字节将超过 %llu 字节的上限</translation>
+    </message>
+    <message>
+        <source>file transfer: wrote %s (%zu bytes)</source>
+        <translation>文件传输：已写入 %s（%zu 字节）</translation>
+    </message>
+    <message>
+        <source>forced disconnection of client "%s"</source>
+        <translation>已强制断开客户端“%s”的连接</translation>
+    </message>
+    <message>
+        <source>forcefully terminated process %d</source>
+        <translation>已强制终止进程 %d</translation>
+    </message>
+    <message>
+        <source>format specifier %%I%d has invalid length</source>
+        <translation>格式说明符 %%I%d 的长度无效</translation>
+    </message>
+    <message>
+        <source>found %s in session %i but could not open process handle</source>
+        <translation>在会话中找到 %s，会话 ID 为 %i，但无法打开进程句柄</translation>
+    </message>
+    <message>
+        <source>getLength: %% format specifier with unexpected length: '%d'</source>
+        <translation>getLength：%% 格式说明符的长度不符合预期：“%d”</translation>
+    </message>
+    <message>
+        <source>getLength: invalid format specifier: '%c'</source>
+        <translation>getLength：格式说明符无效：“%c”</translation>
+    </message>
+    <message>
+        <source>getLength: invalid integer format length: '%d'</source>
+        <translation>getLength：整数格式长度无效：“%d”</translation>
+    </message>
+    <message>
+        <source>getLength: invalid integer vector format length: '%d'</source>
+        <translation>getLength：整数向量格式长度无效：“%d”</translation>
+    </message>
+    <message>
+        <source>getLength: raw string format specifier with unexpected length: '%d'</source>
+        <translation>getLength：原始字符串格式说明符的长度不符合预期：“%d”</translation>
+    </message>
+    <message>
+        <source>getLength: string format specifier with unexpected length: '%d'</source>
+        <translation>getLength：字符串格式说明符的长度不符合预期：“%d”</translation>
+    </message>
+    <message>
+        <source>group change: %d</source>
+        <translation>键盘布局组已变更：%d</translation>
+    </message>
+    <message>
+        <source>hello back received with protocol: '%s'</source>
+        <translation>收到握手回应，协议为：“%s”</translation>
+    </message>
+    <message>
+        <source>ignored screen "%s" grab of clipboard %d</source>
+        <translation>已忽略屏幕“%s”对剪贴板 %d 的所有权获取请求</translation>
+    </message>
+    <message>
+        <source>ignored screen "%s" update of clipboard %d (mis-sequenced)</source>
+        <translation>已忽略屏幕“%s”对剪贴板 %d 的更新（序号不匹配）</translation>
+    </message>
+    <message>
+        <source>ignored screen "%s" update of clipboard %d (not the clipboard owner)</source>
+        <translation>已忽略屏幕“%s”对剪贴板 %d 的更新（不是剪贴板所有者）</translation>
+    </message>
+    <message>
+        <source>ignoring drag info from "%s": receiving transfers is not implemented</source>
+        <translation>忽略来自“%s”的拖放信息：尚未实现接收传输</translation>
+    </message>
+    <message>
+        <source>ignoring file chunk from "%s": receiving transfers is not implemented</source>
+        <translation>忽略来自“%s”的文件数据块：尚未实现接收传输</translation>
+    </message>
+    <message>
+        <source>ignoring stored config path that is not relative: %s</source>
+        <translation>忽略存储的非相对配置路径：%s</translation>
+    </message>
+    <message>
+        <source>ignoring unparsable blocked key combination "%s"</source>
+        <translation>忽略无法解析的已屏蔽组合键“%s”</translation>
+    </message>
+    <message>
+        <source>incomplete message from "%s": %d bytes</source>
+        <translation>来自“%s”的消息不完整：%d 字节</translation>
+    </message>
+    <message>
+        <source>incomplete message from server: %d bytes</source>
+        <translation>来自服务器的消息不完整：%d 字节</translation>
+    </message>
+    <message>
+        <source>invalid %s value: %s</source>
+        <translation>无效的 %s 值：%s</translation>
+    </message>
+    <message>
+        <source>invalid message from server: %c%c%c%c</source>
+        <translation>来自服务器的消息无效：%c%c%c%c</translation>
+    </message>
+    <message>
+        <source>invalid process handle, cannot shutdown process %d</source>
+        <translation>进程句柄无效，无法关闭进程 %d</translation>
+    </message>
+    <message>
+        <source>invalid process id, cannot shutdown process %d</source>
+        <translation>进程 ID 无效，无法关闭进程 %d</translation>
+    </message>
+    <message>
+        <source>key down id=0x%04x mask=0x%04x blocked by configuration</source>
+        <translation>按键按下 id=0x%04x mask=0x%04x 被配置阻止</translation>
+    </message>
+    <message>
+        <source>key repeat id=0x%04x mask=0x%04x blocked by configuration</source>
+        <translation>按键重复 id=0x%04x mask=0x%04x 被配置阻止</translation>
+    </message>
+    <message>
+        <source>keyboard device %s does not have a keymap, we are guessing</source>
+        <translation>键盘设备 %s 没有键位映射，正在尝试推测</translation>
+    </message>
+    <message>
+        <source>language "%s" is unknown</source>
+        <translation>未知语言“%s”</translation>
+    </message>
+    <message>
+        <source>local layouts: %s</source>
+        <translation>本地键盘布局：%s</translation>
+    </message>
+    <message>
+        <source>log messages above %s are NOT sent to console (use file logging)</source>
+        <translation>高于 %s 级别的日志不会发送到控制台（请使用文件日志）</translation>
+    </message>
+    <message>
+        <source>malloc failed on %s:%s</source>
+        <translation>在 %s:%s 处分配内存失败</translation>
+    </message>
+    <message>
+        <source>modifier mask %s not accounted for, this is a bug</source>
+        <translation>修饰键掩码 %s 未被处理，这是一个程序缺陷</translation>
+    </message>
+    <message>
+        <source>multiple keysyms per keycode are not supported, keycode %d</source>
+        <translation>不支持一个键码对应多个键符号，键码 %d</translation>
+    </message>
+    <message>
+        <source>no converter for format %d</source>
+        <translation>没有适用于格式 %d 的转换器</translation>
+    </message>
+    <message>
+        <source>non-exception throw on thread 0x%08x: &lt;unknown&gt;</source>
+        <translation>线程 0x%08x 抛出了非异常对象：&lt;未知&gt;</translation>
+    </message>
+    <message>
+        <source>not sending clipboard data, exceeds limit: %i KB</source>
+        <translation>不发送剪贴板数据，超过限制：%i KB</translation>
+    </message>
+    <message>
+        <source>not sending clipboard data, exceeds limit: %zu KB</source>
+        <translation>不发送剪贴板数据，超过限制：%zu KB</translation>
+    </message>
+    <message>
+        <source>on switch, x (%d) exceeds the right boundary (dx + width = %d)</source>
+        <translation>切换时，x（%d）超过右边界（dx + width = %d）</translation>
+    </message>
+    <message>
+        <source>on switch, x (%d) is less than the left boundary dx (%d)</source>
+        <translation>切换时，x（%d）小于左边界 dx（%d）</translation>
+    </message>
+    <message>
+        <source>on switch, y (%d) exceeds the bottom boundary (dy + height = %d)</source>
+        <translation>切换时，y（%d）超过下边界（dy + height = %d）</translation>
+    </message>
+    <message>
+        <source>on switch, y (%d) is less than the top boundary dy (%d)</source>
+        <translation>切换时，y（%d）小于上边界 dy（%d）</translation>
+    </message>
+    <message>
+        <source>openssl error: %s</source>
+        <translation>OpenSSL 错误：%s</translation>
+    </message>
+    <message>
+        <source>peer tls certificate info: %s</source>
+        <translation>对端 TLS 证书信息：%s</translation>
+    </message>
+    <message>
+        <source>portal bug: input capture version is %d</source>
+        <translation>Portal 错误：输入捕获版本为 %d</translation>
+    </message>
+    <message>
+        <source>primary screen unavailable: %s</source>
+        <translation>主屏幕不可用：%s</translation>
+    </message>
+    <message>
+        <source>process %d did not exit within the expected time</source>
+        <translation>进程 %d 未在预期时间内退出</translation>
+    </message>
+    <message>
+        <source>process failed with exit code: %lu</source>
+        <translation>进程运行失败，退出码：%lu</translation>
+    </message>
+    <message>
+        <source>protocol error from client "%s"</source>
+        <translation>客户端“%s”发生协议错误</translation>
+    </message>
+    <message>
+        <source>protocol error from client "%s": %s</source>
+        <translation>客户端“%s”发生协议错误：%s</translation>
+    </message>
+    <message>
+        <source>protocol error from server: %s</source>
+        <translation>服务器发生协议错误：%s</translation>
+    </message>
+    <message>
+        <source>rate limited key 0x%04x: %zu events in window</source>
+        <translation>按键 0x%04x 被限速：时间窗口内有 %zu 个事件</translation>
+    </message>
+    <message>
+        <source>rate limited new key 0x%08x: already tracking %zu keys</source>
+        <translation>新按键 0x%08x 被限速：已跟踪 %zu 个按键</translation>
+    </message>
+    <message>
+        <source>read error during transfer: %s</source>
+        <translation>传输期间读取出错：%s</translation>
+    </message>
+    <message>
+        <source>read: %% format specifier with unexpected length: '%d'</source>
+        <translation>读取：%% 格式说明符的长度异常：“%d”</translation>
+    </message>
+    <message>
+        <source>read: invalid format specifier: '%c'</source>
+        <translation>读取：无效的格式说明符：“%c”</translation>
+    </message>
+    <message>
+        <source>read: length to be read is wrong: '%d' should be 1,2, or 4</source>
+        <translation>读取：待读取的长度不正确：“%d”，应为 1、2 或 4</translation>
+    </message>
+    <message>
+        <source>read: string length exceeds maximum allowed size: %u</source>
+        <translation>读取：字符串长度超过允许的最大值：%u</translation>
+    </message>
+    <message>
+        <source>readVectorSize: vector length exceeds maximum allowed size: %u</source>
+        <translation>readVectorSize：向量长度超过允许的最大值：%u</translation>
+    </message>
+    <message>
+        <source>refusing client connection: %zu connections already active or pending</source>
+        <translation>拒绝客户端连接：已有 %zu 个连接处于活动或待处理状态</translation>
+    </message>
+    <message>
+        <source>refusing to send a file chunk of %zu bytes: the transport limit is %zu (chunk the content with splitIntoFileChunks())</source>
+        <translation>拒绝发送 %zu 字节的文件数据块：传输限制为 %zu 字节（请使用 splitIntoFileChunks() 分块）</translation>
+    </message>
+    <message>
+        <source>refusing to send file chunk to "%s": bad size header "%s"</source>
+        <translation>拒绝向“%s”发送文件数据块：大小头字段无效“%s”</translation>
+    </message>
+    <message>
+        <source>remote layouts: %s</source>
+        <translation>远程键盘布局：%s</translation>
+    </message>
+    <message>
+        <source>running command (%s): %ls</source>
+        <translation>正在运行命令（%s）：%ls</translation>
+    </message>
+    <message>
+        <source>saying hello as %s, protocol v%d.%d</source>
+        <translation>以 %s 的身份发送问候，协议版本 v%d.%d</translation>
+    </message>
+    <message>
+        <source>screen "%s" grabbed clipboard %d from "%s"</source>
+        <translation>屏幕“%s”取得剪贴板 %d，来源为“%s”</translation>
+    </message>
+    <message>
+        <source>screen "%s" updated clipboard %d</source>
+        <translation>屏幕“%s”更新了剪贴板 %d</translation>
+    </message>
+    <message>
+        <source>seat %s is ignored</source>
+        <translation>忽略 seat %s</translation>
+    </message>
+    <message>
+        <source>secondary screen unavailable: %s</source>
+        <translation>副屏幕不可用：%s</translation>
+    </message>
+    <message>
+        <source>secure socket error: %s</source>
+        <translation>安全套接字错误：%s</translation>
+    </message>
+    <message>
+        <source>secure write buffer allocation failed (%d bytes)</source>
+        <translation>安全写入缓冲区分配失败（%d 字节）</translation>
+    </message>
+    <message>
+        <source>sent drag-and-drop transfer: %zu path(s), %llu byte(s)</source>
+        <translation>已发送拖放传输：%zu 个路径，%llu 字节</translation>
+    </message>
+    <message>
+        <source>server already has a connected client with name "%s"</source>
+        <translation>服务器已有名为“%s”的已连接客户端</translation>
+    </message>
+    <message>
+        <source>server has incompatible version %d.%d</source>
+        <translation>服务器版本不兼容：%d.%d</translation>
+    </message>
+    <message>
+        <source>server layouts missing on this computer: %s</source>
+        <translation>此计算机缺少服务器键盘布局：%s</translation>
+    </message>
+    <message>
+        <source>server refused client with name "%s"</source>
+        <translation>服务器拒绝名为“%s”的客户端</translation>
+    </message>
+    <message>
+        <source>server tls certificate info: %s</source>
+        <translation>服务器 TLS 证书信息：%s</translation>
+    </message>
+    <message>
+        <source>settings file: %s</source>
+        <translation>设置文件：%s</translation>
+    </message>
+    <message>
+        <source>skipping "%s" for transfer: %s</source>
+        <translation>传输时跳过“%s”：%s</translation>
+    </message>
+    <message>
+        <source>skipping "%s": it could not be opened for sending</source>
+        <translation>跳过“%s”：无法打开以供发送</translation>
+    </message>
+    <message>
+        <source>socket flush timed out after %.1f seconds</source>
+        <translation>套接字刷新在 %.1f 秒后超时</translation>
+    </message>
+    <message>
+        <source>standard exception on thread 0x%08x: %s</source>
+        <translation>线程 0x%08x 发生标准异常：%s</translation>
+    </message>
+    <message>
+        <source>start failed %d times, delaying start by %u second(s)</source>
+        <translation>启动失败 %d 次，延迟 %u 秒后启动</translation>
+    </message>
+    <message>
+        <source>startDraggingFiles: DoDragDrop failed: 0x%08lx</source>
+        <translation>startDraggingFiles：DoDragDrop 失败：0x%08lx</translation>
+    </message>
+    <message>
+        <source>startDraggingFiles: drop completed (effect=%lu)</source>
+        <translation>startDraggingFiles：拖放完成（effect=%lu）</translation>
+    </message>
+    <message>
+        <source>switch from "%s" to "%s" at %d,%d</source>
+        <translation>从“%s”切换到“%s”，位置 %d,%d</translation>
+    </message>
+    <message>
+        <source>the ISO 639-2 code "%s" is missed in table</source>
+        <translation>表中缺少 ISO 639-2 代码“%s”</translation>
+    </message>
+    <message>
+        <source>tls certificate rejected: RSA key too small (%d bits, minimum %d)</source>
+        <translation>TLS 证书被拒绝：RSA 密钥过小（%d 位，最小要求 %d 位）</translation>
+    </message>
+    <message>
+        <source>tls certificate verification error: %s</source>
+        <translation>TLS 证书验证错误：%s</translation>
+    </message>
+    <message>
+        <source>too many discarded events! %d</source>
+        <translation>丢弃的事件过多！%d</translation>
+    </message>
+    <message>
+        <source>unable to get old mouse keys settings, error: %d</source>
+        <translation>无法获取原有鼠标键设置，错误：%d</translation>
+    </message>
+    <message>
+        <source>unable to open %s</source>
+        <translation>无法打开 %s</translation>
+    </message>
+    <message>
+        <source>unable to set cursor visibility after %d attempts</source>
+        <translation>尝试 %d 次后仍无法设置光标可见性</translation>
+    </message>
+    <message>
+        <source>unknown file chunk mark %u for "%s"</source>
+        <translation>未知文件数据块标记 %u，文件“%s”</translation>
+    </message>
+    <message>
+        <source>unknown file chunk mark: %u</source>
+        <translation>未知文件数据块标记：%u</translation>
+    </message>
+    <message>
+        <source>unknown screen name `%s'</source>
+        <translation>未知屏幕名称“%s”</translation>
+    </message>
+    <message>
+        <source>unrecognised client name "%s", check server config</source>
+        <translation>无法识别客户端名称“%s”，请检查服务器配置</translation>
+    </message>
+    <message>
+        <source>writef: %% format specifier with unexpected length: '%d'</source>
+        <translation>writef：%% 格式说明符的长度异常：“%d”</translation>
+    </message>
+    <message>
+        <source>writef: invalid format specifier: '%c'</source>
+        <translation>writef：无效的格式说明符：“%c”</translation>
+    </message>
+    <message>
+        <source>writef: invalid integer vector format length: '%d'</source>
+        <translation>writef：整数向量格式的长度无效：“%d”</translation>
+    </message>
+    <message>
+        <source>writef: raw string format specifier with unexpected length: '%d'</source>
+        <translation>writef：原始字符串格式说明符的长度异常：“%d”</translation>
+    </message>
+    <message>
+        <source>writef: string format specifier with unexpected length: '%d'</source>
+        <translation>writef：字符串格式说明符的长度异常：“%d”</translation>
+    </message>
+</context>
 </TS>

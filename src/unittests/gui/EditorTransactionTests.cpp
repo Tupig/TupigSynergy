@@ -182,6 +182,23 @@ void EditorTransactionTests::localizingEngineLogPreservesRawHistory()
     {
       if (QByteArrayView(context) == "EngineLogMessages" && QByteArrayView(source) == "fixture connection accepted")
         return QStringLiteral("已接受客户端连接");
+      if (QByteArrayView(context) == "EngineLogFormats") {
+        const QByteArrayView format(source);
+        if (format == "failed to open trusted fingerprints file: %s")
+          return QStringLiteral("打开受信任指纹文件失败：%s");
+        if (format == "file transfer: wrote %s (%zu bytes)")
+          return QStringLiteral("文件传输：已写入 %s（%zu 字节）");
+        if (format == "error communicating with client \"%s\": %s")
+          return QStringLiteral("与客户端“%s”通信时出错：%s");
+        if (format == "failed to connect to server=%s, trying next resolved address")
+          return QStringLiteral("连接服务器 %s 失败，正在尝试下一个解析地址");
+        if (format == "failed to connect to server=%s, trying next server in list")
+          return QStringLiteral("连接服务器 %s 失败，正在尝试列表中的下一个服务器");
+        if (format == "format specifier %%I%d has invalid length")
+          return QStringLiteral("格式说明符 %%I%d 的长度无效");
+        if (format == "file transfer: server is offering %zu file(s)")
+          return QStringLiteral("文件传输：服务器正在提供 %s 个文件"); // Deliberately invalid translation type.
+      }
       return {};
     }
   };
@@ -204,6 +221,56 @@ void EditorTransactionTests::localizingEngineLogPreservesRawHistory()
   QCOMPARE(log.allText(), raw);
   QVERIFY(QCoreApplication::removeTranslator(&translator));
   QTRY_COMPARE(table->item(0, 2)->text(), QStringLiteral("fixture connection accepted"));
+
+  LogWidget dynamicLog;
+  auto *dynamicTable = dynamicLog.findChild<QTableWidget *>();
+  QVERIFY(dynamicTable);
+  const auto path = QStringLiteral("C:\\临时目录\\%1:指纹:数据库.txt");
+  const auto client = QStringLiteral("客户端%1:名字");
+  const auto detail = QStringLiteral("对端:连接断开 %2:保留");
+  const auto host = QStringLiteral("服务器%1:24800");
+  const auto ambiguous = QStringLiteral("error communicating with client \"first\": second\": third");
+  const auto overlong = QStringLiteral("failed to open trusted fingerprints file: ") + QString(16385, QLatin1Char('x'));
+  const QList<QPair<QString, QString>> examples{
+      {QStringLiteral("failed to open trusted fingerprints file: ") + path,
+       QStringLiteral("打开受信任指纹文件失败：") + path},
+      {QStringLiteral("file transfer: wrote ") + path + QStringLiteral(" (4294967297 bytes)"),
+       QStringLiteral("文件传输：已写入 ") + path + QStringLiteral("（4294967297 字节）")},
+      {QStringLiteral("error communicating with client \"") + client + QStringLiteral("\": ") + detail,
+       QStringLiteral("与客户端“") + client + QStringLiteral("”通信时出错：") + detail},
+      {QStringLiteral("failed to connect to server=") + host + QStringLiteral(", trying next resolved address"),
+       QStringLiteral("连接服务器 ") + host + QStringLiteral(" 失败，正在尝试下一个解析地址")},
+      {QStringLiteral("failed to connect to server=") + host + QStringLiteral(", trying next server in list"),
+       QStringLiteral("连接服务器 ") + host + QStringLiteral(" 失败，正在尝试列表中的下一个服务器")},
+      {QStringLiteral("format specifier %I8 has invalid length"), QStringLiteral("格式说明符 %I8 的长度无效")},
+      {QStringLiteral("file transfer: wrote ") + path + QStringLiteral(" (not-a-number bytes)"),
+       QStringLiteral("file transfer: wrote ") + path + QStringLiteral(" (not-a-number bytes)")},
+      {ambiguous, ambiguous}, // Either occurrence of the delimiter yields two valid string fields.
+      {QStringLiteral("file transfer: server is offering 12 file(s)"),
+       QStringLiteral("file transfer: server is offering 12 file(s)")},
+      {overlong, overlong},
+      {QStringLiteral("unknown engine detail: ") + detail, QStringLiteral("unknown engine detail: ") + detail}
+  };
+  QStringList rawLines;
+  for (const auto &example : examples) {
+    rawLines.append(QStringLiteral("[2026-11-18T18:17:28.518] INFO: ") + example.first);
+    dynamicLog.appendLine(rawLines.last());
+  }
+  QCOMPARE(dynamicTable->rowCount(), examples.size());
+  for (int row = 0; row < examples.size(); ++row)
+    QCOMPARE(dynamicTable->item(row, 2)->text(), examples.at(row).first);
+  QVERIFY(QCoreApplication::installTranslator(&translator));
+  QTRY_COMPARE(dynamicTable->item(0, 2)->text(), examples.first().second);
+  for (int row = 0; row < examples.size(); ++row)
+    QCOMPARE(dynamicTable->item(row, 2)->text(), examples.at(row).second);
+  // Copy uses allText(), so it must retain the exact original lines without touching the host clipboard.
+  QCOMPARE(dynamicLog.allText(), rawLines.join(QLatin1Char('\n')));
+  QVERIFY(dynamicLog.latestDisplayText().endsWith(examples.last().second));
+  QVERIFY(QCoreApplication::removeTranslator(&translator));
+  QTRY_COMPARE(dynamicTable->item(0, 2)->text(), examples.first().first);
+  for (int row = 0; row < examples.size(); ++row)
+    QCOMPARE(dynamicTable->item(row, 2)->text(), examples.at(row).first);
+  QCOMPARE(dynamicLog.allText(), rawLines.join(QLatin1Char('\n')));
 }
 
 void EditorTransactionTests::largeLogHistoryWrapsAfterResizeFontAndFilter()
