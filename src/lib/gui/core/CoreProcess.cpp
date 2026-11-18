@@ -320,7 +320,7 @@ void CoreProcess::startProcessFromDaemon()
     }
     configFile = fileName;
   }
-  qInfo("sending start to daemon (config file: %s)", qPrintable(configFile));
+  qInfo().noquote() << tr("Sending start request to the service (configuration: %1)").arg(configFile);
 
   auto sendStart = [this, configFile] {
     m_daemonIpcClient->sendConfigFile(configFile);
@@ -457,9 +457,9 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
 
   const auto currentMode = Settings::value(Settings::Core::ProcessMode).value<ProcessMode>();
   const auto processMode = processModeOption.value_or(currentMode);
-  const auto coreMode = QVariant::fromValue(m_mode).toString().toLower();
-
-  qInfo().noquote() << QString("starting %1 process (%2 mode)").arg(coreMode, processModeToString(processMode));
+  const auto coreMode = m_mode == Settings::CoreMode::Server ? tr("server") : tr("client");
+  const auto modeLabel = processMode == ProcessMode::Service ? tr("service mode") : tr("desktop mode");
+  qInfo().noquote() << tr("Starting %1 process (%2)").arg(coreMode, modeLabel);
 
   setProcessState(ProcessState::Starting);
 
@@ -513,7 +513,7 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
       Q_EMIT error(Error::StartFailed);
       return;
     }
-    qInfo("core config file: %s", qPrintable(configFilename));
+    qInfo().noquote() << tr("Core configuration file: %1").arg(configFilename);
   }
 
   qDebug().noquote() << "log level:" << Settings::logLevelText();
@@ -579,7 +579,8 @@ void CoreProcess::stop(std::optional<ProcessMode> processModeOption)
   const auto currentMode = Settings::value(Settings::Core::ProcessMode).value<ProcessMode>();
   const auto processMode = processModeOption.value_or(currentMode);
 
-  qInfo("stopping core process (%s mode)", qPrintable(processModeToString(processMode)));
+  const auto modeLabel = processMode == ProcessMode::Service ? tr("service mode") : tr("desktop mode");
+  qInfo().noquote() << tr("Stopping core process (%1)").arg(modeLabel);
 
   if (m_coreIpcClient) {
     m_coreIpcClient->disconnectFromServer();

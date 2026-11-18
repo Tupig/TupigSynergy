@@ -14,7 +14,7 @@
 class QTableWidget;
 
 /**
- * @brief 设计稿的记录区：时间 70px、级别 34px、消息自适应，行高 1.55。
+ * @brief 日志日期、时间和级别按内容取宽，消息占剩余宽度。
  */
 class LogWidget : public QWidget
 {

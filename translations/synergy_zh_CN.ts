@@ -703,6 +703,41 @@ Do you want to connect to the server?
     </message>
 </context>
 <context>
+    <name>synergy::gui::CoreProcess</name>
+    <message>
+        <source>Sending start request to the service (configuration: %1)</source>
+        <translation>正在向服务发送启动请求（配置文件：%1）</translation>
+    </message>
+    <message>
+        <source>server</source>
+        <translation>服务端</translation>
+    </message>
+    <message>
+        <source>client</source>
+        <translation>客户端</translation>
+    </message>
+    <message>
+        <source>service mode</source>
+        <translation>服务模式</translation>
+    </message>
+    <message>
+        <source>desktop mode</source>
+        <translation>桌面模式</translation>
+    </message>
+    <message>
+        <source>Starting %1 process (%2)</source>
+        <translation>正在启动%1进程（%2）</translation>
+    </message>
+    <message>
+        <source>Stopping core process (%1)</source>
+        <translation>正在停止共享进程（%1）</translation>
+    </message>
+    <message>
+        <source>Core configuration file: %1</source>
+        <translation>核心配置文件：%1</translation>
+    </message>
+</context>
+<context>
     <name>LogLevel</name>
     <message>
         <source>Fatal</source>
@@ -727,6 +762,13 @@ Do you want to connect to the server?
     <message>
         <source>Verbose</source>
         <translation>详细</translation>
+    </message>
+</context>
+<context>
+    <name>LogWidget</name>
+    <message>
+        <source>Critical</source>
+        <translation>严重错误</translation>
     </message>
 </context>
 <context>

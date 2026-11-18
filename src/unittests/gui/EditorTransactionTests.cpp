@@ -114,9 +114,14 @@ void EditorTransactionTests::logsFilterCountAndBoundHistory()
   };
   phase("enter");
   LogWidget log;
-  log.appendLine(QStringLiteral("[time] INFO: first"));
+  log.appendLine(QStringLiteral("[2026-11-18T18:17:28.518] INFO: first"));
   log.appendLine(QStringLiteral("[time] WARNING: second"));
   log.appendLine(QStringLiteral("[time] ERROR: third"));
+  auto *table = log.findChild<QTableWidget *>();
+  QVERIFY(table != nullptr);
+  QCOMPARE(table->item(0, 0)->text(), QStringLiteral("2026-11-18 18:17:28"));
+  QCOMPARE(table->item(0, 0)->font(), table->item(0, 1)->font());
+  QCOMPARE(table->item(0, 1)->font(), table->item(0, 2)->font());
   const std::array<int, 3> counts{1, 1, 1};
   QCOMPARE(log.levelCounts(), counts);
   QSignalSpy history(&log, &LogWidget::historyChanged);
@@ -125,6 +130,7 @@ void EditorTransactionTests::logsFilterCountAndBoundHistory()
   QVERIFY(log.allText().contains(QStringLiteral("second")));
   QVERIFY(!log.allText().contains(QStringLiteral("first")));
   log.setLevelFilter(QString());
+  QCOMPARE(table->item(0, 0)->text(), QStringLiteral("2026-11-18 18:17:28"));
   log.clear();
   for (int i = 0; i < 10003; ++i) {
     if (i == 0)
@@ -153,8 +159,6 @@ void EditorTransactionTests::logsFilterCountAndBoundHistory()
   phase("process-events-before");
   QCoreApplication::processEvents();
   phase("process-events-after");
-  auto *table = log.findChild<QTableWidget *>();
-  QVERIFY(table != nullptr);
   QCOMPARE(table->textElideMode(), Qt::ElideNone);
   QVERIFY(table->rowHeight(table->rowCount() - 1) > table->fontMetrics().height() * 2);
 }

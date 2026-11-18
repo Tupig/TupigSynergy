@@ -5,7 +5,7 @@
  */
 
 #include "LogWidget.h"
-#include "common/PlatformInfo.h"
+#include "common/LogLevel.h"
 #include "gui/StyleUtils.h"
 
 #include <gui/Logger.h>
@@ -75,8 +75,7 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_table{new QTableWidge
     }
   });
 
-  QFont font = synergy::platform::isWindows() ? QFont(QStringLiteral("Consolas"))
-                                              : QFontDatabase::systemFont(QFontDatabase::FixedFont);
+  QFont font = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
   font.setPixelSize(12);
   m_table->setFont(font);
 
@@ -104,11 +103,18 @@ LogWidget::Record LogWidget::parse(const QString &line)
   const auto close = line.indexOf(QLatin1String("] "));
   if (close > 0 && line.startsWith(QLatin1Char('['))) {
     record.time = line.mid(1, close - 1);
-    if (record.time.size() >= 19)
-      record.time = record.time.mid(11, 8);
+    if (record.time.size() >= 19 && record.time.at(10) == QLatin1Char('T')) {
+      record.time.truncate(19);
+      record.time[10] = QLatin1Char(' ');
+    }
     const auto colon = line.indexOf(QLatin1Char(':'), close + 2);
     if (colon > 0) {
       record.level = line.mid(close + 2, colon - close - 2).trimmed();
+      const auto level = LogLevel::indexOfOption(record.level);
+      if (level >= 0)
+        record.level = LogLevel::toString(static_cast<int>(level));
+      else if (record.level == QStringLiteral("CRITICAL"))
+        record.level = tr("Critical");
       record.message = line.mid(colon + 1).trimmed();
     }
   }
@@ -137,10 +143,6 @@ void LogWidget::appendLine(const QString &msg)
     time->setForeground(QColor(QStringLiteral("#6f6f78")));
     auto *level = new QTableWidgetItem(record.level);
     level->setForeground(levelColor(levelOf(msg)));
-    QFont levelFont = m_table->font();
-    levelFont.setBold(true);
-    levelFont.setPixelSize(11);
-    level->setFont(levelFont);
     auto *message = new QTableWidgetItem(record.message);
     message->setForeground(QColor(synergy::gui::isDarkMode() ? QStringLiteral("#cfcfd6") : QStringLiteral("#3a3a40")));
     m_table->setItem(row, 0, time);
@@ -276,10 +278,6 @@ void LogWidget::rebuild()
     time->setForeground(QColor(QStringLiteral("#6f6f78")));
     auto *level = new QTableWidgetItem(record.level);
     level->setForeground(levelColor(levelOf(visible.at(index))));
-    QFont levelFont = m_table->font();
-    levelFont.setBold(true);
-    levelFont.setPixelSize(11);
-    level->setFont(levelFont);
     auto *message = new QTableWidgetItem(record.message);
     message->setForeground(QColor(synergy::gui::isDarkMode() ? QStringLiteral("#cfcfd6") : QStringLiteral("#3a3a40")));
     m_table->setItem(row, 0, time);
