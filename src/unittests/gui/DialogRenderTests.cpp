@@ -212,7 +212,6 @@ void DialogRenderTests::animatedButtonStillDeliversClick()
   synergy::gui::installButtonFeedback();
   QPushButton button(QStringLiteral("Test"));
   button.resize(100, 32);
-  button.setAttribute(Qt::WA_DontShowOnScreen);
   button.show();
   QCoreApplication::processEvents();
   QSignalSpy clicked(&button, &QPushButton::clicked);
