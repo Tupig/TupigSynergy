@@ -323,6 +323,9 @@ private Q_SLOTS:
     Settings::setValue(Settings::Log::Level, QStringLiteral("INFO"));
     ControlledHttp server;
     IsolatedWindow window(server, m_width);
+    window.setAttribute(Qt::WA_DontShowOnScreen, false);
+    window.show();
+    QCoreApplication::processEvents();
     auto *serverMode = window.findChild<ModeCard *>("rbModeServer");
     auto *clientMode = window.findChild<ModeCard *>("rbModeClient");
     auto *exportConfig = window.findChild<QPushButton *>("btnSaveServerConfig");
