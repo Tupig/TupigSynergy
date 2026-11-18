@@ -75,7 +75,7 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_table{new QTableWidge
     }
   });
 
-  QFont font = synergy::platform::isWindows() ? QFont(QStringLiteral("Consolas"))
+  QFont font = synergy::platform::isWindows() ? QFontDatabase::systemFont(QFontDatabase::GeneralFont)
                                               : QFontDatabase::systemFont(QFontDatabase::FixedFont);
   font.setPixelSize(12);
   m_table->setFont(font);
