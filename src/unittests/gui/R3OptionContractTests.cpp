@@ -295,6 +295,9 @@ void R3OptionContractTests::absentStoredTargetNeedsExplicitReplacement()
   {
     ActionDialog editor(nullptr, config, hotkey, action);
     showForEvents(editor);
+    editor.setAttribute(Qt::WA_DontShowOnScreen, false);
+    editor.show();
+    QCoreApplication::processEvents();
     auto *targets = combo(editor, "comboSwitchToScreen");
     const int valid = targets->findText("Studio");
     QVERIFY(valid >= 0);
