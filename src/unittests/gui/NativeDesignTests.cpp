@@ -33,6 +33,7 @@
 #include <QAbstractSpinBox>
 #include <QApplication>
 #include <QComboBox>
+#include <QCryptographicHash>
 #include <QDate>
 #include <QDebug>
 #include <QDialogButtonBox>
@@ -372,6 +373,36 @@ void NativeDesignTests::mainShellUsesCompactCards()
     QVERIFY(footer != nullptr);
     ui.workspace->ensureWidgetVisible(footer, 0, 0);
     QCoreApplication::processEvents();
+    if (language == QStringLiteral("zh_CN")) {
+      auto *table = records->findChild<QTableWidget *>();
+      QVERIFY(table != nullptr);
+      const auto footerRect = QRect(footer->mapTo(ui.workspace->viewport(), QPoint()), footer->size());
+      const auto tableFont = QFontInfo(table->font());
+      const auto footerFont = QFontInfo(footer->font());
+      const auto tableMetrics = QFontMetrics(table->font());
+      const auto footerMetrics = QFontMetrics(footer->font());
+      const auto hashText = [](const QString &value) {
+        return QCryptographicHash::hash(value.toUtf8(), QCryptographicHash::Sha256).toHex();
+      };
+      qInfo().nospace()
+          << "CJK-WF1 languageZh=" << true << " dark=" << dark << " server=" << server
+          << " collapsed=" << collapsed << " window=" << window.size() << " workspace=" << ui.workspace->size()
+          << " viewport=" << ui.workspace->viewport()->size() << " contents=" << ui.workspace->widget()->size()
+          << " logPanel=" << ui.logPanel->size() << " records=" << records->size() << " table=" << table->size()
+          << " footer=" << footer->size() << " footerRect=" << footerRect
+          << " footerVisible=" << ui.workspace->viewport()->rect().contains(footerRect)
+          << " scrollValue=" << ui.workspace->verticalScrollBar()->value()
+          << " scrollMaximum=" << ui.workspace->verticalScrollBar()->maximum()
+          << " scrollPageStep=" << ui.workspace->verticalScrollBar()->pageStep()
+          << " messageColumn=" << table->columnWidth(2) << " rows=" << table->rowCount()
+          << " tableFont=" << tableFont.family() << " tableFontExact=" << tableFont.exactMatch()
+          << " tableFontPixels=" << table->font().pixelSize() << " tableFontHeight=" << tableMetrics.height()
+          << " tableCjkAdvance=" << tableMetrics.horizontalAdvance(QString::fromUtf8("设置"))
+          << " tableLatinAdvance=" << tableMetrics.horizontalAdvance(QStringLiteral("Settings"))
+          << " footerFont=" << footerFont.family() << " footerFontExact=" << footerFont.exactMatch()
+          << " footerFontPixels=" << footer->font().pixelSize() << " footerFontHeight=" << footerMetrics.height()
+          << " footerTextLength=" << footer->text().size() << " footerTextSha256=" << hashText(footer->text());
+    }
     QVERIFY(ui.workspace->viewport()->rect().contains(
         QRect(footer->mapTo(ui.workspace->viewport(), QPoint()), footer->size())
     ));
