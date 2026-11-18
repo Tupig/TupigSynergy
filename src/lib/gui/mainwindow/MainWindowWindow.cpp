@@ -306,15 +306,16 @@ void MainWindow::closeEvent(QCloseEvent *event)
       event->ignore();
       Settings::setValue(Settings::Gui::CloseReminder, false);
       auto *message = new QMessageBox(
-          QMessageBox::Information, kAppName,
+          QMessageBox::NoIcon, kAppName,
           tr("%1 will continue to run in the background. Use the tray icon to reopen the window.").arg(kAppName),
           QMessageBox::Ok, this
       );
+      message->setAttribute(Qt::WA_DeleteOnClose);
       connect(message, &QDialog::finished, this, [this] {
         Settings::setValue(Settings::Gui::WindowGeometry, geometry());
         hide();
       });
-      showPage(message);
+      message->open();
       return;
     }
     Settings::setValue(Settings::Gui::WindowGeometry, geometry());

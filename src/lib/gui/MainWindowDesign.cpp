@@ -63,7 +63,6 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   pageBarLayout->setSpacing(kGap);
 
   btnBack = iconButton(pageBar, QStringLiteral("btnBack"), QStringLiteral("go-previous"));
-  btnBack->setToolTip(QObject::tr("Back"));
   btnBack->setAccessibleName(QObject::tr("Back"));
   btnBack->setVisible(false);
   pageBarLayout->addWidget(btnBack);
@@ -260,7 +259,6 @@ void Ui::MainWindow::retranslateUi(QMainWindow *window)
 {
   if (!pageHost->hasEditor())
     pageTitle->setText(QObject::tr("Devices & Connection"));
-  btnBack->setToolTip(QObject::tr("Back"));
   btnBack->setAccessibleName(QObject::tr("Back"));
   btnSettingsShortcut->setText(QObject::tr("Preferences"));
   btnUpdatesShortcut->setText(QObject::tr("Updates"));
