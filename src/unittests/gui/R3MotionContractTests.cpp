@@ -373,6 +373,45 @@ void R3MotionContractTests::buttonStandardActivation()
   else if (activation == "accessible-press") {
     // Qt may implement AX press using animateClick and its intrinsic release delay.
     // Compare stock scheduling under Reduced, then require Animated adds no delay.
+    struct ActivationTiming
+    {
+      QElapsedTimer clock;
+      qint64 pressed = -1;
+      qint64 released = -1;
+      qint64 clicked = -1;
+      qint64 actionReturned = -1;
+      qint64 observed = -1;
+    };
+    struct WaitObservation
+    {
+      const char *mode;
+      ActivationTiming &timing;
+      ~WaitObservation()
+      {
+        timing.observed = timing.clock.elapsed();
+        qInfo().nospace() << "AX1 mode=" << mode << " pressedMs=" << timing.pressed << " releasedMs=" << timing.released
+                          << " clickedMs=" << timing.clicked << " actionReturnedMs=" << timing.actionReturned
+                          << " observedMs=" << timing.observed;
+      }
+    };
+    ActivationTiming baselineTiming;
+    ActivationTiming animatedTiming;
+    // Connections must end before their captured timing state, while the button survives this branch.
+    QObject timingContext;
+    const auto recordSignals = [&timingContext](QPushButton *target, ActivationTiming &timing) {
+      connect(target, &QPushButton::pressed, &timingContext, [&timing] {
+        if (timing.pressed < 0)
+          timing.pressed = timing.clock.elapsed();
+      });
+      connect(target, &QPushButton::released, &timingContext, [&timing] {
+        if (timing.released < 0)
+          timing.released = timing.clock.elapsed();
+      });
+      connect(target, &QPushButton::clicked, &timingContext, [&timing] {
+        if (timing.clicked < 0)
+          timing.clicked = timing.clock.elapsed();
+      });
+    };
     synergy::gui::setMotionModeForTesting(synergy::gui::MotionMode::Reduced);
     QPushButton baseline("Stock accessible baseline");
     baseline.setAttribute(Qt::WA_DontShowOnScreen);
@@ -380,11 +419,14 @@ void R3MotionContractTests::buttonStandardActivation()
     auto *baselineInterface = QAccessible::queryAccessibleInterface(&baseline);
     QVERIFY(baselineInterface && baselineInterface->actionInterface());
     QSignalSpy baselineClicked(&baseline, &QPushButton::clicked);
-    QElapsedTimer baselineClock;
-    baselineClock.start();
+    recordSignals(&baseline, baselineTiming);
+    baselineTiming.clock.start();
     baselineInterface->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
-    QTRY_COMPARE_WITH_TIMEOUT(baselineClicked.count(), 1, 250);
-    const auto baselineMilliseconds = baselineClock.elapsed();
+    baselineTiming.actionReturned = baselineTiming.clock.elapsed();
+    {
+      WaitObservation observation{"stock", baselineTiming};
+      QTRY_COMPARE_WITH_TIMEOUT(baselineClicked.count(), 1, 250);
+    }
     baseline.hide();
     button->setFocus();
     focus = QApplication::focusWidget();
@@ -394,13 +436,19 @@ void R3MotionContractTests::buttonStandardActivation()
     auto *actions = interface->actionInterface();
     QVERIFY(actions);
     QVERIFY(actions->actionNames().contains(QAccessibleActionInterface::pressAction()));
-    QElapsedTimer activationClock;
-    activationClock.start();
+    recordSignals(button, animatedTiming);
+    animatedTiming.clock.start();
     trace.begin();
     actions->doAction(QAccessibleActionInterface::pressAction());
-    QTRY_COMPARE_WITH_TIMEOUT(clicked.count(), 1, 250);
+    animatedTiming.actionReturned = animatedTiming.clock.elapsed();
+    {
+      WaitObservation observation{"animated", animatedTiming};
+      QTRY_COMPARE_WITH_TIMEOUT(clicked.count(), 1, 250);
+    }
+    QVERIFY(baselineTiming.clicked >= 0);
+    QVERIFY(animatedTiming.clicked >= 0);
     QVERIFY2(
-        activationClock.elapsed() <= baselineMilliseconds + 60,
+        animatedTiming.clicked <= baselineTiming.clicked + 60,
         "Motion adds delay beyond stock Qt accessible activation scheduling"
     );
   } else
