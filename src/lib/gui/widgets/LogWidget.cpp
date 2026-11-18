@@ -168,7 +168,7 @@ void LogWidget::changeEvent(QEvent *event)
 {
   QWidget::changeEvent(event);
   if (event->type() == QEvent::LanguageChange && !m_history.empty())
-    rebuild();
+    rebuild(false);
 }
 
 bool LogWidget::eventFilter(QObject *watched, QEvent *event)
@@ -267,9 +267,12 @@ int LogWidget::levelIndex(const QString &line)
   return level == QStringLiteral("warn") ? 1 : level == QStringLiteral("error") ? 2 : 0;
 }
 
-void LogWidget::rebuild()
+void LogWidget::rebuild(bool resetScroll)
 {
   const QScopedValueRollback<bool> adjusting(m_adjustingContents, true);
+  auto *scrollBar = m_table->verticalScrollBar();
+  const int anchorRow = m_table->rowAt(0);
+  const int anchorOffset = anchorRow < 0 ? 0 : -m_table->rowViewportPosition(anchorRow);
   m_table->setRowCount(0);
   m_latestLine.clear();
   QList<QString> visible;
@@ -296,7 +299,12 @@ void LogWidget::rebuild()
     m_table->setItem(row, 2, message);
   }
   updateVisibleHeight(true);
-  scrollToBottom();
+  if (resetScroll || m_followTail) {
+    scrollToBottom();
+  } else if (anchorRow >= 0 && anchorRow < m_table->rowCount()) {
+    m_table->scrollToItem(m_table->item(anchorRow, 0), QAbstractItemView::PositionAtTop);
+    scrollBar->setValue(scrollBar->value() + anchorOffset);
+  }
   Q_EMIT historyChanged(m_latestLine);
 }
 

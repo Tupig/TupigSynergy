@@ -54,7 +54,7 @@ private:
   static QString levelOf(const QString &line);
   static int levelIndex(const QString &line);
   static Record parse(const QString &line);
-  void rebuild();
+  void rebuild(bool resetScroll = true);
   void updateVisibleHeight(bool refreshColumnWidth = false);
   void requestTailScroll();
   int rowHeight() const;

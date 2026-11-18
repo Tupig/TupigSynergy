@@ -18,10 +18,12 @@
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QElapsedTimer>
+#include <QEvent>
 #include <QFileInfo>
 #include <QListWidget>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QScrollBar>
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTranslator>
@@ -296,6 +298,15 @@ void EditorTransactionTests::largeLogHistoryWrapsAfterResizeFontAndFilter()
   QTRY_VERIFY_WITH_TIMEOUT(
       table->columnWidth(2) == warningColumn && lastRowHeight() == warningHeight && geometryStable(), 1000
   );
+  auto *scrollBar = table->verticalScrollBar();
+  QVERIFY(scrollBar->maximum() > 0);
+  scrollBar->setValue(0);
+  QEvent languageChange(QEvent::LanguageChange);
+  QCoreApplication::sendEvent(&log, &languageChange);
+  QCOMPARE(scrollBar->value(), 0);
+  log.appendLine(QStringLiteral("[time] INFO: extra row"));
+  QCoreApplication::processEvents();
+  QCOMPARE(scrollBar->value(), 0);
 }
 
 void EditorTransactionTests::traySelectorCancelDoesNotWrite()
