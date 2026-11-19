@@ -116,11 +116,9 @@ void MainWindow::coreProcessError(CoreProcess::Error error)
 
 void MainWindow::startCore()
 {
-  // The core exits immediately when macOS does not trust this app for the
-  // accessibility API. Check before spawning so the user sees the permission
-  // reminder instead of a process that dies one frame later.
+  // Let macOS request accessibility permission before starting the core.
 #if defined(Q_OS_MACOS)
-  if (!checkOSXAccessibilityPermission(this)) {
+  if (!checkOSXAccessibilityPermission()) {
     return;
   }
 #endif
