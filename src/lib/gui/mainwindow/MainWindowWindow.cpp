@@ -382,7 +382,6 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
 void MainWindow::showAndActivate()
 {
-  const auto wasVisible = isVisible();
 #ifdef Q_OS_MACOS
   forceAppActive();
 #endif
@@ -391,6 +390,4 @@ void MainWindow::showAndActivate()
   activateWindow();
   m_actionRestore->setVisible(true);
   m_actionMinimize->setVisible(true);
-  if (!wasVisible)
-    restoreWindow();
 }

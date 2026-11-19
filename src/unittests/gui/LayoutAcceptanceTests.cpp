@@ -330,7 +330,7 @@ void LayoutAcceptanceTests::actualPagesNaturalFit_data()
                           QStringLiteral("about"),    QStringLiteral("fingerprint"), QStringLiteral("update"),
                           QStringLiteral("message")};
   for (const auto &language : {QStringLiteral("en"), QStringLiteral("zh_CN")})
-    for (const int width : {540, 600, 820})
+    for (const int width : {500, 540, 600, 820})
       for (const auto &kind : pages)
         QTest::newRow(qPrintable(QStringLiteral("%1-%2-%3").arg(kind, language).arg(width)))
             << kind << language << width;

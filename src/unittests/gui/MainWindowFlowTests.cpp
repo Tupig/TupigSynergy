@@ -129,6 +129,7 @@ public:
       QObject::disconnect(hostname, &QLineEdit::returnPressed, nullptr, nullptr);
     setAttribute(Qt::WA_DontShowOnScreen, !showOnScreen);
     open();
+    // Matrix widths represent a manual resize after the compact production startup.
     if (width > 0)
       resize(width, height());
   }
@@ -247,7 +248,7 @@ private Q_SLOTS:
     QTest::addColumn<QString>("language");
     QTest::addColumn<int>("width");
     for (const auto &language : {QStringLiteral("en"), QStringLiteral("zh_CN")})
-      for (int width : {540, 600, 820})
+      for (int width : {500, 600, 820})
         QTest::newRow(qPrintable(language + "-" + QString::number(width))) << language << width;
   }
   void init()
@@ -271,17 +272,25 @@ private Q_SLOTS:
     Settings::setValue(Settings::Security::TlsEnabled, false);
     Settings::setValue(Settings::Log::ToFile, false);
   }
-  void windowUsesMinimumWidthUnlessGeometryWasSaved()
+  void windowStartsCompactDespiteSavedGeometry()
   {
-    if (m_width > 540)
-      Settings::setValue(Settings::Gui::WindowGeometry, QRect(0, 0, m_width, 570));
+    Settings::setValue(Settings::Gui::WindowGeometry, QRect(25, 35, m_width + 200, 900));
     ControlledHttp server;
     IsolatedWindow window(server, 0);
-    QCOMPARE(window.minimumSize(), QSize(540, 535));
-    QCOMPARE(window.width(), m_width);
+    QCOMPARE(window.minimumSize(), QSize(500, 390));
+    QTRY_COMPARE(window.width(), 500);
     QVERIFY(window.height() >= window.minimumHeight());
     window.resize(200, 200);
-    QCOMPARE(window.size(), window.minimumSize());
+    QCOMPARE(window.size(), QSize(500, 390));
+  }
+  void windowStartsCompactWithoutSavedGeometry()
+  {
+    Settings::setValue(Settings::Gui::WindowGeometry);
+    ControlledHttp server;
+    IsolatedWindow window(server, 0);
+    QCOMPARE(window.minimumSize(), QSize(500, 390));
+    QTRY_COMPARE(window.width(), 500);
+    QVERIFY(window.height() >= 390);
   }
   void pageShortcutReceivesFocusOnTab()
   {
@@ -319,6 +328,7 @@ private Q_SLOTS:
     QPointer<SettingsDialog> editor = window.findChild<SettingsDialog *>();
     QTRY_VERIFY(editor && editor->isVisibleTo(&window));
     QTRY_VERIFY(back->isVisibleTo(&window));
+    QTRY_COMPARE(window.width(), m_width);
     QVERIFY(pageBar->isVisibleTo(&window));
     QTRY_VERIFY(homeShortcutsHidden());
     QTest::mouseClick(back, Qt::LeftButton);
@@ -326,6 +336,7 @@ private Q_SLOTS:
     QTRY_VERIFY(homeShortcutsVisible());
     QTRY_VERIFY(!back->isVisibleTo(&window));
     QTRY_VERIFY(editor.isNull());
+    QTRY_COMPARE(window.width(), m_width);
 
     pageBar->setFocus();
     QTest::keyClick(pageBar, Qt::Key_Tab);
@@ -336,17 +347,19 @@ private Q_SLOTS:
     editor = window.findChild<SettingsDialog *>();
     QTRY_VERIFY(editor && editor->isVisibleTo(&window));
     QTRY_VERIFY(back->isVisibleTo(&window));
+    QTRY_COMPARE(window.width(), m_width);
     QTRY_VERIFY(homeShortcutsHidden());
     QTest::mouseClick(back, Qt::LeftButton);
     QTRY_COMPARE(pages->currentIndex(), 0);
     QTRY_VERIFY(homeShortcutsVisible());
     QTRY_VERIFY(editor.isNull());
+    QTRY_COMPARE(window.width(), m_width);
   }
   void preferencesTabStripKeepsWorkspaceInsetAtMinimumHeight()
   {
     ControlledHttp server;
     IsolatedWindow window(server, m_width);
-    window.resize(m_width, 535);
+    window.resize(m_width, 700);
     auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
     auto *pageBar = window.findChild<QWidget *>("pageBar");
     auto *pages = window.findChild<QStackedWidget *>("pageStack");
@@ -364,7 +377,7 @@ private Q_SLOTS:
     auto *tabBar = tabs->tabBar();
     QVERIFY(tabBar);
     QTRY_VERIFY(editor->isVisibleTo(&window) && tabBar->isVisibleTo(&window));
-    QTRY_COMPARE(window.size(), QSize(m_width, 535));
+    QTRY_COMPARE(window.size(), QSize(m_width, 390));
     QVERIFY(settleStaticRender(window));
     QRect previousTabRect;
     QRect previousViewportRect;
@@ -383,12 +396,20 @@ private Q_SLOTS:
              qAbs(tabRect.top() - headerBottom - 10) <= 2;
     };
     QTRY_VERIFY_WITH_TIMEOUT(topInsetSettled(), 1000);
-    QCOMPARE(window.size(), QSize(m_width, 535));
+    QCOMPARE(window.size(), QSize(m_width, 390));
+    QTest::mouseClick(tabBar, Qt::LeftButton, Qt::NoModifier, tabBar->tabRect(1).center());
+    QTRY_COMPARE(tabs->currentIndex(), 1);
+    QTRY_COMPARE(window.width(), m_width);
+    QTest::mouseClick(tabBar, Qt::LeftButton, Qt::NoModifier, tabBar->tabRect(0).center());
+    QTRY_COMPARE(tabs->currentIndex(), 0);
+    QTRY_COMPARE(window.size(), QSize(m_width, 390));
+    QTRY_VERIFY_WITH_TIMEOUT(topInsetSettled(), 1000);
     capture(window, "preferences-general-top-inset");
     auto *back = window.findChild<QPushButton *>("btnBack");
     QVERIFY(back);
     QTest::mouseClick(back, Qt::LeftButton);
     QTRY_COMPARE(pages->currentIndex(), 0);
+    QTRY_COMPARE(window.width(), m_width);
   }
   void nameChangesRequireExplicitCommit()
   {

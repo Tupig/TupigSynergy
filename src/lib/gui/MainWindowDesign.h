@@ -27,7 +27,8 @@ class MainWindow
 {
 public:
   // 设计稿尺寸（CSS px）
-  static constexpr int kWindowWidth = 600;
+  static constexpr int kWindowWidth = 500;
+  static constexpr int kWindowHeight = 390;
   static constexpr int kPageBarHeight = 36;
   static constexpr int kStatusBarHeight = 32;
   static constexpr int kWorkspacePadding = 10;

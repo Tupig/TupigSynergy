@@ -186,6 +186,7 @@ void Ui::AboutDialog::retranslateUi(QDialog *dialog)
   label->setText(QCoreApplication::translate("AboutDialog", "Version:"));
   btnCopyVersion->setText(QCoreApplication::translate("AboutDialog", "Copy"));
   btnCopyVersion->setToolTip(QCoreApplication::translate("AboutDialog", "Copy version information"));
+  btnCopyVersion->setAccessibleName(btnCopyVersion->toolTip());
   groupBox->setTitle(QString());
   lblImportantDevs->setText(QCoreApplication::translate("AboutDialog", "Important Developers"));
   groupLicenses->setTitle(QString());
