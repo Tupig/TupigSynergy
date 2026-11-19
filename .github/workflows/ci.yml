@@ -289,10 +289,15 @@ jobs:
             python3 scripts/ci/check-diagnostic-paths.py --recursive \
               build/src/unittests/Testing/Temporary "build/src/unittests/test-results/${suite}.txt" \
               "build/r3-test-evidence/${suite}.xml" "build/r3-test-evidence/${suite}.log"
+            if [ "$suite" = MainWindowFlowTests ]; then
+              python3 scripts/ci/check-diagnostic-paths.py --recursive build/r3-test-evidence/main-window-images
+              export SYNERGY_UI_EVIDENCE_DIR="$(python3 -c 'from pathlib import Path; print(Path("build/r3-test-evidence/main-window-images").resolve().as_posix())')"
+            fi
             status=0
             ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error \
               --output-junit "$PWD/build/r3-test-evidence/${suite}.xml" \
               --output-log "$PWD/build/r3-test-evidence/${suite}.log" -R "^${suite}$" || status=$?
+            if [ "$suite" = MainWindowFlowTests ]; then unset SYNERGY_UI_EVIDENCE_DIR; fi
             python3 scripts/ci/check-diagnostic-paths.py \
               "build/src/unittests/test-results/${suite}.txt" build/src/unittests/Testing/Temporary/LastTest.log \
               "build/r3-test-evidence/${suite}-${suite}.txt" "build/r3-test-evidence/${suite}-LastTest.log"
@@ -607,10 +612,15 @@ jobs:
             python3 scripts/ci/check-diagnostic-paths.py --recursive \
               build/src/unittests/Testing/Temporary "build/src/unittests/test-results/${suite}.txt" \
               "build/r3-test-evidence/${suite}.xml" "build/r3-test-evidence/${suite}.log"
+            if [ "$suite" = MainWindowFlowTests ]; then
+              python3 scripts/ci/check-diagnostic-paths.py --recursive build/r3-test-evidence/main-window-images
+              export SYNERGY_UI_EVIDENCE_DIR="$PWD/build/r3-test-evidence/main-window-images"
+            fi
             status=0
             ctest --test-dir build/src/unittests --build-config Release --output-on-failure --no-tests=error \
               --output-junit "$PWD/build/r3-test-evidence/${suite}.xml" \
               --output-log "$PWD/build/r3-test-evidence/${suite}.log" -R "^${suite}$" || status=$?
+            if [ "$suite" = MainWindowFlowTests ]; then unset SYNERGY_UI_EVIDENCE_DIR; fi
             python3 scripts/ci/check-diagnostic-paths.py \
               "build/src/unittests/test-results/${suite}.txt" build/src/unittests/Testing/Temporary/LastTest.log \
               "build/r3-test-evidence/${suite}-${suite}.txt" "build/r3-test-evidence/${suite}-LastTest.log"
