@@ -225,7 +225,12 @@ endif()
 if(UNIX AND NOT APPLE)
   set_property(TEST MainWindowFlowTests APPEND PROPERTY ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endif()
-set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 45)
+# Six window-case groups accumulate on Windows; per-case limits stay unchanged.
+if(WIN32)
+  set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 75)
+else()
+  set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 45)
+endif()
 
 add_executable(R2UiPreview EXCLUDE_FROM_ALL MACOSX_BUNDLE
   R2UiPreview.cpp
