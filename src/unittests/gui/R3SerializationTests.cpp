@@ -541,7 +541,7 @@ void R3SerializationTests::translatedClientStartsAndStopsOwnedInertChildTenTimes
     restore("SYNERGY_R3_INERT_CORE_SETTINGS", previousChildSettings);
   });
   qputenv("SYNERGY_R3_INERT_CORE_CHILD", "1");
-  qputenv("SYNERGY_R3_INERT_CORE_SETTINGS", settingsPath.toUtf8());
+  QVERIFY(qputenv("SYNERGY_R3_INERT_CORE_SETTINGS", settingsPath.toUtf8().toHex()));
   const auto executable = QCoreApplication::applicationFilePath();
   // The existing macOS dev-path guard must bypass notification authorization for this unit executable.
   QVERIFY(!executable.contains(QStringLiteral("Applications/TuPig Synergy.app")));
@@ -598,7 +598,7 @@ int main(int argc, char **argv)
 {
   if (qgetenv("SYNERGY_R3_INERT_CORE_CHILD") == "1") {
     QCoreApplication child(argc, argv);
-    const auto expectedSettings = qEnvironmentVariable("SYNERGY_R3_INERT_CORE_SETTINGS");
+    const auto expectedSettings = QString::fromUtf8(QByteArray::fromHex(qgetenv("SYNERGY_R3_INERT_CORE_SETTINGS")));
     const auto arguments = child.arguments();
     if (expectedSettings.isEmpty() || arguments.size() != 4 || arguments.at(1) != QStringLiteral("client") ||
         arguments.at(2) != QStringLiteral("--settings") || arguments.at(3) != expectedSettings)

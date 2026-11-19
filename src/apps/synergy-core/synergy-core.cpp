@@ -78,13 +78,19 @@ App *createApp(const CoreArgParser &parser, EventQueue &events, const QString &p
 
 int main(int argc, char **argv)
 {
+  QStringList args;
 #if defined(Q_OS_WIN)
   {
     // HACK to make sure settings gets the correct qApp path
     QCoreApplication m(argc, argv);
+    // Qt reads the native Unicode command line on Windows.
+    args = QCoreApplication::arguments();
   }
 
   ArchMiscWindows::setInstanceWin32(GetModuleHandle(nullptr));
+#else
+  for (int i = 0; i < argc; i++)
+    args.append(argv[i]);
 #endif
 
   Arch arch;
@@ -92,10 +98,6 @@ int main(int argc, char **argv)
 
   Log log;
   qInstallMessageHandler(qtMessageHandler);
-
-  QStringList args;
-  for (int i = 0; i < argc; i++)
-    args.append(argv[i]);
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   // Qt5's QCommandLineParser::helpText() dereferences QCoreApplication, but the real
