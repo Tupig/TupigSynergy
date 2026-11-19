@@ -182,17 +182,19 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   lineHostname = new QLineEdit(clientOptions);
   lineHostname->setObjectName(QStringLiteral("lineHostname"));
   lineHostname->setAccessibleName(QObject::tr("Connect to:"));
+  lineHostname->setMaximumWidth(220);
   lineHostname->setToolTip(
       QObject::tr("Hostname or IP address of the server computer. May contain a comma separated list.")
   );
-  clientLayout->addWidget(lineHostname, 1);
+  clientLayout->addWidget(lineHostname);
   spinPort = new QSpinBox(clientOptions);
   spinPort->setObjectName(QStringLiteral("spinPort"));
   spinPort->setAccessibleName(QObject::tr("Port"));
   spinPort->setRange(1, 65535);
   spinPort->setValue(22211);
-  spinPort->setMaximumWidth(88);
+  spinPort->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
   clientLayout->addWidget(spinPort);
+  clientLayout->addStretch(1);
   cardLayout->addWidget(clientOptions);
 
   lblNoMode = new QLabel(QObject::tr("You must select a mode"), card);

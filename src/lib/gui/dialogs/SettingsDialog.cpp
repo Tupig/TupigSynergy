@@ -12,6 +12,7 @@
 #include "common/LogLevel.h"
 #include "common/PlatformInfo.h"
 #include "gui/StyleUtils.h"
+#include "widgets/MessagePage.h"
 #include "widgets/PageHost.h"
 
 #include "common/Constants.h"
@@ -348,12 +349,13 @@ void SettingsDialog::regenCertificates()
     // Regeneration is an explicit file action. Commit only its matching metadata
     // so cancelling unrelated drafts cannot leave the saved certificate invalid.
     Settings::setValue(Settings::Security::KeySize, keyLength);
-    PageHost::present(
-        this, new QMessageBox(
-                  QMessageBox::Information, tr("TLS Certificate Regenerated"),
-                  tr("TLS certificate regenerated successfully."), QMessageBox::Ok, this
-              )
+    auto *notice = new MessagePage(
+        this, MessagePage::Kind::Information, tr("TLS Certificate Regenerated"),
+        tr("TLS certificate regenerated successfully.")
     );
+    auto *ok = notice->addButton(QObject::tr("OK"), true);
+    connect(ok, &QPushButton::clicked, notice, &QDialog::accept);
+    PageHost::present(this, notice);
     updateKeyLengthOnFile(certificate);
     setButtonBoxEnabledButtons();
   }
