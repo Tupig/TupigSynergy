@@ -22,6 +22,8 @@ private Q_SLOTS:
   void explicitSwitchReturnsToPrimary();
   void unknownTargetDoesNotSwitch();
   void configurationWithoutPrimaryIsRejected();
+  void loopbackClientSwitchesAndReconnects_data();
+  void loopbackClientSwitchesAndReconnects();
   void SwitchToScreenInfo_alloc_screen();
   void KeyboardBroadcastInfo_alloc_stateAndSceens();
 
