@@ -2,66 +2,54 @@
 
 > **Language / 语言**: [English](#english) | [中文](#中文)
 
----
-
 ## 中文
 
-### 为什么每次升级都要重新授权
+### 升级后显示已授权，启动仍被拦
 
-macOS 的「辅助功能」授权（TCC）绑定到应用的**代码签名身份**：
+macOS 按代码签名身份识别获得辅助功能授权的应用。临时签名（ad-hoc）绑定到具体构建。更新后，列表可能还显示旧构建的授权，而系统已经拒绝新构建使用它。关闭再打开旧条目的开关可能仍然保留旧签名。 [Apple 关于代码签名身份的说明](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements)
 
-- 未签名/ad-hoc 构建：身份是 **cdhash**，每次编译都会变化，系统把新版本当成另一个应用，于是重新弹窗。
-- Developer ID 或**自签名证书**构建：身份是证书的 designated requirement，只要证书不变，授权就跨版本保留。
+在「系统设置 → 隐私与安全性 → 辅助功能」中移除旧的 TuPig Synergy 条目，再添加「应用程序」中的 TuPig Synergy.app 并打开开关。退出并重新打开应用后，点击「启动」。
 
-本项目默认没有 Apple Developer 证书，CI 使用 ad-hoc 签名，所以每次发布都会重新询问。**不需要付费账号**也能解决：
-用一张自签名代码签名证书签名所有发布包即可。
+也可用以下命令清除这一个应用的旧记录，然后在系统设置中重新授权。
 
-### 一次性配置（免费）
-
-1. 打开「钥匙串访问」→ 菜单「证书助理」→「创建证书…」。
-2. 名称：`TuPig Synergy Local`；身份类型：**自签名根证书**；证书类型：**代码签名**；有效期按需（如 3650 天）。
-3. 创建后导出为 `.p12`（设置一个导出密码）。
-4. 把证书加入 GitHub 仓库机密：
-   - `APPLE_P12_CERTIFICATE`：`.p12` 的 base64（`base64 -i cert.p12 | pbcopy`）
-   - `APPLE_P12_PASSWORD`：导出密码
-   - `APPLE_CODESIGN_ID`：证书的**常用名称**，即 `TuPig Synergy Local`
-5. 之后 CI 会用同一身份签名每个 macOS 包，辅助功能授权只授权一次。
-
-本地构建也可以复用：
-
-```bash
-cmake -B build -DAPPLE_CODESIGN_ID="TuPig Synergy Local" ...
+```sh
+tccutil reset Accessibility com.tupig.synergy
 ```
 
-或使用 `APPLE_CODESIGN_DEV`（开发签名，见 `cmake/MacCodesign.cmake`）。
+### 正式发布签名
 
-### 限制
+GitHub 的 macOS 发布流程支持 Developer ID Application 签名及 Apple 公证。该流程启用签名后就会提交公证。Apple 公证要求有效的 Developer ID 证书。 [Apple 公证要求](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)
 
-- 自签名**不能公证**（公证需要付费的 Apple Developer Program）。首次打开可能提示「无法验证开发者」，
-  右键「打开」即可；之后的更新由应用内自动更新完成。
-- 自动更新（下载→替换→重启）不依赖签名；签名只影响 TCC 是否记住授权。
-- 一旦改用 Developer ID 证书，`APPLE_*` 机密可直接替换，无需改代码。
+发布维护者通过 GitHub Actions 的仓库机密配置以下值。
+
+- `APPLE_CODESIGN_ID` 是 Developer ID Application 签名身份。
+- `APPLE_P12_CERTIFICATE` 和 `APPLE_P12_PASSWORD` 是签名证书导出文件的 Base64 内容与导出密码。
+- `APPLE_NOTARY_USER`、`APPLE_NOTARY_PASSWORD` 和 `APPLE_TEAM_ID` 是现有公证流程使用的 Apple 账号、App 专用密码和团队 ID。
+
+从临时签名切换到 Developer ID 后，先为新的签名身份授权一次。随后用两个由同一团队签署的正式构建实测应用内升级，确认升级后能直接启动。
 
 ## English
 
-### Why every update re-prompts
+### Accessibility appears enabled, but Start is blocked after an update
 
-macOS Accessibility (TCC) grants are bound to the app's code-signing identity. Ad-hoc/unsigned builds are
-identified by their **cdhash**, which changes on every build, so the system treats each release as a new app.
-A Developer ID **or a self-signed code-signing certificate** gives a stable designated requirement, so the
-grant survives updates. No paid account is required for that.
+macOS ties Accessibility approval to the app’s code-signing identity. An ad-hoc signature is specific to one build. After an update, System Settings can still show the old build as allowed while denying the new build. Toggling that existing entry can leave the old signature on record. [Apple’s code-signing identity guide](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements)
 
-### One-time setup (free)
+In System Settings → Privacy & Security → Accessibility, remove the old TuPig Synergy entry. Add TuPig Synergy.app from Applications and enable it. Quit and reopen the app, then select Start.
 
-1. Keychain Access → Certificate Assistant → Create a Certificate.
-2. Name `TuPig Synergy Local`; Identity: **Self Signed Root**; Certificate Type: **Code Signing**.
-3. Export as `.p12` with a password.
-4. Add repository secrets: `APPLE_P12_CERTIFICATE` (base64 of the p12), `APPLE_P12_PASSWORD`, and
-   `APPLE_CODESIGN_ID` (the certificate common name).
-5. CI then signs every macOS package with the same identity.
+The following command clears the old approval for this app. Grant it again in System Settings.
 
-### Limitations
+```sh
+tccutil reset Accessibility com.tupig.synergy
+```
 
-Self-signed builds cannot be notarized (notarization requires the paid Apple Developer Program). The first
-launch may need right-click → Open; subsequent updates use the in-app updater. Switching to a Developer ID
-certificate later only changes the secrets, not the code.
+### Release signing
+
+GitHub’s macOS release workflow supports Developer ID Application signing and Apple notarization. Enabling signing also enables submission to the notary service. Apple requires a valid Developer ID certificate for that service. [Apple’s notarization requirements](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)
+
+Release maintainers configure these values as GitHub Actions repository secrets.
+
+- `APPLE_CODESIGN_ID` is the Developer ID Application signing identity.
+- `APPLE_P12_CERTIFICATE` and `APPLE_P12_PASSWORD` are the Base64-encoded certificate export and its password.
+- `APPLE_NOTARY_USER`, `APPLE_NOTARY_PASSWORD` and `APPLE_TEAM_ID` are the Apple account, app-specific password and team ID used by the existing notarization workflow.
+
+When moving from ad-hoc signing to Developer ID, approve the new signing identity once. Then test an in-app update between two releases signed by the same team and verify that Start works after the upgrade.
