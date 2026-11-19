@@ -261,6 +261,7 @@ private Q_SLOTS:
   void settingsResetCancelAndSave();
   void tlsKeySizeRemainsDraftUntilSave();
   void tlsRestoreDefaultsRemainsDraft();
+  void explicitRegenerationCommitsOnlyMatchingMetadata_data();
   void explicitRegenerationCommitsOnlyMatchingMetadata();
   void failedRegenerationPreservesStoredMetadata();
   void menusShareActionsAndRouteOnce_data();
@@ -1026,8 +1027,25 @@ void LayoutAcceptanceTests::tlsRestoreDefaultsRemainsDraft()
   editor.reject();
 }
 
+void LayoutAcceptanceTests::explicitRegenerationCommitsOnlyMatchingMetadata_data()
+{
+  QTest::addColumn<QString>("language");
+  QTest::addColumn<QString>("title");
+  QTest::addColumn<QString>("body");
+  QTest::addColumn<QString>("confirm");
+  QTest::newRow("en-500") << QStringLiteral("en") << QStringLiteral("TLS Certificate Regenerated")
+                          << QStringLiteral("TLS certificate regenerated successfully.") << QStringLiteral("OK");
+  QTest::newRow("zh_CN-500") << QStringLiteral("zh_CN") << QStringLiteral("TLS 证书已重新生成")
+                             << QStringLiteral("TLS 证书重新生成成功。") << QStringLiteral("确定");
+}
+
 void LayoutAcceptanceTests::explicitRegenerationCommitsOnlyMatchingMetadata()
 {
+  QFETCH(QString, language);
+  QFETCH(QString, title);
+  QFETCH(QString, body);
+  QFETCH(QString, confirm);
+  constexpr int width = 500;
   QTemporaryDir temporary;
   QVERIFY(temporary.isValid());
   const auto storedPath = temporary.filePath(QStringLiteral("stored/private.pem"));
@@ -1035,34 +1053,83 @@ void LayoutAcceptanceTests::explicitRegenerationCommitsOnlyMatchingMetadata()
   const ScopedSetting certificate(Settings::Security::Certificate, storedPath);
   const ScopedSetting keySize(Settings::Security::KeySize, 2048);
   const ScopedSetting tls(Settings::Security::TlsEnabled, true);
-  const ScopedLanguage language(QStringLiteral("en"));
+  const ScopedLanguage languageScope(language);
+  QCOMPARE(I18N::currentLanguage(), language);
   QVERIFY(synergy::gui::TlsUtility::generateCertificateAt(storedPath, 2048));
   QCOMPARE(synergy::gui::TlsUtility::getCertKeyLength(storedPath), 2048);
   const bool storedSleep = Settings::value(Settings::Core::PreventSleep).toBool();
   synergy::gui::ServerConfig config;
   PageHost host;
-  prepare(host, 600);
+  prepare(host, width);
+  QSignalSpy displayedTitle(&host, &PageHost::titleChanged);
+  auto *stack = host.findChild<QStackedWidget *>(QStringLiteral("pageStack"));
+  QVERIFY(stack);
   auto *editor = new SettingsDialog(nullptr, config);
   host.push(editor);
+  auto *tabs = editor->findChild<QTabWidget *>(QStringLiteral("tabWidget"));
+  auto *network = editor->findChild<QWidget *>(QStringLiteral("tabNetwork"));
   auto *combo = editor->findChild<QComboBox *>(QStringLiteral("comboTlsKeyLength"));
-  QVERIFY(combo);
+  auto *path = editor->findChild<QLineEdit *>(QStringLiteral("lineTlsCertPath"));
+  auto *sleep = editor->findChild<QCheckBox *>(QStringLiteral("cbPreventSleep"));
+  QVERIFY(tabs && network && combo && path && sleep);
+  tabs->setCurrentWidget(network);
   combo->setCurrentText(QStringLiteral("4096"));
-  editor->findChild<QLineEdit *>(QStringLiteral("lineTlsCertPath"))->setText(draftPath);
-  editor->findChild<QCheckBox *>(QStringLiteral("cbPreventSleep"))->setChecked(!storedSleep);
+  path->setText(draftPath);
+  sleep->setChecked(!storedSleep);
   auto *regenerate = editor->findChild<QPushButton *>(QStringLiteral("btnTlsRegenCert"));
-  QVERIFY(regenerate);
-  QVERIFY(regenerate->isEnabled());
-  regenerate->click();
-  settle();
+  fit(host, width);
+  QVERIFY(regenerate && regenerate->isVisibleTo(editor) && regenerate->isEnabled());
+  QTest::mouseClick(regenerate, Qt::LeftButton);
+  fit(host, width);
   QCOMPARE(synergy::gui::TlsUtility::getCertKeyLength(storedPath), 4096);
   QCOMPARE(Settings::value(Settings::Security::KeySize).toInt(), 4096);
   QCOMPARE(Settings::value(Settings::Security::Certificate).toString(), storedPath);
   QCOMPARE(Settings::value(Settings::Core::PreventSleep).toBool(), storedSleep);
   QVERIFY(!QFile::exists(draftPath));
-  auto *notice = host.findChild<QMessageBox *>();
-  QVERIFY(notice);
-  notice->accept();
-  settle();
+  auto *notice = host.findChild<MessagePage *>();
+  QVERIFY2(notice && notice->isVisible(), "Certificate regeneration must show the styled message page");
+  QVERIFY(!host.findChild<QMessageBox *>());
+  QCOMPARE(stack->count(), 3);
+  auto *activePage = qobject_cast<QScrollArea *>(stack->currentWidget());
+  QVERIFY(activePage);
+  QCOMPARE(activePage->property("pageEditor").value<QDialog *>(), static_cast<QDialog *>(notice));
+  QCOMPARE(notice->windowTitle(), title);
+  QVERIFY(!displayedTitle.isEmpty());
+  QCOMPARE(displayedTitle.last().at(0).toString(), title);
+  auto *icon = notice->findChild<QLabel *>(QStringLiteral("messageIcon"));
+  auto *heading = notice->findChild<QLabel *>(QStringLiteral("messageTitle"));
+  auto *text = notice->findChild<QLabel *>(QStringLiteral("messageText"));
+  QCOMPARE(notice->findChildren<QPushButton *>().size(), qsizetype{1});
+  auto *ok = notice->findChild<QPushButton *>();
+  QVERIFY(icon && heading && text && ok);
+  QCOMPARE(icon->size(), QSize(32, 32));
+  QCOMPARE(heading->text(), title);
+  QCOMPARE(text->text(), body);
+  QCOMPARE(ok->text(), confirm);
+  QVERIFY(ok->property("primary").toBool());
+  QCOMPARE(host.width(), width);
+  QCOMPARE(activePage->horizontalScrollBar()->maximum(), 0);
+  for (auto *control : QList<QWidget *>{icon, heading, text, ok}) {
+    QVERIFY(control->isVisibleTo(notice));
+    QVERIFY(notice->rect().contains(QRect(control->mapTo(notice, QPoint()), control->size())));
+  }
+
+  const auto directory =
+      qEnvironmentVariable("SYNERGY_UI_EVIDENCE_DIR", QDir::temp().filePath(QStringLiteral("tupig-r2-layout")));
+  QVERIFY(QDir().mkpath(directory));
+  QVERIFY(settleStaticRender(host));
+  QPixmap image(host.size());
+  image.fill(Qt::transparent);
+  host.render(&image);
+  QVERIFY(image.save(QDir(directory).filePath(QStringLiteral("tls-regenerated-%1-500.png").arg(language))));
+
+  QTest::mouseClick(ok, Qt::LeftButton);
+  fit(host, width);
+  QCOMPARE(stack->count(), 2);
+  QCOMPARE(stack->currentWidget()->property("pageEditor").value<QDialog *>(), static_cast<QDialog *>(editor));
+  QCOMPARE(tabs->currentWidget(), network);
+  QCOMPARE(path->text(), draftPath);
+  QCOMPARE(sleep->isChecked(), !storedSleep);
   editor->reject();
   settle();
   QCOMPARE(Settings::value(Settings::Security::KeySize).toInt(), 4096);
@@ -1098,6 +1165,7 @@ void LayoutAcceptanceTests::failedRegenerationPreservesStoredMetadata()
   QCOMPARE(Settings::value(Settings::Security::Certificate).toString(), blockedPath);
   QVERIFY(!QFile::exists(blockedPath));
   QVERIFY(host.findChild<QMessageBox *>() == nullptr);
+  QVERIFY(host.findChild<MessagePage *>() == nullptr);
   editor->reject();
   settle();
 }

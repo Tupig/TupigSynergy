@@ -149,14 +149,9 @@ int main(int argc, char **argv)
 
   App *coreApp = createApp(parser, events, processName);
 
-  QApplication app(argc, argv);
-  QApplication::setApplicationName(QStringLiteral("%1 Core").arg(kAppName));
-
 #if defined(Q_OS_MACOS)
-  // synergy-core is a helper process. QApplication resets the activation
-  // policy to "regular" while it initializes, so transforming before it
-  // constructs is undone and every core instance leaves a Dock icon behind.
-  // Apply the transform after the application object exists.
+  // Demote the bundled helper before Cocoa initializes. Qt otherwise promotes
+  // it during QApplication construction, even if it was already backgrounded.
   {
     ProcessSerialNumber psn = {0, kCurrentProcess};
 #pragma GCC diagnostic push
@@ -165,7 +160,22 @@ int main(int argc, char **argv)
 #pragma GCC diagnostic pop
     TransformProcessType(&psn, kProcessTransformToBackgroundApplication);
   }
+  constexpr auto foregroundTransform = "QT_MAC_DISABLE_FOREGROUND_APPLICATION_TRANSFORM";
+  const auto initialForegroundTransform = qgetenv(foregroundTransform);
+  qputenv(foregroundTransform, "1");
 #endif
+
+  QApplication app(argc, argv);
+
+#if defined(Q_OS_MACOS)
+  // Do not change the environment inherited by commands launched later.
+  if (initialForegroundTransform.isNull()) {
+    qunsetenv(foregroundTransform);
+  } else {
+    qputenv(foregroundTransform, initialForegroundTransform);
+  }
+#endif
+  QApplication::setApplicationName(QStringLiteral("%1 Core").arg(kAppName));
 
   const auto ipcServer = new synergy::core::ipc::CoreIpcServer(&app); // NOSONAR - Qt managed
   QObject::connect(

@@ -114,6 +114,7 @@ create_test(
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/gui"
 )
 target_include_directories(NativeDesignTests PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/gui)
+target_sources(NativeDesignTests PRIVATE ${CMAKE_SOURCE_DIR}/src/apps/res/branding/synergy.qrc)
 target_compile_definitions(NativeDesignTests PRIVATE UI_TEST_TRANSLATIONS_DIR="${CMAKE_BINARY_DIR}/translations")
 if(TARGET app_translations)
   add_dependencies(NativeDesignTests app_translations)
@@ -137,6 +138,7 @@ create_test(
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/gui"
 )
 target_include_directories(LayoutAcceptanceTests PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/gui)
+target_sources(LayoutAcceptanceTests PRIVATE ${CMAKE_SOURCE_DIR}/src/apps/res/branding/synergy.qrc)
 target_compile_definitions(LayoutAcceptanceTests PRIVATE UI_TEST_TRANSLATIONS_DIR="${CMAKE_BINARY_DIR}/translations")
 if(TARGET app_translations)
   add_dependencies(LayoutAcceptanceTests app_translations)

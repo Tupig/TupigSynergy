@@ -57,6 +57,8 @@
 #include <QSignalSpy>
 #include <QStackedWidget>
 #include <QStyle>
+#include <QStyleOptionFrame>
+#include <QStyleOptionSpinBox>
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QTcpServer>
@@ -151,6 +153,8 @@ private Q_SLOTS:
   void initTestCase();
   void mainShellResponsiveWidths_data();
   void mainShellResponsiveWidths();
+  void clientAddressAndPortFit_data();
+  void clientAddressAndPortFit();
   void mainShellUsesCompactCards_data();
   void mainShellUsesCompactCards();
   void embeddedPages_data();
@@ -261,6 +265,117 @@ void NativeDesignTests::mainShellResponsiveWidths()
   capture(
       window, QStringLiteral("main-responsive-%1-%2-%3").arg(language).arg(width).arg(server ? "server" : "client")
   );
+  qApp->removeTranslator(&translator);
+}
+
+void NativeDesignTests::clientAddressAndPortFit_data()
+{
+  QTest::addColumn<QString>("language");
+  QTest::addColumn<bool>("dark");
+  QTest::addColumn<int>("width");
+  for (const auto &language : {QStringLiteral("en"), QStringLiteral("zh_CN")})
+    for (const bool dark : {false, true})
+      for (const int width : {500, 820})
+        QTest::newRow(qPrintable(QStringLiteral("%1-%2-%3").arg(language, dark ? "dark" : "light").arg(width)))
+            << language << dark << width;
+}
+
+void NativeDesignTests::clientAddressAndPortFit()
+{
+  QFETCH(QString, language);
+  QFETCH(bool, dark);
+  QFETCH(int, width);
+  applyTestPalette(dark);
+  QTranslator translator;
+  if (language == QStringLiteral("zh_CN")) {
+    QVERIFY(translator.load(QStringLiteral("synergy_zh_CN.qm"), QStringLiteral(UI_TEST_TRANSLATIONS_DIR)));
+    qApp->installTranslator(&translator);
+  }
+
+  QMainWindow window;
+  window.setAttribute(Qt::WA_DontShowOnScreen);
+  Ui::MainWindow ui;
+  ui.setupUi(&window);
+  ui.lblComputerName->setText(QStringLiteral("Render-Fixture"));
+  ui.lblIpAddresses->setText(QStringLiteral("192.0.2.10"));
+  ui.lineEditName->hide();
+  ui.btnSaveName->hide();
+  ui.btnCancelName->hide();
+  ui.rbModeClient->setChecked(true);
+  ui.clientOptions->show();
+  ui.serverOptions->hide();
+  ui.btnConfigureClient->show();
+  ui.lblNoMode->hide();
+  ui.logPanel->setCollapsed(true);
+  window.resize(width, 390);
+  window.show();
+  QVERIFY(settleStaticRender(window));
+
+  QCOMPARE(window.width(), width);
+  QCOMPARE(ui.workspace->horizontalScrollBar()->maximum(), 0);
+  QVERIFY(ui.clientOptions->rect().contains(ui.lineHostname->geometry()));
+  QVERIFY(ui.clientOptions->rect().contains(ui.spinPort->geometry()));
+  QVERIFY(!ui.lineHostname->geometry().intersects(ui.spinPort->geometry()));
+
+  const auto textContents = [](QLineEdit *editor) {
+    QStyleOptionFrame frame;
+    frame.initFrom(editor);
+    frame.lineWidth =
+        editor->hasFrame() ? editor->style()->pixelMetric(QStyle::PM_DefaultFrameWidth, &frame, editor) : 0;
+    return editor->style()
+        ->subElementRect(QStyle::SE_LineEditContents, &frame, editor)
+        .marginsRemoved(editor->textMargins());
+  };
+  const int addressWidth = ui.lineHostname->width();
+  const bool compactAddress = addressWidth <= 240;
+  const auto addressContents = textContents(ui.lineHostname);
+  QVERIFY(
+      addressContents.width() >= ui.lineHostname->fontMetrics().horizontalAdvance(QStringLiteral("255.255.255.255"))
+  );
+
+  auto *portEdit = ui.spinPort->findChild<QLineEdit *>();
+  QVERIFY(portEdit != nullptr);
+  const auto portContents = textContents(portEdit);
+  const QRect spinText(portEdit->mapTo(ui.spinPort, portContents.topLeft()), portContents.size());
+  QStyleOptionSpinBox spin;
+  spin.initFrom(ui.spinPort);
+  spin.frame = ui.spinPort->hasFrame();
+  spin.buttonSymbols = ui.spinPort->buttonSymbols();
+  spin.subControls = QStyle::SC_All;
+  for (const auto arrow : {QStyle::SC_SpinBoxUp, QStyle::SC_SpinBoxDown}) {
+    const auto arrowBounds = ui.spinPort->style()->subControlRect(QStyle::CC_SpinBox, &spin, arrow, ui.spinPort);
+    QVERIFY(!arrowBounds.isEmpty());
+    QVERIFY(!spinText.intersects(arrowBounds));
+  }
+  QStringList clippedPorts;
+  for (const int port : {22211, 65535}) {
+    ui.spinPort->setValue(port);
+    QCOMPARE(portEdit->text(), QString::number(port));
+    const int required = portEdit->fontMetrics().horizontalAdvance(portEdit->displayText()) + 4;
+    if (required > portContents.width())
+      clippedPorts << QStringLiteral("%1 needs %2 px but has %3 px").arg(port).arg(required).arg(portContents.width());
+  }
+
+  const auto addressList = QStringLiteral(
+      "server.test, 198.51.100.123, 2001:db8:1234:5678:90ab:cdef:0:1234, "
+      "fallback-west-gateway.example.test, fallback-east-gateway.example.test, backup.test"
+  );
+  QVERIFY(ui.lineHostname->fontMetrics().horizontalAdvance(addressList) > addressContents.width());
+  QTest::keyClicks(ui.lineHostname, addressList);
+  QCOMPARE(ui.lineHostname->text(), addressList);
+  ui.lineHostname->home(false);
+  QTest::keyClicks(ui.lineHostname, QStringLiteral("primary-"));
+  ui.lineHostname->end(false);
+  QTest::keyClicks(ui.lineHostname, QStringLiteral(".example"));
+  QCOMPARE(ui.lineHostname->text(), QStringLiteral("primary-") + addressList + QStringLiteral(".example"));
+
+  ui.lineHostname->setText(QStringLiteral("198.51.100.123"));
+  ui.spinPort->setValue(22211);
+  if (width == 500)
+    capture(window, QStringLiteral("client-address-port-%1-%2").arg(language, dark ? "dark" : "light"));
+  if (!compactAddress)
+    clippedPorts << QStringLiteral("Address field occupies %1 px, expected at most 240 px").arg(addressWidth);
+  QVERIFY2(clippedPorts.isEmpty(), qPrintable(clippedPorts.join(QStringLiteral("; "))));
   qApp->removeTranslator(&translator);
 }
 
