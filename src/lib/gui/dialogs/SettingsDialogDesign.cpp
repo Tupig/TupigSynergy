@@ -460,6 +460,23 @@ void Ui::SettingsDialog::setupUi(QDialog *dialog)
   certificateActions->addStretch(1);
   networkCardLayout->addLayout(certificateActions);
 
+  tlsRegenerationNotice = new QFrame(networkCard);
+  tlsRegenerationNotice->setObjectName(QStringLiteral("tlsRegenerationNotice"));
+  tlsRegenerationNotice->hide();
+  auto *noticeLayout = new QHBoxLayout(tlsRegenerationNotice);
+  noticeLayout->setContentsMargins(10, 6, 10, 6);
+  noticeLayout->setSpacing(8);
+  lblTlsRegenerationResult = createLabel(tlsRegenerationNotice, QStringLiteral("lblTlsRegenerationResult"));
+  lblTlsRegenerationResult->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+  noticeLayout->addWidget(lblTlsRegenerationResult, 1);
+  btnDismissTlsRegeneration = new QPushButton(tlsRegenerationNotice);
+  btnDismissTlsRegeneration->setObjectName(QStringLiteral("btnDismissTlsRegeneration"));
+  btnDismissTlsRegeneration->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+  btnDismissTlsRegeneration->setProperty("small", true);
+  btnDismissTlsRegeneration->setProperty("primary", true);
+  noticeLayout->addWidget(btnDismissTlsRegeneration, 0, Qt::AlignVCenter);
+  networkCardLayout->addWidget(tlsRegenerationNotice);
+
   networkScrollLayout->addWidget(networkCard);
   networkScrollLayout->setAlignment(Qt::AlignTop);
   networkScroll->setWidget(networkScrollContents);
@@ -624,6 +641,10 @@ void Ui::SettingsDialog::retranslateUi(QDialog *dialog)
   comboTlsKeyLength->setItemText(1, QStringLiteral("4096"));
   btnTlsRegenCert->setText(QCoreApplication::translate("SettingsDialog", "Regenerate certificate", nullptr));
   btnViewFingerprint->setText(QCoreApplication::translate("SettingsDialog", "View saved certificate fingerprint"));
+  lblTlsRegenerationResult->setText(
+      QCoreApplication::translate("SettingsDialog", "TLS certificate regenerated successfully.", nullptr)
+  );
+  btnDismissTlsRegeneration->setText(QObject::tr("OK"));
   btnTlsRegenCert->setToolTip(
       QCoreApplication::translate(
           "SettingsDialog",

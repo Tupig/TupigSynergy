@@ -161,15 +161,7 @@ pkg-config --modversion libei
 | **Menu bar icon missing** | Grant **Screen Recording** permission (for tray) |
 | **Keychain prompts** | Store cert in keychain: `security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain cert.pem` |
 
-**Debug Permissions**:
-```bash
-# Check TCC database
-sqlite3 ~/Library/Application\ Support/com.apple.TCC/TCC.db "SELECT * FROM access WHERE service='kTCCServiceAccessibility';"
-
-# Reset permissions (last resort)
-tccutil reset Accessibility
-tccutil reset InputMonitoring
-```
+For a reset limited to TuPig Synergy, see [macOS signing and Accessibility](macos-signing.md#english).
 
 #### 🪟 Windows
 
@@ -478,15 +470,7 @@ pkg-config --modversion libei
 | **菜单栏图标缺失** | 授予 **屏幕录制** 权限 (托盘用) |
 | **钥匙串弹窗** | 证书存入钥匙串：`security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain cert.pem` |
 
-**权限调试**：
-```bash
-# 查看 TCC 数据库
-sqlite3 ~/Library/Application\ Support/com.apple.TCC/TCC.db "SELECT * FROM access WHERE service='kTCCServiceAccessibility';"
-
-# 重置权限 (最后手段)
-tccutil reset Accessibility
-tccutil reset InputMonitoring
-```
+只清理 TuPig Synergy 的旧授权时，请参见 [macOS 签名与辅助功能授权](macos-signing.md#中文)。
 
 #### 🪟 Windows
 
