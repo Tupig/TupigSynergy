@@ -115,9 +115,10 @@ private:
   //! upper bound for the exponential retry delay
   static constexpr int kMaxRetryDelayMs = 60000;
 
+  QStringList desktopProcessArguments() const;
   void startForegroundProcess(const QStringList &args);
   void startProcessFromDaemon();
-  void stopForegroundProcess() const;
+  void stopForegroundProcess();
   void stopProcessFromDaemon();
   QPair<bool, QString> persistServerConfig() const;
   void setConnectionState(ConnectionState state);

@@ -46,7 +46,7 @@ QPushButton *iconButton(QWidget *parent, const QString &name, const QString &ico
 void Ui::MainWindow::setupUi(QMainWindow *window)
 {
   window->setObjectName(QStringLiteral("MainWindow"));
-  window->resize(kWindowWidth, 470);
+  window->resize(kWindowWidth, kWindowHeight);
 
   topLevelWidget = new QWidget(window);
   topLevelWidget->setObjectName(QStringLiteral("appRoot"));

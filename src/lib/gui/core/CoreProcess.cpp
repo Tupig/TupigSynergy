@@ -243,6 +243,16 @@ void CoreProcess::applyLogLevel()
   }
 }
 
+QStringList CoreProcess::desktopProcessArguments() const
+{
+  // CLI tokens are not display text. Pin the core to the GUI's exact selected
+  // settings file; the service path forwards its configuration separately.
+  return {
+      m_mode == Settings::CoreMode::Server ? QStringLiteral("server") : QStringLiteral("client"),
+      QStringLiteral("--settings"), Settings::settingsFile()
+  };
+}
+
 void CoreProcess::startForegroundProcess(const QStringList &args)
 {
   using enum ProcessState;
@@ -350,25 +360,23 @@ void CoreProcess::startProcessFromDaemon()
   }
 }
 
-void CoreProcess::stopForegroundProcess() const
+void CoreProcess::stopForegroundProcess()
 {
   if (m_processState != ProcessState::Stopping) {
     qCritical().noquote() << tr("core process must be in stopping state");
     return;
   }
 
-  if (!m_process) {
-    qCritical().noquote() << tr("process not set, cannot stop");
+  if (!m_process || m_process->state() == QProcess::NotRunning) {
+    qDebug("process is not running, skipping terminate");
+    setProcessState(ProcessState::Stopped);
     return;
   }
 
-  qInfo().noquote() << tr("Stopping the core desktop process");
-
-  if (m_process->state() == QProcess::ProcessState::Running) {
-    qDebug("process is running, closing");
-    m_process->close();
-  } else {
-    qDebug("process is not running, skipping terminate");
+  qDebug("process is running or starting, closing");
+  m_process->close();
+  if (m_process->state() == QProcess::NotRunning) {
+    setProcessState(ProcessState::Stopped);
   }
 }
 
@@ -492,19 +500,13 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
     );
   }
 
-  QStringList args = {coreMode};
-
-  // Pin the core to the same settings file the GUI is using. Without this the
-  // core falls through Settings::load()'s default lookup (user file before
-  // system file), so a user who has selected system scope in the GUI still
-  // gets a core running against the user-scope file. The daemon path already
-  // forwards the settings path via IPC below; this covers the foreground path.
-  args << QStringLiteral("--settings") << Settings::settingsFile();
-
   if (m_mode == Settings::CoreMode::Server) {
     const auto [hasNeededPermissions, configFilename] = persistServerConfig();
     if (configFilename.isEmpty()) {
       qCritical().noquote() << tr("config file name empty for server args");
+      setProcessState(ProcessState::Stopped);
+      setConnectionState(ConnectionState::Disconnected);
+      Q_EMIT error(Error::StartFailed);
       return;
     }
     if (!hasNeededPermissions) {
@@ -564,7 +566,7 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
   );
 
   if (processMode == ProcessMode::Desktop) {
-    startForegroundProcess(args);
+    startForegroundProcess(desktopProcessArguments());
   } else if (processMode == ProcessMode::Service) {
     startProcessFromDaemon();
   }
@@ -575,6 +577,7 @@ void CoreProcess::start(std::optional<ProcessMode> processModeOption)
 void CoreProcess::stop(std::optional<ProcessMode> processModeOption)
 {
   QMutexLocker locker(&m_processMutex);
+  m_retryTimer.stop();
 
   const auto currentMode = Settings::value(Settings::Core::ProcessMode).value<ProcessMode>();
   const auto processMode = processModeOption.value_or(currentMode);
@@ -588,7 +591,7 @@ void CoreProcess::stop(std::optional<ProcessMode> processModeOption)
     m_coreIpcClient = nullptr;
   }
 
-  if (m_processState == ProcessState::Starting) {
+  if (m_processState == ProcessState::Starting && processMode != ProcessMode::Desktop) {
     qDebug("core process is starting, cancelling");
     setProcessState(ProcessState::Stopped);
   } else if (m_processState != ProcessState::Stopped) {

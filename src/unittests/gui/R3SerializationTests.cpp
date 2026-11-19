@@ -13,16 +13,38 @@
 #include <QFile>
 #include <QScopeGuard>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QTemporaryDir>
 #include <QTextStream>
+#include <QTranslator>
 #include <QUuid>
 #include <QtTest>
 
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
 #include <deque>
 
 namespace {
+class ModeTranslator final : public QTranslator
+{
+public:
+  bool isEmpty() const override
+  {
+    return false;
+  }
+  QString translate(const char *context, const char *source, const char *, int) const override
+  {
+    if (QByteArrayView(context) != "synergy::gui::CoreProcess" && QByteArrayView(context) != "CoreProcess")
+      return {};
+    if (QByteArrayView(source) == "server")
+      return QStringLiteral("服务端");
+    if (QByteArrayView(source) == "client")
+      return QStringLiteral("客户端");
+    return {};
+  }
+};
+
 struct ExitMessage
 {
   QtMsgType type;
@@ -98,6 +120,11 @@ private Q_SLOTS:
   void actualCorePersistenceDoesNotLaunchOrTruncate();
   void actualCoreExitClassification_data();
   void actualCoreExitClassification();
+  void desktopArgumentsRemainProtocolTokensAcrossLanguages_data();
+  void desktopArgumentsRemainProtocolTokensAcrossLanguages();
+  void stopCancelsRetryWithoutRunningProcess_data();
+  void stopCancelsRetryWithoutRunningProcess();
+  void translatedClientStartsAndStopsOwnedInertChildTenTimes();
 };
 void R3SerializationTests::invalidConfigCannotTruncateOrPartiallyWrite_data()
 {
@@ -414,8 +441,176 @@ void R3SerializationTests::actualCoreExitClassification()
   QVERIFY(core.findChildren<QProcess *>().isEmpty());
 }
 
+void R3SerializationTests::desktopArgumentsRemainProtocolTokensAcrossLanguages_data()
+{
+  QTest::addColumn<bool>("server");
+  QTest::newRow("server") << true;
+  QTest::newRow("client") << false;
+}
+
+void R3SerializationTests::desktopArgumentsRemainProtocolTokensAcrossLanguages()
+{
+  QFETCH(bool, server);
+  ModeTranslator translator;
+  const auto previousSettings = Settings::settingsFile();
+  const auto restoreSettings = qScopeGuard([&] { Settings::setSettingsFile(previousSettings); });
+  const auto settingsPath = synergy::runtime::runtimeRoot() + QStringLiteral("/user/参数 %1 配置.conf");
+  Settings::setSettingsFile(settingsPath);
+  synergy::gui::ServerConfig config;
+  synergy::gui::CoreProcess core(config);
+  core.setMode(server ? Settings::CoreMode::Server : Settings::CoreMode::Client);
+  const QStringList expected{
+      server ? QStringLiteral("server") : QStringLiteral("client"), QStringLiteral("--settings"), settingsPath
+  };
+  const auto english = core.desktopProcessArguments();
+  QCOMPARE(english, expected);
+  QVERIFY(QCoreApplication::installTranslator(&translator));
+  const auto removeTranslator = qScopeGuard([&] { QCoreApplication::removeTranslator(&translator); });
+  const char *modeLabel = server ? "server" : "client";
+  QCOMPARE(synergy::gui::CoreProcess::tr(modeLabel), server ? QStringLiteral("服务端") : QStringLiteral("客户端"));
+  QCOMPARE(core.desktopProcessArguments(), expected);
+  QCOMPARE(Settings::settingsFile(), settingsPath);
+  QCOMPARE(core.processState(), synergy::core::ProcessState::Stopped);
+  QVERIFY(core.m_process == nullptr);
+  QVERIFY(core.m_coreIpcClient == nullptr);
+  QVERIFY(core.findChildren<QProcess *>().isEmpty());
+}
+
+void R3SerializationTests::stopCancelsRetryWithoutRunningProcess_data()
+{
+  QTest::addColumn<bool>("hasProcessObject");
+  QTest::newRow("not-running-process") << true;
+  QTest::newRow("null-process") << false;
+}
+
+void R3SerializationTests::stopCancelsRetryWithoutRunningProcess()
+{
+  QFETCH(bool, hasProcessObject);
+  synergy::gui::ServerConfig config;
+  synergy::gui::CoreProcess core(config);
+  const auto stopRetryOnExit = qScopeGuard([&] { core.m_retryTimer.stop(); });
+  core.m_processState = synergy::core::ProcessState::RetryPending;
+  core.m_connectionState = synergy::core::ConnectionState::Connected;
+  core.m_lastProcessMode = Settings::ProcessMode::Desktop;
+  if (hasProcessObject) {
+    // Reproduce the stale NotRunning handle without launching any process or sharing session.
+    core.m_process = new QProcess(&core);
+    QCOMPARE(core.m_process->state(), QProcess::NotRunning);
+    QCOMPARE(core.m_process->processId(), qint64(0));
+  }
+  core.m_retryTimer.setSingleShot(true);
+  core.m_retryTimer.start(60000);
+  QVERIFY(core.m_retryTimer.isActive());
+  core.stop(Settings::ProcessMode::Desktop);
+  const auto observedState = core.processState();
+  const auto observedConnection = core.connectionState();
+  const bool retryActiveAfterStop = core.m_retryTimer.isActive();
+  // Make a failing pre-fix test safe before making assertions or pumping any events.
+  core.m_retryTimer.stop();
+  QVERIFY(!retryActiveAfterStop);
+  QCOMPARE(observedState, synergy::core::ProcessState::Stopped);
+  QCOMPARE(observedConnection, synergy::core::ConnectionState::Disconnected);
+  QVERIFY(core.m_coreIpcClient == nullptr);
+  for (auto *process : core.findChildren<QProcess *>()) {
+    QCOMPARE(process->state(), QProcess::NotRunning);
+    QCOMPARE(process->processId(), qint64(0));
+    QVERIFY(process->program().isEmpty());
+  }
+}
+
+void R3SerializationTests::translatedClientStartsAndStopsOwnedInertChildTenTimes()
+{
+  ModeTranslator translator;
+  QVERIFY(QCoreApplication::installTranslator(&translator));
+  const auto removeTranslator = qScopeGuard([&] { QCoreApplication::removeTranslator(&translator); });
+  QCOMPARE(synergy::gui::CoreProcess::tr("client"), QStringLiteral("客户端"));
+  const auto previousSettings = Settings::settingsFile();
+  const auto restoreSettings = qScopeGuard([&] { Settings::setSettingsFile(previousSettings); });
+  const auto settingsPath = synergy::runtime::runtimeRoot() + QStringLiteral("/user/惰性子进程 %1 配置.conf");
+  Settings::setSettingsFile(settingsPath);
+  const auto previousChildMode = qgetenv("SYNERGY_R3_INERT_CORE_CHILD");
+  const auto previousChildSettings = qgetenv("SYNERGY_R3_INERT_CORE_SETTINGS");
+  const auto restoreEnvironment = qScopeGuard([&] {
+    const auto restore = [](const char *name, const QByteArray &value) {
+      if (value.isNull())
+        qunsetenv(name);
+      else
+        qputenv(name, value);
+    };
+    restore("SYNERGY_R3_INERT_CORE_CHILD", previousChildMode);
+    restore("SYNERGY_R3_INERT_CORE_SETTINGS", previousChildSettings);
+  });
+  qputenv("SYNERGY_R3_INERT_CORE_CHILD", "1");
+  QVERIFY(qputenv("SYNERGY_R3_INERT_CORE_SETTINGS", settingsPath.toUtf8().toHex()));
+  const auto executable = QCoreApplication::applicationFilePath();
+  // The existing macOS dev-path guard must bypass notification authorization for this unit executable.
+  QVERIFY(!executable.contains(QStringLiteral("Applications/TuPig Synergy.app")));
+  for (int cycle = 0; cycle < 10; ++cycle) {
+    synergy::gui::ServerConfig config;
+    synergy::gui::CoreProcess core(config);
+    core.setMode(Settings::CoreMode::Client);
+    core.m_appPath = executable;
+    const auto reapChild = qScopeGuard([&] {
+      core.m_retryTimer.stop();
+      if (core.m_process) {
+        core.m_process->disconnect(&core);
+        if (core.m_process->state() != QProcess::NotRunning) {
+          core.m_process->kill();
+          core.m_process->waitForFinished(5000);
+        }
+      }
+    });
+    QSignalSpy output(&core, &synergy::gui::CoreProcess::logLine);
+    {
+      // Exclude the Started self-signal that would otherwise attach to the fixed live core IPC name.
+      // This test exercises the production QProcess launch/argv/stop path, not IPC or state notifications.
+      const QSignalBlocker preventFixedIpc(&core);
+      core.start(Settings::ProcessMode::Desktop);
+    }
+    QCOMPARE(core.processState(), synergy::core::ProcessState::Started);
+    QVERIFY(core.m_process);
+    QCOMPARE(core.m_process->state(), QProcess::Running);
+    QCOMPARE(
+        core.m_process->arguments(), QStringList({QStringLiteral("client"), QStringLiteral("--settings"), settingsPath})
+    );
+    QCOMPARE(core.m_process->write("R", 1), qint64(1));
+    if (core.m_process->bytesToWrite() > 0)
+      QVERIFY(core.m_process->waitForBytesWritten(2000));
+    const auto hasValidatedArguments = [&output] {
+      return std::any_of(output.cbegin(), output.cend(), [](const auto &record) {
+        return record.first().toString() == QStringLiteral("R3-INERT client settings-ok");
+      });
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(hasValidatedArguments(), 4000);
+    QVERIFY(core.m_coreIpcClient == nullptr);
+    core.stop(Settings::ProcessMode::Desktop);
+    QTRY_COMPARE(core.processState(), synergy::core::ProcessState::Stopped);
+    QCOMPARE(core.connectionState(), synergy::core::ConnectionState::Disconnected);
+    QCOMPARE(core.m_process->state(), QProcess::NotRunning);
+    QCOMPARE(core.m_process->processId(), qint64(0));
+    QVERIFY(!core.m_retryTimer.isActive());
+    QVERIFY(core.m_coreIpcClient == nullptr);
+    qInfo() << "INERT1 cycle" << cycle + 1 << "literal-client-and-settings-validated; stopped; no-core-ipc";
+  }
+}
+
 int main(int argc, char **argv)
 {
+  if (qgetenv("SYNERGY_R3_INERT_CORE_CHILD") == "1") {
+    QCoreApplication child(argc, argv);
+    const auto expectedSettings = QString::fromUtf8(QByteArray::fromHex(qgetenv("SYNERGY_R3_INERT_CORE_SETTINGS")));
+    const auto arguments = child.arguments();
+    if (expectedSettings.isEmpty() || arguments.size() != 4 || arguments.at(1) != QStringLiteral("client") ||
+        arguments.at(2) != QStringLiteral("--settings") || arguments.at(3) != expectedSettings)
+      return 81;
+    if (std::fgetc(stdin) != 'R')
+      return 82;
+    std::fputs("R3-INERT client settings-ok\n", stdout);
+    std::fflush(stdout);
+    // Only the parent controls lifetime; no core, IPC, GUI, input or clipboard is initialized.
+    std::fgetc(stdin);
+    return 0;
+  }
   QTemporaryDir dir;
   if (!dir.isValid())
     return 1;

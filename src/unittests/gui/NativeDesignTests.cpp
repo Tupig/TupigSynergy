@@ -205,7 +205,7 @@ void NativeDesignTests::mainShellResponsiveWidths_data()
   QTest::addColumn<int>("width");
   QTest::addColumn<bool>("server");
   for (const auto &language : {QStringLiteral("en"), QStringLiteral("zh_CN")})
-    for (int width : {540, 600, 820})
+    for (int width : {500, 540, 600, 820})
       for (bool server : {false, true})
         QTest::newRow(qPrintable(QStringLiteral("%1-%2-%3").arg(language).arg(width).arg(server ? "server" : "client")))
             << language << width << server;
@@ -330,6 +330,7 @@ void NativeDesignTests::mainShellUsesCompactCards()
     );
   }
   ui.logPanel->setCollapsed(collapsed);
+  window.resize(600, window.height());
   window.show();
   QCoreApplication::processEvents();
   QCOMPARE(window.width(), 600);

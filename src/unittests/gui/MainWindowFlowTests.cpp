@@ -12,6 +12,7 @@
 #include "gui/KeySequence.h"
 #include "gui/MainWindow.h"
 #include "gui/ScreenSetupModel.h"
+#include "gui/StyleUtils.h"
 #include "gui/TlsUtility.h"
 #include "gui/dialogs/ActionDialog.h"
 #include "gui/dialogs/FingerprintDialog.h"
@@ -21,6 +22,7 @@
 #include "gui/update/UpdateChecker.h"
 #include "gui/update/UpdateDialog.h"
 #include "gui/update/UpdateDownloader.h"
+#include "gui/widgets/LogPanel.h"
 #include "gui/widgets/MessagePage.h"
 #include "gui/widgets/ModeCard.h"
 #include "gui/widgets/ScreenSetupView.h"
@@ -36,10 +38,12 @@
 #include <QFrame>
 #include <QGroupBox>
 #include <QHostAddress>
+#include <QImage>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMap>
+#include <QMenu>
 #include <QPointer>
 #include <QProgressBar>
 #include <QPushButton>
@@ -129,6 +133,7 @@ public:
       QObject::disconnect(hostname, &QLineEdit::returnPressed, nullptr, nullptr);
     setAttribute(Qt::WA_DontShowOnScreen, !showOnScreen);
     open();
+    // Matrix widths represent a manual resize after the compact production startup.
     if (width > 0)
       resize(width, height());
   }
@@ -247,7 +252,7 @@ private Q_SLOTS:
     QTest::addColumn<QString>("language");
     QTest::addColumn<int>("width");
     for (const auto &language : {QStringLiteral("en"), QStringLiteral("zh_CN")})
-      for (int width : {540, 600, 820})
+      for (int width : {500, 600, 820})
         QTest::newRow(qPrintable(language + "-" + QString::number(width))) << language << width;
   }
   void init()
@@ -271,17 +276,25 @@ private Q_SLOTS:
     Settings::setValue(Settings::Security::TlsEnabled, false);
     Settings::setValue(Settings::Log::ToFile, false);
   }
-  void windowUsesMinimumWidthUnlessGeometryWasSaved()
+  void windowStartsCompactDespiteSavedGeometry()
   {
-    if (m_width > 540)
-      Settings::setValue(Settings::Gui::WindowGeometry, QRect(0, 0, m_width, 570));
+    Settings::setValue(Settings::Gui::WindowGeometry, QRect(25, 35, m_width + 200, 900));
     ControlledHttp server;
     IsolatedWindow window(server, 0);
-    QCOMPARE(window.minimumSize(), QSize(540, 535));
-    QCOMPARE(window.width(), m_width);
+    QCOMPARE(window.minimumSize(), QSize(500, 390));
+    QTRY_COMPARE(window.width(), 500);
     QVERIFY(window.height() >= window.minimumHeight());
     window.resize(200, 200);
-    QCOMPARE(window.size(), window.minimumSize());
+    QCOMPARE(window.size(), QSize(500, 390));
+  }
+  void windowStartsCompactWithoutSavedGeometry()
+  {
+    Settings::setValue(Settings::Gui::WindowGeometry);
+    ControlledHttp server;
+    IsolatedWindow window(server, 0);
+    QCOMPARE(window.minimumSize(), QSize(500, 390));
+    QTRY_COMPARE(window.width(), 500);
+    QVERIFY(window.height() >= 390);
   }
   void pageShortcutReceivesFocusOnTab()
   {
@@ -319,6 +332,7 @@ private Q_SLOTS:
     QPointer<SettingsDialog> editor = window.findChild<SettingsDialog *>();
     QTRY_VERIFY(editor && editor->isVisibleTo(&window));
     QTRY_VERIFY(back->isVisibleTo(&window));
+    QTRY_COMPARE(window.width(), m_width);
     QVERIFY(pageBar->isVisibleTo(&window));
     QTRY_VERIFY(homeShortcutsHidden());
     QTest::mouseClick(back, Qt::LeftButton);
@@ -326,6 +340,7 @@ private Q_SLOTS:
     QTRY_VERIFY(homeShortcutsVisible());
     QTRY_VERIFY(!back->isVisibleTo(&window));
     QTRY_VERIFY(editor.isNull());
+    QTRY_COMPARE(window.width(), m_width);
 
     pageBar->setFocus();
     QTest::keyClick(pageBar, Qt::Key_Tab);
@@ -336,17 +351,19 @@ private Q_SLOTS:
     editor = window.findChild<SettingsDialog *>();
     QTRY_VERIFY(editor && editor->isVisibleTo(&window));
     QTRY_VERIFY(back->isVisibleTo(&window));
+    QTRY_COMPARE(window.width(), m_width);
     QTRY_VERIFY(homeShortcutsHidden());
     QTest::mouseClick(back, Qt::LeftButton);
     QTRY_COMPARE(pages->currentIndex(), 0);
     QTRY_VERIFY(homeShortcutsVisible());
     QTRY_VERIFY(editor.isNull());
+    QTRY_COMPARE(window.width(), m_width);
   }
   void preferencesTabStripKeepsWorkspaceInsetAtMinimumHeight()
   {
     ControlledHttp server;
     IsolatedWindow window(server, m_width);
-    window.resize(m_width, 535);
+    window.resize(m_width, 700);
     auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
     auto *pageBar = window.findChild<QWidget *>("pageBar");
     auto *pages = window.findChild<QStackedWidget *>("pageStack");
@@ -364,7 +381,7 @@ private Q_SLOTS:
     auto *tabBar = tabs->tabBar();
     QVERIFY(tabBar);
     QTRY_VERIFY(editor->isVisibleTo(&window) && tabBar->isVisibleTo(&window));
-    QTRY_COMPARE(window.size(), QSize(m_width, 535));
+    QTRY_COMPARE(window.size(), QSize(m_width, 390));
     QVERIFY(settleStaticRender(window));
     QRect previousTabRect;
     QRect previousViewportRect;
@@ -383,12 +400,175 @@ private Q_SLOTS:
              qAbs(tabRect.top() - headerBottom - 10) <= 2;
     };
     QTRY_VERIFY_WITH_TIMEOUT(topInsetSettled(), 1000);
-    QCOMPARE(window.size(), QSize(m_width, 535));
+    QCOMPARE(window.size(), QSize(m_width, 390));
+    QTest::mouseClick(tabBar, Qt::LeftButton, Qt::NoModifier, tabBar->tabRect(1).center());
+    QTRY_COMPARE(tabs->currentIndex(), 1);
+    QTRY_COMPARE(window.width(), m_width);
+    QTest::mouseClick(tabBar, Qt::LeftButton, Qt::NoModifier, tabBar->tabRect(0).center());
+    QTRY_COMPARE(tabs->currentIndex(), 0);
+    QTRY_COMPARE(window.size(), QSize(m_width, 390));
+    QTRY_VERIFY_WITH_TIMEOUT(topInsetSettled(), 1000);
     capture(window, "preferences-general-top-inset");
     auto *back = window.findChild<QPushButton *>("btnBack");
     QVERIFY(back);
     QTest::mouseClick(back, Qt::LeftButton);
     QTRY_COMPARE(pages->currentIndex(), 0);
+    QTRY_COMPARE(window.width(), m_width);
+  }
+  void compactHomeAndPreferencesRenderWithoutClipping()
+  {
+    Settings::setValue(Settings::Gui::LogExpanded, true);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    const auto mappedRect = [&window](QWidget *widget) {
+      return QRect(widget->mapTo(&window, QPoint()), widget->size());
+    };
+    const auto imageMatchesWindow = [&window](const QImage &image) {
+      const qreal dpr = window.devicePixelRatioF();
+      return !image.isNull() && qAbs(image.devicePixelRatio() - dpr) < 0.001 &&
+             qAbs(image.width() - window.width() * dpr) <= 1 && qAbs(image.height() - window.height() * dpr) <= 1;
+    };
+    const auto pixel = [](const QImage &image, const QPoint &logical) {
+      const qreal dpr = image.devicePixelRatio();
+      return image.pixelColor(qRound(logical.x() * dpr), qRound(logical.y() * dpr));
+    };
+    const auto colorNear = [](QColor actual, QColor expected) {
+      return actual.alpha() == 255 && qAbs(actual.red() - expected.red()) <= 2 &&
+             qAbs(actual.green() - expected.green()) <= 2 && qAbs(actual.blue() - expected.blue()) <= 2;
+    };
+    const auto distinctPaintPixels = [&pixel](const QImage &image, const QRect &rect) {
+      const auto background = pixel(image, rect.topLeft() + QPoint(4, rect.height() / 2));
+      int count = 0;
+      for (int y = rect.top() + 4; y < rect.bottom() - 3; ++y)
+        for (int x = rect.left() + 6; x < rect.right() - 5; ++x) {
+          const auto color = pixel(image, QPoint(x, y));
+          count += qAbs(color.red() - background.red()) + qAbs(color.green() - background.green()) +
+                       qAbs(color.blue() - background.blue()) >
+                   24;
+        }
+      return count;
+    };
+    QList<QRect> previousLayout;
+    QElapsedTimer stableLayout;
+    const auto layoutSettled = [&] {
+      QList<QRect> current{window.rect()};
+      for (auto *widget : window.findChildren<QWidget *>())
+        if (widget->isVisibleTo(&window))
+          current.append(mappedRect(widget));
+      if (!stableLayout.isValid() || current != previousLayout) {
+        previousLayout = current;
+        stableLayout.start();
+      }
+      return stableLayout.elapsed() >= 50;
+    };
+    auto *workspace = window.findChild<QScrollArea *>("workspace");
+    auto *status = window.findChild<QWidget *>("statusBar");
+    auto *logPanel = window.findChild<QWidget *>("logPanel");
+    auto *card = window.findChild<QFrame *>("card");
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    auto *serverMode = window.findChild<ModeCard *>("rbModeServer");
+    auto *clientMode = window.findChild<ModeCard *>("rbModeClient");
+    auto *configure = window.findChild<QPushButton *>("btnConfigureServer");
+    auto *start = window.findChild<QPushButton *>("btnToggleCore");
+    auto *restart = window.findChild<QPushButton *>("btnRestartCore");
+    QVERIFY(
+        workspace && status && logPanel && card && preferences && serverMode && clientMode && configure && start &&
+        restart
+    );
+    QTRY_COMPARE(window.width(), m_width);
+    QVERIFY(settleStaticRender(window));
+    QTRY_VERIFY_WITH_TIMEOUT(layoutSettled(), 1000);
+    const auto home = window.grab().toImage();
+    QVERIFY(imageMatchesWindow(home));
+    QCOMPARE(window.size(), QSize(m_width, 390));
+    capture(window, "strict-home");
+    const QColor panel(synergy::gui::isDarkMode() ? "#242427" : "#ffffff");
+    const QColor idleMode(synergy::gui::isDarkMode() ? "#28292e" : "#f0f0f3");
+    QVERIFY(colorNear(pixel(home, card->mapTo(&window, QPoint(card->width() / 2, 5))), panel));
+    QVERIFY(colorNear(pixel(home, clientMode->mapTo(&window, QPoint(clientMode->width() - 8, 16))), idleMode));
+    const QList<QWidget *> homeControls{serverMode, clientMode, configure, start, restart};
+    for (int i = 0; i < homeControls.size(); ++i) {
+      auto *control = homeControls.at(i);
+      QVERIFY(control->isVisibleTo(&window));
+      QVERIFY2(mappedRect(workspace->viewport()).contains(mappedRect(control)), qPrintable(control->objectName()));
+      QVERIFY2(distinctPaintPixels(home, mappedRect(control)) > 8, qPrintable(control->objectName()));
+      for (int j = i + 1; j < homeControls.size(); ++j)
+        QVERIFY(!mappedRect(control).intersects(mappedRect(homeControls.at(j))));
+    }
+    QCOMPARE(workspace->horizontalScrollBar()->maximum(), 0);
+    const int homeBottomGap = mappedRect(status).top() - mappedRect(logPanel).bottom() - 1;
+    QVERIFY2(homeBottomGap >= 0 && homeBottomGap <= 100, qPrintable(QString::number(homeBottomGap)));
+
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    QTRY_VERIFY(window.findChild<SettingsDialog *>() != nullptr);
+    auto *editor = window.findChild<SettingsDialog *>();
+    auto *general = editor->findChild<QGroupBox *>("generalCard");
+    auto *tabs = editor->findChild<QTabWidget *>("tabWidget");
+    auto *buttons = editor->findChild<QDialogButtonBox *>("buttonBox");
+    auto *language = editor->findChild<QComboBox *>("comboLanguage");
+    auto *tray = editor->findChild<QComboBox *>("comboTrayIcon");
+    auto *sleep = editor->findChild<QCheckBox *>("cbPreventSleep");
+    auto *updates = editor->findChild<QCheckBox *>("checkForUpdates");
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(general && tabs && buttons && language && tray && sleep && updates && pages);
+    auto *area = qobject_cast<QScrollArea *>(pages->currentWidget());
+    QVERIFY(area);
+    QTRY_COMPARE(window.size(), QSize(m_width, 390));
+    QVERIFY(settleStaticRender(window));
+    stableLayout.invalidate();
+    QTRY_VERIFY_WITH_TIMEOUT(layoutSettled(), 1000);
+    const auto settings = window.grab().toImage();
+    QVERIFY(imageMatchesWindow(settings));
+    capture(window, "strict-preferences");
+    QVERIFY(colorNear(pixel(settings, general->mapTo(&window, QPoint(6, general->height() / 2))), panel));
+    const QList<QWidget *> settingsControls{tabs->tabBar(), sleep, updates, language, tray, buttons};
+    for (int i = 0; i < settingsControls.size(); ++i) {
+      auto *control = settingsControls.at(i);
+      QVERIFY(control->isVisibleTo(&window));
+      QVERIFY2(mappedRect(area->viewport()).contains(mappedRect(control)), qPrintable(control->objectName()));
+      QVERIFY2(distinctPaintPixels(settings, mappedRect(control)) > 8, qPrintable(control->objectName()));
+      for (int j = i + 1; j < settingsControls.size(); ++j)
+        QVERIFY(!mappedRect(control).intersects(mappedRect(settingsControls.at(j))));
+    }
+    QCOMPARE(area->horizontalScrollBar()->maximum(), 0);
+    QCOMPARE(area->verticalScrollBar()->maximum(), 0);
+    const int settingsBottomGap = mappedRect(status).top() - mappedRect(buttons).bottom() - 1;
+    QVERIFY2(settingsBottomGap >= 8 && settingsBottomGap <= 90, qPrintable(QString::number(settingsBottomGap)));
+    window.hide();
+    window.open();
+    QTRY_COMPARE(window.width(), m_width);
+    QTRY_COMPARE(window.size(), QSize(m_width, 390));
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    QVERIFY(back);
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 0);
+    QTRY_COMPARE(window.width(), m_width);
+    window.hide();
+    window.open();
+    QTRY_COMPARE(window.width(), m_width);
+  }
+  void viewMenuTogglesTheActualLogPanel()
+  {
+    Settings::setValue(Settings::Gui::LogExpanded, true);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *view = window.findChild<QMenu *>("menuView");
+    auto *log = window.findChild<LogPanel *>("logPanel");
+    QVERIFY(view && log);
+    QCOMPARE(view->actions().size(), 1);
+    auto *toggle = view->actions().first();
+    QVERIFY(toggle->isCheckable());
+    for (const bool collapsed : {true, false}) {
+      QCOMPARE(log->isCollapsed(), !collapsed);
+      view->popup(window.mapToGlobal(QPoint(12, 36)));
+      QTRY_VERIFY(view->isVisible());
+      const QRect item = view->actionGeometry(toggle);
+      QVERIFY(item.isValid());
+      QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, item.center());
+      QTRY_COMPARE(log->isCollapsed(), collapsed);
+      QTRY_VERIFY(!view->isVisible());
+      QCOMPARE(toggle->isChecked(), !collapsed);
+    }
   }
   void nameChangesRequireExplicitCommit()
   {
