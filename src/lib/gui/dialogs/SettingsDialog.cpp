@@ -12,7 +12,6 @@
 #include "common/LogLevel.h"
 #include "common/PlatformInfo.h"
 #include "gui/StyleUtils.h"
-#include "widgets/MessagePage.h"
 #include "widgets/PageHost.h"
 
 #include "common/Constants.h"
@@ -42,6 +41,7 @@
 #include <QListView>
 #include <QLocale>
 #include <QMessageBox>
+#include <QTimer>
 #include <QVariant>
 #include <algorithm>
 
@@ -261,6 +261,10 @@ void SettingsDialog::initConnections()
   connect(ui->groupSecurity, &QGroupBox::toggled, this, &SettingsDialog::updateTlsControlsEnabled);
   connect(ui->groupService, &QGroupBox::toggled, this, &SettingsDialog::updateControls);
   connect(ui->btnTlsRegenCert, &QPushButton::clicked, this, &SettingsDialog::regenCertificates);
+  connect(ui->btnDismissTlsRegeneration, &QPushButton::clicked, this, [this] {
+    ui->tlsRegenerationNotice->hide();
+    ui->btnTlsRegenCert->setFocus();
+  });
   connect(ui->btnViewFingerprint, &QPushButton::clicked, this, [this] {
     const auto savedPath = Settings::value(Settings::Security::Certificate).toString();
     const auto fingerprint = TlsUtility::certFingerprint(savedPath);
@@ -343,21 +347,25 @@ void SettingsDialog::initConnections()
 
 void SettingsDialog::regenCertificates()
 {
+  ui->tlsRegenerationNotice->hide();
   const auto certificate = Settings::value(Settings::Security::Certificate).toString();
   const int keyLength = std::max(kMinimumRsaBits, ui->comboTlsKeyLength->currentText().toInt());
   if (TlsUtility::generateCertificateAt(certificate, keyLength)) {
     // Regeneration is an explicit file action. Commit only its matching metadata
     // so cancelling unrelated drafts cannot leave the saved certificate invalid.
     Settings::setValue(Settings::Security::KeySize, keyLength);
-    auto *notice = new MessagePage(
-        this, MessagePage::Kind::Information, tr("TLS Certificate Regenerated"),
-        tr("TLS certificate regenerated successfully.")
-    );
-    auto *ok = notice->addButton(QObject::tr("OK"), true);
-    connect(ok, &QPushButton::clicked, notice, &QDialog::accept);
-    PageHost::present(this, notice);
     updateKeyLengthOnFile(certificate);
     setButtonBoxEnabledButtons();
+    ui->tlsRegenerationNotice->show();
+    // Wait for PageHost to fit the resizable editor. On short screens its
+    // outer viewport can scroll even when the Network tab itself fits.
+    QTimer::singleShot(0, ui->tlsRegenerationNotice, [notice = ui->tlsRegenerationNotice] {
+      if (!notice->isVisible())
+        return;
+      for (auto *parent = notice->parentWidget(); parent; parent = parent->parentWidget())
+        if (auto *area = qobject_cast<QScrollArea *>(parent))
+          area->ensureWidgetVisible(notice, 0, 0);
+    });
   }
 }
 

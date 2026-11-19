@@ -894,6 +894,84 @@ private Q_SLOTS:
     window.close();
     QVERIFY2(captionErrors.isEmpty(), qPrintable(captionErrors.join('\n')));
   }
+  void certificateResultStaysInNetworkSettings()
+  {
+    QTemporaryDir certificates;
+    QVERIFY(certificates.isValid());
+    const auto saved = certificates.filePath("saved.pem");
+    const auto draft = certificates.filePath("draft.pem");
+    Settings::setValue(Settings::Security::Certificate, saved);
+    Settings::setValue(Settings::Security::KeySize, 2048);
+    Settings::setValue(Settings::Security::TlsEnabled, true);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    auto *title = window.findChild<QLabel *>("pageTitle");
+    QVERIFY(preferences && pages && title);
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    auto *editor = window.findChild<SettingsDialog *>();
+    QVERIFY(editor);
+    auto *tabs = editor->findChild<QTabWidget *>("tabWidget");
+    auto *network = editor->findChild<QWidget *>("tabNetwork");
+    auto *scroll = editor->findChild<QScrollArea *>("networkScroll");
+    auto *path = editor->findChild<QLineEdit *>("lineTlsCertPath");
+    auto *regenerate = editor->findChild<QPushButton *>("btnTlsRegenCert");
+    QVERIFY(tabs && network && scroll && path && regenerate);
+    tabs->setCurrentWidget(network);
+    path->setText(draft);
+    QVERIFY(settleStaticRender(window));
+    scroll->ensureWidgetVisible(regenerate);
+    auto *activePage = qobject_cast<QScrollArea *>(pages->currentWidget());
+    QVERIFY(activePage);
+    const auto editorTitle = title->text();
+    // Exercise the outer scrollbar with an editor capped at the compact height.
+    if (m_width == 600) {
+      window.setMaximumHeight(window.minimumHeight());
+      QVERIFY(settleStaticRender(window));
+      activePage->ensureWidgetVisible(regenerate, 0, 0);
+    }
+    const auto editorHeight = window.height();
+    QSignalSpy navigation(pages, &QStackedWidget::currentChanged);
+    QVERIFY(regenerate->isVisibleTo(&window) && regenerate->isEnabled());
+    QTest::mouseClick(regenerate, Qt::LeftButton);
+    capture(window, "tls-result");
+
+    QCOMPARE(pages->currentWidget(), activePage);
+    QCOMPARE(navigation.count(), 0);
+    QCOMPARE(title->text(), editorTitle);
+    QCOMPARE(tabs->currentWidget(), network);
+    QCOMPARE(window.width(), m_width);
+    auto *notice = network->findChild<QFrame *>("tlsRegenerationNotice");
+    auto *text = network->findChild<QLabel *>("lblTlsRegenerationResult");
+    auto *ok = network->findChild<QPushButton *>("btnDismissTlsRegeneration");
+    QVERIFY(notice && text && ok);
+    QVERIFY(notice->isVisibleTo(&window) && ok->isVisibleTo(&window));
+    QCOMPARE(
+        text->text(),
+        I18N::currentLanguage() == "zh_CN" ? "TLS 证书重新生成成功。" : "TLS certificate regenerated successfully."
+    );
+    QVERIFY(notice->height() <= 56);
+    QVERIFY(text->contentsRect().width() >= text->fontMetrics().horizontalAdvance(text->text()));
+    QVERIFY(ok->width() <= ok->sizeHint().width());
+    QVERIFY(window.height() <= editorHeight + notice->height() + 8);
+    const auto viewport = scroll->viewport();
+    QTRY_VERIFY(viewport->rect().contains(QRect(notice->mapTo(viewport, QPoint()), notice->size())));
+    const auto outerViewport = activePage->viewport();
+    if (m_width == 600)
+      QVERIFY(activePage->verticalScrollBar()->maximum() > 0);
+    QTRY_VERIFY(outerViewport->rect().contains(QRect(notice->mapTo(outerViewport, QPoint()), notice->size())));
+    QVERIFY(synergy::gui::TlsUtility::isCertValid(saved));
+    QVERIFY(!QFile::exists(draft));
+    QCOMPARE(path->text(), draft);
+
+    QTest::mouseClick(ok, Qt::LeftButton);
+    QTRY_VERIFY(notice->isHidden());
+    QTRY_COMPARE(window.height(), editorHeight);
+    QCOMPARE(pages->currentWidget(), activePage);
+    QCOMPARE(navigation.count(), 0);
+    QCOMPARE(path->text(), draft);
+  }
   void savedCertificateFingerprintKeepsDistinctDraftPath()
   {
     // C-UI-R3-M04-R2: saved-certificate semantics must be explicit when draft B

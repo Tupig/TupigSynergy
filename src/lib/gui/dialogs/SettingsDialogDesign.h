@@ -93,6 +93,9 @@ public:
   QComboBox *comboTlsKeyLength = nullptr;
   QPushButton *btnTlsRegenCert = nullptr;
   QPushButton *btnViewFingerprint = nullptr;
+  QFrame *tlsRegenerationNotice = nullptr;
+  QLabel *lblTlsRegenerationResult = nullptr;
+  QPushButton *btnDismissTlsRegeneration = nullptr;
   QCheckBox *cbRequireClientCert = nullptr;
   QWidget *tabAdvanced = nullptr;
   QScrollArea *advancedScroll = nullptr;

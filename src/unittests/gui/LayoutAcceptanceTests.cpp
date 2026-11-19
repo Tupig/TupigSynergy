@@ -1030,19 +1030,17 @@ void LayoutAcceptanceTests::tlsRestoreDefaultsRemainsDraft()
 void LayoutAcceptanceTests::explicitRegenerationCommitsOnlyMatchingMetadata_data()
 {
   QTest::addColumn<QString>("language");
-  QTest::addColumn<QString>("title");
   QTest::addColumn<QString>("body");
   QTest::addColumn<QString>("confirm");
-  QTest::newRow("en-500") << QStringLiteral("en") << QStringLiteral("TLS Certificate Regenerated")
-                          << QStringLiteral("TLS certificate regenerated successfully.") << QStringLiteral("OK");
-  QTest::newRow("zh_CN-500") << QStringLiteral("zh_CN") << QStringLiteral("TLS 证书已重新生成")
-                             << QStringLiteral("TLS 证书重新生成成功。") << QStringLiteral("确定");
+  QTest::newRow("en-500") << QStringLiteral("en") << QStringLiteral("TLS certificate regenerated successfully.")
+                          << QStringLiteral("OK");
+  QTest::newRow("zh_CN-500") << QStringLiteral("zh_CN") << QStringLiteral("TLS 证书重新生成成功。")
+                             << QStringLiteral("确定");
 }
 
 void LayoutAcceptanceTests::explicitRegenerationCommitsOnlyMatchingMetadata()
 {
   QFETCH(QString, language);
-  QFETCH(QString, title);
   QFETCH(QString, body);
   QFETCH(QString, confirm);
   constexpr int width = 500;
@@ -1061,7 +1059,6 @@ void LayoutAcceptanceTests::explicitRegenerationCommitsOnlyMatchingMetadata()
   synergy::gui::ServerConfig config;
   PageHost host;
   prepare(host, width);
-  QSignalSpy displayedTitle(&host, &PageHost::titleChanged);
   auto *stack = host.findChild<QStackedWidget *>(QStringLiteral("pageStack"));
   QVERIFY(stack);
   auto *editor = new SettingsDialog(nullptr, config);
@@ -1086,45 +1083,21 @@ void LayoutAcceptanceTests::explicitRegenerationCommitsOnlyMatchingMetadata()
   QCOMPARE(Settings::value(Settings::Security::Certificate).toString(), storedPath);
   QCOMPARE(Settings::value(Settings::Core::PreventSleep).toBool(), storedSleep);
   QVERIFY(!QFile::exists(draftPath));
-  auto *notice = host.findChild<MessagePage *>();
-  QVERIFY2(notice && notice->isVisible(), "Certificate regeneration must show the styled message page");
-  QVERIFY(!host.findChild<QMessageBox *>());
-  QCOMPARE(stack->count(), 3);
-  auto *activePage = qobject_cast<QScrollArea *>(stack->currentWidget());
-  QVERIFY(activePage);
-  QCOMPARE(activePage->property("pageEditor").value<QDialog *>(), static_cast<QDialog *>(notice));
-  QCOMPARE(notice->windowTitle(), title);
-  QVERIFY(!displayedTitle.isEmpty());
-  QCOMPARE(displayedTitle.last().at(0).toString(), title);
-  auto *icon = notice->findChild<QLabel *>(QStringLiteral("messageIcon"));
-  auto *heading = notice->findChild<QLabel *>(QStringLiteral("messageTitle"));
-  auto *text = notice->findChild<QLabel *>(QStringLiteral("messageText"));
-  QCOMPARE(notice->findChildren<QPushButton *>().size(), qsizetype{1});
-  auto *ok = notice->findChild<QPushButton *>();
-  QVERIFY(icon && heading && text && ok);
-  QCOMPARE(icon->size(), QSize(32, 32));
-  QCOMPARE(heading->text(), title);
+  auto *notice = network->findChild<QFrame *>("tlsRegenerationNotice");
+  auto *text = network->findChild<QLabel *>("lblTlsRegenerationResult");
+  auto *ok = network->findChild<QPushButton *>("btnDismissTlsRegeneration");
+  QVERIFY(notice && text && ok && notice->isVisible());
+  QVERIFY(!host.findChild<QMessageBox *>() && !host.findChild<MessagePage *>());
+  QCOMPARE(stack->count(), 2);
+  QCOMPARE(stack->currentWidget()->property("pageEditor").value<QDialog *>(), static_cast<QDialog *>(editor));
   QCOMPARE(text->text(), body);
   QCOMPARE(ok->text(), confirm);
-  QVERIFY(ok->property("primary").toBool());
+  QCOMPARE(tabs->currentWidget(), network);
   QCOMPARE(host.width(), width);
-  QCOMPARE(activePage->horizontalScrollBar()->maximum(), 0);
-  for (auto *control : QList<QWidget *>{icon, heading, text, ok}) {
-    QVERIFY(control->isVisibleTo(notice));
-    QVERIFY(notice->rect().contains(QRect(control->mapTo(notice, QPoint()), control->size())));
-  }
-
-  const auto directory =
-      qEnvironmentVariable("SYNERGY_UI_EVIDENCE_DIR", QDir::temp().filePath(QStringLiteral("tupig-r2-layout")));
-  QVERIFY(QDir().mkpath(directory));
-  QVERIFY(settleStaticRender(host));
-  QPixmap image(host.size());
-  image.fill(Qt::transparent);
-  host.render(&image);
-  QVERIFY(image.save(QDir(directory).filePath(QStringLiteral("tls-regenerated-%1-500.png").arg(language))));
 
   QTest::mouseClick(ok, Qt::LeftButton);
   fit(host, width);
+  QVERIFY(notice->isHidden());
   QCOMPARE(stack->count(), 2);
   QCOMPARE(stack->currentWidget()->property("pageEditor").value<QDialog *>(), static_cast<QDialog *>(editor));
   QCOMPARE(tabs->currentWidget(), network);
@@ -1166,6 +1139,8 @@ void LayoutAcceptanceTests::failedRegenerationPreservesStoredMetadata()
   QVERIFY(!QFile::exists(blockedPath));
   QVERIFY(host.findChild<QMessageBox *>() == nullptr);
   QVERIFY(host.findChild<MessagePage *>() == nullptr);
+  auto *notice = editor->findChild<QFrame *>("tlsRegenerationNotice");
+  QVERIFY(notice && notice->isHidden());
   editor->reject();
   settle();
 }

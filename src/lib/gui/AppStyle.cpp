@@ -101,6 +101,7 @@ QString appStyleSheet()
 
     /* 卡片：无边框、圆角 11，内边距由布局给出 10/12 */
     QFrame#card { background: %5; border: 0; border-radius: 11px; }
+    QFrame#tlsRegenerationNotice { background: %21; border: 1px solid %7; border-radius: 8px; }
     QGroupBox {
       background: %5; border: 0; border-radius: 11px;
       margin-top: 0; padding: 0;
