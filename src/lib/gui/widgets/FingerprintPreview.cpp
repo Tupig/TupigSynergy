@@ -9,6 +9,7 @@
 
 #include <QClipboard>
 #include <QFont>
+#include <QFontDatabase>
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -76,11 +77,14 @@ QLayout *FingerprintPreview::sha256Layout(const Fingerprint &fingerprint, const 
   m_lblArt->setTextInteractionFlags(Qt::TextSelectableByMouse);
   m_lblArt->setVisible(!hashMode);
 
-  f = font();
-  f.setFamilies({"Hack", "Liberation Mono", "Monospace", "Andale Mono"});
-  f.setStyleHint(QFont::Monospace);
-  m_lblArt->setFont(f);
-  m_lblHash->setFont(f);
+  const auto itemFont = font();
+  auto codeFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+  if (itemFont.pixelSize() > 0)
+    codeFont.setPixelSize(itemFont.pixelSize());
+  else if (itemFont.pointSizeF() > 0)
+    codeFont.setPointSizeF(itemFont.pointSizeF());
+  m_lblArt->setFont(codeFont);
+  m_lblHash->setFont(codeFont);
 
   auto innersha256Layout = new QHBoxLayout();
   innersha256Layout->setContentsMargins(0, 0, 0, 0);
