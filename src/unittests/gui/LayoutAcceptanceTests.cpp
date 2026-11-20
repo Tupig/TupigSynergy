@@ -10,6 +10,7 @@
 #include "gui/AppMenus.h"
 #include "gui/AppStyle.h"
 #include "gui/Hotkey.h"
+#include "gui/StyleUtils.h"
 #include "gui/TlsUtility.h"
 #include "gui/config/Screen.h"
 #include "gui/config/ScreenList.h"
@@ -32,18 +33,22 @@
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QDoubleSpinBox>
 #include <QFile>
 #include <QFileInfo>
 #include <QFocusEvent>
 #include <QGroupBox>
+#include <QImage>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QLocale>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPixmap>
 #include <QRadioButton>
+#include <QScopeGuard>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSettings>
@@ -52,6 +57,8 @@
 #include <QStackedWidget>
 #include <QStyle>
 #include <QStyleOptionButton>
+#include <QStyleOptionFrame>
+#include <QStyleOptionSpinBox>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QTableView>
@@ -199,6 +206,89 @@ void fit(PageHost &host, int width)
   host.resize(width, qMin(660, host.preferredContentHeight(width)));
   settle();
 }
+
+template <typename SpinBox>
+void verifyNumericStepper(SpinBox &spin, const QString &maximumText, const QString &settingsKey, bool dark)
+{
+  QVERIFY(spin.isVisible() && spin.isEnabled());
+  QCOMPARE(spin.buttonSymbols(), QAbstractSpinBox::UpDownArrows);
+  auto *edit = spin.template findChild<QLineEdit *>();
+  QVERIFY(edit);
+  spin.setLocale(QLocale::c());
+  const auto initial = spin.value();
+  const auto stored = Settings::value(settingsKey);
+  const auto step = spin.singleStep();
+  QVERIFY(initial - step >= spin.minimum() && initial + step <= spin.maximum());
+  spin.setValue(spin.maximum());
+  QCOMPARE(edit->displayText(), maximumText);
+
+  QStyleOptionFrame frame;
+  frame.initFrom(edit);
+  frame.lineWidth = edit->hasFrame() ? edit->style()->pixelMetric(QStyle::PM_DefaultFrameWidth, &frame, edit) : 0;
+  const auto contents =
+      edit->style()->subElementRect(QStyle::SE_LineEditContents, &frame, edit).marginsRemoved(edit->textMargins());
+  const QRect text(edit->mapTo(&spin, contents.topLeft()), contents.size());
+  const int required = edit->fontMetrics().horizontalAdvance(edit->displayText()) + 4;
+  QVERIFY2(
+      text.width() >= required, qPrintable(QStringLiteral("%1 value %2 needs %3 px, has %4 px")
+                                               .arg(spin.objectName(), maximumText)
+                                               .arg(required)
+                                               .arg(text.width()))
+  );
+  spin.setValue(initial);
+
+  QStyleOptionSpinBox option;
+  option.initFrom(&spin);
+  option.frame = spin.hasFrame();
+  option.buttonSymbols = spin.buttonSymbols();
+  option.stepEnabled = QAbstractSpinBox::StepUpEnabled | QAbstractSpinBox::StepDownEnabled;
+  option.subControls = QStyle::SC_All;
+  const auto up = spin.style()->subControlRect(QStyle::CC_SpinBox, &option, QStyle::SC_SpinBoxUp, &spin);
+  const auto down = spin.style()->subControlRect(QStyle::CC_SpinBox, &option, QStyle::SC_SpinBoxDown, &spin);
+  QVERIFY(!up.isEmpty() && !down.isEmpty());
+  QVERIFY(spin.rect().contains(up) && spin.rect().contains(down));
+  QVERIFY(up.bottom() < down.top());
+  QVERIFY(!text.intersects(up) && !text.intersects(down));
+
+  // Paint the real styled widget at logical resolution. Exclude the button borders
+  // and sample the adjacent fill so we detect a rendered arrow, including at 1x DPI.
+  QImage image(spin.size(), QImage::Format_ARGB32_Premultiplied);
+  image.fill(Qt::transparent);
+  spin.render(&image);
+  for (const auto &button : {up, down}) {
+    const auto center = button.adjusted(4, 2, -4, -2);
+    QVERIFY(!center.isEmpty());
+    const auto background = qGray(image.pixel(button.left() + 3, button.center().y()));
+    QRect contrastingPixels;
+    for (int y = center.top(); y <= center.bottom(); ++y) {
+      for (int x = center.left(); x <= center.right(); ++x) {
+        const int difference = qGray(image.pixel(x, y)) - background;
+        if ((dark ? difference : -difference) >= 48)
+          contrastingPixels |= QRect(x, y, 1, 1);
+      }
+    }
+    QVERIFY2(
+        contrastingPixels.width() >= 3 && contrastingPixels.height() >= 2,
+        qPrintable(QStringLiteral("%1 %2 arrow has no visible glyph contrasting with its background")
+                       .arg(spin.objectName(), button == up ? QStringLiteral("up") : QStringLiteral("down")))
+    );
+  }
+
+  QTest::mouseClick(&spin, Qt::LeftButton, Qt::NoModifier, up.center());
+  QCOMPARE(spin.value(), initial + step);
+  QCOMPARE(Settings::value(settingsKey), stored);
+  QTest::mouseClick(&spin, Qt::LeftButton, Qt::NoModifier, down.center());
+  QCOMPARE(spin.value(), initial);
+  // Qt dispatches keyboard input to the spin box through the text editor's focus proxy.
+  QVERIFY(edit->focusProxy() == &spin);
+  edit->setFocus();
+  QTest::keyClick(&spin, Qt::Key_Down);
+  QCOMPARE(spin.value(), initial - step);
+  QTest::keyClick(&spin, Qt::Key_Up);
+  QCOMPARE(spin.value(), initial);
+  QCOMPARE(Settings::value(settingsKey), stored);
+}
+
 QPushButton *saveButton(QDialog &dialog)
 {
   auto *box = dialog.findChild<QDialogButtonBox *>();
@@ -251,6 +341,8 @@ private Q_SLOTS:
   void activeTabShrinksAndInvalidates();
   void actualPagesNaturalFit_data();
   void actualPagesNaturalFit();
+  void numericSteppersRenderAndRespond_data();
+  void numericSteppersRenderAndRespond();
   void serverTileDisplaysNameSuffix_data();
   void serverTileDisplaysNameSuffix();
   void aliasListGrowthAndShrink();
@@ -531,6 +623,72 @@ void LayoutAcceptanceTests::actualPagesNaturalFit()
   editor->reject();
   settle();
   QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+}
+
+void LayoutAcceptanceTests::numericSteppersRenderAndRespond_data()
+{
+  QTest::addColumn<bool>("dark");
+  QTest::newRow("light") << false;
+  QTest::newRow("dark") << true;
+}
+
+void LayoutAcceptanceTests::numericSteppersRenderAndRespond()
+{
+  QFETCH(bool, dark);
+  const auto originalPalette = qApp->palette();
+  const auto originalStyleSheet = qApp->styleSheet();
+  const auto restoreStyle = qScopeGuard([&] {
+    qApp->setPalette(originalPalette);
+    qApp->setStyleSheet(originalStyleSheet);
+  });
+  auto palette = QApplication::style()->standardPalette();
+  palette.setColor(QPalette::Window, QColor(dark ? "#1c1c1e" : "#f5f5f7"));
+  palette.setColor(QPalette::WindowText, QColor(dark ? "#e9e9ea" : "#1c1c1e"));
+  qApp->setPalette(palette);
+  QCOMPARE(synergy::gui::isDarkMode(), dark);
+  qApp->setStyleSheet(synergy::gui::appStyleSheet());
+
+  const ScopedSetting savedPort(Settings::Core::Port, 22211);
+  const ScopedSetting savedHorizontal(Settings::Client::XScrollScale, 1.0);
+  const ScopedSetting savedVertical(Settings::Client::YScrollScale, 1.0);
+  constexpr int width = 500;
+  PageHost host;
+  prepare(host, width);
+  const auto captureSteppers = [&](const QString &page) {
+    const auto directory = qEnvironmentVariable("SYNERGY_UI_EVIDENCE_DIR");
+    if (directory.isEmpty())
+      return;
+    QVERIFY(QDir().mkpath(directory));
+    QVERIFY(settleStaticRender(host));
+    const auto name = QStringLiteral("numeric-steppers-%1-%2.png").arg(page, dark ? "dark" : "light");
+    QVERIFY(host.grab().save(QDir(directory).filePath(name)));
+  };
+
+  synergy::gui::ServerConfig config;
+  auto *preferences = new SettingsDialog(nullptr, config);
+  host.push(preferences);
+  auto *tabs = preferences->findChild<QTabWidget *>();
+  auto *network = preferences->findChild<QWidget *>(QStringLiteral("tabNetwork"));
+  auto *port = preferences->findChild<QSpinBox *>(QStringLiteral("sbPort"));
+  QVERIFY(tabs && network && port);
+  tabs->setCurrentWidget(network);
+  fit(host, width);
+  QCOMPARE(host.width(), width);
+  verifyNumericStepper(*port, QStringLiteral("65535"), Settings::Core::Port, dark);
+  captureSteppers(QStringLiteral("preferences-network"));
+  preferences->reject();
+
+  auto *client = new ClientConfigDialog(nullptr);
+  host.push(client);
+  auto *horizontal = client->findChild<QDoubleSpinBox *>(QStringLiteral("sbXScrollScale"));
+  auto *vertical = client->findChild<QDoubleSpinBox *>(QStringLiteral("sbYScrollScale"));
+  QVERIFY(horizontal && vertical);
+  fit(host, width);
+  QCOMPARE(host.width(), width);
+  verifyNumericStepper(*horizontal, QStringLiteral("10.00"), Settings::Client::XScrollScale, dark);
+  verifyNumericStepper(*vertical, QStringLiteral("10.00"), Settings::Client::YScrollScale, dark);
+  captureSteppers(QStringLiteral("client"));
+  client->reject();
 }
 
 void LayoutAcceptanceTests::serverTileDisplaysNameSuffix_data()

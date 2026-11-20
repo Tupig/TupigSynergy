@@ -84,6 +84,22 @@ Session: %1 (%2)</source>
         <translation>第三方许可声明</translation>
     </message>
     <message>
+        <source>Project attribution</source>
+        <translation>项目来源</translation>
+    </message>
+    <message>
+        <source>Copyright</source>
+        <translation>版权</translation>
+    </message>
+    <message>
+        <source>Project license</source>
+        <translation>项目许可</translation>
+    </message>
+    <message>
+        <source>GNU GPL Version 2 with the OpenSSL exception.</source>
+        <translation>本项目采用 GNU GPL 第 2 版并保留 OpenSSL 例外。</translation>
+    </message>
+    <message>
         <source>GNU GPL Version 2 with the OpenSSL exception. Full copyright and third-party notices are available below.</source>
         <translation>本项目采用 GNU GPL 第 2 版并保留 OpenSSL 例外。完整版权与第三方许可声明可在下方查看。</translation>
     </message>

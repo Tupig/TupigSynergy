@@ -16,8 +16,10 @@
 #include "gui/TlsUtility.h"
 #include "gui/dialogs/AboutDialog.h"
 #include "gui/dialogs/ActionDialog.h"
+#include "gui/dialogs/ClientConfigDialog.h"
 #include "gui/dialogs/FingerprintDialog.h"
 #include "gui/dialogs/HotkeyDialog.h"
+#include "gui/dialogs/ScreenSettingsDialog.h"
 #include "gui/dialogs/ServerConfigDialog.h"
 #include "gui/dialogs/SettingsDialog.h"
 #include "gui/update/UpdateChecker.h"
@@ -47,6 +49,7 @@
 #include <QListWidget>
 #include <QMap>
 #include <QMenu>
+#include <QMessageBox>
 #include <QPointer>
 #include <QProgressBar>
 #include <QPushButton>
@@ -58,6 +61,8 @@
 #include <QSignalSpy>
 #include <QSpinBox>
 #include <QStackedWidget>
+#include <QStyle>
+#include <QStyleOptionButton>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QTcpServer>
@@ -243,6 +248,68 @@ void capture(QWidget &root, const QString &name)
       path + "/flow-" + name + "-" + I18N::currentLanguage() + "-" + QString::number(root.width()) + ".png"
   ));
 }
+
+void verifyEmbeddedFooter(MainWindow &window, QWidget *bottom, QWidget *actions, const QString &detail)
+{
+  auto *pages = window.findChild<QStackedWidget *>("pageStack");
+  auto *status = window.findChild<StatusBar *>("statusBar");
+  QVERIFY(pages && status && window.screen());
+  auto *area = qobject_cast<QScrollArea *>(pages->currentWidget());
+  QVERIFY(area && area->widget());
+  QVERIFY2(bottom && actions && bottom->isVisibleTo(&window) && actions->isVisibleTo(&window), qPrintable(detail));
+  QVERIFY(area->widget()->isAncestorOf(bottom));
+  auto *viewport = area->viewport();
+  const auto rect = [viewport](QWidget *widget) { return QRect(widget->mapTo(viewport, QPoint()), widget->size()); };
+  QVERIFY(settleStaticRender(window));
+  QList<QRect> previousGeometry;
+  QElapsedTimer stable;
+  const auto geometryStable = [&] {
+    const QList<QRect> geometry{window.rect(), viewport->rect(), rect(bottom), rect(actions)};
+    if (!stable.isValid() || geometry != previousGeometry) {
+      previousGeometry = geometry;
+      stable.start();
+    }
+    return stable.elapsed() >= 50;
+  };
+  QTRY_VERIFY_WITH_TIMEOUT(geometryStable(), 1000);
+  QCOMPARE(area->horizontalScrollBar()->maximum(), 0);
+  auto *vertical = area->verticalScrollBar();
+  const auto movePage = [&](Qt::Key direction, int end) {
+    area->setFocus();
+    QCOMPARE(window.focusWidget(), area);
+    while (vertical->value() != end) {
+      const int previous = vertical->value();
+      QTest::keyClick(area, direction);
+      QVERIFY(qAbs(vertical->value() - end) < qAbs(previous - end));
+    }
+  };
+  const int overflow = vertical->maximum();
+  if (overflow > 0) {
+    // Only screen-capped content may use the workspace scrollbar.
+    const int chrome = window.frameGeometry().height() - area->height();
+    const int cap = qBound(1, window.screen()->availableGeometry().height() - chrome, 660);
+    QVERIFY2(qAbs(area->height() - cap) <= 2, qPrintable(detail));
+    QVERIFY2(area->widget()->height() > viewport->height(), qPrintable(detail));
+    movePage(Qt::Key_PageDown, overflow);
+    if (QTest::currentTestFailed())
+      return;
+  }
+  const int gap = status->mapTo(&window, QPoint()).y() - bottom->mapTo(&window, QPoint()).y() - bottom->height();
+  qInfo().noquote() << detail << "height" << window.height() << "bottom gap" << gap << "vertical overflow" << overflow;
+  QVERIFY2(viewport->rect().contains(rect(actions)), qPrintable(detail));
+  QVERIFY2(qAbs(gap - 10) <= 2, qPrintable(detail + QStringLiteral(" bottom gap %1 px").arg(gap)));
+  if (overflow > 0)
+    movePage(Qt::Key_PageUp, 0);
+}
+
+void verifyDialogFooter(MainWindow &window, QDialog *editor, const QString &detail)
+{
+  QVERIFY(editor);
+  auto *buttons = editor->findChild<QDialogButtonBox *>();
+  QVERIFY(buttons);
+  auto *card = qobject_cast<QGroupBox *>(buttons->parentWidget());
+  verifyEmbeddedFooter(window, card ? static_cast<QWidget *>(card) : buttons, buttons, detail);
+}
 } // namespace
 
 // Additive executable counterpart of accepted M-C01, M-C05 and M-C06.
@@ -379,9 +446,10 @@ private Q_SLOTS:
     auto *editor = window.findChild<SettingsDialog *>();
     auto *tabs = editor->findChild<QTabWidget *>("tabWidget");
     auto *general = editor->findChild<QGroupBox *>("generalCard");
+    auto *buttons = editor->findChild<QDialogButtonBox *>("buttonBox");
     auto *status = window.findChild<StatusBar *>("statusBar");
     auto *area = qobject_cast<QScrollArea *>(pages->currentWidget());
-    QVERIFY(tabs && general && status && area);
+    QVERIFY(tabs && general && buttons && status && area && window.screen());
     QCOMPARE(area->property("pageEditor").value<QDialog *>(), static_cast<QDialog *>(editor));
     QTRY_COMPARE(tabs->currentIndex(), 0);
     QCOMPARE(tabs->currentWidget()->objectName(), QStringLiteral("tabGeneral"));
@@ -408,12 +476,46 @@ private Q_SLOTS:
     QTRY_VERIFY_WITH_TIMEOUT(topInsetSettled(), 1000);
     QCOMPARE(window.width(), m_width);
     const auto generalSize = window.size();
-    const int bottomGap =
-        status->mapTo(&window, QPoint()).y() - general->mapTo(&window, QPoint()).y() - general->height();
-    QVERIFY2(qAbs(bottomGap - 10) <= 2, qPrintable(QString::number(bottomGap)));
-    QTest::mouseClick(tabBar, Qt::LeftButton, Qt::NoModifier, tabBar->tabRect(1).center());
-    QTRY_COMPARE(tabs->currentIndex(), 1);
-    QTRY_COMPARE(window.width(), m_width);
+    const auto verifyActiveTabFit = [&](const char *phase) {
+      auto *card = qobject_cast<QGroupBox *>(buttons->parentWidget());
+      const auto tabName = tabs->currentWidget()->objectName();
+      const auto detail = tabName + QStringLiteral(" / ") + QString::fromLatin1(phase);
+      QVERIFY2(card && tabs->currentWidget()->isAncestorOf(card) && card->isVisibleTo(&window), qPrintable(detail));
+      QCOMPARE(window.width(), m_width);
+      verifyEmbeddedFooter(window, card, buttons, detail);
+      if (!QTest::currentTestFailed() && m_width == 500 && QLatin1String(phase) == QLatin1String("baseline"))
+        capture(window, "preferences-fit-" + tabName);
+    };
+    const QStringList toggleNames{
+        "cbPreventSleep", "cbShowVersion", "cbLogToFile", "cbTlsEnabled", "cbRunEnterCommand"
+    };
+    QCOMPARE(tabs->count(), toggleNames.size());
+    for (int index = 0; index < tabs->count(); ++index) {
+      QTest::mouseClick(tabBar, Qt::LeftButton, Qt::NoModifier, tabBar->tabRect(index).center());
+      QTRY_COMPARE(tabs->currentIndex(), index);
+      verifyActiveTabFit("baseline");
+      if (QTest::currentTestFailed())
+        return;
+      auto *toggle = tabs->currentWidget()->findChild<QCheckBox *>(toggleNames.at(index));
+      QVERIFY(toggle && toggle->isVisibleTo(&window) && toggle->isEnabled());
+      const auto original = toggle->isChecked();
+      QStyleOptionButton option;
+      option.initFrom(toggle);
+      const auto indicator = toggle->style()->subElementRect(QStyle::SE_CheckBoxIndicator, &option, toggle);
+      QVERIFY(!indicator.isEmpty());
+      const auto click = indicator.center();
+      QVERIFY(area->viewport()->rect().contains(toggle->mapTo(area->viewport(), click)));
+      QTest::mouseClick(toggle, Qt::LeftButton, Qt::NoModifier, click);
+      QTRY_COMPARE(toggle->isChecked(), !original);
+      verifyActiveTabFit("toggled");
+      if (QTest::currentTestFailed())
+        return;
+      QTest::mouseClick(toggle, Qt::LeftButton, Qt::NoModifier, click);
+      QTRY_COMPARE(toggle->isChecked(), original);
+      verifyActiveTabFit("restored");
+      if (QTest::currentTestFailed())
+        return;
+    }
     QTest::mouseClick(tabBar, Qt::LeftButton, Qt::NoModifier, tabBar->tabRect(0).center());
     QTRY_COMPARE(tabs->currentIndex(), 0);
     QTRY_COMPARE(window.size(), generalSize);
@@ -820,7 +922,9 @@ private Q_SLOTS:
     IsolatedWindow window(server, m_width);
     window.serverConfig().addClient("Delete-Fixture");
     auto *open = window.findChild<QPushButton *>("btnConfigureServer");
-    QVERIFY(open);
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(open && back && pages);
     const auto select = [](ScreenSetupView *view, const QString &name) {
       for (int row = 0; row < view->model()->rowCount(); ++row)
         for (int column = 0; column < view->model()->columnCount(); ++column) {
@@ -840,6 +944,69 @@ private Q_SLOTS:
       auto *remove = editor->findChild<QPushButton *>("deleteSelectedComputerButton");
       auto *external = editor->findChild<QCheckBox *>("cbExternalConfig");
       QVERIFY(view && remove && external);
+      if (!save && m_width == 500) {
+        auto *tabs = editor->findChild<QTabWidget *>();
+        QVERIFY(tabs);
+        QCOMPARE(tabs->count(), 4);
+        for (int index = 0; index < tabs->count(); ++index) {
+          QTest::mouseClick(tabs->tabBar(), Qt::LeftButton, Qt::NoModifier, tabs->tabBar()->tabRect(index).center());
+          QTRY_COMPARE(tabs->currentIndex(), index);
+          const auto name = "server-fit-" + tabs->currentWidget()->objectName();
+          verifyDialogFooter(window, editor, name);
+          if (QTest::currentTestFailed())
+            return;
+          capture(window, name);
+        }
+        auto *file = editor->findChild<QLineEdit *>("lineConfigFile");
+        auto *actions = editor->findChild<QDialogButtonBox *>();
+        QVERIFY(file && actions);
+        const auto invalid = Settings::userDir() + "/missing-server.conf";
+        external->setChecked(true);
+        file->setText(invalid);
+        auto *saveConfig = actions->button(QDialogButtonBox::Ok);
+        QVERIFY(saveConfig && saveConfig->isEnabled());
+        QTest::mouseClick(saveConfig, Qt::LeftButton);
+        QTRY_COMPARE(pages->currentIndex(), 2);
+        auto *confirmation = window.findChild<QMessageBox *>();
+        verifyDialogFooter(window, confirmation, "server-fit-invalid-file");
+        if (QTest::currentTestFailed())
+          return;
+        capture(window, "server-fit-invalid-file");
+        QEvent restyle(QEvent::StyleChange);
+        QCoreApplication::sendEvent(confirmation, &restyle);
+        verifyDialogFooter(window, confirmation, "server-fit-invalid-file-after-style-change");
+        if (QTest::currentTestFailed())
+          return;
+        QTest::mouseClick(back, Qt::LeftButton);
+        QTRY_COMPARE(pages->currentIndex(), 1);
+        QCOMPARE(file->text(), invalid);
+        external->setChecked(false);
+        QTest::mouseClick(tabs->tabBar(), Qt::LeftButton, Qt::NoModifier, tabs->tabBar()->tabRect(0).center());
+        QTRY_COMPARE(tabs->currentIndex(), 0);
+        QVERIFY(settleStaticRender(window));
+        QVERIFY(select(view, "Delete-Fixture"));
+        const auto computer = view->visualRect(view->currentIndex()).center();
+        QVERIFY(view->viewport()->rect().contains(computer));
+        QTest::mouseDClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, computer);
+        QTRY_COMPARE(pages->currentIndex(), 2);
+        auto *screen = window.findChild<ScreenSettingsDialog *>();
+        QVERIFY(screen);
+        auto *screenTabs = screen->findChild<QTabWidget *>();
+        QVERIFY(screenTabs);
+        QCOMPARE(screenTabs->count(), 4);
+        for (int index = 0; index < screenTabs->count(); ++index) {
+          auto *bar = screenTabs->tabBar();
+          QTest::mouseClick(bar, Qt::LeftButton, Qt::NoModifier, bar->tabRect(index).center());
+          QTRY_COMPARE(screenTabs->currentIndex(), index);
+          const auto name = "screen-fit-tab-" + QString::number(index);
+          verifyDialogFooter(window, screen, name);
+          if (QTest::currentTestFailed())
+            return;
+          capture(window, name);
+        }
+        QTest::mouseClick(back, Qt::LeftButton);
+        QTRY_COMPARE(pages->currentIndex(), 1);
+      }
       QVERIFY(select(view, window.serverConfig().getServerName()));
       QVERIFY(!remove->isEnabled());
       QVERIFY(select(view, "Delete-Fixture"));
@@ -858,6 +1025,22 @@ private Q_SLOTS:
       QTest::mouseClick(buttons->button(save ? QDialogButtonBox::Ok : QDialogButtonBox::Cancel), Qt::LeftButton);
       QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
       QCOMPARE(window.serverConfig().screenExists("Delete-Fixture"), !save);
+    }
+    if (m_width == 500) {
+      auto *clientMode = window.findChild<ModeCard *>("rbModeClient");
+      auto *clientSetup = window.findChild<QPushButton *>("btnConfigureClient");
+      QVERIFY(clientMode && clientSetup);
+      QTest::mouseClick(clientMode, Qt::LeftButton);
+      QTRY_VERIFY(clientSetup->isVisibleTo(&window));
+      QTest::mouseClick(clientSetup, Qt::LeftButton);
+      QTRY_COMPARE(pages->currentIndex(), 1);
+      auto *client = window.findChild<ClientConfigDialog *>();
+      verifyDialogFooter(window, client, "client-fit");
+      if (QTest::currentTestFailed())
+        return;
+      capture(window, "client-fit");
+      QTest::mouseClick(back, Qt::LeftButton);
+      QTRY_COMPARE(pages->currentIndex(), 0);
     }
     window.close();
   }
@@ -923,6 +1106,12 @@ private Q_SLOTS:
     QTest::mouseClick(parent->findChild<QPushButton *>("btnEditHotkey"), Qt::LeftButton);
     auto *hotkey = window.findChild<HotkeyDialog *>();
     QVERIFY(hotkey);
+    if (m_width == 500) {
+      verifyDialogFooter(window, hotkey, "hotkey-fit");
+      if (QTest::currentTestFailed())
+        return;
+      capture(window, "hotkey-fit");
+    }
     auto *associated = hotkey->findChild<QListWidget *>("listAssociatedActions");
     QVERIFY(associated);
     associated->setCurrentRow(0);
@@ -932,11 +1121,23 @@ private Q_SLOTS:
     QTest::mouseClick(hotkey->findChild<QPushButton *>("btnAddAction"), Qt::LeftButton);
     auto *addition = window.findChild<ActionDialog *>();
     QVERIFY(addition);
+    if (m_width == 500) {
+      verifyDialogFooter(window, addition, "action-fit-initial");
+      if (QTest::currentTestFailed())
+        return;
+      capture(window, "action-fit-initial");
+    }
     auto *type = addition->findChild<QComboBox *>("comboActionType");
     auto *direction = addition->findChild<QComboBox *>("comboSwitchInDirection");
     QVERIFY(type && direction);
     type->setCurrentIndex(type->findData(4));
     direction->setCurrentIndex(direction->findData(2));
+    if (m_width == 500) {
+      verifyDialogFooter(window, addition, "action-fit-switch-direction");
+      if (QTest::currentTestFailed())
+        return;
+      capture(window, "action-fit-switch-direction");
+    }
     QTest::mouseClick(addition->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok), Qt::LeftButton);
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     QCOMPARE(associated->count(), 2);
@@ -998,6 +1199,11 @@ private Q_SLOTS:
       activePage->ensureWidgetVisible(regenerate, 0, 0);
     }
     const auto editorHeight = window.height();
+    if (m_width != 600) {
+      verifyDialogFooter(window, editor, "tls-fit-before-regeneration");
+      if (QTest::currentTestFailed())
+        return;
+    }
     QSignalSpy navigation(pages, &QStackedWidget::currentChanged);
     QVERIFY(regenerate->isVisibleTo(&window) && regenerate->isEnabled());
     QTest::mouseClick(regenerate, Qt::LeftButton);
@@ -1031,12 +1237,22 @@ private Q_SLOTS:
     QVERIFY(!QFile::exists(draft));
     QCOMPARE(path->text(), draft);
 
+    if (m_width != 600 && activePage->verticalScrollBar()->maximum() == 0) {
+      verifyDialogFooter(window, editor, "tls-fit-notice-revealed");
+      if (QTest::currentTestFailed())
+        return;
+    }
     QTest::mouseClick(ok, Qt::LeftButton);
     QTRY_VERIFY(notice->isHidden());
     QTRY_COMPARE(window.height(), editorHeight);
     QCOMPARE(pages->currentWidget(), activePage);
     QCOMPARE(navigation.count(), 0);
     QCOMPARE(path->text(), draft);
+    if (m_width != 600) {
+      verifyDialogFooter(window, editor, "tls-fit-notice-dismissed");
+      if (!QTest::currentTestFailed() && m_width == 500)
+        capture(window, "tls-fit-notice-dismissed");
+    }
   }
   void savedCertificateFingerprintKeepsDistinctDraftPath()
   {
@@ -1113,13 +1329,20 @@ private Q_SLOTS:
     QVERIFY(checking);
     auto *progress = checking->findChild<QProgressBar *>();
     auto *card = checking->findChild<QFrame *>("card");
-    QVERIFY(progress && card && card->isAncestorOf(progress));
+    auto *status = window.findChild<StatusBar *>("statusBar");
+    QVERIFY(progress && card && status && card->isAncestorOf(progress));
+    const auto bottomGap = [&](QFrame *activeCard) {
+      return status->mapTo(&window, QPoint()).y() - activeCard->mapTo(&window, QPoint()).y() - activeCard->height();
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(qAbs(bottomGap(card) - 10) <= 2, 1000);
     capture(window, "checking");
     server.write("HTTP/1.1 503 Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", true);
     QTRY_VERIFY(message(window, QCoreApplication::translate("MainWindow", "Update Check Failed")));
     auto *failed = message(window, QCoreApplication::translate("MainWindow", "Update Check Failed"));
     auto *retry = button(*failed, QCoreApplication::translate("MainWindow", "Retry"));
-    QVERIFY(retry);
+    auto *failedCard = failed->findChild<QFrame *>("card");
+    QVERIFY(retry && failedCard);
+    QTRY_VERIFY_WITH_TIMEOUT(qAbs(bottomGap(failedCard) - 10) <= 2, 1000);
     capture(window, "check-failed");
     QTest::mouseClick(retry, Qt::LeftButton);
     QTRY_COMPARE(server.requests, 2);

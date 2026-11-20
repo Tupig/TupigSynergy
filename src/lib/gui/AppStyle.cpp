@@ -173,7 +173,8 @@ QString appStyleSheet()
     QProgressBar#updateProgress::chunk { border-radius: 4px; background: %11; }
     QComboBox::drop-down { border: 0; width: 18px; }
     QComboBox::down-arrow { image: url(%22); width: 12px; height: 12px; }
-    QSpinBox, QDoubleSpinBox { padding-right: 25px; }
+    /* Qt 已为右侧的微调按钮保留空间，无需在编辑区重复扣除。 */
+    QSpinBox, QDoubleSpinBox { padding-right: 0; }
     QSpinBox::up-button, QSpinBox::down-button,
     QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
       subcontrol-origin: padding; width: 22px; height: 14px;
