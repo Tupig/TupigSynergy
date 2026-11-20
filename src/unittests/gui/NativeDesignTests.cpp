@@ -42,6 +42,7 @@
 #include <QFontInfo>
 #include <QFontMetrics>
 #include <QHostAddress>
+#include <QImage>
 #include <QLabel>
 #include <QLibraryInfo>
 #include <QLineEdit>
@@ -177,6 +178,7 @@ private Q_SLOTS:
   void fingerprintsShowFullHashAndRejectByDefault();
   void aboutUsesBuildVersionAndCompactTitle();
   void collapsedLogShowsOneLatestMessage();
+  void collapsedLogBadgeHasRoundedCorners();
   void coreLogUsesChineseCatalogue_data();
   void coreLogUsesChineseCatalogue();
   void logFollowsTailWithoutInterruptingHistory();
@@ -875,6 +877,31 @@ void NativeDesignTests::collapsedLogShowsOneLatestMessage()
   QVERIFY(records->isVisibleTo(&panel));
   QVERIFY(records->allText().contains(QStringLiteral("first")));
   QVERIFY(records->allText().contains(QStringLiteral("last complete message")));
+}
+
+void NativeDesignTests::collapsedLogBadgeHasRoundedCorners()
+{
+  applyTestPalette(true);
+  LogPanel panel;
+  panel.setAttribute(Qt::WA_DontShowOnScreen);
+  panel.resize(500, panel.sizeHint().height());
+  panel.setCollapsed(true);
+  panel.show();
+  QVERIFY(settleStaticRender(panel));
+
+  auto *badge = panel.findChild<QLabel *>(QStringLiteral("logBadge"));
+  QVERIFY(badge && badge->isVisibleTo(&panel));
+  const QRect bounds(badge->mapTo(&panel, QPoint()) * 2, badge->size() * 2);
+  QImage image(panel.size() * 2, QImage::Format_ARGB32_Premultiplied);
+  image.setDevicePixelRatio(2);
+  image.fill(Qt::transparent);
+  panel.render(&image);
+  QVERIFY(image.rect().contains(bounds.adjusted(-2, 0, 0, 0)));
+  const auto background = image.pixelColor(bounds.left() - 2, bounds.top());
+  for (const auto &corner : {bounds.topLeft(), bounds.topRight(), bounds.bottomLeft(), bounds.bottomRight()}) {
+    QCOMPARE(image.pixelColor(corner), background);
+  }
+  QVERIFY(image.pixelColor(bounds.center().x(), bounds.top()) != background);
 }
 
 void NativeDesignTests::coreLogUsesChineseCatalogue_data()
