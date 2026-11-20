@@ -51,6 +51,7 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QRegularExpression>
+#include <QScreen>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSettings>
@@ -1147,13 +1148,36 @@ private Q_SLOTS:
       QVERIFY(last && last->isVisibleTo(&window));
       QVERIFY(settleStaticRender(window));
       auto *page = qobject_cast<QScrollArea *>(pages->currentWidget());
-      QVERIFY(page);
+      QVERIFY(page && page->widget() && window.screen());
+      auto *scroll = page->verticalScrollBar();
       const auto lastRect = [&] { return QRect(last->mapTo(page->viewport(), QPoint()), last->size()); };
+      const auto atBodyCap = [&] {
+        const int chrome = window.frameGeometry().height() - page->height();
+        const int available = window.screen()->availableGeometry().height();
+        const int bodyCap = qBound(1, available - chrome, 660);
+        return qAbs(page->height() - bodyCap) <= 2;
+      };
+      QTRY_VERIFY_WITH_TIMEOUT(
+          scroll->maximum() > 0 ? atBodyCap() : page->viewport()->rect().contains(lastRect()), 1000
+      );
+      QCOMPARE(page->horizontalScrollBar()->maximum(), 0);
+      if (scroll->maximum() > 0) {
+        QVERIFY(page->widget()->height() > page->viewport()->height());
+        QVERIFY(scroll->value() < scroll->maximum());
+        page->setFocus();
+        QCOMPARE(window.focusWidget(), page);
+        while (scroll->value() < scroll->maximum()) {
+          const int before = scroll->value();
+          QTest::keyClick(page, Qt::Key_PageDown);
+          QVERIFY2(scroll->value() > before, "Page Down must scroll capped content toward the bottom actions");
+        }
+        QCOMPARE(scroll->value(), scroll->maximum());
+      }
       QTRY_VERIFY_WITH_TIMEOUT(page->viewport()->rect().contains(lastRect()), 1000);
       const int gap = status->mapTo(&window, QPoint()).y() - last->mapTo(&window, QPoint()).y() - last->height();
-      qInfo().noquote() << name << "window height" << window.height() << "bottom gap" << gap;
-      if (page->verticalScrollBar()->maximum() == 0)
-        QVERIFY2(qAbs(gap - 10) <= 2, qPrintable(QStringLiteral("%1 bottom gap: %2 px").arg(name).arg(gap)));
+      qInfo().noquote() << name << "window height" << window.height() << "bottom gap" << gap << "vertical scroll"
+                        << scroll->value() << "of" << scroll->maximum();
+      QVERIFY2(qAbs(gap - 10) <= 2, qPrintable(QStringLiteral("%1 bottom gap: %2 px").arg(name).arg(gap)));
       QCOMPARE(window.width(), m_width);
       capture(window, name);
     };
@@ -1164,6 +1188,8 @@ private Q_SLOTS:
     auto *aboutClose = about->findChild<QPushButton *>("btnOk");
     QVERIFY(notices && aboutClose);
     record("about-compact", aboutClose);
+    if (QTest::currentTestFailed())
+      return;
     const int aboutHeight = window.height();
     QTest::mouseClick(notices, Qt::LeftButton);
     QTRY_COMPARE(pages->currentIndex(), 2);
@@ -1173,6 +1199,8 @@ private Q_SLOTS:
     QVERIFY(notice);
     auto *noticeClose = button(*notice, QCoreApplication::translate("AboutDialog", "&Close"));
     record("about-notices", noticeClose);
+    if (QTest::currentTestFailed())
+      return;
     QTest::mouseClick(back, Qt::LeftButton);
     QTRY_COMPARE(pages->currentIndex(), 1);
     QTRY_COMPARE(window.height(), aboutHeight);
@@ -1191,11 +1219,17 @@ private Q_SLOTS:
       QVERIFY(toggle);
       const auto kind = mode == FingerprintDialogMode::Local ? QStringLiteral("local") : QStringLiteral("compare");
       record("fingerprint-" + kind + "-hash", actions);
+      if (QTest::currentTestFailed())
+        return;
+      const int hashHeight = window.height();
       QTest::mouseClick(toggle, Qt::LeftButton);
       QTRY_VERIFY(hash->isHidden());
       record("fingerprint-" + kind + "-image", actions);
+      if (QTest::currentTestFailed())
+        return;
       QTest::mouseClick(toggle, Qt::LeftButton);
       QTRY_VERIFY(hash->isVisibleTo(&window));
+      QTRY_COMPARE(window.height(), hashHeight);
       QTest::mouseClick(back, Qt::LeftButton);
       QTRY_COMPARE(pages->currentIndex(), 0);
     }
