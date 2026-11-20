@@ -55,6 +55,26 @@ class MacUpdateInstallerTests(unittest.TestCase):
         cls.install_script = shell_literal(source, "kInstallBundle")
         cls.disk_image_script = shell_literal(source, "kInstallFromDiskImage")
         cls.runner_script = shell_literal(source, "kRunUpdate")
+        temporary = tempfile.TemporaryDirectory(prefix="tupig-update-fixture-")
+        cls.addClassCleanup(temporary.cleanup)
+        cls.fixture_executable = Path(temporary.name) / "fixture"
+        # Use our own executable so the fixtures do not inherit platform-binary signatures or flags.
+        fixture_source = """\
+#include <unistd.h>
+
+int main(int argc, char **argv)
+{
+    (void)argv;
+    if (argc > 1)
+        sleep(45);
+    return 0;
+}
+"""
+        compilation = run([
+            "/usr/bin/xcrun", "--sdk", "macosx", "clang", "-x", "c", "-", "-o", str(cls.fixture_executable),
+        ], input=fixture_source)
+        if compilation.returncode != 0:
+            raise AssertionError(f"Could not compile updater fixture:\n{compilation.stdout}{compilation.stderr}")
 
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="tupig-update-test-")
@@ -80,6 +100,11 @@ class MacUpdateInstallerTests(unittest.TestCase):
     def verify_signature(self, path):
         return run([CODESIGN, "--verify", "--deep", "--strict", str(path)])
 
+    def write_fixture_executable(self, executable):
+        shutil.copyfile(self.fixture_executable, executable)
+        executable.chmod(0o755)
+        self.assert_success(run([CODESIGN, "--force", "--sign", "-", str(executable)]))
+
     def write_app(self, root, version, bundle_id=BUNDLE_ID):
         contents = root / "Contents"
         macos = contents / "MacOS"
@@ -96,10 +121,7 @@ class MacUpdateInstallerTests(unittest.TestCase):
             "CFBundleVersion": version,
         }
         (contents / "Info.plist").write_bytes(plistlib.dumps(plist))
-        executable = macos / "Fixture"
-        shutil.copyfile("/usr/bin/true", executable)
-        executable.chmod(0o755)
-        self.assert_success(run([CODESIGN, "--force", "--sign", "-", str(executable)]))
+        self.write_fixture_executable(macos / "Fixture")
         (resources / f"version-{version}.txt").write_text(version, encoding="ascii")
         self.assert_success(run([CODESIGN, "--force", "--sign", "-", str(root)]))
         self.assert_success(self.verify_signature(root))
@@ -120,22 +142,28 @@ class MacUpdateInstallerTests(unittest.TestCase):
 
     def start_bundle_process(self, bundle, name="Fixture"):
         executable = bundle / "Contents/MacOS" / name
-        shutil.copyfile("/bin/sleep", executable)
-        executable.chmod(0o755)
-        self.assert_success(run([CODESIGN, "--force", "--sign", "-", str(executable)]))
+        self.write_fixture_executable(executable)
         self.assert_success(run([CODESIGN, "--force", "--sign", "-", str(bundle)]))
         self.assert_success(self.verify_signature(bundle))
-        process = subprocess.Popen([str(executable), "45"], env=self.environment,
-                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        process = subprocess.Popen([str(executable), "--wait"], env=self.environment,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
 
         def stop_fixture():
             if process.poll() is None:
                 process.terminate()
                 process.wait(timeout=5)
 
+        self.addCleanup(process.stderr.close)
         self.addCleanup(stop_fixture)
-        self.assertEqual(run(["/bin/ps", "-ww", "-p", str(process.pid), "-o", "comm="]).stdout.strip(),
-                         str(executable))
+        identity = run(["/bin/ps", "-ww", "-p", str(process.pid), "-o", "comm="])
+        exit_code = process.poll()
+        if exit_code is not None:
+            self.fail(
+                f"Fixture {executable} exited before the path check (status {exit_code}; "
+                f"ps: {identity.stdout + identity.stderr!r}; stderr: {process.stderr.read()!r})"
+            )
+        self.assert_success(identity)
+        self.assertEqual(identity.stdout.strip(), str(executable))
         return process
 
     def assert_original_installation(self):
