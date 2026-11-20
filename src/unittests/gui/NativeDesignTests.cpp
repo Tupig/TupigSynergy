@@ -38,6 +38,7 @@
 #include <QDebug>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QFile>
 #include <QFontDatabase>
 #include <QFontInfo>
 #include <QFontMetrics>
@@ -55,6 +56,7 @@
 #include <QRegularExpression>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QSet>
 #include <QSignalSpy>
 #include <QStackedWidget>
 #include <QStyle>
@@ -65,6 +67,8 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTemporaryDir>
+#include <QTextBlock>
+#include <QTextBrowser>
 #include <QTranslator>
 #include <QVBoxLayout>
 #include <QtTest>
@@ -177,6 +181,8 @@ private Q_SLOTS:
   void shortPreferenceFieldsStayCompact();
   void fingerprintsShowFullHashAndRejectByDefault();
   void aboutUsesBuildVersionAndCompactTitle();
+  void aboutNoticesRemainReadableAndComplete_data();
+  void aboutNoticesRemainReadableAndComplete();
   void collapsedLogShowsOneLatestMessage();
   void collapsedLogBadgeHasRoundedCorners();
   void coreLogUsesChineseCatalogue_data();
@@ -856,6 +862,92 @@ void NativeDesignTests::aboutUsesBuildVersionAndCompactTitle()
   auto *license = dialog.findChild<QLabel *>(QStringLiteral("linkGpl"));
   QVERIFY(license != nullptr);
   QVERIFY(!license->text().trimmed().isEmpty());
+}
+
+void NativeDesignTests::aboutNoticesRemainReadableAndComplete_data()
+{
+  QTest::addColumn<bool>("chinese");
+  QTest::newRow("en-light") << false;
+  QTest::newRow("zh-dark") << true;
+}
+
+void NativeDesignTests::aboutNoticesRemainReadableAndComplete()
+{
+  QFETCH(bool, chinese);
+  QTranslator translator;
+  if (chinese) {
+    QVERIFY(translator.load(QStringLiteral("synergy_zh_CN.qm"), QStringLiteral(UI_TEST_TRANSLATIONS_DIR)));
+    qApp->installTranslator(&translator);
+  }
+  applyTestPalette(chinese);
+  PageHost host;
+  auto *pages = prepareHost(host);
+  host.resize(500, 380);
+  auto *about = new AboutDialog(&host);
+  host.push(about);
+  auto *open = about->findChild<QPushButton *>(QStringLiteral("aboutNoticesButton"));
+  QVERIFY(open);
+  QTest::mouseClick(open, Qt::LeftButton);
+  QTRY_COMPARE(pages->currentIndex(), 2);
+  auto *browser = host.findChild<QTextBrowser *>(QStringLiteral("aboutNoticesText"));
+  QVERIFY(browser);
+  QCOMPARE(browser->openExternalLinks(), true);
+
+  QStringList headings;
+  QSet<QString> links;
+  bool hasRegularBodyWithLeading = false;
+  for (auto block = browser->document()->firstBlock(); block.isValid(); block = block.next()) {
+    const auto format = block.blockFormat();
+    if (format.headingLevel() == 2)
+      headings.append(block.text());
+    for (auto it = block.begin(); !it.atEnd(); ++it) {
+      const auto span = it.fragment().charFormat();
+      if (span.isAnchor())
+        links.insert(span.anchorHref());
+      else if (!it.fragment().text().trimmed().isEmpty() && format.headingLevel() == 0 &&
+               span.fontWeight() == QFont::Normal && format.lineHeight() >= 130) {
+        hasRegularBodyWithLeading = true;
+      }
+    }
+  }
+  const auto expectedHeadings =
+      chinese
+          ? QStringList{QStringLiteral("项目来源"), QStringLiteral("版权"), QStringLiteral("主要开发者"), QStringLiteral("项目许可"), QStringLiteral("第三方许可声明")}
+          : QStringList{
+                QStringLiteral("Project attribution"), QStringLiteral("Copyright"),
+                QStringLiteral("Important Developers"), QStringLiteral("Project license"),
+                QStringLiteral("Third-party notices")
+            };
+  QCOMPARE(headings, expectedHeadings);
+  QVERIFY(hasRegularBodyWithLeading);
+  const auto body = browser->toPlainText().simplified();
+  const auto copyright = QString::fromUtf8(kCopyright).split(QLatin1Char('\n'));
+  for (const auto &line : copyright)
+    QVERIFY2(body.contains(line), qPrintable(line));
+  QFile license(QStringLiteral(":/licenses/Lucide-Feather.txt"));
+  QVERIFY(license.open(QIODevice::ReadOnly));
+  QVERIFY(body.contains(QString::fromUtf8(license.readAll()).simplified()));
+  QVERIFY(links.contains(QStringLiteral("https://www.gnu.org/licenses/old-licenses/gpl-2.0.html")));
+  QVERIFY(links.contains(QStringLiteral("https://github.com/Tupig/TupigSynergy")));
+  QVERIFY(links.contains(QStringLiteral("https://github.com/Tupig/TupigSynergy/graphs/contributors")));
+#ifdef SYNERGY_EXTRA_HEADER
+  QVERIFY(links.contains(QString::fromUtf8(kProjectContact)));
+  QVERIFY(links.contains(QStringLiteral("https://github.com/Tupig/Tupig_synergy#readme")));
+#endif
+
+  auto *close = host.findChild<QPushButton *>(QStringLiteral("aboutNoticesClose"));
+  QVERIFY(close);
+  QCoreApplication::processEvents();
+  host.resize(500, host.preferredContentHeight(500));
+  QTRY_VERIFY(browser->verticalScrollBar()->maximum() > 0);
+  QCOMPARE(browser->horizontalScrollBar()->maximum(), 0);
+  verifyTextAction(close);
+  QVERIFY(close->width() <= close->sizeHint().width() + 2);
+  const int bottom = close->mapTo(&host, QPoint(0, close->height())).y();
+  QVERIFY2(host.height() - bottom >= 0 && host.height() - bottom <= 12, "Trailing space must be only the page inset");
+  capture(host, chinese ? QStringLiteral("about-notices-500-zh-dark") : QStringLiteral("about-notices-500-en-light"));
+  QTest::mouseClick(close, Qt::LeftButton);
+  QTRY_COMPARE(pages->currentIndex(), 1);
 }
 
 void NativeDesignTests::collapsedLogShowsOneLatestMessage()

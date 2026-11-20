@@ -24,7 +24,7 @@
 #include <QFile>
 #include <QGroupBox>
 #include <QHBoxLayout>
-#include <QPlainTextEdit>
+#include <QRegularExpression>
 #include <QTextBrowser>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -140,29 +140,51 @@ AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique
     auto *text = new QTextBrowser(page);
     text->setObjectName(QStringLiteral("aboutNoticesText"));
     text->setOpenExternalLinks(true);
+    text->setFrameShape(QFrame::NoFrame);
+    text->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    text->document()->setDocumentMargin(12);
+    const auto linkColor = synergy::gui::isDarkMode() ? QStringLiteral("#9bbfff") : QStringLiteral("#15549d");
+    text->document()->setDefaultStyleSheet(QStringLiteral(R"(
+          h2 { font-size: 15px; font-weight: 600; margin-top: 8px; margin-bottom: 4px; }
+          p { font-size: 13px; font-weight: normal; line-height: 140%; margin-top: 0px; margin-bottom: 8px; }
+          a { color: %1; }
+        )")
+                                               .arg(linkColor));
     const auto html = [](QLabel *label) {
-      return label->textFormat() == Qt::RichText
-                 ? label->text()
-                 : label->text().toHtmlEscaped().replace(QLatin1Char('\n'), QStringLiteral("<br>"));
+      if (label->textFormat() != Qt::RichText)
+        return label->text().toHtmlEscaped().replace(QLatin1Char('\n'), QStringLiteral("<br>"));
+      // The overlay's fixed link colors belong to its labels. Let this
+      // document use its own contrasting link color while keeping the URLs.
+      static const QRegularExpression inlineColor(QStringLiteral(R"css( style="color: #[0-9a-fA-F]{6}")css"));
+      return label->text().remove(inlineColor);
     };
-    QString content = QStringLiteral("<p>%1</p><p>%2</p><p>%3</p><h3>%4</h3><p>%5</p><p>%6</p>")
-                          .arg(
-                              html(ui->lblDescription), html(ui->lblCopyright), html(ui->program_name),
-                              html(ui->lblImportantDevs), html(ui->linkContributors), html(ui->linkGpl)
-                          );
+    QString content;
+    const auto addSection = [&content](const QString &heading, const QStringList &paragraphs) {
+      content += QStringLiteral("<h2>%1</h2>").arg(heading.toHtmlEscaped());
+      for (const auto &paragraph : paragraphs)
+        content += QStringLiteral("<p>%1</p>").arg(paragraph);
+    };
+    addSection(
+        tr("Project attribution"), {html(ui->lblDescription), html(ui->program_name), html(ui->openExternalLinks)}
+    );
+    addSection(tr("Copyright"), {html(ui->lblCopyright)});
+    addSection(ui->lblImportantDevs->text(), {html(ui->linkContributors)});
+    addSection(
+        tr("Project license"), {tr("GNU GPL Version 2 with the OpenSSL exception.").toHtmlEscaped(), html(ui->linkGpl)}
+    );
     QFile license(QStringLiteral(":/licenses/Lucide-Feather.txt"));
-    if (license.open(QIODevice::ReadOnly))
-      content += QStringLiteral("<h3>%1</h3><p>%2</p>")
-                     .arg(
-                         tr("Third-party notices"), QString::fromUtf8(license.readAll())
-                                                        .toHtmlEscaped()
-                                                        .replace(QLatin1Char('\n'), QStringLiteral("<br>"))
-                     );
+    if (license.open(QIODevice::ReadOnly | QIODevice::Text)) {
+      auto paragraphs = QString::fromUtf8(license.readAll()).split(QStringLiteral("\n\n"), Qt::SkipEmptyParts);
+      for (auto &paragraph : paragraphs)
+        paragraph = paragraph.simplified().toHtmlEscaped();
+      addSection(tr("Third-party notices"), paragraphs);
+    }
     text->setHtml(content);
     layout->addWidget(text);
     auto *close = new QPushButton(tr("&Close"), page);
+    close->setObjectName(QStringLiteral("aboutNoticesClose"));
     connect(close, &QPushButton::clicked, page, &QDialog::reject);
-    layout->addWidget(close);
+    layout->addWidget(close, 0, Qt::AlignRight);
     PageHost::present(this, page);
   });
 }
