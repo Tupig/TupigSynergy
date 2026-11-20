@@ -23,11 +23,13 @@ enum class UpdateInstallResult
 /**
  * @brief Hand a downloaded, digest-verified package to the platform installer.
  *
- * Windows opens the MSI through ShellExecute so UAC owns the elevation prompt;
- * macOS replaces the .app bundle through a detached helper and relaunches it;
+ * Windows opens the MSI through ShellExecute so UAC owns the elevation prompt.
+ * macOS rechecks the package digest in the detached installer, replaces the
+ * application contents and relaunches it.
  * Linux opens the package with xdg-open so the distribution's package manager
  * performs the upgrade. The caller must quit once the result is Launched.
  */
-UpdateInstallResult launchUpdateInstaller(const QString &packagePath, QString *error = nullptr);
+UpdateInstallResult
+launchUpdateInstaller(const QString &packagePath, const QString &expectedSha256, QString *error = nullptr);
 
 } // namespace synergy::platform
