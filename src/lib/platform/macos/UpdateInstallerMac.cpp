@@ -29,6 +29,8 @@ dest=$2
 expected_id=$3
 image_work=$4
 expected_root=$5
+gui=${SYNERGY_MAC_UPDATE_GUI:?}
+core=${SYNERGY_MAC_UPDATE_CORE:?}
 [ -n "$expected_id" ] && [ -n "$expected_root" ] || exit 64
 
 identity() { /usr/bin/stat -f '%d:%i' "$1"; }
@@ -48,6 +50,7 @@ bundle_matches "$dest" && verify_bundle "$source" || exit 65
 dest=$(cd -P "$dest" && pwd -P) || exit 65
 source=$(cd -P "$source" && pwd -P) || exit 65
 [ "$source" != "$dest" ] || exit 65
+[ "${gui%/*}" = "$dest/Contents/MacOS" ] && [ "${core%/*}" = "$dest/Contents/MacOS" ] || exit 65
 parent=${dest%/*}
 [ -n "$parent" ] || parent=/
 root_id=$(identity "$dest")
@@ -124,6 +127,12 @@ old_id=$(identity "$dest/Contents")
 new_id=$(identity "$staged/Contents")
 [ "$old_id" != "$new_id" ] || exit 65
 
+# Staging can take time. Use UTF-8 so ps reports localized paths verbatim.
+commands=$(LC_ALL=en_US.UTF-8 /bin/ps -Aww -o comm=) || exit 75
+match_status=0
+printf '%s\n' "$commands" | /usr/bin/grep -Fqx -e "$gui" -e "$core" || match_status=$?
+[ "$match_status" -eq 1 ] || exit 75
+
 # From here on, even an ambiguous interruption must retain the staged copy.
 keep_backup=1
 if ! exchange_contents; then
@@ -167,6 +176,8 @@ source_name=$4
 bundle_id=$5
 install_bundle=$6
 expected_root=$7
+gui=$8
+core=$9
 case "$expected_sha" in
   ''|*[!0-9a-f]*) exit 65 ;;
 esac
@@ -198,7 +209,8 @@ sha_result=$(/usr/bin/shasum -a 256 < "$private_dmg") || exit 65
 /bin/mkdir "$mount_path"
 printf 'Y\n' | /usr/bin/hdiutil attach "$private_dmg" -nobrowse -readonly -mountpoint "$mount_path" >/dev/null ||
   exit 65
-/bin/sh -c "$install_bundle" mac-update-install "$mount_path/$source_name" "$dest" "$bundle_id" "$work" "$expected_root"
+SYNERGY_MAC_UPDATE_GUI="$gui" SYNERGY_MAC_UPDATE_CORE="$core" \
+  /bin/sh -c "$install_bundle" mac-update-install "$mount_path/$source_name" "$dest" "$bundle_id" "$work" "$expected_root"
 )SH";
 
 constexpr auto kRunUpdate = R"SH(
@@ -216,35 +228,30 @@ install_image=$9
 install_bundle=${10}
 expected_root=$(/usr/bin/stat -f '%d:%i' "$dest") || exit 65
 
-matches_executable() {
-  [ "$(/bin/ps -ww -p "$1" -o comm=)" = "$2" ]
+bundle_is_idle() {
+  # The initiating GUI normally exits while this helper is starting.
+  [ "$(LC_ALL=en_US.UTF-8 /bin/ps -ww -p "$pid" -o comm=)" != "$gui" ] || return 1
+  commands=$(LC_ALL=en_US.UTF-8 /bin/ps -Aww -o comm=) || return 1
+  match_status=0
+  printf '%s\n' "$commands" | /usr/bin/grep -Fqx -e "$gui" -e "$core" || match_status=$?
+  [ "$match_status" -eq 1 ]
 }
 
 # The GUI shuts down its core during normal exit. Do not exchange its files
-# until both executables have stopped.
-wait_for_exit() {
-  count=0
-  while matches_executable "$1" "$2" && [ "$count" -lt 50 ]; do
-    /bin/sleep 0.2
-    count=$((count + 1))
-  done
-}
-
-wait_for_exit "$pid" "$gui"
-matches_executable "$pid" "$gui" && exit 75
-for core_pid in $(/usr/bin/pgrep -x "${core##*/}" || :); do
-  if matches_executable "$core_pid" "$core"; then
-    wait_for_exit "$core_pid" "$core"
-  fi
-  matches_executable "$core_pid" "$core" && exit 75
+# until every GUI or core at these exact paths has stopped.
+count=0
+while ! bundle_is_idle && [ "$count" -lt 50 ]; do
+  /bin/sleep 0.2
+  count=$((count + 1))
 done
+bundle_is_idle || exit 75
 
 result=0
-/bin/sh -c "$install_image" mac-update-image "$dmg" "$expected_sha" "$dest" "$source_name" "$bundle_id" "$install_bundle" "$expected_root" || result=$?
+/bin/sh -c "$install_image" mac-update-image "$dmg" "$expected_sha" "$dest" "$source_name" "$bundle_id" "$install_bundle" "$expected_root" "$gui" "$core" || result=$?
 if [ "$result" -eq 77 ]; then
   # Pass code inline and quote every argument in AppleScript. The privileged
   # command never executes a user-writable helper script or app executable.
-  if admin_result=$(/usr/bin/osascript - "$install_image" "$dmg" "$expected_sha" "$dest" "$source_name" "$bundle_id" "$install_bundle" "$expected_root" <<'APPLESCRIPT'
+  if admin_result=$(/usr/bin/osascript - "$install_image" "$dmg" "$expected_sha" "$dest" "$source_name" "$bundle_id" "$install_bundle" "$expected_root" "$gui" "$core" <<'APPLESCRIPT'
 on run argv
   set commandLine to "/bin/sh -c " & quoted form of (item 1 of argv) & " mac-update-image"
   repeat with argumentIndex from 2 to count argv

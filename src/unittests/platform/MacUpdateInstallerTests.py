@@ -106,11 +106,37 @@ class MacUpdateInstallerTests(unittest.TestCase):
 
     def install(self, *, script=None, source=None, destination=None, expected_identity=None):
         expected_root = "{}:{}".format(*(expected_identity or self.old_identity))
+        dest = destination or self.destination
+        executable_dir = dest / "Contents/MacOS"
         return run([
             "/bin/sh", "-c", script if script is not None else self.install_script,
-            "mac-update-install", str(source or self.source), str(destination or self.destination), BUNDLE_ID,
+            "mac-update-install", str(source or self.source), str(dest), BUNDLE_ID,
             str(self.root), expected_root,
-        ], env=self.environment)
+        ], env={
+            **self.environment,
+            "SYNERGY_MAC_UPDATE_GUI": str(executable_dir / "Fixture"),
+            "SYNERGY_MAC_UPDATE_CORE": str(executable_dir / "FixtureCore"),
+        })
+
+    def start_bundle_process(self, bundle, name="Fixture"):
+        executable = bundle / "Contents/MacOS" / name
+        shutil.copyfile("/bin/sleep", executable)
+        executable.chmod(0o755)
+        self.assert_success(run([CODESIGN, "--force", "--sign", "-", str(executable)]))
+        self.assert_success(run([CODESIGN, "--force", "--sign", "-", str(bundle)]))
+        self.assert_success(self.verify_signature(bundle))
+        process = subprocess.Popen([str(executable), "45"], env=self.environment,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        def stop_fixture():
+            if process.poll() is None:
+                process.terminate()
+                process.wait(timeout=5)
+
+        self.addCleanup(stop_fixture)
+        self.assertEqual(run(["/bin/ps", "-ww", "-p", str(process.pid), "-o", "comm="]).stdout.strip(),
+                         str(executable))
+        return process
 
     def assert_original_installation(self):
         self.assertEqual(directory_identity(self.destination), self.old_identity)
@@ -188,6 +214,48 @@ class MacUpdateInstallerTests(unittest.TestCase):
         result = self.install(script=self.install_script.replace(check, forced_failure))
         self.assertIn(marker, result.stderr)
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assert_original_installation()
+
+    def test_installer_rejects_live_core_before_exchanging_contents(self):
+        core = self.start_bundle_process(self.destination, "FixtureCore")
+        self.old_contents = tree_contents(self.destination)
+        old_contents_identity = directory_identity(self.destination / "Contents")
+
+        # Exercise the final guard directly, independently of the runner wait.
+        result = self.install()
+        self.assertEqual(result.returncode, 75, result.stdout + result.stderr)
+        self.assertIsNone(core.poll())
+        self.assertEqual(directory_identity(self.destination / "Contents"), old_contents_identity)
+        self.assert_original_installation()
+
+    def test_runner_waits_for_all_gui_instances_at_the_target_path(self):
+        unrelated_bundle = self.root / "unrelated apps" / "Fixture.app"
+        self.write_app(unrelated_bundle, "2")
+        unrelated = self.start_bundle_process(unrelated_bundle)
+        executable_dir = self.destination / "Contents/MacOS"
+        runner = self.runner_script.replace('/usr/bin/open "$dest"', ":")
+        install_marker = "reached image staging"
+        install_image = f'printf "%s\\n" "{install_marker}"; exit 65'
+
+        def update():
+            return run([
+                "/bin/sh", "-c", runner, "mac-update-run", str(os.getpid()),
+                str(self.root / "fixture.dmg"), "0" * 64, str(self.destination), self.source.name, BUNDLE_ID,
+                str(executable_dir / "Fixture"), str(executable_dir / "FixtureCore"),
+                install_image, self.install_script,
+            ], env=self.environment)
+
+        # An executable with the same basename in another app must be ignored.
+        unrelated_result = update()
+        self.assertEqual(unrelated_result.returncode, 65, unrelated_result.stdout + unrelated_result.stderr)
+        self.assertIn(install_marker, unrelated_result.stdout)
+        old_gui = self.start_bundle_process(self.destination)
+        self.old_contents = tree_contents(self.destination)
+        result = update()
+        self.assertEqual(result.returncode, 75, result.stdout + result.stderr)
+        self.assertNotIn(install_marker, result.stdout)
+        self.assertIsNone(old_gui.poll())
+        self.assertIsNone(unrelated.poll())
         self.assert_original_installation()
 
     def test_runner_verifies_downloaded_image_and_installs_without_replacing_outer_directory(self):
