@@ -38,6 +38,7 @@ struct NameLayout
 {
   int lines = 0;
   qreal height = 0;
+  qreal width = 0;
   bool complete = true;
 };
 
@@ -54,6 +55,7 @@ NameLayout layoutName(QTextLayout &text, const QRectF &rect)
     line.setPosition(QPointF(0, result.height));
     ++result.lines;
     result.height += line.height();
+    result.width = qMax(result.width, line.naturalTextWidth());
   }
   text.endLayout();
   return result;
@@ -71,19 +73,36 @@ void drawName(QPainter &painter, const QRectF &rect, const QString &name, const 
   text.setTextOption(option);
 
   auto fitted = layoutName(text, rect);
+  qreal layoutWidth = rect.width();
+  qreal horizontalScale = 1;
   if (!fitted.complete) {
+    option.setWrapMode(QTextOption::WrapAnywhere);
+    text.setTextOption(option);
     QFont compactFont = font;
     for (int pixelSize : {10, 9}) {
       compactFont.setPixelSize(pixelSize);
-      if (pixelSize == 9)
-        compactFont.setStretch(93);
       text.setFont(compactFont);
       fitted = layoutName(text, rect);
       if (fitted.complete)
         break;
     }
     if (!fitted.complete) {
+      // Give compact text one last chance using measured line widths. Scale
+      // only horizontally so the 9px minimum stays consistent across fonts.
+      constexpr qreal minimumHorizontalScale = 0.8;
+      QRectF widerRect = rect;
+      widerRect.setWidth(rect.width() / minimumHorizontalScale);
+      fitted = layoutName(text, widerRect);
+      fitted.complete = fitted.complete && fitted.width <= widerRect.width();
+      if (fitted.complete) {
+        layoutWidth = widerRect.width();
+        horizontalScale = rect.width() / qMax(rect.width(), fitted.width);
+      }
+    }
+    if (!fitted.complete) {
       // Keep the regular reading size for names too long to display in full.
+      option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+      text.setTextOption(option);
       text.setFont(font);
       fitted = layoutName(text, rect);
     }
@@ -94,7 +113,11 @@ void drawName(QPainter &painter, const QRectF &rect, const QString &name, const 
   const QPointF origin(rect.left(), rect.top() + (rect.height() - fitted.height) / 2);
   painter.setClipRect(rect, Qt::IntersectClip);
   if (fitted.complete) {
-    text.draw(&painter, origin);
+    painter.save();
+    painter.translate(rect.center().x() - layoutWidth * horizontalScale / 2, origin.y());
+    painter.scale(horizontalScale, 1);
+    text.draw(&painter, QPointF());
+    painter.restore();
     return;
   }
 
@@ -168,7 +191,7 @@ public:
           roleRect, Qt::AlignTop | Qt::AlignHCenter, local ? QObject::tr("Local") : QObject::tr("Client")
       );
       const QRectF textRect(
-          roleRect.left(), roleRect.bottom() + 1, roleRect.width(), tile.bottom() - roleRect.bottom() - 3
+          roleRect.left() - 1, roleRect.bottom(), roleRect.width() + 2, tile.bottom() - roleRect.bottom() - 2
       );
       drawName(*painter, textRect, name, textFont);
     } else {
