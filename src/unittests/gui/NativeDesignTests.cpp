@@ -164,6 +164,8 @@ private Q_SLOTS:
   void fingerprintsShowFullHashAndRejectByDefault();
   void aboutUsesBuildVersionAndCompactTitle();
   void collapsedLogShowsOneLatestMessage();
+  void coreLogUsesChineseCatalogue_data();
+  void coreLogUsesChineseCatalogue();
   void logFollowsTailWithoutInterruptingHistory();
   void leavingUpdateCancelsPendingDownload();
 };
@@ -835,6 +837,56 @@ void NativeDesignTests::collapsedLogShowsOneLatestMessage()
   QVERIFY(records->isVisibleTo(&panel));
   QVERIFY(records->allText().contains(QStringLiteral("first")));
   QVERIFY(records->allText().contains(QStringLiteral("last complete message")));
+}
+
+void NativeDesignTests::coreLogUsesChineseCatalogue_data()
+{
+  QTest::addColumn<QString>("message");
+  QTest::addColumn<QString>("translated");
+
+  QTest::newRow("settings-path") << QStringLiteral("initial settings file: C:\\示例目录\\settings %1.ini")
+                                 << QStringLiteral("初始设置文件：C:\\示例目录\\settings %1.ini");
+  QTest::newRow("core-start") << QStringLiteral("starting core") << QStringLiteral("正在启动核心进程");
+  QTest::newRow("tls-listener") << QStringLiteral("QtTransportListenSocket: listening on 192.0.2.42:22211 (tls=1)")
+                                << QStringLiteral("QtTransportListenSocket：正在监听 192.0.2.42:22211（tls=1）");
+  QTest::newRow("clipboard") << QStringLiteral("screen \"fixture%1\" grabbed clipboard 0 from \"示例%2\"")
+                             << QStringLiteral("屏幕“fixture%1”取得剪贴板 0，来源为“示例%2”");
+  QTest::newRow("unrecognized") << QStringLiteral("fixture: unknown system detail %1")
+                                << QStringLiteral("fixture: unknown system detail %1");
+}
+
+void NativeDesignTests::coreLogUsesChineseCatalogue()
+{
+  QFETCH(QString, message);
+  QFETCH(QString, translated);
+  LogPanel panel;
+  auto *records = panel.findChild<LogWidget *>();
+  auto *table = panel.findChild<QTableWidget *>(QStringLiteral("logRecords"));
+  auto *tail = panel.findChild<QLabel *>(QStringLiteral("logTail"));
+  QVERIFY(records && table && tail);
+
+  const auto history = QStringLiteral("[2026-01-02T03:04:05.678] INFO: ") + message;
+  const auto latest = QStringLiteral("[2026-01-02T03:04:06.789] INFO: ") + message;
+  panel.appendLine(history);
+  QCOMPARE(table->rowCount(), 1);
+  QCOMPARE(table->item(0, 2)->text(), message);
+
+  QTranslator translator;
+  QVERIFY(translator.load(QStringLiteral("synergy_zh_CN.qm"), QStringLiteral(UI_TEST_TRANSLATIONS_DIR)));
+  QVERIFY(QCoreApplication::installTranslator(&translator));
+  QTRY_COMPARE(table->item(0, 2)->text(), translated);
+  panel.appendLine(latest);
+  QCOMPARE(table->rowCount(), 2);
+  QCOMPARE(table->item(1, 0)->text(), QStringLiteral("2026-01-02 03:04:06"));
+  QCOMPARE(table->item(1, 2)->text(), translated);
+  panel.setCollapsed(true);
+  QVERIFY(tail->text().endsWith(translated));
+  QCOMPARE(records->allText(), history + QLatin1Char('\n') + latest);
+
+  QVERIFY(QCoreApplication::removeTranslator(&translator));
+  QTRY_COMPARE(table->item(0, 2)->text(), message);
+  QCOMPARE(table->item(1, 2)->text(), message);
+  QVERIFY(tail->text().endsWith(message));
 }
 
 void NativeDesignTests::logFollowsTailWithoutInterruptingHistory()

@@ -4627,6 +4627,10 @@ Package: %3</source>
         <translation>来自服务器的消息不完整：%d 字节</translation>
     </message>
     <message>
+        <source>initial settings file: %s</source>
+        <translation>初始设置文件：%s</translation>
+    </message>
+    <message>
         <source>invalid %s value: %s</source>
         <translation>无效的 %s 值：%s</translation>
     </message>

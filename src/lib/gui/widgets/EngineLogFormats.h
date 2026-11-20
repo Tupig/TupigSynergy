@@ -182,6 +182,7 @@ inline constexpr const char *kEngineLogFormats[] = {
     QT_TRANSLATE_NOOP("EngineLogFormats", "ignoring unparsable blocked key combination \"%s\""),
     QT_TRANSLATE_NOOP("EngineLogFormats", "incomplete message from \"%s\": %d bytes"),
     QT_TRANSLATE_NOOP("EngineLogFormats", "incomplete message from server: %d bytes"),
+    QT_TRANSLATE_NOOP("EngineLogFormats", "initial settings file: %s"),
     QT_TRANSLATE_NOOP("EngineLogFormats", "invalid %s value: %s"),
     QT_TRANSLATE_NOOP("EngineLogFormats", "invalid message from server: %c%c%c%c"),
     QT_TRANSLATE_NOOP("EngineLogFormats", "invalid process handle, cannot shutdown process %d"),
