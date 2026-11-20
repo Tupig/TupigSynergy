@@ -17,7 +17,7 @@
 
 namespace synergy::platform {
 
-UpdateInstallResult launchUpdateInstaller(const QString &packagePath, QString *error)
+UpdateInstallResult launchUpdateInstaller(const QString &packagePath, const QString &, QString *error)
 {
   const auto result = reinterpret_cast<INT_PTR>(ShellExecuteW(
       nullptr, L"open", reinterpret_cast<LPCWSTR>(QDir::toNativeSeparators(packagePath).utf16()), nullptr, nullptr,

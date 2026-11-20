@@ -26,6 +26,11 @@ if (WIN32)
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/platform"
   )
 elseif(APPLE)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_test(NAME MacUpdateInstallerTests
+    COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/MacUpdateInstallerTests.py")
+  set_tests_properties(MacUpdateInstallerTests PROPERTIES TIMEOUT 120)
+
   create_test(
     NAME OSXClipboardTests
     DEPENDS platform
