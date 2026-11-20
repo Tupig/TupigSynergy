@@ -99,6 +99,19 @@ void applyTestPalette(bool dark)
   qApp->setStyleSheet(synergy::gui::appStyleSheet());
 }
 
+void verifyTextAction(const QPushButton *button)
+{
+  const auto detail = QStringLiteral("%1 \"%2\": height %3, font %4px, width %5, hinted width %6")
+                          .arg(button->objectName(), button->text())
+                          .arg(button->height())
+                          .arg(button->font().pixelSize())
+                          .arg(button->width())
+                          .arg(button->sizeHint().width());
+  QVERIFY2(button->height() == 32, qPrintable(detail));
+  QVERIFY2(button->font().pixelSize() == 13, qPrintable(detail));
+  QVERIFY2(button->width() >= button->minimumSizeHint().width(), qPrintable(detail));
+}
+
 QStackedWidget *prepareHost(PageHost &host)
 {
   host.setAttribute(Qt::WA_DontShowOnScreen);
@@ -245,6 +258,7 @@ void NativeDesignTests::mainShellResponsiveWidths()
   ui.lineHostname->setText(QStringLiteral("192.0.2.20"));
   ui.logPanel->setCollapsed(true);
   window.resize(width, 480);
+  ui.updateShortcutPresentation(width);
   window.show();
   QCoreApplication::processEvents();
   QCOMPARE(window.width(), width);
@@ -264,6 +278,22 @@ void NativeDesignTests::mainShellResponsiveWidths()
   if (ui.workspace->horizontalScrollBar()->maximum() != 0)
     diagnoseGeometryFailure(ui.workspace, "responsive-horizontal-scroll");
   QCOMPARE(ui.workspace->horizontalScrollBar()->maximum(), 0);
+  for (const auto *button :
+       {ui.btnEditName, ui.btnSaveName, ui.btnCancelName, ui.btnToggleCore, ui.btnRestartCore,
+        server ? ui.btnConfigureServer : ui.btnConfigureClient}) {
+    verifyTextAction(button);
+  }
+  for (const auto *button : {ui.btnSettingsShortcut, ui.btnUpdatesShortcut, ui.btnAboutShortcut}) {
+    QVERIFY(ui.pageBar->rect().contains(QRect(button->mapTo(ui.pageBar, QPoint()), button->size())));
+    if (width < 640) {
+      QVERIFY(button->text().isEmpty());
+      QVERIFY(!button->accessibleName().isEmpty());
+      QCOMPARE(button->height(), 24);
+    } else {
+      QVERIFY(!button->text().isEmpty());
+      verifyTextAction(button);
+    }
+  }
   capture(
       window, QStringLiteral("main-responsive-%1-%2-%3").arg(language).arg(width).arg(server ? "server" : "client")
   );
@@ -682,6 +712,14 @@ void NativeDesignTests::embeddedPages()
       if (!(bounds.left() >= 0 && bounds.right() < editor->width()))
         diagnoseGeometryFailure(field, "embedded-field-containment");
       QVERIFY2(bounds.left() >= 0 && bounds.right() < editor->width(), qPrintable(detail));
+      if (auto *button = qobject_cast<QPushButton *>(field)) {
+        if (button->property("keyCapture").toBool()) {
+          QCOMPARE(button->height(), 30);
+        } else if (!button->text().isEmpty() && !button->property("iconButton").toBool() &&
+                   !button->property("iconButton32").toBool()) {
+          verifyTextAction(button);
+        }
+      }
     }
     for (auto *area : editor->findChildren<QScrollArea *>()) {
       if (area->isVisibleTo(editor) && area->horizontalScrollBar()->maximum() != 0)

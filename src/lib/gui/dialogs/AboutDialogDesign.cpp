@@ -110,7 +110,6 @@ void Ui::AboutDialog::setupUi(QDialog *dialog)
   btnCopyVersion->setObjectName(QStringLiteral("btnCopyVersion"));
   btnCopyVersion->setIcon(synergy::gui::appIcon(QStringLiteral("edit-copy")));
   btnCopyVersion->setFlat(true);
-  btnCopyVersion->setProperty("small", true);
   horizontalLayout->addWidget(btnCopyVersion);
 
   auto *horizontalSpacer = new QSpacerItem(8, 0, QSizePolicy::Expanding, QSizePolicy::Minimum);

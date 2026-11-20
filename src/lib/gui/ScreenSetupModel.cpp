@@ -68,9 +68,10 @@ QVariant ScreenSetupModel::data(const QModelIndex &index, int role) const
     return QString(tr("<center>Screen: <b>%1</b></center>"
                       "<br>Double click to edit settings"
                       "<br>Drag screen to the trashcan to remove it"))
-        .arg(screen(index).name());
+        .arg(screen(index).name().toHtmlEscaped());
 
   case Qt::DisplayRole:
+  case Qt::AccessibleTextRole:
     return screen(index).name();
 
   default:

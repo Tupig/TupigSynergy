@@ -54,6 +54,7 @@
 #include <QStyleOptionButton>
 #include <QTabBar>
 #include <QTabWidget>
+#include <QTableView>
 #include <QTemporaryDir>
 #include <QTextEdit>
 #include <QTranslator>
@@ -250,6 +251,8 @@ private Q_SLOTS:
   void activeTabShrinksAndInvalidates();
   void actualPagesNaturalFit_data();
   void actualPagesNaturalFit();
+  void serverTileDisplaysNameSuffix_data();
+  void serverTileDisplaysNameSuffix();
   void aliasListGrowthAndShrink();
   void actionTypesShowRelevantFieldsAndSave_data();
   void actionTypesShowRelevantFieldsAndSave();
@@ -528,6 +531,85 @@ void LayoutAcceptanceTests::actualPagesNaturalFit()
   editor->reject();
   settle();
   QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+}
+
+void LayoutAcceptanceTests::serverTileDisplaysNameSuffix_data()
+{
+  QTest::addColumn<int>("width");
+  QTest::addColumn<int>("columns");
+  QTest::addColumn<bool>("local");
+  QTest::newRow("500-local") << 500 << 5 << true;
+  QTest::newRow("500-dense-local") << 500 << 9 << true;
+  QTest::newRow("500-dense-client") << 500 << 9 << false;
+  QTest::newRow("820-dense-local") << 820 << 9 << true;
+}
+
+void LayoutAcceptanceTests::serverTileDisplaysNameSuffix()
+{
+  QFETCH(int, width);
+  QFETCH(int, columns);
+  QFETCH(bool, local);
+  const ScopedSetting gridWidth(QStringLiteral("internalConfig/numColumns"), columns);
+  QList<QImage> tileImages;
+  QStringList accessibleNames;
+  QStringList fullNames;
+  for (const auto &suffix : {QStringLiteral("4"), QStringLiteral("7")}) {
+    const auto name = QStringLiteral("QATest_MacBook_Air_M") + suffix;
+    const ScopedSetting serverName(Settings::Core::ComputerName, local ? name : QStringLiteral("Test-Server"));
+    synergy::gui::ServerConfig config(columns);
+    if (!local)
+      config.addClient(name);
+    const auto longClientName = QStringLiteral("Office-Client-Backup-Workstation-").repeated(4);
+    config.addClient(longClientName);
+
+    PageHost host;
+    prepare(host, width);
+    auto *editor = new ServerConfigDialog(nullptr, config);
+    host.push(editor);
+    fit(host, width);
+    QCOMPARE(host.width(), width);
+    auto *view = editor->findChild<QTableView *>(QStringLiteral("screenSetupView"));
+    QVERIFY(view && view->isVisibleTo(editor));
+    const auto *model = view->model();
+    QCOMPARE(model->columnCount(), columns);
+    QCOMPARE(model->rowCount(), 3);
+
+    const auto findTile = [model](const QString &text) {
+      for (int column = 0; column < model->columnCount(); ++column) {
+        const auto matches = model->match(model->index(0, column), Qt::DisplayRole, text, 1, Qt::MatchExactly);
+        if (!matches.isEmpty())
+          return matches.first();
+      }
+      return QModelIndex();
+    };
+    const auto tileIndex = findTile(name);
+    const auto longIndex = findTile(longClientName);
+    QVERIFY2(tileIndex.isValid(), qPrintable(name));
+    QVERIFY(longIndex.isValid());
+    QVERIFY(tileIndex.flags() & Qt::ItemIsDragEnabled);
+    QVERIFY(tileIndex.flags() & Qt::ItemIsSelectable);
+    QVERIFY(longIndex.data(Qt::ToolTipRole).toString().contains(longClientName));
+    accessibleNames << longIndex.data(Qt::AccessibleTextRole).toString();
+    fullNames << longClientName;
+    const auto tile = view->visualRect(tileIndex);
+    QVERIFY(tile.height() >= 52 && tile.height() <= 64);
+    QVERIFY(view->viewport()->rect().contains(tile));
+    QVERIFY(settleStaticRender(host));
+    tileImages << view->viewport()->grab(tile).toImage();
+    QVERIFY(!tileImages.last().isNull());
+    if (suffix == QStringLiteral("4") && qEnvironmentVariableIsSet("SYNERGY_UI_EVIDENCE_DIR")) {
+      const QDir output(qEnvironmentVariable("SYNERGY_UI_EVIDENCE_DIR"));
+      QVERIFY(QDir().mkpath(output.absolutePath()));
+      const auto file = QStringLiteral("server-name-%1-%2-%3.png")
+                            .arg(width)
+                            .arg(columns)
+                            .arg(local ? QStringLiteral("local") : QStringLiteral("client"));
+      QVERIFY(host.grab().save(output.filePath(file)));
+    }
+  }
+  QCOMPARE(tileImages.first().size(), tileImages.last().size());
+  QVERIFY2(tileImages.first() != tileImages.last(), "Changing only the suffix must change the painted tile");
+  QCOMPARE(accessibleNames, fullNames);
 }
 
 void LayoutAcceptanceTests::aliasListGrowthAndShrink()

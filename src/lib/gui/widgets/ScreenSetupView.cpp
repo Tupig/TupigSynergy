@@ -20,6 +20,7 @@
 #include <QDrag>
 #include <QDragEnterEvent>
 #include <QDragMoveEvent>
+#include <QFontMetricsF>
 #include <QHeaderView>
 #include <QMimeData>
 #include <QMouseEvent>
@@ -32,6 +33,83 @@
 #include <QTextOption>
 
 namespace {
+
+struct NameLayout
+{
+  int lines = 0;
+  qreal height = 0;
+  bool complete = true;
+};
+
+NameLayout layoutName(QTextLayout &text, const QRectF &rect)
+{
+  NameLayout result;
+  text.beginLayout();
+  for (auto line = text.createLine(); line.isValid(); line = text.createLine()) {
+    line.setLineWidth(rect.width());
+    if (result.height + line.height() > rect.height()) {
+      result.complete = false;
+      break;
+    }
+    line.setPosition(QPointF(0, result.height));
+    ++result.lines;
+    result.height += line.height();
+  }
+  text.endLayout();
+  return result;
+}
+
+void drawName(QPainter &painter, const QRectF &rect, const QString &name, const QFont &font)
+{
+  if (rect.isEmpty())
+    return;
+
+  QTextLayout text(name, font, painter.device());
+  QTextOption option;
+  option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+  option.setAlignment(Qt::AlignHCenter);
+  text.setTextOption(option);
+
+  auto fitted = layoutName(text, rect);
+  if (!fitted.complete) {
+    QFont compactFont = font;
+    for (int pixelSize : {10, 9}) {
+      compactFont.setPixelSize(pixelSize);
+      if (pixelSize == 9)
+        compactFont.setStretch(93);
+      text.setFont(compactFont);
+      fitted = layoutName(text, rect);
+      if (fitted.complete)
+        break;
+    }
+    if (!fitted.complete) {
+      // Keep the regular reading size for names too long to display in full.
+      text.setFont(font);
+      fitted = layoutName(text, rect);
+    }
+  }
+
+  if (fitted.lines == 0)
+    return;
+  const QPointF origin(rect.left(), rect.top() + (rect.height() - fitted.height) / 2);
+  painter.setClipRect(rect, Qt::IntersectClip);
+  if (fitted.complete) {
+    text.draw(&painter, origin);
+    return;
+  }
+
+  for (int index = 0; index < fitted.lines - 1; ++index)
+    text.lineAt(index).draw(&painter, origin);
+
+  const auto last = text.lineAt(fitted.lines - 1);
+  const QFontMetricsF metrics(font, painter.device());
+  const auto shortened = metrics.elidedText(name.mid(last.textStart()), Qt::ElideRight, rect.width());
+  painter.setFont(font);
+  painter.drawText(
+      QRectF(origin + last.position(), QSizeF(rect.width(), last.height())), Qt::AlignHCenter | Qt::AlignVCenter,
+      shortened
+  );
+}
 
 // Presentation only: the table retains the model's indexes, flags and drag/drop hit areas.
 class ScreenTileDelegate final : public QStyledItemDelegate
@@ -79,35 +157,20 @@ public:
       QFont textFont = option.font;
       textFont.setPixelSize(11);
       textFont.setWeight(selected || local ? QFont::DemiBold : QFont::Normal);
-      painter->setFont(textFont);
       painter->setPen(dark ? QColor(local ? "#cfdfff" : "#d9f3e6") : accent);
-      const QRectF textRect = tile.adjusted(6, 18, -6, -4);
       QFont roleFont = option.font;
       roleFont.setPixelSize(10);
+      const QRectF roleRect(
+          tile.left() + 2, tile.top() + 2, tile.width() - 4, QFontMetricsF(roleFont, painter->device()).height()
+      );
       painter->setFont(roleFont);
       painter->drawText(
-          tile.adjusted(6, 3, -6, -3), Qt::AlignTop | Qt::AlignHCenter,
-          local ? QObject::tr("Local") : QObject::tr("Client")
+          roleRect, Qt::AlignTop | Qt::AlignHCenter, local ? QObject::tr("Local") : QObject::tr("Client")
       );
-      painter->setFont(textFont);
-      QTextLayout text(name, textFont);
-      QTextOption textOption;
-      textOption.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-      textOption.setAlignment(Qt::AlignHCenter);
-      text.setTextOption(textOption);
-      text.beginLayout();
-      qreal height = 0;
-      while (true) {
-        auto line = text.createLine();
-        if (!line.isValid())
-          break;
-        line.setLineWidth(textRect.width());
-        line.setPosition(QPointF(0, height));
-        height += line.height();
-      }
-      text.endLayout();
-      painter->setClipRect(textRect, Qt::IntersectClip);
-      text.draw(painter, QPointF(textRect.left(), textRect.top() + qMax(0.0, (textRect.height() - height) / 2)));
+      const QRectF textRect(
+          roleRect.left(), roleRect.bottom() + 1, roleRect.width(), tile.bottom() - roleRect.bottom() - 3
+      );
+      drawName(*painter, textRect, name, textFont);
     } else {
       painter->setPen(QPen(QColor(dark ? "#9a9aa0" : "#777782"), 1.8, Qt::SolidLine, Qt::RoundCap));
       const auto center = tile.center();

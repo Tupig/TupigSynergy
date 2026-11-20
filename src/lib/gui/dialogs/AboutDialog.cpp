@@ -95,7 +95,6 @@ AboutDialog::AboutDialog(QWidget *parent) : QDialog(parent), ui{std::make_unique
   auto *projectRow = new QHBoxLayout;
   projectRow->setSpacing(8);
   ui->widget_2->layout()->removeWidget(ui->btnCopyVersion);
-  ui->btnCopyVersion->setProperty("small", false);
   ui->btnCopyVersion->setFlat(false);
   projectRow->addWidget(ui->btnCopyVersion);
   auto *project = new QPushButton(tr("Project home"), ui->frameLogo);

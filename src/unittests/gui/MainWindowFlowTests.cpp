@@ -14,6 +14,7 @@
 #include "gui/ScreenSetupModel.h"
 #include "gui/StyleUtils.h"
 #include "gui/TlsUtility.h"
+#include "gui/dialogs/AboutDialog.h"
 #include "gui/dialogs/ActionDialog.h"
 #include "gui/dialogs/FingerprintDialog.h"
 #include "gui/dialogs/HotkeyDialog.h"
@@ -25,7 +26,9 @@
 #include "gui/widgets/LogPanel.h"
 #include "gui/widgets/MessagePage.h"
 #include "gui/widgets/ModeCard.h"
+#include "gui/widgets/PageHost.h"
 #include "gui/widgets/ScreenSetupView.h"
+#include "gui/widgets/StatusBar.h"
 #include <QAbstractItemView>
 #include <QAction>
 #include <QApplication>
@@ -59,6 +62,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTemporaryDir>
+#include <QTextBrowser>
 #include <QUuid>
 #include <utility>
 
@@ -373,15 +377,16 @@ private Q_SLOTS:
     QTRY_VERIFY(window.findChild<SettingsDialog *>() != nullptr);
     auto *editor = window.findChild<SettingsDialog *>();
     auto *tabs = editor->findChild<QTabWidget *>("tabWidget");
+    auto *general = editor->findChild<QGroupBox *>("generalCard");
+    auto *status = window.findChild<StatusBar *>("statusBar");
     auto *area = qobject_cast<QScrollArea *>(pages->currentWidget());
-    QVERIFY(tabs && area);
+    QVERIFY(tabs && general && status && area);
     QCOMPARE(area->property("pageEditor").value<QDialog *>(), static_cast<QDialog *>(editor));
     QTRY_COMPARE(tabs->currentIndex(), 0);
     QCOMPARE(tabs->currentWidget()->objectName(), QStringLiteral("tabGeneral"));
     auto *tabBar = tabs->tabBar();
     QVERIFY(tabBar);
     QTRY_VERIFY(editor->isVisibleTo(&window) && tabBar->isVisibleTo(&window));
-    QTRY_COMPARE(window.size(), QSize(m_width, 390));
     QVERIFY(settleStaticRender(window));
     QRect previousTabRect;
     QRect previousViewportRect;
@@ -400,13 +405,17 @@ private Q_SLOTS:
              qAbs(tabRect.top() - headerBottom - 10) <= 2;
     };
     QTRY_VERIFY_WITH_TIMEOUT(topInsetSettled(), 1000);
-    QCOMPARE(window.size(), QSize(m_width, 390));
+    QCOMPARE(window.width(), m_width);
+    const auto generalSize = window.size();
+    const int bottomGap =
+        status->mapTo(&window, QPoint()).y() - general->mapTo(&window, QPoint()).y() - general->height();
+    QVERIFY2(qAbs(bottomGap - 10) <= 2, qPrintable(QString::number(bottomGap)));
     QTest::mouseClick(tabBar, Qt::LeftButton, Qt::NoModifier, tabBar->tabRect(1).center());
     QTRY_COMPARE(tabs->currentIndex(), 1);
     QTRY_COMPARE(window.width(), m_width);
     QTest::mouseClick(tabBar, Qt::LeftButton, Qt::NoModifier, tabBar->tabRect(0).center());
     QTRY_COMPARE(tabs->currentIndex(), 0);
-    QTRY_COMPARE(window.size(), QSize(m_width, 390));
+    QTRY_COMPARE(window.size(), generalSize);
     QTRY_VERIFY_WITH_TIMEOUT(topInsetSettled(), 1000);
     capture(window, "preferences-general-top-inset");
     auto *back = window.findChild<QPushButton *>("btnBack");
@@ -513,7 +522,7 @@ private Q_SLOTS:
     QVERIFY(general && tabs && buttons && language && tray && sleep && updates && pages);
     auto *area = qobject_cast<QScrollArea *>(pages->currentWidget());
     QVERIFY(area);
-    QTRY_COMPARE(window.size(), QSize(m_width, 390));
+    QTRY_COMPARE(window.width(), m_width);
     QVERIFY(settleStaticRender(window));
     stableLayout.invalidate();
     QTRY_VERIFY_WITH_TIMEOUT(layoutSettled(), 1000);
@@ -532,12 +541,13 @@ private Q_SLOTS:
     }
     QCOMPARE(area->horizontalScrollBar()->maximum(), 0);
     QCOMPARE(area->verticalScrollBar()->maximum(), 0);
-    const int settingsBottomGap = mappedRect(status).top() - mappedRect(buttons).bottom() - 1;
-    QVERIFY2(settingsBottomGap >= 8 && settingsBottomGap <= 90, qPrintable(QString::number(settingsBottomGap)));
+    const int settingsBottomGap = mappedRect(status).top() - mappedRect(general).bottom() - 1;
+    QVERIFY2(qAbs(settingsBottomGap - 10) <= 2, qPrintable(QString::number(settingsBottomGap)));
+    const auto settingsSize = window.size();
     window.hide();
     window.open();
     QTRY_COMPARE(window.width(), m_width);
-    QTRY_COMPARE(window.size(), QSize(m_width, 390));
+    QTRY_COMPARE(window.size(), settingsSize);
     auto *back = window.findChild<QPushButton *>("btnBack");
     QVERIFY(back);
     QTest::mouseClick(back, Qt::LeftButton);
@@ -569,6 +579,61 @@ private Q_SLOTS:
       QTRY_VERIFY(!view->isVisible());
       QCOMPARE(toggle->isChecked(), !collapsed);
     }
+  }
+  void collapsedLogFitsHomeWithoutExtraSpace()
+  {
+    Settings::setValue(Settings::Gui::LogExpanded, true);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *workspace = window.findChild<QScrollArea *>("workspace");
+    auto *log = window.findChild<LogPanel *>("logPanel");
+    auto *status = window.findChild<StatusBar *>("statusBar");
+    auto *addresses = window.findChild<QLabel *>("lblIpAddresses");
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    QVERIFY(workspace && log && status && addresses && preferences && back);
+    addresses->setText(QCoreApplication::translate("MainWindow", "Local IP") + QStringLiteral("  192.0.2.10"));
+    status->setStatus(ConnectionState::Listening, ProcessState::Started, true);
+    auto *statusText = status->findChild<QLabel *>("statusText");
+    QVERIFY(statusText);
+    log->appendLine(QStringLiteral("[10:15:00] INFO: ") + statusText->text());
+    const auto logButton = [log](const char *label) -> QPushButton * {
+      const auto tooltip = QCoreApplication::translate("LogPanel", label);
+      for (auto *control : log->findChildren<QPushButton *>())
+        if (control->toolTip() == tooltip)
+          return control;
+      return nullptr;
+    };
+    auto *collapse = logButton("Collapse Log");
+    auto *expand = logButton("Expand Log");
+    QVERIFY(collapse && expand);
+    QVERIFY(settleStaticRender(window));
+    const int expandedHeight = window.height();
+    QTest::mouseClick(collapse, Qt::LeftButton);
+    QTRY_VERIFY(log->isCollapsed());
+    QVERIFY(settleStaticRender(window));
+
+    const int gap = status->mapTo(&window, QPoint()).y() - log->mapTo(&window, QPoint()).y() - log->height();
+    QVERIFY2(qAbs(gap - 10) <= 2, qPrintable(QStringLiteral("Gap below collapsed log: %1 px").arg(gap)));
+    QVERIFY(window.height() < expandedHeight);
+    QCOMPARE(window.width(), m_width);
+    QCOMPARE(window.minimumWidth(), 500);
+    QCOMPARE(workspace->verticalScrollBar()->maximum(), 0);
+    const QRect logRect(log->mapTo(workspace->viewport(), QPoint()), log->size());
+    QVERIFY(workspace->viewport()->rect().contains(logRect));
+    capture(window, "home-collapsed-log");
+
+    const int collapsedHeight = window.height();
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    QTRY_VERIFY(back->isVisibleTo(&window));
+    QVERIFY(settleStaticRender(window));
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_COMPARE(window.height(), collapsedHeight);
+    QTest::mouseClick(expand, Qt::LeftButton);
+    QTRY_VERIFY(!log->isCollapsed());
+    QTRY_COMPARE(window.height(), expandedHeight);
+    QCOMPARE(window.minimumHeight(), 390);
+    QCOMPARE(window.width(), m_width);
   }
   void nameChangesRequireExplicitCommit()
   {
@@ -1068,6 +1133,129 @@ private Q_SLOTS:
     QVERIFY(window.findChildren<synergy::gui::update::UpdateChecker *>().isEmpty());
     QCOMPARE(window.checks, 2);
     window.close();
+  }
+  void detailPagesRevealAndReturnWithoutClipping()
+  {
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    auto *aboutButton = window.findChild<QPushButton *>("btnAboutShortcut");
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    auto *status = window.findChild<StatusBar *>("statusBar");
+    QVERIFY(pages && aboutButton && back && status);
+    const auto record = [&](const QString &name, QWidget *last) {
+      QVERIFY(last && last->isVisibleTo(&window));
+      QVERIFY(settleStaticRender(window));
+      auto *page = qobject_cast<QScrollArea *>(pages->currentWidget());
+      QVERIFY(page);
+      const auto lastRect = [&] { return QRect(last->mapTo(page->viewport(), QPoint()), last->size()); };
+      QTRY_VERIFY_WITH_TIMEOUT(page->viewport()->rect().contains(lastRect()), 1000);
+      const int gap = status->mapTo(&window, QPoint()).y() - last->mapTo(&window, QPoint()).y() - last->height();
+      qInfo().noquote() << name << "window height" << window.height() << "bottom gap" << gap;
+      if (page->verticalScrollBar()->maximum() == 0)
+        QVERIFY2(qAbs(gap - 10) <= 2, qPrintable(QStringLiteral("%1 bottom gap: %2 px").arg(name).arg(gap)));
+      QCOMPARE(window.width(), m_width);
+      capture(window, name);
+    };
+    QTest::mouseClick(aboutButton, Qt::LeftButton);
+    auto *about = window.findChild<AboutDialog *>();
+    QVERIFY(about);
+    auto *notices = about->findChild<QPushButton *>("aboutNoticesButton");
+    auto *aboutClose = about->findChild<QPushButton *>("btnOk");
+    QVERIFY(notices && aboutClose);
+    record("about-compact", aboutClose);
+    const int aboutHeight = window.height();
+    QTest::mouseClick(notices, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 2);
+    auto *noticeText = window.findChild<QTextBrowser *>("aboutNoticesText");
+    QVERIFY(noticeText && !noticeText->toPlainText().isEmpty());
+    auto *notice = qobject_cast<QDialog *>(noticeText->parentWidget());
+    QVERIFY(notice);
+    auto *noticeClose = button(*notice, QCoreApplication::translate("AboutDialog", "&Close"));
+    record("about-notices", noticeClose);
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 1);
+    QTRY_COMPARE(window.height(), aboutHeight);
+    QTest::mouseClick(aboutClose, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 0);
+
+    const Fingerprint local(QCryptographicHash::Sha256, QByteArray(32, '\x5a'));
+    const Fingerprint remote(QCryptographicHash::Sha256, QByteArray(32, '\x7e'));
+    for (const auto mode : {FingerprintDialogMode::Local, FingerprintDialogMode::Server}) {
+      auto *fingerprints = new FingerprintDialog(&window, local, mode, remote);
+      PageHost::present(&window, fingerprints);
+      auto *actions = fingerprints->findChild<QDialogButtonBox *>();
+      auto *hash = fingerprints->findChild<QLabel *>("fingerprintHash");
+      QVERIFY(actions && hash && hash->isVisibleTo(&window));
+      auto *toggle = actions->button(QDialogButtonBox::Help);
+      QVERIFY(toggle);
+      const auto kind = mode == FingerprintDialogMode::Local ? QStringLiteral("local") : QStringLiteral("compare");
+      record("fingerprint-" + kind + "-hash", actions);
+      QTest::mouseClick(toggle, Qt::LeftButton);
+      QTRY_VERIFY(hash->isHidden());
+      record("fingerprint-" + kind + "-image", actions);
+      QTest::mouseClick(toggle, Qt::LeftButton);
+      QTRY_VERIFY(hash->isVisibleTo(&window));
+      QTest::mouseClick(back, Qt::LeftButton);
+      QTRY_COMPARE(pages->currentIndex(), 0);
+    }
+  }
+  void embeddedUpdateFitsBeforeAndDuringDownload()
+  {
+    ControlledHttp server;
+    QVERIFY(server.isListening());
+    IsolatedWindow window(server, m_width);
+    synergy::gui::update::UpdateInfo info;
+    info.version = "99.0.0";
+    info.notes = "Offline controlled update fixture";
+    info.asset.name = "flow-fixture.dmg";
+    info.asset.url = server.url();
+    info.asset.sha256 = QString(64, QLatin1Char('0'));
+    info.asset.size = 1048576;
+    const synergy::gui::update::DownloadPolicy policy{"http", "127.0.0.1", "/"};
+    auto *dialog = new synergy::gui::update::UpdateDialog(info, &window, policy);
+    PageHost::present(&window, dialog);
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(pages);
+    auto *page = qobject_cast<QScrollArea *>(pages->currentWidget());
+    auto *card = dialog->findChild<QGroupBox *>("updateSummaryCard");
+    auto *status = window.findChild<StatusBar *>("statusBar");
+    auto *download = button(*dialog, QCoreApplication::translate("UpdateDialog", "Download and Install"));
+    auto *downloader = dialog->findChild<synergy::gui::update::UpdateDownloader *>();
+    auto *notes = dialog->findChild<QTextEdit *>("releaseNotes");
+    auto *toggleNotes = dialog->findChild<QPushButton *>("toggleReleaseNotes");
+    QVERIFY(page && card && status && download && downloader && notes && toggleNotes);
+    const auto checkFit = [&] {
+      QVERIFY(settleStaticRender(window));
+      const QRect cardRect(card->mapTo(page->viewport(), QPoint()), card->size());
+      QVERIFY(page->viewport()->rect().contains(cardRect));
+      QCOMPARE(page->verticalScrollBar()->maximum(), 0);
+      const int gap = status->mapTo(&window, QPoint()).y() - card->mapTo(&window, QPoint()).y() - card->height();
+      QVERIFY2(qAbs(gap - 10) <= 2, qPrintable(QStringLiteral("Gap below update card: %1 px").arg(gap)));
+      QCOMPARE(window.width(), m_width);
+    };
+    checkFit();
+    QVERIFY(notes->isVisibleTo(&window));
+    const int shownHeight = window.height();
+    QTest::mouseClick(toggleNotes, Qt::LeftButton);
+    QTRY_VERIFY(notes->isHidden());
+    QTRY_VERIFY(window.height() < shownHeight);
+    checkFit();
+    QTest::mouseClick(toggleNotes, Qt::LeftButton);
+    QTRY_VERIFY(notes->isVisibleTo(&window));
+    QTRY_COMPARE(window.height(), shownHeight);
+    QSignalSpy bytes(downloader, &synergy::gui::update::UpdateDownloader::progress);
+    QTest::mouseClick(download, Qt::LeftButton);
+    QTRY_COMPARE(server.requests, 1);
+    server.write("HTTP/1.1 200 OK\r\nContent-Length: 1048576\r\nConnection: close\r\n\r\n" + QByteArray(65536, 'x'));
+    QTRY_VERIFY(!bytes.isEmpty() && bytes.last().at(0).toLongLong() > 0);
+    checkFit();
+    capture(window, "embedded-update-download");
+    auto *cancel = button(*dialog, QCoreApplication::translate("UpdateDialog", "Cancel download"));
+    QVERIFY(cancel);
+    QTest::mouseClick(cancel, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 0);
+    QTRY_COMPARE(window.minimumHeight(), 390);
   }
   void stalledDownloadUsesActualBytesAndCancels()
   {

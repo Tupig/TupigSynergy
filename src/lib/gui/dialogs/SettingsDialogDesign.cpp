@@ -472,7 +472,6 @@ void Ui::SettingsDialog::setupUi(QDialog *dialog)
   btnDismissTlsRegeneration = new QPushButton(tlsRegenerationNotice);
   btnDismissTlsRegeneration->setObjectName(QStringLiteral("btnDismissTlsRegeneration"));
   btnDismissTlsRegeneration->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-  btnDismissTlsRegeneration->setProperty("small", true);
   btnDismissTlsRegeneration->setProperty("primary", true);
   noticeLayout->addWidget(btnDismissTlsRegeneration, 0, Qt::AlignVCenter);
   networkCardLayout->addWidget(tlsRegenerationNotice);

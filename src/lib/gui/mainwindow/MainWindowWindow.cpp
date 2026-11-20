@@ -113,7 +113,12 @@ void MainWindow::fitToCurrentPage()
   const int menuHeight = menuBar()->isNativeMenuBar() ? 0 : menuBar()->sizeHint().height();
   const int chrome = ui->pageBar->height() + ui->statusBar->height() + menuHeight;
   const int bodyCap = qMax(1, qMin(660, available - chrome - frame));
-  const int target = qMax(minimumHeight(), chrome + qMin(preferred, bodyCap));
+  const int fittedHeight = chrome + qMin(preferred, bodyCap);
+  const int defaultHeight = Ui::MainWindow::kWindowHeight;
+  const bool compactPage = m_pageHost->hasEditor() || m_logDock->isCollapsed();
+  const int minimum = compactPage ? qMin(defaultHeight, fittedHeight) : defaultHeight;
+  setMinimumHeight(minimum);
+  const int target = qMax(minimum, fittedHeight);
   if (height() != target)
     resize(width(), target);
 }
