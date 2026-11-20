@@ -20,13 +20,20 @@
 #include <QVariant>
 
 namespace {
-void clearEmbeddedMessageMargins(QDialog *editor)
+void normalizeEmbeddedMessageBox(QDialog *editor)
 {
-  // Qt applies standalone message-box margins to the widget itself on macOS.
-  // It can recreate these margins when the style changes.
+  // Qt can rebuild the message layout on a style change and restore platform margins.
   auto *message = qobject_cast<QMessageBox *>(editor);
-  if (message && !message->contentsMargins().isNull())
+  if (!message)
+    return;
+  if (!message->contentsMargins().isNull())
     message->setContentsMargins(0, 0, 0, 0);
+  if (auto *layout = message->layout()) {
+    if (!layout->contentsMargins().isNull())
+      layout->setContentsMargins(0, 0, 0, 0);
+    if (layout->sizeConstraint() != QLayout::SetNoConstraint)
+      layout->setSizeConstraint(QLayout::SetNoConstraint);
+  }
 }
 
 int layoutHeight(QWidget *widget, int width)
@@ -157,7 +164,7 @@ void PageHost::push(QDialog *editor)
   containerLayout->addWidget(editor, 0, Qt::AlignTop);
   editor->setWindowFlags(Qt::Widget);
   // PageHost owns the sole workspace inset; standalone dialog margins remain intact.
-  clearEmbeddedMessageMargins(editor);
+  normalizeEmbeddedMessageBox(editor);
   if (editor->layout()) {
     editor->layout()->setContentsMargins(0, 0, 0, 0);
     editor->layout()->setSizeConstraint(QLayout::SetNoConstraint);
@@ -260,7 +267,7 @@ int PageHost::preferredContentHeight(int width)
   if (!area || !area->widget())
     return 0;
   const QScopedValueRollback<bool> measuring(m_measuring, true);
-  clearEmbeddedMessageMargins(area->property("pageEditor").value<QDialog *>());
+  normalizeEmbeddedMessageBox(area->property("pageEditor").value<QDialog *>());
   auto *content = area->widget();
   const int contentWidth = qMax(1, width - 2 * area->frameWidth());
   content->resize(contentWidth, content->height());
