@@ -740,6 +740,14 @@ private Q_SLOTS:
       editor = p;
     }
     QVERIFY(editor);
+    const QPointer<QDialog> guardedEditor(editor);
+    const auto cleanup = qScopeGuard([guardedEditor] {
+      if (!guardedEditor)
+        return;
+      // A failed row must not leave its page or a retained transfer in the shared host.
+      guardedEditor->QDialog::reject();
+      QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    });
     host->push(editor);
     QVERIFY(settleStaticRender(*m_window));
     auto *tabs = editor->findChild<QTabWidget *>();
@@ -1185,7 +1193,20 @@ private Q_SLOTS:
             {"controls", controls}
         }
     );
-    editor->reject();
+    if (kind == "update" && expected.tab > 0) {
+      // Back leaves a live download running. Use the explicit Cancel action
+      // to verify that the incomplete transfer is destroyed.
+      const auto cancelText = observedText("synergy::gui::update::UpdateDialog", "Cancel download");
+      QPushButton *cancel = nullptr;
+      for (auto *button : editor->findChildren<QPushButton *>()) {
+        if (button->isVisibleTo(editor) && button->text() == cancelText)
+          cancel = button;
+      }
+      QVERIFY(cancel != nullptr);
+      QTest::mouseClick(cancel, Qt::LeftButton);
+    } else {
+      editor->reject();
+    }
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     QVERIFY(settleStaticRender(*m_window));
     if (kind == "action")

@@ -16,4 +16,8 @@ private Q_SLOTS:
   void rejectsMismatch();
   void rejectsUnsafeUrl();
   void rejectsSizeMismatch();
+  void downloadsLargePackage_data();
+  void downloadsLargePackage();
+  void rejectsUnrelatedRedirect_data();
+  void rejectsUnrelatedRedirect();
 };

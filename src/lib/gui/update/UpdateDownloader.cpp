@@ -13,10 +13,14 @@
 #include <QNetworkRequest>
 #include <QRegularExpression>
 
+#include <utility>
+
 namespace synergy::gui::update {
 namespace {
 
 constexpr qint64 kMaxPackageSize = 512LL * 1024 * 1024;
+constexpr qint64 kParallelThreshold = 8LL * 1024 * 1024;
+constexpr int kRangeCount = 3;
 
 const auto kSha256Pattern = QRegularExpression(QStringLiteral("^[0-9a-f]{64}$"));
 
@@ -36,7 +40,9 @@ UpdateDownloader::~UpdateDownloader()
 
 bool UpdateDownloader::isAllowedDownloadUrl(const QUrl &url) const
 {
-  return url.scheme() == m_policy.scheme && url.host() == m_policy.host && url.path().startsWith(m_policy.pathPrefix);
+  return url.scheme() == m_policy.scheme && url.host() == m_policy.host && url.userInfo().isEmpty() &&
+         (m_policy.scheme != QLatin1String("https") || url.port(443) == 443) &&
+         url.path().startsWith(m_policy.pathPrefix);
 }
 
 QString UpdateDownloader::safeFileName(const QString &name)
@@ -78,20 +84,27 @@ void UpdateDownloader::start(const UpdateAsset &asset, const QString &directory)
   m_hash.reset();
 
   m_file = std::make_unique<QFile>(m_path);
-  if (!m_file->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-    Q_EMIT failed(tr("Could not create the update file: %1").arg(m_file->errorString()));
+  if (!m_file->open(QIODevice::ReadWrite | QIODevice::Truncate)) {
+    const auto reason = tr("Could not create the update file: %1").arg(m_file->errorString());
     cleanup();
+    Q_EMIT failed(reason);
     return;
   }
 
-  QNetworkRequest request(asset.url);
-  request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Synergy-UpdateDownloader"));
-  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+  if (asset.size >= kParallelThreshold)
+    startRanges();
+  else
+    startSingleDownload();
+}
+
+void UpdateDownloader::startSingleDownload()
+{
+  QNetworkRequest request(m_asset.url);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
   request.setTransferTimeout(300000);
 #endif
 
-  auto *reply = m_network->get(request);
+  auto *reply = startRequest(request);
   m_reply = reply;
   // Capture the reply so an aborted or superseded download cannot handle the
   // bytes of a newer one.
@@ -120,6 +133,132 @@ void UpdateDownloader::start(const UpdateAsset &asset, const QString &directory)
   });
 }
 
+void UpdateDownloader::startRanges()
+{
+  m_ranges.reserve(kRangeCount);
+  for (int index = 0; index < kRangeCount; ++index) {
+    const auto first = m_asset.size * index / kRangeCount;
+    const auto last = m_asset.size * (index + 1) / kRangeCount - 1;
+    QNetworkRequest request(m_asset.url);
+    // Give each range an independent connection on slow or lossy links.
+    request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
+    request.setRawHeader("Accept-Encoding", "identity");
+    request.setRawHeader("Range", "bytes=" + QByteArray::number(first) + '-' + QByteArray::number(last));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    request.setTransferTimeout(15000);
+#endif
+
+    auto *reply = startRequest(request);
+    reply->setReadBufferSize(64 * 1024);
+    m_ranges.append({reply, first, last, 0});
+    connect(reply, &QNetworkReply::readyRead, this, [this, index] {
+      if (readRange(m_ranges[index]))
+        Q_EMIT progress(m_received, m_asset.size);
+    });
+    connect(reply, &QNetworkReply::finished, this, [this, index] { finishRange(m_ranges[index]); });
+  }
+}
+
+QNetworkReply *UpdateDownloader::startRequest(QNetworkRequest request)
+{
+  request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Synergy-UpdateDownloader"));
+  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::UserVerifiedRedirectPolicy);
+  auto *reply = m_network->get(request);
+  connect(reply, &QNetworkReply::redirected, this, [this, reply](const QUrl &url) {
+    const auto target = reply->url().resolved(url);
+    const int defaultPort = m_policy.scheme == QLatin1String("https") ? 443 : 80;
+    const bool sameRepository =
+        isAllowedDownloadUrl(target) && target.port(defaultPort) == m_asset.url.port(defaultPort);
+    const bool releaseCdn = m_policy.scheme == QLatin1String("https") && m_policy.host == QLatin1String("github.com") &&
+                            target.scheme() == QLatin1String("https") && target.port(443) == 443 &&
+                            target.host() == QLatin1String("release-assets.githubusercontent.com") &&
+                            target.userInfo().isEmpty();
+    if (sameRepository || releaseCdn) {
+      Q_EMIT reply->redirectAllowed();
+      return;
+    }
+    cleanup();
+    Q_EMIT failed(tr("Refusing to download a package outside this repository."));
+  });
+  return reply;
+}
+
+bool UpdateDownloader::readRange(Range &range)
+{
+  auto *reply = range.reply;
+  const auto expectedRange = "bytes " + QByteArray::number(range.first) + '-' + QByteArray::number(range.last) + '/' +
+                             QByteArray::number(m_asset.size);
+  if (reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() != 206 ||
+      reply->rawHeader("Content-Range") != expectedRange) {
+    fallBackToSingleDownload();
+    return false;
+  }
+  if (reply->bytesAvailable() == 0)
+    return true;
+  const auto chunk = reply->readAll();
+  if (chunk.size() > range.last - range.first + 1 - range.received || !m_file->seek(range.first + range.received) ||
+      m_file->write(chunk) != chunk.size()) {
+    fallBackToSingleDownload();
+    return false;
+  }
+  range.received += chunk.size();
+  m_received += chunk.size();
+  return true;
+}
+
+void UpdateDownloader::finishRange(Range &range)
+{
+  auto *reply = range.reply;
+  if (reply->error() != QNetworkReply::NoError) {
+    fallBackToSingleDownload();
+    return;
+  }
+  if (!readRange(range))
+    return;
+  if (range.received != range.last - range.first + 1) {
+    fallBackToSingleDownload();
+    return;
+  }
+  range.reply = nullptr;
+  reply->deleteLater();
+  for (const auto &part : std::as_const(m_ranges)) {
+    if (part.reply != nullptr)
+      return;
+  }
+  m_ranges.clear();
+  if (!m_file->flush() || !m_file->seek(0) || !m_hash.addData(m_file.get())) {
+    cleanup();
+    Q_EMIT failed(tr("Could not finish writing the update file."));
+    return;
+  }
+  completeDownload();
+}
+
+void UpdateDownloader::fallBackToSingleDownload()
+{
+  abortRanges();
+  m_received = 0;
+  if (!m_file->resize(0) || !m_file->seek(0)) {
+    cleanup();
+    Q_EMIT failed(tr("Could not finish writing the update file."));
+    return;
+  }
+  startSingleDownload();
+  Q_EMIT progress(0, m_asset.size);
+}
+
+void UpdateDownloader::abortRanges()
+{
+  for (const auto &range : std::as_const(m_ranges)) {
+    if (range.reply != nullptr) {
+      range.reply->disconnect(this);
+      range.reply->abort();
+      range.reply->deleteLater();
+    }
+  }
+  m_ranges.clear();
+}
+
 void UpdateDownloader::finishDownload()
 {
   auto *reply = m_reply;
@@ -130,27 +269,33 @@ void UpdateDownloader::finishDownload()
   reply->deleteLater();
 
   if (reply->error() != QNetworkReply::NoError) {
-    Q_EMIT failed(tr("Could not download the update: %1").arg(reply->errorString()));
+    const auto reason = tr("Could not download the update: %1").arg(reply->errorString());
     cleanup();
+    Q_EMIT failed(reason);
     return;
   }
 
   if (m_file == nullptr || !m_file->flush()) {
-    Q_EMIT failed(tr("Could not finish writing the update file."));
     cleanup();
+    Q_EMIT failed(tr("Could not finish writing the update file."));
     return;
   }
+  completeDownload();
+}
+
+void UpdateDownloader::completeDownload()
+{
   m_file->close();
 
   if (m_asset.size > 0 && m_received != m_asset.size) {
-    Q_EMIT failed(tr("Update package size does not match the release metadata."));
     cleanup();
+    Q_EMIT failed(tr("Update package size does not match the release metadata."));
     return;
   }
 
   if (m_hash.result().toHex() != m_asset.sha256) {
-    Q_EMIT failed(tr("Update package failed SHA-256 verification."));
     cleanup();
+    Q_EMIT failed(tr("Update package failed SHA-256 verification."));
     return;
   }
 
@@ -162,9 +307,11 @@ void UpdateDownloader::finishDownload()
 
 void UpdateDownloader::cleanup()
 {
+  abortRanges();
   if (m_reply != nullptr) {
     auto *reply = m_reply;
     m_reply = nullptr;
+    reply->disconnect(this);
     reply->abort();
     reply->deleteLater();
   }

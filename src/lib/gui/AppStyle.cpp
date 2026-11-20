@@ -204,7 +204,7 @@ QString appStyleSheet()
     QListWidget::item { padding: 7px 10px; border: 0; }
     QListWidget::item:selected { background: %18; color: %1; }
     QListWidget QLabel { font-size: 12px; }
-    QPlainTextEdit#releaseNotes {
+    QTextEdit#releaseNotes {
       background: %21; border: 0; border-radius: 9px; padding: 7px 10px; font-size: 12px;
     }
 

@@ -103,7 +103,7 @@ bool PageHost::hasEditor() const
   return pages != nullptr && pages->count() > 1;
 }
 
-bool PageHost::activateEditor(const QMetaObject &type)
+bool PageHost::activateEditor(const QMetaObject &type, bool bringToFront)
 {
   auto *pages = stack();
   if (pages == nullptr)
@@ -112,6 +112,13 @@ bool PageHost::activateEditor(const QMetaObject &type)
     auto *area = qobject_cast<QScrollArea *>(pages->widget(index));
     auto *editor = area ? area->property("pageEditor").value<QDialog *>() : nullptr;
     if (editor != nullptr && editor->metaObject()->inherits(&type)) {
+      if (bringToFront && pages->currentWidget() != area) {
+        pages->removeWidget(area);
+        pages->addWidget(area);
+        pages->setCurrentWidget(area);
+        updateNavigation();
+        synergy::gui::animateContentTransition(this);
+      }
       // 保持后代草稿所在的当前页，不让父编辑器在子页仍存活时被更改。
       pages->currentWidget()->setFocus();
       return true;
@@ -168,8 +175,8 @@ void PageHost::push(QDialog *editor)
   area->setWidget(container);
   pages->addWidget(area);
   pages->setCurrentWidget(area);
-  connect(editor, &QDialog::windowTitleChanged, this, &PageHost::updateNavigation);
-  connect(editor, &QDialog::finished, this, [this, area, pages] {
+  connect(editor, &QDialog::windowTitleChanged, area, [this] { updateNavigation(); });
+  connect(editor, &QDialog::finished, area, [this, area, pages, editor] {
     const int index = pages->indexOf(area);
     const bool current = pages->currentWidget() == area;
     // 父页被外部动作关闭时先拒绝后代，避免编辑器继续持有父页草稿引用。
@@ -183,6 +190,15 @@ void PageHost::push(QDialog *editor)
       child->reject();
     }
     pages->removeWidget(area);
+    if (editor->property("retainWhenFinished").toBool()) {
+      // The editor holds work that must survive leaving its workspace page.
+      // Disconnect this wrapper before the editor can be reopened.
+      editor->disconnect(area);
+      const auto title = editor->windowTitle();
+      editor->setParent(this);
+      editor->setWindowTitle(title);
+      editor->setProperty("retainWhenFinished", false);
+    }
     if (current || pages->currentIndex() < 0)
       pages->setCurrentIndex(qMax(0, index - 1));
     // finished 的业务回调仍可访问编辑器；下一轮事件循环再销毁。

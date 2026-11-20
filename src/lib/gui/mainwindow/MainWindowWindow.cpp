@@ -133,6 +133,22 @@ synergy::gui::update::UpdateChecker *MainWindow::createUpdateChecker()
 
 void MainWindow::checkForUpdates(bool manual)
 {
+  using synergy::gui::update::UpdateDialog;
+  const auto showExistingUpdate = [this, manual] {
+    if (!manual)
+      return m_pageHost->findChild<UpdateDialog *>() != nullptr;
+    if (m_pageHost->activateEditor(UpdateDialog::staticMetaObject, true)) {
+      showAndActivate();
+      return true;
+    }
+    if (auto *update = m_pageHost->findChild<UpdateDialog *>(QString(), Qt::FindDirectChildrenOnly)) {
+      showPage(update);
+      return true;
+    }
+    return false;
+  };
+  if (showExistingUpdate())
+    return;
   QPointer<synergy::gui::update::UpdateChecker> checker = createUpdateChecker();
   if (!checker)
     return;
@@ -172,8 +188,8 @@ void MainWindow::checkForUpdates(bool manual)
 
   connect(
       checker.data(), &synergy::gui::update::UpdateChecker::updateAvailable, this,
-      [this, release](const synergy::gui::update::UpdateInfo &info) {
-        if (!release())
+      [this, release, showExistingUpdate](const synergy::gui::update::UpdateInfo &info) {
+        if (!release() || showExistingUpdate())
           return;
         showPage(new synergy::gui::update::UpdateDialog(info, this));
       }
