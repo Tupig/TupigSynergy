@@ -8,11 +8,15 @@
 
 #include "common/Constants.h"
 #include "common/I18N.h"
+#include "common/RuntimeContext.h"
 #include "common/Settings.h"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QSignalSpy>
+#include <QTemporaryDir>
+#include <QUuid>
 
 namespace {
 // Locate the directory holding the catalogues produced by the translations
@@ -79,8 +83,7 @@ void I18NTests::creationTest()
 
 void I18NTests::detectedLangTest()
 {
-  for (const auto &lang : I18N::detectedLanguages())
-    QVERIFY(m_langMap.contains(lang));
+  QCOMPARE(I18N::detectedLanguages(), m_langMap.keys());
 }
 
 void I18NTests::check639NameTest_validMapValues()
@@ -122,13 +125,20 @@ void I18NTests::setLangTest_invalidLang()
 {
   QSignalSpy spy(I18N::instance(), &I18N::languageChanged);
   I18N::setLanguage("INVALID-LANGUAGE");
+  I18N::setLanguage("ja");
   QCOMPARE(spy.count(), 0);
 }
 
 void I18NTests::setLangTest_currentLang()
 {
+  const auto language = I18N::currentLanguage();
+  Settings::setValue(Settings::Core::Language, QString());
   QSignalSpy spy(I18N::instance(), &I18N::languageChanged);
-  I18N::setLanguage(I18N::currentLanguage());
+  I18N::setLanguage(language, false);
+  QVERIFY(Settings::value(Settings::Core::Language).toString().isEmpty());
+  I18N::setLanguage(language);
+  QCOMPARE(Settings::value(Settings::Core::Language).toString(), language);
+  QCOMPARE(I18N::currentLanguage(), language);
   QCOMPARE(spy.count(), 0);
 }
 
@@ -145,4 +155,15 @@ void I18NTests::reDetectTest()
   QCOMPARE(spy.count(), 1);
 }
 
-QTEST_MAIN(I18NTests)
+int main(int argc, char **argv)
+{
+  QTemporaryDir directory;
+  if (!directory.isValid() || !synergy::runtime::configureIsolatedRuntime(
+                                  {QFileInfo(directory.path()).canonicalFilePath(),
+                                   "ts-i18n-" + QUuid::createUuid().toString(QUuid::WithoutBraces)}
+                              ))
+    return 1;
+  QCoreApplication app(argc, argv);
+  I18NTests tests;
+  return QTest::qExec(&tests, argc, argv);
+}

@@ -29,6 +29,7 @@
 #include <QProcess>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QStyle>
@@ -571,50 +572,72 @@ void R3OptionContractTests::preferencesTypedValuesSaveCancelAndReopen()
 }
 void R3OptionContractTests::languagePreviewCancelAndSystemValue()
 {
+  const QLocale previousLocale;
+  const auto restoreLocale = qScopeGuard([previousLocale] { QLocale::setDefault(previousLocale); });
+  QLocale::setDefault(QLocale(QLocale::English));
   Settings::setValue(Settings::Core::Language, QString());
   synergy::gui::ServerConfig config;
-  const QString original = I18N::currentLanguage();
+  const auto english = QStringLiteral("en");
+  const auto chinese = QStringLiteral("zh_CN");
   {
     SettingsDialog editor(nullptr, config);
+    showForEvents(editor);
     auto *languages = combo(editor, "comboLanguage");
-    QVERIFY(languages->findData(QString()) >= 0);
-    QCOMPARE(languages->currentData().toString(), QString());
-    const int chinese = languages->findData(QStringLiteral("zh_CN"));
-    QVERIFY2(chinese >= 0, "Packaged test translations must include zh_CN");
-    languages->setCurrentIndex(chinese);
-    QVERIFY(I18N::currentLanguage().startsWith("zh"));
+    QVERIFY(languages);
+    QCOMPARE(languages->count(), 2);
+    QCOMPARE(languages->itemText(languages->findData(english)), QStringLiteral("English"));
+    QCOMPARE(languages->itemText(languages->findData(chinese)), QStringLiteral("简体中文"));
+    QCOMPARE(languages->currentData().toString(), english);
+    QVERIFY(!saveButton(editor)->isEnabled());
+    QVERIFY(activatePopup(languages, languages->findData(chinese), true));
+    QCOMPARE(I18N::currentLanguage(), chinese);
     QVERIFY(Settings::value(Settings::Core::Language).toString().isEmpty());
-    editor.reject();
-    QCOMPARE(I18N::currentLanguage(), original);
+    auto *buttons = editor.findChild<QDialogButtonBox *>();
+    QVERIFY(buttons);
+    QTest::mouseClick(buttons->button(QDialogButtonBox::Cancel), Qt::LeftButton);
+    QCOMPARE(editor.result(), int(QDialog::Rejected));
+    QCOMPARE(I18N::currentLanguage(), english);
     QVERIFY(Settings::value(Settings::Core::Language).toString().isEmpty());
   }
-  SettingsDialog editor(nullptr, config);
-  auto *languages = combo(editor, "comboLanguage");
-  languages->setCurrentIndex(languages->findData(QStringLiteral("en")));
-  QTest::mouseClick(saveButton(editor), Qt::LeftButton);
-  QCOMPARE(Settings::value(Settings::Core::Language).toString(), QStringLiteral("en"));
+  {
+    SettingsDialog editor(nullptr, config);
+    showForEvents(editor);
+    auto *languages = combo(editor, "comboLanguage");
+    QCOMPARE(languages->currentData().toString(), english);
+    QVERIFY(activatePopup(languages, languages->findData(english), true));
+    QVERIFY(saveButton(editor)->isEnabled());
+    QTest::mouseClick(saveButton(editor), Qt::LeftButton);
+    QCOMPARE(editor.result(), int(QDialog::Accepted));
+    QCOMPARE(Settings::value(Settings::Core::Language).toString(), english);
+  }
+  {
+    SettingsDialog editor(nullptr, config);
+    showForEvents(editor);
+    auto *languages = combo(editor, "comboLanguage");
+    QCOMPARE(languages->currentData().toString(), english);
+    QVERIFY(activatePopup(languages, languages->findData(chinese), true));
+    QTest::mouseClick(saveButton(editor), Qt::LeftButton);
+    QCOMPARE(editor.result(), int(QDialog::Accepted));
+    QCOMPARE(Settings::value(Settings::Core::Language).toString(), chinese);
+  }
+  {
+    SettingsDialog editor(nullptr, config);
+    showForEvents(editor);
+    auto *languages = combo(editor, "comboLanguage");
+    QCOMPARE(languages->currentData().toString(), chinese);
+    auto *buttons = editor.findChild<QDialogButtonBox *>();
+    QVERIFY(buttons && buttons->button(QDialogButtonBox::RestoreDefaults));
+    QTest::mouseClick(buttons->button(QDialogButtonBox::RestoreDefaults), Qt::LeftButton);
+    QCOMPARE(languages->currentData().toString(), english);
+    QCOMPARE(I18N::currentLanguage(), english);
+    QCOMPARE(Settings::value(Settings::Core::Language).toString(), chinese);
+    QTest::mouseClick(saveButton(editor), Qt::LeftButton);
+    QCOMPARE(editor.result(), int(QDialog::Accepted));
+    QVERIFY(Settings::value(Settings::Core::Language).toString().isEmpty());
+  }
   SettingsDialog reopened(nullptr, config);
-  QCOMPARE(combo(reopened, "comboLanguage")->currentData().toString(), QStringLiteral("en"));
+  QCOMPARE(combo(reopened, "comboLanguage")->currentData().toString(), english);
   reopened.reject();
-  {
-    SettingsDialog toSystem(nullptr, config);
-    auto *cancelledSystemLanguages = combo(toSystem, "comboLanguage");
-    cancelledSystemLanguages->setCurrentIndex(cancelledSystemLanguages->findData(QString()));
-    QCOMPARE(Settings::value(Settings::Core::Language).toString(), QStringLiteral("en"));
-    toSystem.reject();
-    QCOMPARE(Settings::value(Settings::Core::Language).toString(), QStringLiteral("en"));
-  }
-  {
-    SettingsDialog toSystem(nullptr, config);
-    auto *acceptedSystemLanguages = combo(toSystem, "comboLanguage");
-    acceptedSystemLanguages->setCurrentIndex(acceptedSystemLanguages->findData(QString()));
-    QTest::mouseClick(saveButton(toSystem), Qt::LeftButton);
-    QCOMPARE(toSystem.result(), int(QDialog::Accepted));
-    QVERIFY(Settings::value(Settings::Core::Language).toString().isEmpty());
-  }
-  SettingsDialog systemReopened(nullptr, config);
-  QCOMPARE(combo(systemReopened, "comboLanguage")->currentData().toString(), QString());
-  systemReopened.reject();
 }
 // UI-008/UI-014 native finding successor: real injected controls must follow
 // actual language-popup preview without discarding the unsaved scope choice.
@@ -691,26 +714,26 @@ void R3OptionContractTests::injectedScopeRetranslatesInSameDialog()
 void R3OptionContractTests::controlledSystemLocaleFallback_data()
 {
   QTest::addColumn<QString>("locale");
+  QTest::addColumn<QString>("configured");
   QTest::addColumn<QString>("expected");
-  QTest::newRow("unsupported-french-falls-back-to-english") << QString("fr_FR") << QString("en");
-  QTest::newRow("japanese-system-default-is-english") << QString("ja_JP") << QString("en");
-  QTest::newRow("simplified-chinese") << QString("zh_CN") << QString("zh_CN");
-  // C-UI-R3-COMPLETE-LOCALE-R2: PM-approved successor; the shipped catalogue
-  // inventory has no Traditional catalogue, so preserve I18N's China fallback.
-  // Original unconditional zh_TW expectation and its RED remain in baseline logs.
-  QTest::newRow("traditional-missing-catalog-falls-back-to-simplified") << QString("zh_TW") << QString("zh_CN");
+  QTest::newRow("french-system") << QString("fr_FR") << QString() << QString("en");
+  QTest::newRow("japanese-system") << QString("ja_JP") << QString() << QString("en");
+  QTest::newRow("simplified-chinese-system") << QString("zh_CN") << QString() << QString("zh_CN");
+  QTest::newRow("traditional-chinese-system") << QString("zh_TW") << QString() << QString("zh_CN");
+  QTest::newRow("saved-ja-on-chinese-system") << QString("zh_CN") << QString("ja") << QString("en");
+  QTest::newRow("saved-es-on-japanese-system") << QString("ja_JP") << QString("es") << QString("en");
+  QTest::newRow("saved-en-on-chinese-system") << QString("zh_CN") << QString("en") << QString("en");
+  QTest::newRow("saved-zh-cn-on-japanese-system") << QString("ja_JP") << QString("zh_CN") << QString("zh_CN");
+  QTest::newRow("saved-zh-tw-on-french-system") << QString("fr_FR") << QString("zh_TW") << QString("zh_CN");
+  QTest::newRow("unknown-saved-value") << QString("zh_CN") << QString("invalid") << QString("en");
 }
 void R3OptionContractTests::controlledSystemLocaleFallback()
 {
   QFETCH(QString, locale);
+  QFETCH(QString, configured);
   QFETCH(QString, expected);
-  if (locale == QStringLiteral("zh_TW"))
-    QVERIFY2(
-        !QFileInfo::exists(QCoreApplication::applicationDirPath() + "/translations/synergy_zh_TW.qm"),
-        "Successor fallback oracle requires the explicit absence of a Traditional catalogue"
-    );
   QProcess process;
-  process.start(QCoreApplication::applicationFilePath(), {"--r3-system-locale", locale, expected});
+  process.start(QCoreApplication::applicationFilePath(), {"--r3-system-locale", locale, configured, expected});
   QVERIFY(process.waitForStarted(5000));
   QVERIFY(process.waitForFinished(15000));
   QCOMPARE(process.exitStatus(), QProcess::NormalExit);
@@ -733,25 +756,27 @@ int main(int argc, char **argv)
   QApplication app(argc, argv);
   Settings::setSettingsFile(root + "/user/test.conf");
   Settings::setStateFile(root + "/state/app.state");
-  if (argc == 4 && QByteArray(argv[1]) == "--r3-system-locale") {
+  if (argc == 5 && QByteArray(argv[1]) == "--r3-system-locale") {
     QLocale::setDefault(QLocale(QString::fromLocal8Bit(argv[2])));
-    Settings::setValue(Settings::Core::Language, QString());
-    const QString expected = QString::fromLocal8Bit(argv[3]);
+    const QString configured = QString::fromLocal8Bit(argv[3]);
+    const QString expected = QString::fromLocal8Bit(argv[4]);
+    Settings::setValue(Settings::Core::Language, configured);
     if (I18N::currentLanguage() != expected)
       return 40;
     synergy::gui::ServerConfig config;
     SettingsDialog editor(nullptr, config);
     auto *languages = combo(editor, "comboLanguage");
-    if (!languages || !languages->currentData().toString().isEmpty())
+    if (!languages || languages->count() != 2 || languages->currentData().toString() != expected)
       return 41;
-    const int explicitEnglish = languages->findData(QStringLiteral("en"));
-    if (explicitEnglish < 0)
+    const auto preview = expected == QStringLiteral("en") ? QStringLiteral("zh_CN") : QStringLiteral("en");
+    const int row = languages->findData(preview);
+    if (row < 0)
       return 42;
-    languages->setCurrentIndex(explicitEnglish);
-    if (!Settings::value(Settings::Core::Language).toString().isEmpty())
+    languages->setCurrentIndex(row);
+    if (I18N::currentLanguage() != preview || Settings::value(Settings::Core::Language).toString() != configured)
       return 43;
     editor.reject();
-    if (I18N::currentLanguage() != expected || !Settings::value(Settings::Core::Language).toString().isEmpty())
+    if (I18N::currentLanguage() != expected || Settings::value(Settings::Core::Language).toString() != configured)
       return 44;
     return 0;
   }

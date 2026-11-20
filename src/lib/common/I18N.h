@@ -21,35 +21,35 @@ public:
   static I18N *instance();
   /**
    * @brief detectedLanguages
-   * @return List of detected languages  (native names: English, Español etc..)
+   * @return The supported UI language names.
    */
   static QStringList detectedLanguages();
 
   /**
    * @brief nativeTo639Name Convert a native Language name into a 639 name
-   * @param nativeName English, Español etc..
-   * @return  639 name for the language e, zh_CN , it, etc..)
+   * @param nativeName English or 简体中文.
+   * @return The corresponding settings value, en or zh_CN.
    */
   static QString nativeTo639Name(QString nativeName);
 
   /**
    * @brief toNativeName Convert a 639 Name into a Native Language string
-   * @param shortName A 639 name en, es etc...
+   * @param shortName en or zh_CN.
    * @return  native language string for the language
    */
   static QString toNativeName(QString shortName);
 
   /**
    * @brief currentLanguage
-   * @return The current language string (639-1 names i.e en, es)
+   * @return The current UI language, en or zh_CN.
    */
   static QString currentLanguage();
 
-  /**
-   * @brief setLanguage Sets the current language
-   * @param langName The language name must be an is 639-1 name
-   */
-  static void setLanguage(const QString &langName);
+  /// Resolve the stored preference, using the system locale when it is empty.
+  static QString resolveLanguage(const QString &configured);
+
+  /// Apply en or zh_CN. A preview leaves the stored preference untouched.
+  static void setLanguage(const QString &langName, bool savePreference = true);
 
   /**
    * @brief detectLanguages Detect new language files
@@ -59,12 +59,12 @@ public:
 Q_SIGNALS:
   /**
    * @brief languageChanged Emitted when the current language changes
-   * @param language The current language (639-1 names i.e en, es)
+   * @param language The current language, en or zh_CN.
    */
   void languageChanged(const QString language);
   /**
    * @brief languagesChanged Emitted when the detected languages changes
-   * @param languages The current list of languages (639-1 names i.e en, es)
+   * @param languages The languages with detected catalogue files.
    */
   void languagesChanged(const QStringList languages);
 
@@ -74,10 +74,10 @@ private:
   I18N *operator=(I18N &other) = delete;
   I18N(const I18N &other) = delete;
   ~I18N() override = default;
+  void applyLanguage(const QString &langName);
   void detectLanguages();
 
   QMap<QString, QStringList> m_translations;
-  QMap<QString, QString> m_nameMap;
   QList<QTranslator *> m_currentTranslations;
   QString m_currentLang = QStringLiteral("en");
   QString m_appTrPath;

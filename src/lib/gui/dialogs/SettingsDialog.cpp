@@ -39,8 +39,8 @@
 #include <QLabel>
 #include <QLayoutItem>
 #include <QListView>
-#include <QLocale>
 #include <QMessageBox>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QVariant>
 #include <algorithm>
@@ -66,15 +66,12 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
   ui->lineCommandEnter->setEnabled(false);
   ui->lineCommandExit->setEnabled(false);
 
-  // 语言可即时预览，但取消必须恢复原显示语言和“跟随系统”的空配置。
+  // 语言可即时预览，保存前保留原始设置，包括空值与旧版语言代码。
   m_originalLanguage = I18N::currentLanguage();
   m_originalLanguageSetting = Settings::value(Settings::Core::Language).toString();
-  // set up the language combo
   I18N::reDetectLanguages();
-  ui->comboLanguage->addItem(tr("Follow system"), QString());
   for (const auto &language : I18N::detectedLanguages())
     ui->comboLanguage->addItem(language, I18N::nativeTo639Name(language));
-  ui->comboLanguage->setCurrentIndex(ui->comboLanguage->findData(m_originalLanguageSetting));
   // 使用可测量的 Qt 列表弹层，避免 macOS 原生弹层按窄控件宽度截断语言名称。
   auto *languageView = new QListView(ui->comboLanguage);
   languageView->setTextElideMode(Qt::ElideNone);
@@ -289,24 +286,15 @@ void SettingsDialog::initConnections()
   connect(
       ui->comboLogLevel, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SettingsDialog::logLevelChanged
   );
-  connect(ui->comboLanguage, qOverload<int>(&QComboBox::currentIndexChanged), this, [this] {
-    auto language = ui->comboLanguage->currentData().toString();
-    if (language.isEmpty()) {
-      const QLocale system;
-      language = system.language() == QLocale::Chinese
-                     ? (system.script() == QLocale::TraditionalChineseScript ? QStringLiteral("zh_TW")
-                                                                             : QStringLiteral("zh_CN"))
-                     : QStringLiteral("en");
-      if (language == QStringLiteral("zh_TW") && ui->comboLanguage->findData(language) < 0)
-        language = QStringLiteral("zh_CN");
-      if (ui->comboLanguage->findData(language) < 0)
-        language = QStringLiteral("en");
-    }
-    const auto stored = Settings::value(Settings::Core::Language);
-    I18N::setLanguage(language);
-    Settings::setValue(Settings::Core::Language, stored);
+  const auto selectLanguage = [this](int row) {
+    if (row < 0)
+      return;
+    setLanguageDraft(ui->comboLanguage->itemData(row).toString());
     setButtonBoxEnabledButtons();
-  });
+  };
+  connect(ui->comboLanguage, qOverload<int>(&QComboBox::currentIndexChanged), this, selectLanguage);
+  // An explicit selection can pin the displayed system default without changing its index.
+  connect(ui->comboLanguage, qOverload<int>(&QComboBox::activated), this, selectLanguage);
 
   // Connect modifiable controls
   connect(ui->rbIconMono, &QRadioButton::toggled, this, &SettingsDialog::setButtonBoxEnabledButtons);
@@ -321,10 +309,6 @@ void SettingsDialog::initConnections()
   );
   connect(
       ui->comboTlsKeyLength, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-      &SettingsDialog::setButtonBoxEnabledButtons
-  );
-  connect(
-      ui->comboLanguage, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
       &SettingsDialog::setButtonBoxEnabledButtons
   );
   connect(ui->rbAutoHide, &QRadioButton::toggled, this, &SettingsDialog::setButtonBoxEnabledButtons);
@@ -427,7 +411,6 @@ void SettingsDialog::showReadOnlyMessage()
 
 void SettingsDialog::updateText()
 {
-  ui->comboLanguage->setItemText(0, tr("Follow system"));
   const auto logLevelNames = LogLevel::logLevelNames();
   const QStringList toolTips = {tr("Required messages"),        tr("Non-fatal errors"), tr("General warnings"),
                                 tr("General events [Default]"), tr("Debug entries"),    tr("Verbose debug output")};
@@ -494,7 +477,7 @@ void SettingsDialog::accept()
   Settings::setValue(Settings::Gui::CloseToTray, ui->rbCloseToTray->isChecked());
   Settings::setValue(Settings::Gui::SymbolicTrayIcon, ui->rbIconMono->isChecked());
   Settings::setValue(Settings::Security::CheckPeers, ui->cbRequireClientCert->isChecked());
-  Settings::setValue(Settings::Core::Language, ui->comboLanguage->currentData());
+  Settings::setValue(Settings::Core::Language, m_languageDraft);
   Settings::setValue(Settings::Log::GuiDebug, ui->cbGuiDebug->isChecked());
   Settings::setValue(Settings::Gui::ShowVersionInTitle, ui->cbShowVersion->isChecked());
   if (m_checkForUpdates != nullptr) {
@@ -517,7 +500,7 @@ void SettingsDialog::accept()
 
 void SettingsDialog::loadFromConfig()
 {
-  ui->comboLanguage->setCurrentIndex(ui->comboLanguage->findData(m_originalLanguageSetting));
+  setLanguageDraft(m_originalLanguageSetting);
   if (auto *scope = findChild<QComboBox *>(QStringLiteral("comboSettingsScope")))
     scope->setCurrentIndex(scope->property("originalScopeIndex").toInt());
   ui->sbPort->setValue(Settings::value(Settings::Core::Port).toInt());
@@ -713,7 +696,7 @@ bool SettingsDialog::isModified() const
       (ui->cbRunExitCommand->isChecked() != Settings::value(Settings::Core::EnableExitCommand).toBool()) ||
       (ui->lineCommandEnter->text() != Settings::value(Settings::Core::ScreenEnterCommand).toString()) ||
       (ui->lineCommandExit->text() != Settings::value(Settings::Core::ScreenExitCommand).toString()) ||
-      (ui->comboLanguage->currentData().toString() != m_originalLanguageSetting);
+      (m_languageDraft != m_originalLanguageSetting);
 
   modified = modified || (m_checkForUpdates->isChecked() != Settings::value(Settings::Gui::CheckForUpdates).toBool());
   if (auto *scope = findChild<QComboBox *>(QStringLiteral("comboSettingsScope")))
@@ -753,15 +736,13 @@ bool SettingsDialog::isDefault() const
       (ui->lineCommandExit->text() == Settings::defaultValue(Settings::Core::ScreenExitCommand).toString()) &&
       (ui->cbRunEnterCommand->isChecked() == Settings::defaultValue(Settings::Core::EnableEnterCommand).toBool()) &&
       (ui->cbRunExitCommand->isChecked() == Settings::defaultValue(Settings::Core::EnableExitCommand).toBool()) &&
-      (ui->comboLanguage->currentData().toString() == Settings::defaultValue(Settings::Core::Language).toString())
+      (m_languageDraft == Settings::defaultValue(Settings::Core::Language).toString())
   );
 }
 
 void SettingsDialog::resetToDefault()
 {
-  ui->comboLanguage->setCurrentIndex(
-      ui->comboLanguage->findData(Settings::defaultValue(Settings::Core::Language).toString())
-  );
+  setLanguageDraft(Settings::defaultValue(Settings::Core::Language).toString());
   ui->sbPort->setValue(Settings::defaultValue(Settings::Core::Port).toInt());
   ui->comboLogLevel->setCurrentIndex(
       static_cast<int>(LogLevel::fromOption(Settings::defaultValue(Settings::Log::Level).toString()))
@@ -821,10 +802,18 @@ void SettingsDialog::setButtonBoxEnabledButtons() const
   ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(writable && !isDefault());
 }
 
+void SettingsDialog::setLanguageDraft(const QString &setting)
+{
+  const auto language = I18N::resolveLanguage(setting);
+  m_languageDraft = setting;
+  const QSignalBlocker blocker(ui->comboLanguage);
+  ui->comboLanguage->setCurrentIndex(ui->comboLanguage->findData(language));
+  I18N::setLanguage(language, false);
+}
+
 void SettingsDialog::reject()
 {
-  if (I18N::currentLanguage() != m_originalLanguage)
-    I18N::setLanguage(m_originalLanguage);
+  I18N::setLanguage(m_originalLanguage, false);
   Settings::setValue(Settings::Core::Language, m_originalLanguageSetting);
   QDialog::reject();
 }

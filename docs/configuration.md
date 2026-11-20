@@ -85,18 +85,14 @@ Comments start with `#` or `;`. Only non-default values are written.
 | `processMode` | int | `0` on an installed Windows build, `1` otherwise | `0` = Service, `1` = Desktop |
 | `computerName` | string | hostname | Unique computer identifier |
 | `useHooks` | bool | `true` | Windows: use hooks vs raw input |
-| `language` | ISO 639 | empty = follow system | UI language code. **Empty follows the system**: a Chinese system (any `zh-*`) uses Chinese (prefer Traditional for `zh-Hant` when its catalogue is installed, then Simplified, then English), every other system — English, Japanese, Korean, Russian, Spanish, Italian — uses English. Picking a language in Preferences stores it here and overrides the default. |
+| `language` | locale code | empty = system default | Preferences offers English (`en`) and Simplified Chinese (`zh_CN`). An empty value uses Simplified Chinese on any Chinese system and English on other systems. Saved Chinese variants use Simplified Chinese. Other legacy values use English. Saving an explicit language selection overrides the system default. |
 | `enableEnterCommand` | bool | `false` | Run command on screen enter |
 | `enterCommand` | string | — | Command to run on enter |
 | `enableExitCommand` | bool | `false` | Run command on screen leave |
 | `exitCommand` | string | — | Command to run on leave |
 
-> **Default language rule.** An unset `language` follows the system: Chinese systems start in Chinese, all
-> other systems start in English. For a Traditional Chinese system, lookup tries Taiwan, then China,
-> then English; the current distribution supplies Simplified Chinese only, so it falls back to Simplified.
-> Japanese, Korean, Russian, Spanish and Italian catalogues still ship and
-> can be selected explicitly; they are simply not the default. The rule lives in
-> `src/lib/common/I18N.cpp` (`defaultCandidates`), so the GUI and the core always agree.
+> Preferences displays the resolved language for an empty or legacy value. Saving unrelated preferences
+> preserves that value. Saving Restore Defaults clears the language preference so it follows the system again.
 
 #### `[daemon]` — Windows Daemon
 
@@ -482,16 +478,14 @@ key=value
 | `processMode` | int | 已安装的 Windows 为 `0`，其余为 `1` | `0`=服务，`1`=桌面 |
 | `computerName` | string | 主机名 | 唯一计算机标识 |
 | `useHooks` | bool | `true` | Windows: 钩子 vs 原始输入 |
-| `language` | ISO 639 | 空 = 跟随系统 | UI 语言代码。**留空表示跟随系统**：中文系统（任意 `zh-*`）使用中文（`zh-Hant` 优先使用已安装的繁体语言包，再回退简体、英文），其它系统——英文、日文、韩文、俄文、西班牙文、意大利文——一律使用英文。在首选项中主动选择语言会写入此项并覆盖默认值。 |
+| `language` | 语言区域代码 | 空 = 系统默认 | 首选项提供 English（`en`）和简体中文（`zh_CN`）。留空时，中文系统使用简体中文，其它系统使用英文。旧版中文值按简体中文处理，其它旧值按英文处理。主动选择语言并保存会覆盖系统默认值。 |
 | `enableEnterCommand` | bool | `false` | 进屏时运行命令 |
 | `enterCommand` | string | — | 进屏执行命令 |
 | `enableExitCommand` | bool | `false` | 离屏时运行命令 |
 | `exitCommand` | string | — | 离屏执行命令 |
 
-> **默认语言规则。** `language` 未设置时跟随系统：中文系统显示中文，其它系统显示英文。繁体中文系统
-> 依次查找繁体中文（台湾）、简体中文（中国大陆）、英文语言包；当前发行仅提供简体中文包，因此缺少繁体包时回退简体。日文、韩文、俄文、
-> 西班牙文、意大利文语言包仍随包提供，可在首选项中显式选择，只是不作为默认。该规则实现在
-> `src/lib/common/I18N.cpp` 的 `defaultCandidates`，GUI 与 core 保持一致。
+> 如果配置为空或保留旧值，首选项会直接显示当前对应的语言。只保存其它首选项时保留原语言值。
+> 恢复默认值并保存后，清空语言设置并按系统语言决定界面语言。
 
 #### `[daemon]` — Windows 守护进程
 
