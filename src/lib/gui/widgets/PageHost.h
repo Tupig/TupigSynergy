@@ -24,7 +24,8 @@ public:
   void push(QDialog *editor);
   static void present(QWidget *origin, QDialog *editor);
   [[nodiscard]] bool hasEditor() const;
-  bool activateEditor(const QMetaObject &type);
+  // Independent pages may be moved above another editor without closing its draft.
+  bool activateEditor(const QMetaObject &type, bool bringToFront = false);
   [[nodiscard]] int preferredContentHeight(int width);
   void requestContentFit();
 

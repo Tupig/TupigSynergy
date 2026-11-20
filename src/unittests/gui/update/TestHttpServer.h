@@ -7,6 +7,7 @@
 #pragma once
 
 #include <QHostAddress>
+#include <QRegularExpression>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QUrl>
@@ -46,20 +47,51 @@ public:
     m_redirect = location;
   }
 
+  void setByteRanges(bool enabled, bool incorrect = false)
+  {
+    m_ranges = enabled;
+    m_incorrectRange = incorrect;
+  }
+
+  int partialRequests() const
+  {
+    return m_partialRequests;
+  }
+  int ordinaryRequests() const
+  {
+    return m_ordinaryRequests;
+  }
+
 protected:
   void incomingConnection(qintptr handle) override
   {
     auto *socket = new QTcpSocket(this);
     socket->setSocketDescriptor(handle);
-    connect(socket, &QTcpSocket::readyRead, this, [this, socket]() {
-      // Respond exactly once per connection; the client request is not parsed.
+    connect(socket, &QTcpSocket::readyRead, this, [this, socket, request = QByteArray()]() mutable {
+      request += socket->readAll();
+      if (!request.contains("\r\n\r\n"))
+        return;
       socket->disconnect(this);
-      socket->readAll();
+      static const QRegularExpression range(
+          QStringLiteral("\\r\\nRange: bytes=(\\d+)-(\\d+)\\r\\n"), QRegularExpression::CaseInsensitiveOption
+      );
+      const auto match = range.match(QString::fromLatin1(request));
+      if (match.hasMatch())
+        ++m_partialRequests;
+      else
+        ++m_ordinaryRequests;
       const auto reason = m_status == 200 ? QByteArrayLiteral("OK") : QByteArrayLiteral("Error");
       QByteArray response;
       if (!m_redirect.isEmpty()) {
         response = "HTTP/1.1 302 Found\r\nLocation: " + m_redirect.toEncoded() +
                    "\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+      } else if (m_ranges && match.hasMatch()) {
+        const auto start = match.captured(1).toLongLong();
+        const auto end = match.captured(2).toLongLong();
+        const auto data = m_body.mid(start, end - start + 1);
+        response = "HTTP/1.1 206 Partial Content\r\nContent-Range: bytes " + QByteArray::number(start) + "-" +
+                   QByteArray::number(end) + "/" + QByteArray::number(m_body.size() + m_incorrectRange) +
+                   "\r\nContent-Length: " + QByteArray::number(data.size()) + "\r\nConnection: close\r\n\r\n" + data;
       } else {
         response = "HTTP/1.1 " + QByteArray::number(m_status) + " " + reason + "\r\nContent-Type: " + m_contentType +
                    "\r\nContent-Length: " + QByteArray::number(m_body.size()) + "\r\nConnection: close\r\n\r\n" +
@@ -76,4 +108,8 @@ private:
   QByteArray m_body;
   QByteArray m_contentType = QByteArrayLiteral("application/json");
   QUrl m_redirect;
+  bool m_ranges = false;
+  bool m_incorrectRange = false;
+  int m_partialRequests = 0;
+  int m_ordinaryRequests = 0;
 };

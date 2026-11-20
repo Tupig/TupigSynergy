@@ -9,6 +9,7 @@
 #include "UpdateChecker.h"
 
 #include <QCryptographicHash>
+#include <QList>
 #include <QObject>
 #include <QUrl>
 
@@ -17,6 +18,7 @@
 class QFile;
 class QNetworkAccessManager;
 class QNetworkReply;
+class QNetworkRequest;
 
 namespace synergy::gui::update {
 
@@ -56,6 +58,22 @@ Q_SIGNALS:
   void failed(const QString &reason);
 
 private:
+  struct Range
+  {
+    QNetworkReply *reply = nullptr;
+    qint64 first = 0;
+    qint64 last = 0;
+    qint64 received = 0;
+  };
+
+  void startSingleDownload();
+  void startRanges();
+  QNetworkReply *startRequest(QNetworkRequest request);
+  bool readRange(Range &range);
+  void finishRange(Range &range);
+  void fallBackToSingleDownload();
+  void abortRanges();
+  void completeDownload();
   void finishDownload();
   void cleanup();
   bool isAllowedDownloadUrl(const QUrl &url) const;
@@ -63,6 +81,7 @@ private:
 
   QNetworkAccessManager *m_network = nullptr;
   QNetworkReply *m_reply = nullptr;
+  QList<Range> m_ranges;
   std::unique_ptr<QFile> m_file;
   QCryptographicHash m_hash{QCryptographicHash::Sha256};
   DownloadPolicy m_policy;

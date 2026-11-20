@@ -100,6 +100,8 @@ MainWindow::MainWindow(const QString &instanceSocketName)
   m_statusBar = ui->statusBar;
   m_pageHost = ui->pageHost;
   connect(m_pageHost, &PageHost::contentSizeChanged, this, &MainWindow::fitToCurrentPage);
+  connect(ui->pageStack, &QStackedWidget::currentChanged, this, &MainWindow::fitToCurrentPage, Qt::QueuedConnection);
+  connect(m_logDock, &LogPanel::collapsedChanged, this, &MainWindow::fitToCurrentPage, Qt::QueuedConnection);
 
   // 纯图标按钮：返回与导出；其余按钮使用设计稿的小号 26px 图标+文字。
   for (auto *button : {ui->btnBack, ui->btnSaveServerConfig}) {

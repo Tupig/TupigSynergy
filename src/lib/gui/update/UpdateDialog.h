@@ -15,7 +15,6 @@
 #include <QTimer>
 
 class QLabel;
-class QPlainTextEdit;
 class QProgressBar;
 class QPushButton;
 
@@ -38,6 +37,7 @@ public:
   void reject() override;
 
 private:
+  void cancelAndClose();
   void startDownload();
   void installDownloaded(const QString &filePath);
   void openReleasePage();
@@ -49,7 +49,6 @@ private:
   UpdateInfo m_info;
   UpdateDownloader *m_downloader = nullptr;
   QLabel *m_summary = nullptr;
-  QPlainTextEdit *m_notes = nullptr;
   QProgressBar *m_progress = nullptr;
   QLabel *m_progressText = nullptr;
   QWidget *m_meter = nullptr;
@@ -62,6 +61,7 @@ private:
   qint64 m_total = -1;
   qint64 m_sampleTime = 0;
   double m_bytesPerSecond = 0;
+  bool m_busy = false;
   QPushButton *m_install = nullptr;
   QPushButton *m_release = nullptr;
   QPushButton *m_later = nullptr;

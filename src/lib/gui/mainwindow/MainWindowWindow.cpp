@@ -113,7 +113,12 @@ void MainWindow::fitToCurrentPage()
   const int menuHeight = menuBar()->isNativeMenuBar() ? 0 : menuBar()->sizeHint().height();
   const int chrome = ui->pageBar->height() + ui->statusBar->height() + menuHeight;
   const int bodyCap = qMax(1, qMin(660, available - chrome - frame));
-  const int target = qMax(minimumHeight(), chrome + qMin(preferred, bodyCap));
+  const int fittedHeight = chrome + qMin(preferred, bodyCap);
+  const int defaultHeight = Ui::MainWindow::kWindowHeight;
+  const bool compactPage = m_pageHost->hasEditor() || m_logDock->isCollapsed();
+  const int minimum = compactPage ? qMin(defaultHeight, fittedHeight) : defaultHeight;
+  setMinimumHeight(minimum);
+  const int target = qMax(minimum, fittedHeight);
   if (height() != target)
     resize(width(), target);
 }
@@ -133,6 +138,22 @@ synergy::gui::update::UpdateChecker *MainWindow::createUpdateChecker()
 
 void MainWindow::checkForUpdates(bool manual)
 {
+  using synergy::gui::update::UpdateDialog;
+  const auto showExistingUpdate = [this, manual] {
+    if (!manual)
+      return m_pageHost->findChild<UpdateDialog *>() != nullptr;
+    if (m_pageHost->activateEditor(UpdateDialog::staticMetaObject, true)) {
+      showAndActivate();
+      return true;
+    }
+    if (auto *update = m_pageHost->findChild<UpdateDialog *>(QString(), Qt::FindDirectChildrenOnly)) {
+      showPage(update);
+      return true;
+    }
+    return false;
+  };
+  if (showExistingUpdate())
+    return;
   QPointer<synergy::gui::update::UpdateChecker> checker = createUpdateChecker();
   if (!checker)
     return;
@@ -172,8 +193,8 @@ void MainWindow::checkForUpdates(bool manual)
 
   connect(
       checker.data(), &synergy::gui::update::UpdateChecker::updateAvailable, this,
-      [this, release](const synergy::gui::update::UpdateInfo &info) {
-        if (!release())
+      [this, release, showExistingUpdate](const synergy::gui::update::UpdateInfo &info) {
+        if (!release() || showExistingUpdate())
           return;
         showPage(new synergy::gui::update::UpdateDialog(info, this));
       }

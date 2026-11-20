@@ -42,6 +42,7 @@
 #include <QFontInfo>
 #include <QFontMetrics>
 #include <QHostAddress>
+#include <QImage>
 #include <QLabel>
 #include <QLibraryInfo>
 #include <QLineEdit>
@@ -97,6 +98,19 @@ void applyTestPalette(bool dark)
   palette.setColor(QPalette::Button, QColor(dark ? "#2a2a2e" : "#ececf0"));
   qApp->setPalette(palette);
   qApp->setStyleSheet(synergy::gui::appStyleSheet());
+}
+
+void verifyTextAction(const QPushButton *button)
+{
+  const auto detail = QStringLiteral("%1 \"%2\": height %3, font %4px, width %5, hinted width %6")
+                          .arg(button->objectName(), button->text())
+                          .arg(button->height())
+                          .arg(button->font().pixelSize())
+                          .arg(button->width())
+                          .arg(button->sizeHint().width());
+  QVERIFY2(button->height() == 32, qPrintable(detail));
+  QVERIFY2(button->font().pixelSize() == 13, qPrintable(detail));
+  QVERIFY2(button->width() >= button->minimumSizeHint().width(), qPrintable(detail));
 }
 
 QStackedWidget *prepareHost(PageHost &host)
@@ -164,6 +178,9 @@ private Q_SLOTS:
   void fingerprintsShowFullHashAndRejectByDefault();
   void aboutUsesBuildVersionAndCompactTitle();
   void collapsedLogShowsOneLatestMessage();
+  void collapsedLogBadgeHasRoundedCorners();
+  void coreLogUsesChineseCatalogue_data();
+  void coreLogUsesChineseCatalogue();
   void logFollowsTailWithoutInterruptingHistory();
   void leavingUpdateCancelsPendingDownload();
 };
@@ -243,6 +260,7 @@ void NativeDesignTests::mainShellResponsiveWidths()
   ui.lineHostname->setText(QStringLiteral("192.0.2.20"));
   ui.logPanel->setCollapsed(true);
   window.resize(width, 480);
+  ui.updateShortcutPresentation(width);
   window.show();
   QCoreApplication::processEvents();
   QCOMPARE(window.width(), width);
@@ -262,6 +280,22 @@ void NativeDesignTests::mainShellResponsiveWidths()
   if (ui.workspace->horizontalScrollBar()->maximum() != 0)
     diagnoseGeometryFailure(ui.workspace, "responsive-horizontal-scroll");
   QCOMPARE(ui.workspace->horizontalScrollBar()->maximum(), 0);
+  for (const auto *button :
+       {ui.btnEditName, ui.btnSaveName, ui.btnCancelName, ui.btnToggleCore, ui.btnRestartCore,
+        server ? ui.btnConfigureServer : ui.btnConfigureClient}) {
+    verifyTextAction(button);
+  }
+  for (const auto *button : {ui.btnSettingsShortcut, ui.btnUpdatesShortcut, ui.btnAboutShortcut}) {
+    QVERIFY(ui.pageBar->rect().contains(QRect(button->mapTo(ui.pageBar, QPoint()), button->size())));
+    if (width < 640) {
+      QVERIFY(button->text().isEmpty());
+      QVERIFY(!button->accessibleName().isEmpty());
+      QCOMPARE(button->height(), 24);
+    } else {
+      QVERIFY(!button->text().isEmpty());
+      verifyTextAction(button);
+    }
+  }
   capture(
       window, QStringLiteral("main-responsive-%1-%2-%3").arg(language).arg(width).arg(server ? "server" : "client")
   );
@@ -680,6 +714,14 @@ void NativeDesignTests::embeddedPages()
       if (!(bounds.left() >= 0 && bounds.right() < editor->width()))
         diagnoseGeometryFailure(field, "embedded-field-containment");
       QVERIFY2(bounds.left() >= 0 && bounds.right() < editor->width(), qPrintable(detail));
+      if (auto *button = qobject_cast<QPushButton *>(field)) {
+        if (button->property("keyCapture").toBool()) {
+          QCOMPARE(button->height(), 30);
+        } else if (!button->text().isEmpty() && !button->property("iconButton").toBool() &&
+                   !button->property("iconButton32").toBool()) {
+          verifyTextAction(button);
+        }
+      }
     }
     for (auto *area : editor->findChildren<QScrollArea *>()) {
       if (area->isVisibleTo(editor) && area->horizontalScrollBar()->maximum() != 0)
@@ -835,6 +877,81 @@ void NativeDesignTests::collapsedLogShowsOneLatestMessage()
   QVERIFY(records->isVisibleTo(&panel));
   QVERIFY(records->allText().contains(QStringLiteral("first")));
   QVERIFY(records->allText().contains(QStringLiteral("last complete message")));
+}
+
+void NativeDesignTests::collapsedLogBadgeHasRoundedCorners()
+{
+  applyTestPalette(true);
+  LogPanel panel;
+  panel.setAttribute(Qt::WA_DontShowOnScreen);
+  panel.resize(500, panel.sizeHint().height());
+  panel.setCollapsed(true);
+  panel.show();
+  QVERIFY(settleStaticRender(panel));
+
+  auto *badge = panel.findChild<QLabel *>(QStringLiteral("logBadge"));
+  QVERIFY(badge && badge->isVisibleTo(&panel));
+  const QRect bounds(badge->mapTo(&panel, QPoint()) * 2, badge->size() * 2);
+  QImage image(panel.size() * 2, QImage::Format_ARGB32_Premultiplied);
+  image.setDevicePixelRatio(2);
+  image.fill(Qt::transparent);
+  panel.render(&image);
+  QVERIFY(image.rect().contains(bounds.adjusted(-2, 0, 0, 0)));
+  const auto background = image.pixelColor(bounds.left() - 2, bounds.top());
+  for (const auto &corner : {bounds.topLeft(), bounds.topRight(), bounds.bottomLeft(), bounds.bottomRight()}) {
+    QCOMPARE(image.pixelColor(corner), background);
+  }
+  QVERIFY(image.pixelColor(bounds.center().x(), bounds.top()) != background);
+}
+
+void NativeDesignTests::coreLogUsesChineseCatalogue_data()
+{
+  QTest::addColumn<QString>("message");
+  QTest::addColumn<QString>("translated");
+
+  QTest::newRow("settings-path") << QStringLiteral("initial settings file: C:\\示例目录\\settings %1.ini")
+                                 << QStringLiteral("初始设置文件：C:\\示例目录\\settings %1.ini");
+  QTest::newRow("core-start") << QStringLiteral("starting core") << QStringLiteral("正在启动核心进程");
+  QTest::newRow("tls-listener") << QStringLiteral("QtTransportListenSocket: listening on 192.0.2.42:22211 (tls=1)")
+                                << QStringLiteral("QtTransportListenSocket：正在监听 192.0.2.42:22211（tls=1）");
+  QTest::newRow("clipboard") << QStringLiteral("screen \"fixture%1\" grabbed clipboard 0 from \"示例%2\"")
+                             << QStringLiteral("屏幕“fixture%1”取得剪贴板 0，来源为“示例%2”");
+  QTest::newRow("unrecognized") << QStringLiteral("fixture: unknown system detail %1")
+                                << QStringLiteral("fixture: unknown system detail %1");
+}
+
+void NativeDesignTests::coreLogUsesChineseCatalogue()
+{
+  QFETCH(QString, message);
+  QFETCH(QString, translated);
+  LogPanel panel;
+  auto *records = panel.findChild<LogWidget *>();
+  auto *table = panel.findChild<QTableWidget *>(QStringLiteral("logRecords"));
+  auto *tail = panel.findChild<QLabel *>(QStringLiteral("logTail"));
+  QVERIFY(records && table && tail);
+
+  const auto history = QStringLiteral("[2026-01-02T03:04:05.678] INFO: ") + message;
+  const auto latest = QStringLiteral("[2026-01-02T03:04:06.789] INFO: ") + message;
+  panel.appendLine(history);
+  QCOMPARE(table->rowCount(), 1);
+  QCOMPARE(table->item(0, 2)->text(), message);
+
+  QTranslator translator;
+  QVERIFY(translator.load(QStringLiteral("synergy_zh_CN.qm"), QStringLiteral(UI_TEST_TRANSLATIONS_DIR)));
+  QVERIFY(QCoreApplication::installTranslator(&translator));
+  QTRY_COMPARE(table->item(0, 2)->text(), translated);
+  panel.appendLine(latest);
+  QCOMPARE(table->rowCount(), 2);
+  QCOMPARE(table->item(1, 0)->text(), QStringLiteral("2026-01-02 03:04:06"));
+  QCOMPARE(table->item(1, 2)->text(), translated);
+  panel.setCollapsed(true);
+  QVERIFY(tail->text().endsWith(translated));
+  QCOMPARE(records->allText(), history + QLatin1Char('\n') + latest);
+
+  QVERIFY(QCoreApplication::removeTranslator(&translator));
+  QTRY_COMPARE(table->item(0, 2)->text(), message);
+  QCOMPARE(table->item(1, 2)->text(), message);
+  QVERIFY(tail->text().endsWith(message));
 }
 
 void NativeDesignTests::logFollowsTailWithoutInterruptingHistory()

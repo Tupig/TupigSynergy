@@ -21,11 +21,10 @@
 
 namespace {
 
-QPushButton *smallButton(QWidget *parent, const QString &name, const QString &text, const QString &icon)
+QPushButton *textButton(QWidget *parent, const QString &name, const QString &text, const QString &icon)
 {
   auto *button = new QPushButton(text, parent);
   button->setObjectName(name);
-  button->setProperty("small", true);
   button->setIcon(synergy::gui::appIcon(icon));
   button->setIconSize(QSize(16, 16));
   return button;
@@ -59,7 +58,7 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   pageBar->setObjectName(QStringLiteral("pageBar"));
   pageBar->setFixedHeight(kPageBarHeight);
   auto *pageBarLayout = new QHBoxLayout(pageBar);
-  pageBarLayout->setContentsMargins(12, 4, 12, 4);
+  pageBarLayout->setContentsMargins(12, 2, 12, 2);
   pageBarLayout->setSpacing(kGap);
 
   btnBack = iconButton(pageBar, QStringLiteral("btnBack"), QStringLiteral("go-previous"));
@@ -73,14 +72,14 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   pageTitle->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
   pageBarLayout->addWidget(pageTitle, 1);
 
-  btnSettingsShortcut = smallButton(
+  btnSettingsShortcut = textButton(
       pageBar, QStringLiteral("btnSettingsShortcut"), QObject::tr("Preferences"), QStringLiteral("configure")
   );
-  btnUpdatesShortcut = smallButton(
+  btnUpdatesShortcut = textButton(
       pageBar, QStringLiteral("btnUpdatesShortcut"), QObject::tr("Updates"), QStringLiteral("system-software-update")
   );
   btnAboutShortcut =
-      smallButton(pageBar, QStringLiteral("btnAboutShortcut"), QObject::tr("About"), QStringLiteral("help-about"));
+      textButton(pageBar, QStringLiteral("btnAboutShortcut"), QObject::tr("About"), QStringLiteral("help-about"));
   btnSettingsShortcut->setFocusPolicy(Qt::StrongFocus);
   btnUpdatesShortcut->setFocusPolicy(Qt::StrongFocus);
   btnAboutShortcut->setFocusPolicy(Qt::StrongFocus);
@@ -134,12 +133,12 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   lineEditName->setToolTip(QObject::tr("Use Enter to save the name change."));
   identityLayout->addWidget(lineEditName);
   btnEditName =
-      smallButton(identity, QStringLiteral("btnEditName"), QObject::tr("Edit"), QStringLiteral("document-edit"));
+      textButton(identity, QStringLiteral("btnEditName"), QObject::tr("Edit"), QStringLiteral("document-edit"));
   btnEditName->setToolTip(QObject::tr("Edit Computer Name"));
   identityLayout->addWidget(btnEditName);
-  btnSaveName = smallButton(identity, QStringLiteral("btnSaveName"), QObject::tr("Save"), QStringLiteral("dialog-ok"));
+  btnSaveName = textButton(identity, QStringLiteral("btnSaveName"), QObject::tr("Save"), QStringLiteral("dialog-ok"));
   btnCancelName =
-      smallButton(identity, QStringLiteral("btnCancelName"), QObject::tr("Cancel"), QStringLiteral("dialog-cancel"));
+      textButton(identity, QStringLiteral("btnCancelName"), QObject::tr("Cancel"), QStringLiteral("dialog-cancel"));
   identityLayout->addWidget(btnSaveName);
   identityLayout->addWidget(btnCancelName);
   identityLayout->addStretch(1);

@@ -81,9 +81,11 @@ private:
    * Enable / Disable the button box buttons based on the state of the gui
    */
   void setButtonBoxEnabledButtons() const;
+  void setLanguageDraft(const QString &setting);
 
   QString m_originalLanguage;
   QString m_originalLanguageSetting;
+  QString m_languageDraft;
   bool m_interfaceSetOnLoad = false;
   std::unique_ptr<Ui::SettingsDialog> ui;
   QCheckBox *m_checkForUpdates = nullptr;

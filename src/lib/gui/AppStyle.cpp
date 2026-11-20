@@ -110,21 +110,18 @@ QString appStyleSheet()
     QGroupBox[cardSection="true"] { background: transparent; border: 0; border-radius: 0; margin: 0; padding: 0; }
     QLabel[sectionHeading="true"] { color: %6; font-size: 12.5px; font-weight: 600; }
 
-    /* Qt 高度为内容盒：有边框的控件扣除上下各 1px，外高为 32/26。 */
+    /* 文字按钮的内容盒为 30px，加上下边框后外高为 32px。 */
     QPushButton {
       min-height: 30px; max-height: 30px; padding: 0 13px; border-radius: 8px;
       border: 1px solid %7; background: %8; color: %1; font-size: 13px;
     }
     QPushButton:hover { background: %9; }
     QPushButton:focus, QToolButton:focus { border: 1px solid %11; }
-    QPushButton:pressed { background: %10; border-color: %11; padding-top: 1px; }
+    QPushButton:pressed { background: %10; border-color: %11; }
     QPushButton[primary="true"]:pressed { background: #269f69; }
     QPushButton[danger="true"]:pressed { background: #582d2d; }
     QToolTip { color: %1; background: %5; border: 1px solid %7; padding: 6px 8px; }
     QPushButton:disabled { color: %4; }
-    QPushButton[small="true"] {
-      min-height: 24px; max-height: 24px; padding: 0 9px; font-size: 12px; border-radius: 7px;
-    }
     QPushButton[iconButton="true"] {
       min-width: 24px; max-width: 24px; min-height: 24px; max-height: 24px;
       padding: 0; border: 0; background: transparent;
@@ -171,7 +168,6 @@ QString appStyleSheet()
       min-height: 28px; max-height: 28px; padding: 0 9px;
       background: %16; font-size: 12.5px; border-radius: 7px; text-align: left;
     }
-    QPushButton[keyCapture="true"]:pressed { padding: 0 9px; }
     QLabel[meterValue="true"] { color: %1; font-size: 12px; font-weight: 600; }
     QProgressBar#updateProgress { border: 0; border-radius: 4px; background: %7; }
     QProgressBar#updateProgress::chunk { border-radius: 4px; background: %11; }
@@ -204,7 +200,7 @@ QString appStyleSheet()
     QListWidget::item { padding: 7px 10px; border: 0; }
     QListWidget::item:selected { background: %18; color: %1; }
     QListWidget QLabel { font-size: 12px; }
-    QPlainTextEdit#releaseNotes {
+    QTextEdit#releaseNotes {
       background: %21; border: 0; border-radius: 9px; padding: 7px 10px; font-size: 12px;
     }
 
@@ -215,7 +211,7 @@ QString appStyleSheet()
     QFrame#logPanel { background: %17; border: 1px solid %7; border-radius: 9px; }
     QLabel#logTitle { font-size: 12px; font-weight: 600; }
     QLabel#logBadge {
-      font-size: 10.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
+      font-size: 10.5px; font-weight: 600; padding: 1px 8px; border-radius: 8px;
       background: %18; color: %11; border: 1px solid rgba(76,195,138,0.35);
     }
     QLabel#logTail { color: %4; font-size: 11px; }

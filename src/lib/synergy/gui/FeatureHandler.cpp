@@ -46,7 +46,6 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPalette>
-#include <QPushButton>
 #include <QRadioButton>
 #include <QSettings>
 #include <QSignalBlocker>
@@ -171,11 +170,6 @@ void FeatureHandler::tightenVersionRow(QDialog *parent) const
   auto *version = parent->findChild<QLabel *>(QStringLiteral("lblVersion"));
   if (prefix != nullptr && version != nullptr) {
     version->setFont(prefix->font());
-  }
-
-  // The copy button is taller than the version text and padded the centred row; cap it.
-  if (auto *copyButton = parent->findChild<QPushButton *>(QStringLiteral("btnCopyVersion"))) {
-    copyButton->setMaximumHeight(copyButton->fontMetrics().height() + 4);
   }
 }
 

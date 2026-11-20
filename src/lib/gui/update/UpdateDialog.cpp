@@ -12,20 +12,23 @@
 #include "gui/widgets/PageHost.h"
 #include "platform/UpdateInstaller.h"
 
+#include <QAbstractTextDocumentLayout>
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QDir>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QImage>
 #include <QLabel>
 #include <QMessageBox>
-#include <QPlainTextEdit>
 #include <QProgressBar>
 #include <QPushButton>
-#include <QResizeEvent>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QTextDocument>
+#include <QTextEdit>
+#include <QTextOption>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <QVariant>
@@ -34,29 +37,67 @@
 namespace synergy::gui::update {
 
 namespace {
-class ReleaseNotes final : public QPlainTextEdit
+QString visibleNotes(QString notes)
+{
+  static const QRegularExpression comments(
+      QStringLiteral("<!--.*?(?:-->|\\z)"), QRegularExpression::DotMatchesEverythingOption
+  );
+  static const QRegularExpression provenance(
+      QStringLiteral("^Built-From: [0-9a-fA-F]{40}\\s*$"), QRegularExpression::MultilineOption
+  );
+  notes.remove(comments);
+  notes.remove(provenance);
+  return notes.trimmed();
+}
+
+class ReleaseNotes final : public QTextEdit
 {
 public:
-  ReleaseNotes(const QString &notes, QWidget *parent) : QPlainTextEdit(notes, parent)
+  ReleaseNotes(const QString &notes, QWidget *parent) : QTextEdit(parent)
   {
     setReadOnly(true);
+    setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    connect(
+        document()->documentLayout(), &QAbstractTextDocumentLayout::documentSizeChanged, this,
+        [this] { fitDocument(); }, Qt::QueuedConnection
+    );
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    auto features = QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub);
+    features.setFlag(QTextDocument::MarkdownNoHTML);
+    document()->setMarkdown(notes, features);
+#else
+    setPlainText(notes);
+#endif
     fitDocument();
   }
 
 private:
+  QVariant loadResource(int, const QUrl &) override
+  {
+    QImage placeholder(1, 1, QImage::Format_ARGB32_Premultiplied);
+    placeholder.fill(Qt::transparent);
+    return placeholder;
+  }
+
   void resizeEvent(QResizeEvent *event) override
   {
-    QPlainTextEdit::resizeEvent(event);
+    QTextEdit::resizeEvent(event);
     fitDocument();
   }
   void fitDocument()
   {
-    QTextDocument measure;
-    measure.setDefaultFont(font());
-    measure.setPlainText(toPlainText());
-    measure.setTextWidth(qMax(120, viewport()->width()));
-    setFixedHeight(qBound(fontMetrics().height() + 14, qCeil(measure.size().height()) + 14 + 2 * frameWidth(), 180));
+    constexpr int maximumHeight = 180;
+    const int chrome = qBound(0, height() - viewport()->height(), 32);
+    const int contentHeight = qCeil(document()->size().height()) + chrome;
+    const auto scrollPolicy = contentHeight > maximumHeight ? Qt::ScrollBarAsNeeded : Qt::ScrollBarAlwaysOff;
+    if (verticalScrollBarPolicy() != scrollPolicy)
+      setVerticalScrollBarPolicy(scrollPolicy);
+    const int target = qBound(fontMetrics().height() + chrome, contentHeight, maximumHeight);
+    if (minimumHeight() != target || this->maximumHeight() != target)
+      setFixedHeight(target);
   }
 };
 } // namespace
@@ -96,31 +137,31 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
   summaryLayout->addWidget(m_summary);
   layout->addWidget(summaryCard);
 
-  if (!info.notes.trimmed().isEmpty()) {
+  const auto notes = visibleNotes(info.notes);
+  if (!notes.isEmpty()) {
     auto *notesCard = new QWidget(summaryCard);
     notesCard->setObjectName(QStringLiteral("updateNotesCard"));
     notesCard->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
     auto *notesLayout = new QVBoxLayout(notesCard);
     notesLayout->setContentsMargins(0, 0, 0, 0);
     notesLayout->setSpacing(8);
-    m_notes = new ReleaseNotes(info.notes, notesCard);
-    m_notes->setObjectName(QStringLiteral("releaseNotes"));
+    auto *releaseNotes = new ReleaseNotes(notes, notesCard);
+    releaseNotes->setObjectName(QStringLiteral("releaseNotes"));
     auto *notesHeader = new QHBoxLayout;
     auto *notesHeading = new QLabel(tr("Release Notes"), notesCard);
     notesHeader->addWidget(notesHeading);
     notesHeader->addStretch(1);
     auto *toggleNotes = new QPushButton(tr("Hide"), notesCard);
     toggleNotes->setObjectName(QStringLiteral("toggleReleaseNotes"));
-    toggleNotes->setProperty("small", true);
     toggleNotes->setCheckable(true);
     toggleNotes->setChecked(true);
-    connect(toggleNotes, &QPushButton::toggled, m_notes, &QWidget::setVisible);
+    connect(toggleNotes, &QPushButton::toggled, releaseNotes, &QWidget::setVisible);
     connect(toggleNotes, &QPushButton::toggled, this, [toggleNotes](bool expanded) {
       toggleNotes->setText(expanded ? tr("Hide") : tr("Show"));
     });
     notesHeader->addWidget(toggleNotes);
     notesLayout->addLayout(notesHeader);
-    notesLayout->addWidget(m_notes);
+    notesLayout->addWidget(releaseNotes);
     summaryLayout->addWidget(notesCard);
   }
 
@@ -181,10 +222,11 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
   buttonLayout->setSpacing(8);
 
   m_later = new QPushButton(tr("Later"), buttons);
-  connect(m_later, &QPushButton::clicked, this, &UpdateDialog::reject);
+  connect(m_later, &QPushButton::clicked, this, &UpdateDialog::cancelAndClose);
   buttonLayout->addWidget(m_later);
 
   m_install = new QPushButton(tr("Download and Install"), buttons);
+  m_install->setObjectName(QStringLiteral("downloadInstall"));
   m_install->setIcon(synergy::gui::appIcon(QStringLiteral("download")));
   m_install->setProperty("primary", true);
   m_install->setDefault(true);
@@ -232,9 +274,11 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
     m_progress->parentWidget()->show();
     m_progressText->setText(reason);
     m_progressText->show();
-    auto *message = new QMessageBox(QMessageBox::Critical, tr("Update Failed"), reason, QMessageBox::Ok, this);
-    message->setTextFormat(Qt::PlainText);
-    PageHost::present(this, message);
+    if (isVisible()) {
+      auto *message = new QMessageBox(QMessageBox::Critical, tr("Update Failed"), reason, QMessageBox::Ok, this);
+      message->setTextFormat(Qt::PlainText);
+      PageHost::present(this, message);
+    }
   });
 }
 
@@ -246,8 +290,18 @@ UpdateDialog::~UpdateDialog()
 
 void UpdateDialog::reject()
 {
+  if (property("embeddedPage").toBool() && (m_busy || !m_downloadedPath.isEmpty())) {
+    setProperty("retainWhenFinished", true);
+    QDialog::reject();
+    return;
+  }
+  cancelAndClose();
+}
+
+void UpdateDialog::cancelAndClose()
+{
   m_rateTimer.stop();
-  // 返回立即中止下载，不能等 deleteLater 后再阻止安装回调。
+  setProperty("retainWhenFinished", false);
   delete m_downloader;
   m_downloader = nullptr;
   QDialog::reject();
@@ -255,6 +309,7 @@ void UpdateDialog::reject()
 
 void UpdateDialog::setBusy(bool busy)
 {
+  m_busy = busy;
   if (auto *heading = findChild<QLabel *>(QStringLiteral("updateHeading")))
     heading->setText(busy ? tr("Downloading update %1").arg(m_info.version) : tr("New version"));
   if (auto *toggle = findChild<QPushButton *>(QStringLiteral("toggleReleaseNotes")))
@@ -264,7 +319,9 @@ void UpdateDialog::setBusy(bool busy)
   else
     m_rateTimer.stop();
   m_later->setText(busy ? tr("Cancel download") : tr("Later"));
-  m_later->setIcon(busy ? synergy::gui::appIcon(QStringLiteral("window-close")) : QIcon());
+  // Text-only controls fit the full English button labels during a download.
+  m_install->setIcon(busy ? QIcon() : synergy::gui::appIcon(QStringLiteral("download")));
+  m_release->setIcon(busy ? QIcon() : synergy::gui::appIcon(QStringLiteral("document-open")));
   m_progress->parentWidget()->setVisible(busy);
   m_install->setEnabled(!busy);
   m_release->setEnabled(!busy);
@@ -280,6 +337,10 @@ void UpdateDialog::updateProgressText()
     m_progressText->setText(tr("Verifying download…"));
     m_progressText->show();
     return;
+  }
+  if (m_busy) {
+    m_meter->show();
+    m_progressText->hide();
   }
 
   // No new bytes for 1.5 seconds is a stalled interval, even if an earlier sample was fast.
