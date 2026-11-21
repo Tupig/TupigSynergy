@@ -747,7 +747,9 @@ private Q_SLOTS:
     auto *cancel = window.findChild<QPushButton *>("btnCancelName");
     auto *field = window.findChild<QLineEdit *>("lineEditName");
     auto *label = window.findChild<QLabel *>("lblComputerName");
-    QVERIFY(edit && save && cancel && field && label);
+    auto *addresses = window.findChild<QLabel *>("lblIpAddresses");
+    QVERIFY(edit && save && cancel && field && label && addresses);
+    addresses->setText(QCoreApplication::translate("MainWindow", "Local IP") + QStringLiteral("  192.0.2.10"));
     QTest::mouseClick(edit, Qt::LeftButton);
     QVERIFY(field->isVisibleTo(&window));
     QCOMPARE(window.width(), m_width);
@@ -755,6 +757,29 @@ private Q_SLOTS:
     cancel->setFocus();
     QCoreApplication::processEvents();
     QCOMPARE(Settings::value(Settings::Core::ComputerName).toString(), QString("Flow-Fixture"));
+    QVERIFY(settleStaticRender(window));
+    QVERIFY(save->isVisibleTo(&window) && cancel->isVisibleTo(&window));
+    QVERIFY(save->isEnabled());
+    if (m_width == 500)
+      capture(window, "name-editing");
+
+    const auto editing = window.grab().toImage();
+    QVERIFY(!editing.isNull());
+    // The upper center of each button is inside the fill and clear of the icon and text.
+    const auto backgroundPoint = [&window, &editing](const QPushButton *control) {
+      const auto point = control->mapTo(&window, QPoint(control->width() / 2, 5));
+      return (QPointF(point) * editing.devicePixelRatio()).toPoint();
+    };
+    const auto savePoint = backgroundPoint(save);
+    const auto cancelPoint = backgroundPoint(cancel);
+    QVERIFY(editing.rect().contains(savePoint) && editing.rect().contains(cancelPoint));
+    const auto saveColor = editing.pixelColor(savePoint);
+    const auto cancelColor = editing.pixelColor(cancelPoint);
+    const bool dark = synergy::gui::isDarkMode();
+    qInfo() << "Name editor button backgrounds" << "Save" << saveColor.name() << "Cancel" << cancelColor.name();
+    QCOMPARE(cancelColor, QColor(dark ? "#2a2a2e" : "#ececf0"));
+    QCOMPARE(saveColor, QColor(dark ? "#4cc38a" : "#2f9e6b"));
+
     QTest::mouseClick(cancel, Qt::LeftButton);
     QCOMPARE(label->text(), QString("Flow-Fixture"));
     QTest::mouseClick(edit, Qt::LeftButton);

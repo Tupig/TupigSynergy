@@ -137,6 +137,7 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   btnEditName->setToolTip(QObject::tr("Edit Computer Name"));
   identityLayout->addWidget(btnEditName);
   btnSaveName = textButton(identity, QStringLiteral("btnSaveName"), QObject::tr("Save"), QStringLiteral("dialog-ok"));
+  btnSaveName->setProperty("primary", true);
   btnCancelName =
       textButton(identity, QStringLiteral("btnCancelName"), QObject::tr("Cancel"), QStringLiteral("dialog-cancel"));
   identityLayout->addWidget(btnSaveName);
