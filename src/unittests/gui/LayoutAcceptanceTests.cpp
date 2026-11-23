@@ -10,6 +10,7 @@
 #include "gui/AppMenus.h"
 #include "gui/AppStyle.h"
 #include "gui/Hotkey.h"
+#include "gui/ScreenSetupModel.h"
 #include "gui/StyleUtils.h"
 #include "gui/TlsUtility.h"
 #include "gui/config/Screen.h"
@@ -63,10 +64,15 @@
 #include <QTabWidget>
 #include <QTableView>
 #include <QTemporaryDir>
+#include <QTextBlock>
+#include <QTextDocument>
 #include <QTextEdit>
+#include <QTextLayout>
+#include <QToolTip>
 #include <QTranslator>
 #include <QUuid>
 #include <QVBoxLayout>
+#include <QtMath>
 #include <QtTest>
 
 namespace {
@@ -345,6 +351,10 @@ private Q_SLOTS:
   void numericSteppersRenderAndRespond();
   void serverTileDisplaysNameSuffix_data();
   void serverTileDisplaysNameSuffix();
+  void serverTileTooltipUsesCenteredConsecutiveLines_data();
+  void serverTileTooltipUsesCenteredConsecutiveLines();
+  void serverTileCentersRoleAndNameTogether_data();
+  void serverTileCentersRoleAndNameTogether();
   void aliasListGrowthAndShrink();
   void actionTypesShowRelevantFieldsAndSave_data();
   void actionTypesShowRelevantFieldsAndSave();
@@ -768,6 +778,144 @@ void LayoutAcceptanceTests::serverTileDisplaysNameSuffix()
   QCOMPARE(tileImages.first().size(), tileImages.last().size());
   QVERIFY2(tileImages.first() != tileImages.last(), "Changing only the suffix must change the painted tile");
   QCOMPARE(accessibleNames, fullNames);
+}
+
+void LayoutAcceptanceTests::serverTileTooltipUsesCenteredConsecutiveLines_data()
+{
+  QTest::addColumn<QString>("language");
+  QTest::addColumn<QString>("title");
+  QTest::addColumn<QString>("edit");
+  QTest::addColumn<QString>("remove");
+  QTest::newRow("english") << QStringLiteral("en") << QStringLiteral("Screen: Studio<&>")
+                           << QStringLiteral("Double click to edit settings")
+                           << QStringLiteral("Drag screen to the trashcan to remove it");
+  QTest::newRow("chinese") << QStringLiteral("zh_CN") << QStringLiteral("屏幕：Studio<&>")
+                           << QStringLiteral("双击编辑设置") << QStringLiteral("将屏幕拖到垃圾桶以移除");
+}
+
+void LayoutAcceptanceTests::serverTileTooltipUsesCenteredConsecutiveLines()
+{
+  QFETCH(QString, language);
+  QFETCH(QString, title);
+  QFETCH(QString, edit);
+  QFETCH(QString, remove);
+  const ScopedLanguage languageScope(language);
+  synergy::gui::ScreenList screens;
+  screens.append(synergy::gui::Screen(QStringLiteral("Studio<&>")));
+  const ScreenSetupModel model(screens, 1, 1);
+  const auto html = model.index(0, 0).data(Qt::ToolTipRole).toString();
+
+  QTextDocument document;
+  document.setDefaultFont(QToolTip::font());
+  document.setHtml(html);
+  document.setTextWidth(480);
+  document.setTextWidth(qCeil(document.idealWidth()));
+  QCOMPARE(document.blockCount(), 1);
+  const auto block = document.begin();
+  QCOMPARE(block.text().split(QChar::LineSeparator), QStringList({title, edit, remove}));
+  QVERIFY(block.blockFormat().alignment() & Qt::AlignHCenter);
+  const auto *layout = block.layout();
+  QVERIFY(layout);
+  QCOMPARE(layout->lineCount(), 3);
+  for (int row = 1; row < layout->lineCount(); ++row) {
+    const auto previous = layout->lineAt(row - 1);
+    const auto line = layout->lineAt(row);
+    QVERIFY(qAbs(line.naturalTextRect().center().x() - previous.naturalTextRect().center().x()) <= 1.0);
+    QVERIFY(line.y() - previous.y() <= previous.height() + 1.0);
+  }
+
+  const auto evidence = qEnvironmentVariable("SYNERGY_UI_EVIDENCE_DIR");
+  if (!evidence.isEmpty()) {
+    const QDir output(evidence);
+    QVERIFY(QDir().mkpath(output.absolutePath()));
+    QLabel preview(html);
+    preview.setFont(QToolTip::font());
+    preview.adjustSize();
+    QVERIFY(preview.grab().save(output.filePath(QStringLiteral("server-tile-tooltip-%1.png").arg(language))));
+  }
+}
+
+void LayoutAcceptanceTests::serverTileCentersRoleAndNameTogether_data()
+{
+  QTest::addColumn<QString>("language");
+  QTest::addColumn<bool>("local");
+  QTest::newRow("english-local") << QStringLiteral("en") << true;
+  QTest::newRow("english-client") << QStringLiteral("en") << false;
+  QTest::newRow("chinese-local") << QStringLiteral("zh_CN") << true;
+  QTest::newRow("chinese-client") << QStringLiteral("zh_CN") << false;
+}
+
+void LayoutAcceptanceTests::serverTileCentersRoleAndNameTogether()
+{
+  QFETCH(QString, language);
+  QFETCH(bool, local);
+  const ScopedLanguage languageScope(language);
+  const auto name = QStringLiteral("Desk-01");
+  const ScopedSetting gridWidth(QStringLiteral("internalConfig/numColumns"), 5);
+  const ScopedSetting serverName(Settings::Core::ComputerName, local ? name : QStringLiteral("Server"));
+  synergy::gui::ServerConfig config(5);
+  if (!local)
+    config.addClient(name);
+
+  PageHost host;
+  prepare(host, 500);
+  auto *editor = new ServerConfigDialog(nullptr, config);
+  host.push(editor);
+  fit(host, 500);
+  auto *view = editor->findChild<QTableView *>(QStringLiteral("screenSetupView"));
+  QVERIFY(view);
+  const auto *model = view->model();
+  QModelIndex tileIndex;
+  for (int column = 0; column < model->columnCount(); ++column) {
+    const auto matches = model->match(model->index(0, column), Qt::DisplayRole, name, 1, Qt::MatchExactly);
+    if (!matches.isEmpty()) {
+      tileIndex = matches.first();
+      break;
+    }
+  }
+  QVERIFY(tileIndex.isValid());
+  QVERIFY(settleStaticRender(host));
+
+  const auto tile = view->visualRect(tileIndex);
+  const auto image = view->viewport()->grab(tile).toImage();
+  QVERIFY(!image.isNull());
+  const auto scale = image.devicePixelRatio();
+  const auto inset = qCeil(6 * scale);
+  const bool dark = synergy::gui::isDarkMode();
+  QList<QRect> textBands;
+  for (int y = inset; y < image.height() - inset; ++y) {
+    QRect row;
+    const auto background = qGray(image.pixel(inset, y));
+    for (int x = inset + 1; x < image.width() - inset; ++x) {
+      const auto difference = qGray(image.pixel(x, y)) - background;
+      if ((dark ? difference : -difference) >= 45)
+        row |= QRect(x, y, 1, 1);
+    }
+    if (row.isEmpty())
+      continue;
+    if (textBands.isEmpty() || row.top() > textBands.last().bottom() + 1)
+      textBands.append(row);
+    else
+      textBands.last() |= row;
+  }
+  QCOMPARE(textBands.size(), 2);
+  const auto group = textBands.first().united(textBands.last());
+  const auto gap = (textBands.last().top() - textBands.first().bottom() - 1) / scale;
+  const auto centerOffset = qAbs(group.center().y() - image.rect().center().y()) / scale;
+  qInfo() << "Server tile text gap" << gap << "vertical offset" << centerOffset;
+  QVERIFY2(gap <= 8, "The role and the computer name should read as one compact group");
+  QVERIFY2(centerOffset <= 3, "The text group should be vertically centered on the screen tile");
+  for (const auto &band : textBands)
+    QVERIFY(qAbs(band.center().x() - image.rect().center().x()) / scale <= 3);
+
+  const auto evidence = qEnvironmentVariable("SYNERGY_UI_EVIDENCE_DIR");
+  if (!evidence.isEmpty()) {
+    const QDir output(evidence);
+    QVERIFY(QDir().mkpath(output.absolutePath()));
+    QVERIFY(image.save(output.filePath(QStringLiteral("server-tile-labels-%1-%2.png")
+                                           .arg(language, local ? QStringLiteral("local") : QStringLiteral("client"))))
+    );
+  }
 }
 
 void LayoutAcceptanceTests::aliasListGrowthAndShrink()

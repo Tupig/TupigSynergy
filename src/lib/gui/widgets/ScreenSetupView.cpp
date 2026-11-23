@@ -61,8 +61,14 @@ NameLayout layoutName(QTextLayout &text, const QRectF &rect)
   return result;
 }
 
-void drawName(QPainter &painter, const QRectF &rect, const QString &name, const QFont &font)
+void drawTileLabels(
+    QPainter &painter, const QRectF &bounds, const QString &role, const QFont &roleFont, const QString &name,
+    const QFont &font
+)
 {
+  constexpr qreal labelGap = 2;
+  const auto roleHeight = QFontMetricsF(roleFont, painter.device()).height();
+  const auto rect = bounds.adjusted(0, roleHeight + labelGap, 0, 0);
   if (rect.isEmpty())
     return;
 
@@ -108,10 +114,16 @@ void drawName(QPainter &painter, const QRectF &rect, const QString &name, const 
     }
   }
 
+  const qreal gap = fitted.lines > 0 ? labelGap : 0;
+  const qreal groupHeight = roleHeight + gap + fitted.height;
+  const QRectF roleRect(bounds.left(), bounds.center().y() - groupHeight / 2, bounds.width(), roleHeight);
+  painter.setFont(roleFont);
+  painter.drawText(roleRect, Qt::AlignCenter, role);
+
   if (fitted.lines == 0)
     return;
-  const QPointF origin(rect.left(), rect.top() + (rect.height() - fitted.height) / 2);
-  painter.setClipRect(rect, Qt::IntersectClip);
+  const QPointF origin(bounds.left(), roleRect.bottom() + gap);
+  painter.setClipRect(QRectF(origin, QSizeF(bounds.width(), fitted.height)), Qt::IntersectClip);
   if (fitted.complete) {
     painter.save();
     painter.translate(rect.center().x() - layoutWidth * horizontalScale / 2, origin.y());
@@ -183,17 +195,10 @@ public:
       painter->setPen(dark ? QColor(local ? "#cfdfff" : "#d9f3e6") : accent);
       QFont roleFont = option.font;
       roleFont.setPixelSize(10);
-      const QRectF roleRect(
-          tile.left() + 2, tile.top() + 2, tile.width() - 4, QFontMetricsF(roleFont, painter->device()).height()
+      drawTileLabels(
+          *painter, tile.adjusted(1, 1, -1, -1), local ? QObject::tr("Local") : QObject::tr("Client"), roleFont, name,
+          textFont
       );
-      painter->setFont(roleFont);
-      painter->drawText(
-          roleRect, Qt::AlignTop | Qt::AlignHCenter, local ? QObject::tr("Local") : QObject::tr("Client")
-      );
-      const QRectF textRect(
-          roleRect.left() - 1, roleRect.bottom(), roleRect.width() + 2, tile.bottom() - roleRect.bottom() - 2
-      );
-      drawName(*painter, textRect, name, textFont);
     } else {
       painter->setPen(QPen(QColor(dark ? "#9a9aa0" : "#777782"), 1.8, Qt::SolidLine, Qt::RoundCap));
       const auto center = tile.center();

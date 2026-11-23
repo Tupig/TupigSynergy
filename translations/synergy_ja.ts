@@ -1738,8 +1738,8 @@ Now you can connect your client computers to this server. You should see a promp
 <context>
     <name>ScreenSetupModel</name>
     <message>
-        <source>&lt;center&gt;Screen: &lt;b&gt;%1&lt;/b&gt;&lt;/center&gt;&lt;br&gt;Double click to edit settings&lt;br&gt;Drag screen to the trashcan to remove it</source>
-        <translation>&lt;center&gt;コンピューター: &lt;b&gt;%1&lt;/b&gt;&lt;/center&gt;&lt;br&gt;ダブルクリックで設定&lt;br&gt;ゴミ箱にドラッグして削除</translation>
+        <source>&lt;center&gt;Screen: &lt;b&gt;%1&lt;/b&gt;&lt;br&gt;Double click to edit settings&lt;br&gt;Drag screen to the trashcan to remove it&lt;/center&gt;</source>
+        <translation>&lt;center&gt;コンピューター: &lt;b&gt;%1&lt;/b&gt;&lt;br&gt;ダブルクリックで設定&lt;br&gt;ゴミ箱にドラッグして削除&lt;/center&gt;</translation>
     </message>
 </context>
 <context>

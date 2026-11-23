@@ -1976,8 +1976,8 @@ Now you can connect your client computers to this server. You should see a promp
 <context>
     <name>ScreenSetupModel</name>
     <message>
-        <source>&lt;center&gt;Screen: &lt;b&gt;%1&lt;/b&gt;&lt;/center&gt;&lt;br&gt;Double click to edit settings&lt;br&gt;Drag screen to the trashcan to remove it</source>
-        <translation>&lt;center&gt;屏幕：&lt;b&gt;%1&lt;/b&gt;&lt;/center&gt;&lt;br&gt;双击编辑设置&lt;br&gt;将屏幕拖到垃圾桶以移除</translation>
+        <source>&lt;center&gt;Screen: &lt;b&gt;%1&lt;/b&gt;&lt;br&gt;Double click to edit settings&lt;br&gt;Drag screen to the trashcan to remove it&lt;/center&gt;</source>
+        <translation>&lt;center&gt;屏幕：&lt;b&gt;%1&lt;/b&gt;&lt;br&gt;双击编辑设置&lt;br&gt;将屏幕拖到垃圾桶以移除&lt;/center&gt;</translation>
     </message>
 </context>
 <context>
