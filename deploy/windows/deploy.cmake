@@ -119,6 +119,7 @@ set(CPACK_WIX_CULTURES "zh-CN;en-US")
 # CPack quotes each extra flag itself, so pass -loc and the path unquoted.
 set(CPACK_WIX_BUILD_EXTRA_FLAGS
   "-loc;${CMAKE_SOURCE_DIR}/deploy/windows/WixExtensions.zh-CN.wxl;-loc;${CMAKE_SOURCE_DIR}/deploy/windows/Product.en-US.wxl")
+list(APPEND CPACK_WIX_BUILD_EXTRA_FLAGS "-dcl" "high")
 set(CPACK_WIX_UI_BANNER "${CMAKE_SOURCE_DIR}/deploy/windows/wix-banner.png")
 set(CPACK_WIX_UI_DIALOG "${CMAKE_SOURCE_DIR}/deploy/windows/wix-dialog.png")
 

@@ -405,6 +405,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cmake --version
+          cpack --version
           if cmake --build build --config Release -j8 --target package; then
             exit 0
           fi
@@ -416,7 +418,7 @@ jobs:
           exit 1
 
       - name: Upload package failure diagnostics
-        if: failure()
+        if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: windows-x64-package-diagnostics
