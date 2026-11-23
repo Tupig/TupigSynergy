@@ -400,7 +400,7 @@ void QtNetworkTransport::onDisconnected()
 
 void QtNetworkTransport::onReadyRead()
 {
-  if (!m_socket) {
+  if (!m_socket || !m_socket->isOpen()) {
     return;
   }
 

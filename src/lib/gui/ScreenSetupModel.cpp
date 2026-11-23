@@ -65,9 +65,9 @@ QVariant ScreenSetupModel::data(const QModelIndex &index, int role) const
     return screen(index).pixmap();
 
   case Qt::ToolTipRole:
-    return QString(tr("<center>Screen: <b>%1</b></center>"
+    return QString(tr("<center>Screen: <b>%1</b>"
                       "<br>Double click to edit settings"
-                      "<br>Drag screen to the trashcan to remove it"))
+                      "<br>Drag screen to the trashcan to remove it</center>"))
         .arg(screen(index).name().toHtmlEscaped());
 
   case Qt::DisplayRole:

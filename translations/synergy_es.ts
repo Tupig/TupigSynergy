@@ -1724,8 +1724,8 @@ Now you can connect your client computers to this server. You should see a promp
 <context>
     <name>ScreenSetupModel</name>
     <message>
-        <source>&lt;center&gt;Screen: &lt;b&gt;%1&lt;/b&gt;&lt;/center&gt;&lt;br&gt;Double click to edit settings&lt;br&gt;Drag screen to the trashcan to remove it</source>
-        <translation type="unfinished">&lt;center&gt;Pantalla: &lt;b&gt;%1&lt;/b&gt;&lt;/center&gt;&lt;br&gt;Haga doble clic para editar la configuración&lt;br&gt;Arrastre la pantalla a la papelera para eliminarla</translation>
+        <source>&lt;center&gt;Screen: &lt;b&gt;%1&lt;/b&gt;&lt;br&gt;Double click to edit settings&lt;br&gt;Drag screen to the trashcan to remove it&lt;/center&gt;</source>
+        <translation type="unfinished">&lt;center&gt;Pantalla: &lt;b&gt;%1&lt;/b&gt;&lt;br&gt;Haga doble clic para editar la configuración&lt;br&gt;Arrastre la pantalla a la papelera para eliminarla&lt;/center&gt;</translation>
     </message>
 </context>
 <context>
