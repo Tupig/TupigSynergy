@@ -84,6 +84,23 @@ class MacOSSigningContract(unittest.TestCase):
         self.assertNotIn("echo \"$APPLE_P12_CERTIFICATE\"", keychain)
         self.assertNotIn("echo \"$APPLE_P12_PASSWORD\"", keychain)
 
+    def test_runner_search_list_and_prebuild_probe_stay_ephemeral_and_nonlogging(self):
+        """The necessary search-list exception is temporary and the probe reveals no P12 data."""
+        keychain = source(KEYCHAIN)
+        workflow = source(WORKFLOW)
+        self.assertIn("search_file=\"$runner_directory/tupig-signing.search-list\"", keychain)
+        self.assertIn("['/usr/bin/security', 'list-keychains', '-d', 'user']", keychain)
+        self.assertIn("sys.argv[2], *previous", keychain)
+        self.assertIn("['/usr/bin/security', 'list-keychains', '-d', 'user', '-s', *previous]", keychain)
+        capability = workflow.split("      - name: Check signing capability before building\n", 1)[1].split(
+            "      - name: Install dependencies\n", 1)[0]
+        self.assertIn("trap 'scripts/ci/macos-signing-keychain.sh cleanup' EXIT", capability)
+        self.assertIn("/usr/bin/clang -x c - -o \"$probe\"", capability)
+        self.assertIn("--keychain \"$SIGN_KEYCHAIN\" --sign \"$MAC_CODESIGN_ID\" \"$probe\"", capability)
+        self.assertIn("Path(sys.argv[1]).unlink()", capability)
+        self.assertNotIn("echo \"$APPLE_P12_CERTIFICATE\"", capability)
+        self.assertNotIn("echo \"$APPLE_P12_PASSWORD\"", capability)
+
     def test_bundle_signing_has_stable_nested_and_outer_identities_with_verification(self):
         """A wrong order, helper ID, outer ID, or omitted strict verification breaks this."""
         template = source(CODESIGN)

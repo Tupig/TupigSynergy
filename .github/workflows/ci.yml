@@ -600,6 +600,27 @@ jobs:
             *) echo 'Unsupported Mac signing mode.' >&2; exit 1 ;;
           esac
 
+      - name: Check signing capability before building
+        if: env.MAC_SIGNING == 'true'
+        shell: bash
+        env:
+          APPLE_P12_CERTIFICATE: ${{ secrets.APPLE_P12_CERTIFICATE }}
+          APPLE_P12_PASSWORD: ${{ secrets.APPLE_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          trap 'scripts/ci/macos-signing-keychain.sh cleanup' EXIT
+          scripts/ci/macos-signing-keychain.sh setup
+          SIGN_KEYCHAIN="$RUNNER_TEMP/tupig-signing.keychain-db"
+          probe="$RUNNER_TEMP/tupig-signing-check"
+          printf 'int main(void) { return 0; }\n' | /usr/bin/clang -x c - -o "$probe"
+          /usr/bin/codesign --force --timestamp=none --keychain "$SIGN_KEYCHAIN" --sign "$MAC_CODESIGN_ID" "$probe"
+          /usr/bin/codesign --verify --strict "$probe"
+          python3 - "$probe" <<'PYCODE'
+          from pathlib import Path
+          import sys
+          Path(sys.argv[1]).unlink()
+          PYCODE
+
       # Stage: toolchain, then compile. Qt comes from the CI Qt build.
       - name: Install dependencies
         id: get-deps

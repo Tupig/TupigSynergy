@@ -75,6 +75,16 @@ PY
     /usr/bin/security unlock-keychain -p "$password" "$keychain" >/dev/null 2>&1
     /usr/bin/security import "$certificate_file" -k "$keychain" -P "$APPLE_P12_PASSWORD" -T /usr/bin/codesign >/dev/null 2>&1
     /usr/bin/security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain" >/dev/null 2>&1
+    # codesign/Security also resolve private keys through the user search list.
+    # Include this per-run keychain temporarily, retaining every existing entry.
+    python3 - "$search_file" "$keychain" <<'PYCODE'
+import json
+from pathlib import Path
+import subprocess
+import sys
+previous = json.loads(Path(sys.argv[1]).read_text())
+subprocess.run(['/usr/bin/security', 'list-keychains', '-d', 'user', '-s', sys.argv[2], *previous], check=True)
+PYCODE
     python3 - "$certificate_file" <<'PY'
 from pathlib import Path
 import sys
