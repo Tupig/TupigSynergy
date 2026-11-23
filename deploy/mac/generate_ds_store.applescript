@@ -41,6 +41,9 @@ on run argv
         set the bounds to { 200, 120, 800, 520 }
         set position of item (image_name & ".app") to { 144, 190 }
         set position of item "Applications" to { 455, 190 }
+        if exists item "Install.command" then
+          set position of item "Install.command" to { 300, 320 }
+        end if
       end tell
     close
   end tell

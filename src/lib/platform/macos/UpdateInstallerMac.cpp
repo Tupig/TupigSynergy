@@ -104,6 +104,8 @@ if [ "$effective_uid" -eq 0 ]; then
   /usr/bin/find -P "$staged" ! -type l -perm +022 -exec /bin/chmod go-w {} + || exit 73
 fi
 verify_bundle "$staged" || exit 65
+# Clear only the verified incoming app's download marker before the exchange.
+/usr/bin/xattr -dr com.apple.quarantine "$staged" || exit 65
 bundle_matches "$dest" || exit 65
 [ "$(identity "$dest")" = "$root_id" ] || exit 65
 exec 8< "$staged"

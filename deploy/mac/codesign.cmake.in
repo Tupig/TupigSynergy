@@ -1,26 +1,27 @@
 # SPDX-FileCopyrightText: (C) 2012 - 2026 Synergy App Ltd
-# Upstream copyright retained intentionally (A-24 (#48)); current project is TuPig.
 # SPDX-License-Identifier: MIT
 
-# CPack pre-build script: sign the app bundle as the final packaging step, after
-# every install() has populated it (frameworks, LICENSE, translations) and just
-# before the DMG is built. Signing earlier and then adding files breaks the seal,
-# which the notary service rejects with "the signature of the binary is invalid".
-
+# Sign the complete staged payload after dependency fixups and resource copying.
 set(app "${CPACK_TEMPORARY_INSTALL_DIRECTORY}/@CMAKE_PROJECT_PROPER_NAME@.app")
-
 set(identity "@APPLE_CODESIGN_ID@")
-set(sign_options "")
-if(identity)
-  list(APPEND sign_options --options runtime --timestamp)
-else()
+if(NOT identity)
   set(identity "-")
 endif()
+set(mode "$ENV{MACOS_SIGNING_MODE}")
+if(NOT mode OR identity STREQUAL "-")
+  set(mode developer-id)
+endif()
+set(keychain_args "")
+if(NOT "$ENV{SIGN_KEYCHAIN}" STREQUAL "")
+  list(APPEND keychain_args --keychain "$ENV{SIGN_KEYCHAIN}")
+endif()
+find_program(signing_python NAMES python3 REQUIRED)
 execute_process(
-  COMMAND /usr/bin/codesign --force --deep ${sign_options}
-          --sign "${identity}" "${app}"
-  RESULT_VARIABLE result
+  COMMAND "${signing_python}" "@CMAKE_SOURCE_DIR@/scripts/ci/sign-macos-app.py"
+    "${app}" --identity "${identity}" --mode "${mode}" ${keychain_args}
+    --installer-template "@CMAKE_SOURCE_DIR@/deploy/mac/install.command.in"
+  RESULT_VARIABLE signing_result
 )
-if(NOT result EQUAL 0)
-  message(FATAL_ERROR "codesign of the app bundle failed (${result})")
+if(NOT signing_result EQUAL 0)
+  message(FATAL_ERROR "Mac application signing or identity verification failed (${signing_result})")
 endif()

@@ -84,6 +84,9 @@ jobs:
       - name: Check vcpkg version matches Version.cmake
         run: python3 scripts/ci/check-version-consistency.py
 
+      - name: Check Mac signing automation
+        run: python3 -m unittest src/unittests/ci/test_macos_signing_contract.py
+
       # One place decides what this event builds. Job `if`s only read these
       # outputs, so a platform is not accidentally both required and skipped.
       # Pull requests and releases build both native targets. Snapshots honor platform.
@@ -557,9 +560,15 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 60
 
+    outputs:
+      signing-mode: ${{ steps.signing-kind.outputs.mode }}
+
     env:
-      MAC_SIGNING: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID != '' }}
-      MAC_CODESIGN_ID: ${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}
+      # Signing secrets are intentionally reachable only from a trusted manual
+      # dispatch. PR jobs always build and test unsigned/ad-hoc packages.
+      MACOS_SIGNING_MODE: ${{ vars.MACOS_SIGNING_MODE || (secrets.APPLE_CODESIGN_ID != '' && 'developer-id') || 'ad-hoc' }}
+      MAC_SIGNING: ${{ github.event_name == 'workflow_dispatch' && vars.MACOS_SIGNING_MODE != 'ad-hoc' && vars.MACOS_SIGNING_MODE != 'disabled' && secrets.APPLE_CODESIGN_ID != '' }}
+      MAC_CODESIGN_ID: ${{ github.event_name == 'workflow_dispatch' && vars.MACOS_SIGNING_MODE != 'ad-hoc' && vars.MACOS_SIGNING_MODE != 'disabled' && secrets.APPLE_CODESIGN_ID || '' }}
 
     steps:
       - name: Checkout
@@ -567,6 +576,50 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+
+      - name: Validate signing configuration
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        env:
+          P12_SECRETS_PRESENT: ${{ secrets.APPLE_P12_CERTIFICATE != '' && secrets.APPLE_P12_PASSWORD != '' }}
+          NOTARY_SECRETS_PRESENT: ${{ secrets.APPLE_NOTARY_USER != '' && secrets.APPLE_NOTARY_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+        run: |
+          case "$MACOS_SIGNING_MODE" in
+            disabled) echo 'Signing setup is incomplete. Run the local setup again.' >&2; exit 1 ;;
+            development)
+              test "$MAC_SIGNING" = true && test "$P12_SECRETS_PRESENT" = true || {
+                echo 'Development signing requires the configured P12 secrets.' >&2; exit 1;
+              }
+              ;;
+            developer-id)
+              test "$MAC_SIGNING" = true && test "$P12_SECRETS_PRESENT" = true && test "$NOTARY_SECRETS_PRESENT" = true || {
+                echo 'Developer ID signing requires its P12 and notarization secrets.' >&2; exit 1;
+              }
+              ;;
+            ad-hoc) ;;
+            *) echo 'Unsupported Mac signing mode.' >&2; exit 1 ;;
+          esac
+
+      - name: Check signing capability before building
+        if: env.MAC_SIGNING == 'true'
+        shell: bash
+        env:
+          APPLE_P12_CERTIFICATE: ${{ secrets.APPLE_P12_CERTIFICATE }}
+          APPLE_P12_PASSWORD: ${{ secrets.APPLE_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          trap 'scripts/ci/macos-signing-keychain.sh cleanup' EXIT
+          scripts/ci/macos-signing-keychain.sh setup
+          SIGN_KEYCHAIN="$RUNNER_TEMP/tupig-signing.keychain-db"
+          probe="$RUNNER_TEMP/tupig-signing-check"
+          printf 'int main(void) { return 0; }\n' | /usr/bin/clang -x c - -o "$probe"
+          /usr/bin/codesign --force --timestamp=none --keychain "$SIGN_KEYCHAIN" --sign "$MAC_CODESIGN_ID" "$probe"
+          /usr/bin/codesign --verify --strict "$probe"
+          python3 - "$probe" <<'PYCODE'
+          from pathlib import Path
+          import sys
+          Path(sys.argv[1]).unlink()
+          PYCODE
 
       # Stage: toolchain, then compile. Qt comes from the CI Qt build.
       - name: Install dependencies
@@ -580,7 +633,7 @@ jobs:
         run: |
           set -euo pipefail
           openssl_root=$(brew --prefix openssl@3)
-          ${{ env.CMAKE_CONFIGURE }} -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ needs.get-version.outputs.publish_release == 'true' && secrets.APPLE_CODESIGN_ID || '' }}" -DOPENSSL_ROOT_DIR="$openssl_root" -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
+          ${{ env.CMAKE_CONFIGURE }} -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="$MAC_CODESIGN_ID" -DOPENSSL_ROOT_DIR="$openssl_root" -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
 
       - name: Build
         shell: bash
@@ -654,24 +707,26 @@ jobs:
         env:
           APPLE_P12_CERTIFICATE: ${{ secrets.APPLE_P12_CERTIFICATE }}
           APPLE_P12_PASSWORD: ${{ secrets.APPLE_P12_PASSWORD }}
+        run: scripts/ci/macos-signing-keychain.sh setup
+
+      - name: Verify selected signing identity
+        if: env.MAC_SIGNING == 'true'
+        shell: bash
+        env:
+          APPLE_CODESIGN_ID: ${{ secrets.APPLE_CODESIGN_ID }}
         run: |
-          keychain="$RUNNER_TEMP/sign.keychain-db"
-          keychain_pass=$(openssl rand -base64 32)
-          security create-keychain -p "$keychain_pass" "$keychain"
-          security set-keychain-settings -lut 3600 "$keychain"
-          security unlock-keychain -p "$keychain_pass" "$keychain"
-          keychains=()
-          while IFS= read -r existing; do
-            keychains+=("$existing")
-          done < <(security list-keychains -d user | sed 's/^[[:space:]]*"//; s/"[[:space:]]*$//')
-          security list-keychains -d user -s "$keychain" "${keychains[@]}"
-          cert_file="$RUNNER_TEMP/cert.p12"
-          echo "$APPLE_P12_CERTIFICATE" | base64 --decode > "$cert_file"
-          security import "$cert_file" -k "$keychain" -P "$APPLE_P12_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_pass" "$keychain"
-          rm -f "$cert_file"
-          echo "SIGN_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
-          echo "SIGN_KEYCHAIN_PASS=$keychain_pass" >> "$GITHUB_ENV"
+          set -euo pipefail
+          python3 - <<'PYCODE'
+          import os
+          import sys
+          sys.path.insert(0, 'scripts/ci')
+          import importlib.util
+          spec = importlib.util.spec_from_file_location('sign_mac', 'scripts/ci/sign-macos-app.py')
+          signing = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(signing)
+          signing.signing_identity(os.environ['APPLE_CODESIGN_ID'], os.environ['SIGN_KEYCHAIN'], os.environ['MACOS_SIGNING_MODE'])
+          print('Exact signing certificate and mode verified.')
+          PYCODE
 
       # CPack runs macdeployqt and, when a Developer ID is configured, codesigns
       # the bundle that gets embedded in the DMG (see deploy/mac/deploy.cmake), so
@@ -680,8 +735,8 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          if [ -n "$SIGN_KEYCHAIN" ]; then
-            security unlock-keychain -p "$SIGN_KEYCHAIN_PASS" "$SIGN_KEYCHAIN"
+          if [ -n "${SIGN_KEYCHAIN:-}" ]; then
+            scripts/ci/macos-signing-keychain.sh unlock
           fi
           for i in $(seq 1 5); do
             if cmake --build build --config Release -j8 --target package 2>&1; then
@@ -697,7 +752,7 @@ jobs:
       # Sign the DMG itself so Gatekeeper trusts it before extraction. Then
       # submit to notarytool (synchronous via --wait) and staple the returned
       # ticket so Gatekeeper can verify offline.
-      - name: Sign + notarize + staple DMG
+      - name: Sign DMG and optionally notarize
         if: env.MAC_SIGNING == 'true'
         shell: bash
         env:
@@ -714,8 +769,20 @@ jobs:
           fi
           echo "Found DMG: $dmg"
 
-          security unlock-keychain -p "$SIGN_KEYCHAIN_PASS" "$SIGN_KEYCHAIN"
-          /usr/bin/codesign --force --timestamp --sign "$APPLE_CODESIGN_ID" "$dmg"
+          scripts/ci/macos-signing-keychain.sh unlock
+          timestamp=--timestamp
+          if [ "$MACOS_SIGNING_MODE" = development ]; then timestamp=--timestamp=none; fi
+          /usr/bin/codesign --force "$timestamp" --keychain "$SIGN_KEYCHAIN" --sign "$APPLE_CODESIGN_ID" "$dmg"
+          /usr/bin/codesign --verify --deep --strict "$dmg"
+
+          if [ "$MACOS_SIGNING_MODE" = development ]; then
+            echo "Development-signed DMG verified; notarization is intentionally not performed."
+            exit 0
+          fi
+          if [ "$MACOS_SIGNING_MODE" != developer-id ]; then
+            echo "ERROR: unsupported MACOS_SIGNING_MODE=$MACOS_SIGNING_MODE" >&2
+            exit 1
+          fi
 
           result=$(xcrun notarytool submit "$dmg" \
             --apple-id "$APPLE_NOTARY_USER" \
@@ -738,6 +805,21 @@ jobs:
           xcrun stapler validate "$dmg"
           spctl -a -t open --context context:primary-signature -v "$dmg"
           echo "DMG signed + notarized + stapled: $dmg"
+
+      - name: Record verified package signing mode
+        id: signing-kind
+        shell: bash
+        run: |
+          if [ "$MAC_SIGNING" = true ]; then
+            echo "mode=$MACOS_SIGNING_MODE" >> "$GITHUB_OUTPUT"
+          else
+            echo 'mode=ad-hoc' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Clean up signing keychain
+        if: ${{ always() && env.MAC_SIGNING == 'true' }}
+        shell: bash
+        run: scripts/ci/macos-signing-keychain.sh cleanup
 
       # Stage: test the build and the package, then upload it.
       - name: Unit tests
@@ -819,6 +901,8 @@ jobs:
           retention-days: 14
 
   github-release:
+    env:
+      MACOS_PACKAGE_SIGNING: ${{ needs.build-macos.outputs.signing-mode }}
     needs: [get-version, build-windows, build-macos, codeql]
     if: ${{ always() && needs.get-version.result == 'success' && needs.get-version.outputs.publish_release == 'true' && needs.build-windows.result == 'success' && needs.build-macos.result == 'success' && needs.codeql.result == 'success' }}
     runs-on: ubuntu-latest
@@ -894,8 +978,18 @@ jobs:
           notes+="- 每个安装包都附带 GitHub 构建来源证明 / Every package carries a GitHub build-provenance attestation:"$'\n'
           notes+="  \`gh attestation verify FILE --repo ${GH_REPO}\`"$'\n'
           notes+="- Windows 包在 SignPath 审批前未签名 / Windows packages are unsigned until SignPath approval."$'\n'
-          notes+="- macOS 包未使用 Developer ID 签名与公证，首次运行需在「系统设置 → 隐私与安全性 → 辅助功能」中授权；升级后如再次提示，请重新授权 / "
-          notes+="macOS packages use an ad-hoc signature (no Developer ID, no notarization); grant Accessibility permission after the first launch and re-grant after an update if prompted."$'\n'
+          case "$MACOS_PACKAGE_SIGNING" in
+            development)
+              notes+="- macOS 使用 Apple Development 开发证书签名，未公证。首次切换签名身份后需要在系统设置中允许权限。 / macOS uses Apple Development signing without notarization. Approve system permissions after the initial identity migration."$'\n'
+              ;;
+            developer-id)
+              notes+="- macOS 使用 Developer ID 签名并通过 Apple 公证。 / macOS uses Developer ID signing and Apple notarization."$'\n'
+              ;;
+            ad-hoc)
+              notes+="- macOS 使用临时签名，升级可能需要重新授权。 / macOS uses ad-hoc signing; upgrades may require renewed system consent."$'\n'
+              ;;
+            *) echo "::error::missing verified Mac signing mode"; exit 1 ;;
+          esac
           marker="Built-From: ${GITHUB_SHA}"
           # The validated integrated commit must already own this version tag.
           # Never let release creation infer a target from the default branch.
