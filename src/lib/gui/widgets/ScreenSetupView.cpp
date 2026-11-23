@@ -66,9 +66,8 @@ void drawTileLabels(
     const QFont &font
 )
 {
-  constexpr qreal labelGap = 2;
   const auto roleHeight = QFontMetricsF(roleFont, painter.device()).height();
-  const auto rect = bounds.adjusted(0, roleHeight + labelGap, 0, 0);
+  const auto rect = bounds.adjusted(0, roleHeight, 0, 0);
   if (rect.isEmpty())
     return;
 
@@ -114,15 +113,14 @@ void drawTileLabels(
     }
   }
 
-  const qreal gap = fitted.lines > 0 ? labelGap : 0;
-  const qreal groupHeight = roleHeight + gap + fitted.height;
+  const qreal groupHeight = roleHeight + fitted.height;
   const QRectF roleRect(bounds.left(), bounds.center().y() - groupHeight / 2, bounds.width(), roleHeight);
   painter.setFont(roleFont);
   painter.drawText(roleRect, Qt::AlignCenter, role);
 
   if (fitted.lines == 0)
     return;
-  const QPointF origin(bounds.left(), roleRect.bottom() + gap);
+  const QPointF origin(bounds.left(), roleRect.bottom());
   painter.setClipRect(QRectF(origin, QSizeF(bounds.width(), fitted.height)), Qt::IntersectClip);
   if (fitted.complete) {
     painter.save();
