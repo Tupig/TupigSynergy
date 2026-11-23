@@ -95,6 +95,9 @@ if (OSX_BUNDLE)
     @ONLY
   )
   set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_CURRENT_BINARY_DIR}/mac-codesign.cmake)
+  # The pre-build signer generates a certificate-pinned Install.command beside
+  # the app only when a real certificate identity is configured.
+  set(CPACK_DMG_FORMAT "ULMO")
 
   set(CPACK_PACKAGE_ICON "${MY_DIR}/dmg-volume.icns")
   set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/deploy/mac/dmg-background.tiff")

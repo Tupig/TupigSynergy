@@ -115,6 +115,10 @@ if args and args[0] == "api":
         reply(state["release_status"], state["release"], "--include" in args)
 if len(args) > 1 and args[0] == "release":
     if args[1] in ("create", "upload", "edit"):
+        if args[1] == "edit" and "--notes-file" in args:
+            notes_path = Path(args[args.index("--notes-file") + 1])
+            with Path(os.environ["GH_STUB_LOG"]).open("a") as output:
+                output.write(json.dumps(["release", "edit-notes", notes_path.read_text()]) + "\n")
         if args[1] == "create":
             state["created"] = True
             state_path.write_text(json.dumps(state))
@@ -167,8 +171,16 @@ def release_case(changes=None, environment=None):
                     "GITHUB_EVENT_NAME": "workflow_dispatch", "GH_TOKEN": "synthetic",
                     "GH_STUB_STATE": str(temp / "state.json"),
                     "GH_STUB_LOG": str(temp / "calls.jsonl"), "RUNNER_TEMP": str(temp),
-                    "GITHUB_OUTPUT": str(temp / "output")})
-        env.update(environment or {})
+                    "GITHUB_OUTPUT": str(temp / "output"),
+                    # The actual native job's verified output is intentionally
+                    # explicit. Retain the established unsigned-package
+                    # contract for pre-signing fixtures.
+                    "MACOS_PACKAGE_SIGNING": "ad-hoc"})
+        for key, value in (environment or {}).items():
+            if value is None:
+                env.pop(key, None)
+            else:
+                env[key] = value
         result = subprocess.run([bash, "-euo", "pipefail", "-c", script], cwd=temp,
                                 env=env, capture_output=True, text=True, timeout=30)
         calls = [json.loads(line) for line in (temp / "calls.jsonl").read_text().splitlines()] \
@@ -660,6 +672,29 @@ class GitHubDeliverySuccessorContract(unittest.TestCase):
         self.assertIn("--draft=false", publish)
         self.assertTrue(any("repos/fixture/fixture/commits/main" in args for args in calls))
         self.assertNotIn("--clobber", [arg for args in calls for arg in args])
+
+    def test_publish_uses_only_the_verified_macos_signing_mode(self):
+        expected_notes = {
+            "development": "Apple Development",
+            "developer-id": "Developer ID",
+            "ad-hoc": "ad-hoc signing",
+        }
+        for mode, expected_note in expected_notes.items():
+            with self.subTest(mode=mode):
+                result, calls = release_case(environment={"MACOS_PACKAGE_SIGNING": mode})
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                notes = [args[2] for args in calls if args[:2] == ["release", "edit-notes"]]
+                self.assertEqual(len(notes), 1)
+                self.assertIn(expected_note, notes[0])
+
+    def test_publish_rejects_missing_or_unknown_macos_signing_mode_before_mutation(self):
+        for name, mode in (("missing", None), ("empty", ""), ("unknown", "unverified")):
+            with self.subTest(mode=name):
+                result, calls = release_case(environment={"MACOS_PACKAGE_SIGNING": mode})
+                self.assertNotEqual(result.returncode, 0,
+                                    name + ": accepted an unverified macOS signing mode")
+                self.assertEqual(mutations(calls), [],
+                                 name + ": mutated the release before mode validation")
 
     def test_publication_rejects_invalid_identity_or_api_before_mutation(self):
         cases = (

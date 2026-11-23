@@ -1,0 +1,97 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
+# SPDX-License-Identifier: MIT
+# This is deliberately a first-install helper. An existing app uses its
+# application-owned updater rather than a second bundle-exchange implementation.
+set -eu
+umask 077
+export LC_ALL=C
+
+app='@CMAKE_PROJECT_PROPER_NAME@.app'
+bundle_id='com.tupig.synergy'
+core_id='com.tupig.synergy.core'
+fingerprint='@APPLE_CODESIGN_ID@'
+applications='/Applications'
+# The sticky temporary parent prevents other users renaming a root-owned stage.
+stage_parent='/private/tmp'
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
+source_app="$script_dir/$app"
+destination="$applications/$app"
+stage=''
+
+fail() { printf '%s\n' "Installation refused: $*" >&2; exit 1; }
+existing_installation() { [ ! -e "$destination" ] && [ ! -L "$destination" ]; }
+open_installed_app() {
+  /usr/bin/open "$destination" || printf '%s\n' 'macOS may require first-open approval in System Settings.' >&2
+  /usr/bin/open 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility' || \
+    printf '%s\n' 'Open System Settings > Privacy & Security > Accessibility to allow this app.' >&2
+}
+cleanup() {
+  case "$stage" in
+    "$stage_parent"/.tupig-synergy-install.*)
+      [ -d "$stage" ] && [ ! -L "$stage" ] && /bin/rm -rf -- "$stage" || : ;;
+  esac
+}
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
+
+case "${1:-}" in
+  '') ;;
+  --as-root) [ "$(/usr/bin/id -u)" -eq 0 ] || fail 'privileged install did not acquire root' ;;
+  *) fail 'unexpected installer argument' ;;
+esac
+[ -n "$fingerprint" ] && [ "$fingerprint" != '-' ] || fail 'no expected certificate fingerprint is configured'
+gui_requirement="=identifier \"$bundle_id\" and certificate leaf = H\"$fingerprint\""
+core_requirement="=identifier \"$core_id\" and certificate leaf = H\"$fingerprint\""
+
+verify_bundle() {
+  bundle=$1
+  [ -d "$bundle" ] && [ ! -L "$bundle" ] || return 1
+  [ -d "$bundle/Contents" ] && [ ! -L "$bundle/Contents" ] || return 1
+  [ -f "$bundle/Contents/Info.plist" ] && [ ! -L "$bundle/Contents/Info.plist" ] || return 1
+  [ -f "$bundle/Contents/MacOS/@CMAKE_PROJECT_PROPER_NAME@" ] || return 1
+  [ -f "$bundle/Contents/MacOS/synergy-core" ] || return 1
+  /usr/bin/codesign --verify --deep --strict -R "$gui_requirement" "$bundle" &&
+    /usr/bin/codesign --verify --strict -R "$core_requirement" "$bundle/Contents/MacOS/synergy-core"
+}
+
+[ -d "$source_app" ] && [ ! -L "$source_app" ] || fail 'source app is missing or is a symlink'
+verify_bundle "$source_app" || fail 'source bundle identity or signature did not match'
+existing_installation || { printf '%s\n' 'Existing installation: use the in-app updater.' >&2; exit 2; }
+
+# The non-writable branch is the same script and same transaction, re-entered
+# with a fixed argument. No source/destination/path string is interpolated into
+# a root shell program.
+if [ "${1:-}" != --as-root ] && [ ! -w "$applications" ]; then
+  /usr/bin/sudo /bin/sh "$0" --as-root
+  open_installed_app
+  exit 0
+fi
+stage=$(/usr/bin/mktemp -d "$stage_parent/.tupig-synergy-install.XXXXXX") || fail 'could not create private staging directory'
+case "$stage" in "$stage_parent"/.tupig-synergy-install.*) ;; *) fail 'unsafe staging path' ;; esac
+[ -d "$stage" ] && [ ! -L "$stage" ] || fail 'unsafe staging directory'
+
+/usr/bin/ditto --noacl "$source_app" "$stage/$app" || fail 'could not stage verified app'
+verify_bundle "$stage/$app" || fail 'staged bundle identity or signature did not match'
+# The single allowed user-machine quarantine mutation: verified private staged
+# copy only. It never targets source/existing apps, TCC, spctl, or trust policy.
+/usr/bin/xattr -dr com.apple.quarantine "$stage/$app" || fail 'could not clear staged quarantine'
+existing_installation || { printf '%s\n' 'Existing installation: use the in-app updater.' >&2; exit 2; }
+# RENAME_EXCL prevents replacing a destination created by a concurrent install.
+# RENAME_NOFOLLOW_ANY rejects symlink components during the atomic rename.
+/usr/bin/osascript -l JavaScript - "$stage/$app" "$destination" <<'JAVASCRIPT' || fail 'could not place first-install app'
+ObjC.import('Foundation');
+ObjC.bindFunction('renameatx_np', ['int', ['int', 'char *', 'int', 'char *', 'unsigned int']]);
+function run(paths) {
+  if (paths.length !== 2 || $.renameatx_np(-2, paths[0], -2, paths[1], 0x00000004 | 0x00000010) !== 0) {
+    throw Error('Atomic first installation failed or destination exists.');
+  }
+}
+JAVASCRIPT
+[ ! -e "$stage/$app" ] && [ ! -L "$stage/$app" ] || fail 'destination appeared concurrently; existing app was not replaced'
+verify_bundle "$destination" || fail 'installed bundle identity or signature did not match'
+printf '%s\n' "Installed $destination. Gatekeeper and TCC/Accessibility approval remain user-controlled."
+
+if [ "${1:-}" != --as-root ]; then
+  open_installed_app
+fi
