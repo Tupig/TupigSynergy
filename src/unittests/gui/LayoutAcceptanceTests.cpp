@@ -47,6 +47,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPainter>
 #include <QPixmap>
 #include <QRadioButton>
 #include <QScopeGuard>
@@ -839,16 +840,28 @@ void LayoutAcceptanceTests::serverTileCentersRoleAndNameTogether_data()
 {
   QTest::addColumn<QString>("language");
   QTest::addColumn<bool>("local");
-  QTest::newRow("english-local") << QStringLiteral("en") << true;
-  QTest::newRow("english-client") << QStringLiteral("en") << false;
-  QTest::newRow("chinese-local") << QStringLiteral("zh_CN") << true;
-  QTest::newRow("chinese-client") << QStringLiteral("zh_CN") << false;
+  QTest::addColumn<bool>("dark");
+  for (const auto &language : {QStringLiteral("en"), QStringLiteral("zh_CN")})
+    for (bool local : {true, false})
+      for (bool dark : {true, false})
+        QTest::newRow(
+            qPrintable(QStringLiteral("%1-%2-%3").arg(language, local ? "local" : "client", dark ? "dark" : "light"))
+        ) << language
+          << local << dark;
 }
 
 void LayoutAcceptanceTests::serverTileCentersRoleAndNameTogether()
 {
   QFETCH(QString, language);
   QFETCH(bool, local);
+  QFETCH(bool, dark);
+  const auto originalPalette = qApp->palette();
+  const auto restorePalette = qScopeGuard([&] { qApp->setPalette(originalPalette); });
+  auto palette = QApplication::style()->standardPalette();
+  palette.setColor(QPalette::Window, QColor(dark ? "#1c1c1e" : "#f5f5f7"));
+  palette.setColor(QPalette::WindowText, QColor(dark ? "#e9e9ea" : "#1c1c1e"));
+  qApp->setPalette(palette);
+  QCOMPARE(synergy::gui::isDarkMode(), dark);
   const ScopedLanguage languageScope(language);
   const auto name = QStringLiteral("Desk-01");
   const ScopedSetting gridWidth(QStringLiteral("internalConfig/numColumns"), 5);
@@ -877,11 +890,19 @@ void LayoutAcceptanceTests::serverTileCentersRoleAndNameTogether()
   QVERIFY(settleStaticRender(host));
 
   const auto tile = view->visualRect(tileIndex);
-  const auto image = view->viewport()->grab(tile).toImage();
-  QVERIFY(!image.isNull());
-  const auto scale = image.devicePixelRatio();
+  const auto capture = view->viewport()->grab(tile);
+  QVERIFY(!capture.isNull());
+  const auto scale = capture.devicePixelRatio();
+  // The tile is translucent. Compare its painted text over the window
+  // background instead of treating premultiplied RGB values as opaque colors.
+  QImage image(capture.size(), QImage::Format_RGB32);
+  image.setDevicePixelRatio(scale);
+  image.fill(palette.color(QPalette::Window));
+  {
+    QPainter painter(&image);
+    painter.drawPixmap(QPoint(), capture);
+  }
   const auto inset = qCeil(6 * scale);
-  const bool dark = synergy::gui::isDarkMode();
   QList<QRect> textBands;
   for (int y = inset; y < image.height() - inset; ++y) {
     QRect row;
@@ -912,9 +933,8 @@ void LayoutAcceptanceTests::serverTileCentersRoleAndNameTogether()
   if (!evidence.isEmpty()) {
     const QDir output(evidence);
     QVERIFY(QDir().mkpath(output.absolutePath()));
-    QVERIFY(image.save(output.filePath(QStringLiteral("server-tile-labels-%1-%2.png")
-                                           .arg(language, local ? QStringLiteral("local") : QStringLiteral("client"))))
-    );
+    QVERIFY(image.save(output.filePath(QStringLiteral("server-tile-labels-%1-%2-%3.png")
+                                           .arg(language, local ? "local" : "client", dark ? "dark" : "light"))));
   }
 }
 
