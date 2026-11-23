@@ -17,6 +17,7 @@ private Q_SLOTS:
   void repeatedReconnect();
   void failedConnectionCanRetry();
   void nullableReadDiscards();
+  void closedTlsSocketIgnoresReadyRead();
 
 private:
   Arch m_arch;

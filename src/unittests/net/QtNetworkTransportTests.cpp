@@ -9,6 +9,7 @@
 #include <QEventLoop>
 #include <QHostAddress>
 #include <QSignalSpy>
+#include <QSslSocket>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTimer>
@@ -188,6 +189,23 @@ void QtNetworkTransportTests::nullableReadDiscards()
   QVERIFY(waitFor([&] { return transport.isReady(); }));
   QCOMPARE(transport.read(result, sizeof(result)), 7u);
   QCOMPARE(QByteArray(result, 7), QByteArray("fresh!!", 7));
+}
+
+void QtNetworkTransportTests::closedTlsSocketIgnoresReadyRead()
+{
+  QtNetworkTransport transport(SecurityLevel::EncryptedTestOnly);
+  auto *socket = qobject_cast<QSslSocket *>(transport.getTcpSocket());
+  QVERIFY(socket);
+  QVERIFY(!socket->isOpen());
+  QSignalSpy received(&transport, &QtNetworkTransport::transportDataReady);
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
+  QTest::failOnWarning();
+#endif
+  // A pending readyRead callback can run after another callback closes the device.
+  QVERIFY(QMetaObject::invokeMethod(socket, "readyRead", Qt::DirectConnection));
+  QCOMPARE(received.count(), 0);
+  QCOMPARE(transport.getSize(), 0u);
 }
 
 QTEST_GUILESS_MAIN(QtNetworkTransportTests)
