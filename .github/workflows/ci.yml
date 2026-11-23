@@ -85,7 +85,7 @@ jobs:
         run: python3 scripts/ci/check-version-consistency.py
 
       - name: Check Mac signing automation
-        run: python3 -m unittest src/unittests/ci/test_macos_signing_contract.py
+        run: python3 -m unittest src/unittests/ci/test_macos_signing_contract.py src/unittests/ci/test_macos_package_loaded_images.py
 
       # One place decides what this event builds. Job `if`s only read these
       # outputs, so a platform is not accidentally both required and skipped.

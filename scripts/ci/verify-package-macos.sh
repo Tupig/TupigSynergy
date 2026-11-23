@@ -409,6 +409,141 @@ def audit(app, expected):
     return gui, core
 
 
+def verify_non_image_mappings(process, core, unreadable_paths):
+    if process.poll() is not None:
+        raise ValueError('TLS core exited before vmmap data observation')
+    pid = str(process.pid)
+    try:
+        result = subprocess.run(
+            ['/usr/bin/vmmap', '-w', pid],
+            env={'PATH': '/usr/bin:/bin:/usr/sbin:/sbin', 'LC_ALL': 'C'},
+            capture_output=True, text=True, timeout=12,
+        )
+    except subprocess.TimeoutExpired:
+        raise ValueError('TLS vmmap data observation timed out') from None
+    except OSError:
+        raise ValueError('Could not run vmmap for TLS data observation') from None
+    if result.returncode:
+        raise ValueError('TLS vmmap data observation failed (exit ' + str(result.returncode) + ')')
+    lines = result.stdout.splitlines()
+    if result.stderr.strip() or any(line.startswith(('vmmap:', 'Error:', 'Warning:')) for line in lines):
+        raise ValueError('TLS vmmap reported a region observation error')
+    process_headers = [line for line in lines if line.startswith('Process:')]
+    if len(process_headers) != 1 or not re.fullmatch(r'Process:\s+.+ \[' + pid + r'\]', process_headers[0]):
+        raise ValueError('TLS vmmap did not report exactly the owned PID')
+
+    section_names = ('==== Non-writable regions', '==== Writable regions',
+                     '==== Summary for process', '==== Legend')
+    sections = [[i for i, line in enumerate(lines) if line.startswith(name)] for name in section_names]
+    if any(len(section) != 1 for section in sections):
+        raise ValueError('TLS vmmap returned an incomplete region report')
+    non_writable, writable, summary, legend = (section[0] for section in sections)
+    if not non_writable < writable < legend < summary:
+        raise ValueError('TLS vmmap returned misordered region sections')
+
+    # The display Path header can use a volume alias. Check the actual executable mapping.
+    path_field = re.compile(r'\s(/.+)$')
+    region_fields = re.compile(
+        r'^(\S.*?)\s+[0-9a-fA-F]+-[0-9a-fA-F]+\s+\[[^\]]+\]\s+'
+        r'([r-][w-][x-])/[r-][w-][x-]\s+SM=\S+\s+$'
+    )
+    core_seen = False
+    data_paths = set()
+    for line in lines[non_writable + 1:legend]:
+        file_path = path_field.search(line)
+        if not file_path:
+            continue
+        try:
+            path = Path(file_path[1]).resolve()
+        except (OSError, RuntimeError):
+            raise ValueError('Could not classify a TLS vmmap region path') from None
+        if path != core and path not in unreadable_paths:
+            continue
+        region = region_fields.fullmatch(line[:file_path.start(1)])
+        if not region:
+            raise ValueError('TLS vmmap returned a malformed relevant region')
+        kind, protection = region.groups()
+        if path == core:
+            core_seen = core_seen or (kind == '__TEXT' and 'x' in protection)
+        elif kind != 'mapped file' or 'x' in protection:
+            raise ValueError('TLS vmmap could not classify an unreadable mapping as non-executable data')
+        else:
+            data_paths.add(path)
+    if not core_seen:
+        raise ValueError('TLS vmmap did not identify the audited executable core mapping')
+    if data_paths != unreadable_paths:
+        raise ValueError('TLS vmmap could not classify every unreadable text mapping')
+    if process.poll() is not None:
+        raise ValueError('TLS core exited during vmmap data observation')
+    print('PASS: live TLS vmmap confirmed', len(data_paths), 'unreadable mappings are non-executable data')
+
+
+def observe_loaded_images(process, core, bundle):
+    if process.poll() is not None:
+        raise ValueError('TLS core exited before live image observation')
+    pid = str(process.pid)
+    try:
+        result = subprocess.run(
+            ['/usr/sbin/lsof', '-nP', '-a', '-p', pid, '-d', 'txt', '-F', 'pfn'],
+            env={'PATH': '/usr/bin:/bin:/usr/sbin:/sbin', 'LC_ALL': 'C'},
+            capture_output=True, text=True, timeout=10,
+        )
+    except subprocess.TimeoutExpired:
+        raise ValueError('TLS lsof image observation timed out') from None
+    except OSError:
+        raise ValueError('Could not run lsof for TLS image observation') from None
+    if result.returncode:
+        raise ValueError('TLS lsof image observation failed (exit ' + str(result.returncode) + ')')
+
+    records = result.stdout.splitlines()
+    if not records or records[0] != 'p' + pid or sum(field.startswith('p') for field in records) != 1:
+        raise ValueError('TLS lsof image observation did not report exactly the owned PID')
+    fields = records[1:]
+    if not fields or len(fields) % 2:
+        raise ValueError('TLS lsof returned empty or incomplete text mappings')
+    bundle = bundle.resolve()
+    core = core.resolve()
+    images = set()
+    unreadable_paths = set()
+    for descriptor, name in zip(fields[::2], fields[1::2]):
+        if descriptor != 'ftxt' or not name.startswith('n/'):
+            raise ValueError('TLS lsof returned a malformed text mapping')
+        try:
+            path = Path(name[1:]).resolve()
+        except (OSError, RuntimeError):
+            raise ValueError('Could not resolve a TLS text mapping') from None
+        if system(str(path)):
+            continue
+        # lsof text records include mapped data resources alongside Mach-O images.
+        try:
+            is_macho = macho(path) if path.is_file() else None
+        except OSError:
+            is_macho = None
+        if is_macho is None:
+            unreadable_paths.add(path)
+            continue
+        if not is_macho:
+            continue
+        if not inside(path, bundle):
+            raise ValueError('TLS lsof found an external non-system image: ' + str(path))
+        images.add(path)
+
+    if core not in images:
+        raise ValueError('TLS lsof image observation did not find the audited core executable')
+    has_openssl_backend = (bundle / 'Contents/PlugIns/tls/libqopensslbackend.dylib').exists()
+    if has_openssl_backend:
+        frameworks = bundle / 'Contents/Frameworks'
+        for stem in ('libssl.', 'libcrypto.'):
+            if not any(path.name.startswith(stem) and inside(path, frameworks) for path in images):
+                raise ValueError('Retained Qt OpenSSL backend did not map packaged ' + stem + ' runtime')
+    if unreadable_paths:
+        verify_non_image_mappings(process, core, unreadable_paths)
+    if process.poll() is not None:
+        raise ValueError('TLS core exited during live image observation')
+    if has_openssl_backend:
+        print('PASS: live TLS lsof observation found packaged libssl and libcrypto')
+
+
 def launch(gui, core, root):
     home = root / 'home'
     config = root / 'config'
@@ -437,7 +572,6 @@ def launch(gui, core, root):
            'DYLD_PRINT_LIBRARIES': '1', 'LC_ALL': 'C'}
 
     def check_loaded(output):
-        loaded = set()
         for line in output.splitlines():
             match = re.match(r'dyld(?:\[\d+\])?:\s+(?:<[^>]+>\s+|loaded:\s+)?(/.*)', line)
             if not match:
@@ -445,8 +579,6 @@ def launch(gui, core, root):
             path = match.group(1).strip()
             if not system(path) and not inside(Path(path).resolve(), gui.parents[2].resolve()):
                 raise ValueError('Startup loaded an external non-system image: ' + path)
-            loaded.add(str(Path(path).resolve()))
-        return loaded
 
     gui_result = subprocess.run([str(gui), '--help'], env=env, capture_output=True, text=True, timeout=30)
     (root / 'gui.log').write_text(gui_result.stdout + gui_result.stderr)
@@ -502,6 +634,7 @@ def launch(gui, core, root):
                         time.sleep(0.05)
                     print('PASS: clean-environment core completed', secure.version(),
                           'loopback handshake and accepted private trusted identity')
+                    observe_loaded_images(process, core, gui.parents[2])
                     # No Synergy greeting is sent; input sharing never activates.
             finally:
                 if process.poll() is None:
@@ -511,15 +644,8 @@ def launch(gui, core, root):
                     except subprocess.TimeoutExpired:
                         process.kill()
                         process.wait(timeout=5)
-        loaded = check_loaded((root / 'core.log').read_text())
-        if not loaded:
-            raise ValueError('TLS smoke has no loaded-image evidence')
-        bundle = gui.parents[2]
-        if (bundle / 'Contents/PlugIns/tls/libqopensslbackend.dylib').exists():
-            for stem in ('libssl.', 'libcrypto.'):
-                if not any(Path(path).name.startswith(stem) for path in loaded):
-                    raise ValueError('Retained Qt OpenSSL backend did not load packaged ' + stem + ' runtime')
-        print('PASS: TLS loaded-image closure stays inside package/system paths')
+        check_loaded((root / 'core.log').read_text())
+        print('PASS: TLS loaded-image closure stays inside package/system paths (live owned PID via lsof)')
 
 
 def main():
