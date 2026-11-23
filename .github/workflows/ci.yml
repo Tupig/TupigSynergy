@@ -612,7 +612,7 @@ jobs:
         run: |
           set -euo pipefail
           openssl_root=$(brew --prefix openssl@3)
-          ${{ env.CMAKE_CONFIGURE }} -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="${{ github.event_name == 'workflow_dispatch' && secrets.APPLE_CODESIGN_ID || '' }}" -DOPENSSL_ROOT_DIR="$openssl_root" -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
+          ${{ env.CMAKE_CONFIGURE }} -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DAPPLE_CODESIGN_ID="$MAC_CODESIGN_ID" -DOPENSSL_ROOT_DIR="$openssl_root" -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
 
       - name: Build
         shell: bash

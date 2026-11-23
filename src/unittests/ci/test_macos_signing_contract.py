@@ -65,6 +65,14 @@ class MacOSSigningContract(unittest.TestCase):
         self.assertIn("Development-signed DMG verified; notarization is intentionally not performed.", workflow)
         self.assertRegex(workflow, r'developer-id\)\s*test "\$MAC_SIGNING" = true')
 
+    def test_configure_uses_the_guarded_signing_identity(self):
+        """An explicit ad-hoc build cannot reuse a retained signing secret."""
+        workflow = source(WORKFLOW)
+        mac_job = workflow.split("  build-macos:\n", 1)[1].split("  github-release:\n", 1)[0]
+        configure = mac_job.split("      - name: Configure\n", 1)[1].split("      - name:", 1)[0]
+        self.assertIn('-DAPPLE_CODESIGN_ID="$MAC_CODESIGN_ID"', configure)
+        self.assertNotIn("secrets.APPLE_CODESIGN_ID", configure)
+
     def test_keychain_decode_and_cleanup_are_macos_safe(self):
         """A macOS runner must decode locally and delete all temporary key material."""
         keychain = source(KEYCHAIN)
