@@ -11,6 +11,8 @@
 
 #include <QCryptographicHash>
 #include <QFile>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -173,6 +175,40 @@ void UpdateDownloaderTests::downloadsLargePackage()
   QFile file(finished.first().first().toString());
   QVERIFY(file.open(QIODevice::ReadOnly));
   QCOMPARE(file.readAll(), bytes);
+}
+
+void UpdateDownloaderTests::disablesHttp2ForPackageTransfers_data()
+{
+  QTest::addColumn<int>("size");
+  QTest::newRow("single") << 256;
+  QTest::newRow("range-fallback") << 9 * 1024 * 1024;
+}
+
+void UpdateDownloaderTests::disablesHttp2ForPackageTransfers()
+{
+  QFETCH(int, size);
+  const QByteArray bytes(size, 'a');
+  TestHttpServer server;
+  server.setBinary(bytes);
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+
+  QList<bool> ordinaryRequestsAllowHttp2;
+  UpdateDownloader downloader(nullptr, loopbackPolicy());
+  auto *network = downloader.findChild<QNetworkAccessManager *>();
+  QVERIFY(network);
+  connect(network, &QNetworkAccessManager::finished, this, [&ordinaryRequestsAllowHttp2](const QNetworkReply *reply) {
+    const auto request = reply->request();
+    if (!request.hasRawHeader("Range"))
+      ordinaryRequestsAllowHttp2.append(request.attribute(QNetworkRequest::Http2AllowedAttribute, true).toBool());
+  });
+  QSignalSpy finished(&downloader, &UpdateDownloader::finished);
+  const auto digest = QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex();
+  downloader.start(
+      {QStringLiteral("package.msi"), server.url(), bytes.size(), QString::fromLatin1(digest)}, directory.path()
+  );
+  QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 5000);
+  QCOMPARE(ordinaryRequestsAllowHttp2, QList<bool>{false});
 }
 
 void UpdateDownloaderTests::rejectsUnrelatedRedirect_data()

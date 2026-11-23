@@ -51,6 +51,11 @@ install(
 )
 
 if(BUILD_OSX_BUNDLE)
+  # Declare the helper as background-only before its QApplication starts.
+  set(core_info_plist "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist")
+  target_link_options(${target} PRIVATE "LINKER:SHELL:-sectcreate __TEXT __info_plist \"${core_info_plist}\"")
+  set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS "${core_info_plist}")
+
   set_target_properties(${target} PROPERTIES
     BUILD_WITH_INSTALL_RPATH TRUE
     INSTALL_RPATH "@loader_path/../Libraries;@loader_path/../Frameworks"

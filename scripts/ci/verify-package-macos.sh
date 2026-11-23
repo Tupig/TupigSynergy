@@ -386,6 +386,11 @@ def audit(app, expected):
         raise ValueError("file=Contents/MacOS/" + name + ";observed=" + ",".join(arches(gui.resolve())) + ";expected=" + ",".join(sorted(expected)))
     if set(arches(core.resolve())) != required_arches:
         raise ValueError('file=Contents/MacOS/synergy-core;observed=' + ','.join(arches(core.resolve())) + ';expected=' + ','.join(sorted(expected)))
+    for arch in sorted(required_arches):
+        metadata = run(['/usr/bin/otool', '-arch', arch, '-P', str(core)])
+        _, section, contents = metadata.partition('(__TEXT,__info_plist) section\n')
+        if not section or plistlib.loads(contents.strip().encode()).get('LSBackgroundOnly') is not True:
+            raise ValueError('The packaged core must declare LSBackgroundOnly for ' + arch)
     for image in sorted(images):
         if not required_arches.issubset(arches(image)):
             raise ValueError('Bundled Mach-O lacks a target architecture: ' + str(image.relative_to(app)))

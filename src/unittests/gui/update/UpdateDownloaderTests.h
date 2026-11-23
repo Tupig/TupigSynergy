@@ -18,6 +18,8 @@ private Q_SLOTS:
   void rejectsSizeMismatch();
   void downloadsLargePackage_data();
   void downloadsLargePackage();
+  void disablesHttp2ForPackageTransfers_data();
+  void disablesHttp2ForPackageTransfers();
   void rejectsUnrelatedRedirect_data();
   void rejectsUnrelatedRedirect();
 };
