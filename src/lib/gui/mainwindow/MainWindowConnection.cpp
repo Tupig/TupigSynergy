@@ -119,6 +119,7 @@ void MainWindow::startCore()
   // Let macOS request accessibility permission before starting the core.
 #if defined(Q_OS_MACOS)
   if (!checkOSXAccessibilityPermission()) {
+    qWarning().noquote() << tr("Start blocked: macOS has not granted Accessibility permission.");
     return;
   }
 #endif

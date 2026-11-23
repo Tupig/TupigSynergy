@@ -961,6 +961,10 @@ Do you want to connect to the server?
 <context>
     <name>MainWindow</name>
     <message>
+        <source>Start blocked: macOS has not granted Accessibility permission.</source>
+        <translation>未能启动：macOS 尚未允许设备控制和数据访问。</translation>
+    </message>
+    <message>
         <source>This computer&apos;s name:</source>
         <translation type="vanished">此计算机名称：</translation>
     </message>
@@ -3866,8 +3870,16 @@ Package: %3</source>
         <translation>startDraggingFiles：无法构建 CF_HDROP</translation>
     </message>
     <message>
-        <source>started client</source>
-        <translation>客户端已启动</translation>
+        <source>server started successfully, waiting for clients</source>
+        <translation>服务端启动成功，正在等待客户端连接。</translation>
+    </message>
+    <message>
+        <source>client ready, connecting to server</source>
+        <translation>客户端已就绪，正在连接服务端。</translation>
+    </message>
+    <message>
+        <source>connected to server successfully</source>
+        <translation>客户端连接成功。</translation>
     </message>
     <message>
         <source>starting core</source>

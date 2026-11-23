@@ -10,6 +10,7 @@
 #include "gui/Action.h"
 #include "gui/AppStyle.h"
 #include "gui/Hotkey.h"
+#include "gui/Logger.h"
 #include "gui/MainWindowDesign.h"
 #include "gui/config/Screen.h"
 #include "gui/config/ScreenList.h"
@@ -187,6 +188,7 @@ private Q_SLOTS:
   void collapsedLogBadgeHasRoundedCorners();
   void coreLogUsesChineseCatalogue_data();
   void coreLogUsesChineseCatalogue();
+  void permissionWarningUsesSelectedLanguage();
   void logFollowsTailWithoutInterruptingHistory();
   void leavingUpdateCancelsPendingDownload();
 };
@@ -1004,6 +1006,12 @@ void NativeDesignTests::coreLogUsesChineseCatalogue_data()
   QTest::newRow("settings-path") << QStringLiteral("initial settings file: C:\\示例目录\\settings %1.ini")
                                  << QStringLiteral("初始设置文件：C:\\示例目录\\settings %1.ini");
   QTest::newRow("core-start") << QStringLiteral("starting core") << QStringLiteral("正在启动核心进程");
+  QTest::newRow("server-started") << QStringLiteral("server started successfully, waiting for clients")
+                                  << QStringLiteral("服务端启动成功，正在等待客户端连接。");
+  QTest::newRow("client-starting") << QStringLiteral("client ready, connecting to server")
+                                   << QStringLiteral("客户端已就绪，正在连接服务端。");
+  QTest::newRow("client-connected") << QStringLiteral("connected to server successfully")
+                                    << QStringLiteral("客户端连接成功。");
   QTest::newRow("tls-listener") << QStringLiteral("QtTransportListenSocket: listening on 192.0.2.42:22211 (tls=1)")
                                 << QStringLiteral("QtTransportListenSocket：正在监听 192.0.2.42:22211（tls=1）");
   QTest::newRow("clipboard") << QStringLiteral("screen \"fixture%1\" grabbed clipboard 0 from \"示例%2\"")
@@ -1044,6 +1052,32 @@ void NativeDesignTests::coreLogUsesChineseCatalogue()
   QTRY_COMPARE(table->item(0, 2)->text(), message);
   QCOMPARE(table->item(1, 2)->text(), message);
   QVERIFY(tail->text().endsWith(message));
+}
+
+void NativeDesignTests::permissionWarningUsesSelectedLanguage()
+{
+  LogPanel panel;
+  auto *records = panel.findChild<LogWidget *>();
+  auto *table = panel.findChild<QTableWidget *>(QStringLiteral("logRecords"));
+  QVERIFY(records && table);
+
+  constexpr auto source = "Start blocked: macOS has not granted Accessibility permission.";
+  const auto appendWarning = [] {
+    const auto message = QCoreApplication::translate("MainWindow", source);
+    synergy::gui::Logger::instance()->handleMessage(QtWarningMsg, {}, message);
+  };
+  appendWarning();
+  QCOMPARE(table->rowCount(), 1);
+  QCOMPARE(table->item(0, 2)->text(), QString::fromLatin1(source));
+
+  QTranslator translator;
+  QVERIFY(translator.load(QStringLiteral("synergy_zh_CN.qm"), QStringLiteral(UI_TEST_TRANSLATIONS_DIR)));
+  QVERIFY(QCoreApplication::installTranslator(&translator));
+  appendWarning();
+  QCOMPARE(table->rowCount(), 2);
+  QCOMPARE(table->item(1, 2)->text(), QStringLiteral("未能启动：macOS 尚未允许设备控制和数据访问。"));
+  QCOMPARE(records->levelCounts().at(1), 2);
+  QVERIFY(QCoreApplication::removeTranslator(&translator));
 }
 
 void NativeDesignTests::logFollowsTailWithoutInterruptingHistory()

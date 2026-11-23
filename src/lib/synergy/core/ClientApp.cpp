@@ -175,7 +175,7 @@ void ClientApp::scheduleClientRestart(double retryTime)
 
 void ClientApp::handleClientConnected()
 {
-  LOG_DEBUG("connected to server");
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "connected to server successfully"));
   ipcSendConnectionState(synergy::core::ConnectionState::Connected);
   // Reset server index on successful connection
   m_currentServerIndex = 0;
@@ -287,7 +287,7 @@ bool ClientApp::startClient()
           clientScreen
       );
       m_clientScreen = clientScreen;
-      LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "started client"));
+      LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "client ready, connecting to server"));
     }
 
     m_client->setServerAddress(getCurrentServerAddress());
