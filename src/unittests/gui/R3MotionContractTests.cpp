@@ -425,7 +425,9 @@ void R3MotionContractTests::buttonStandardActivation()
     baselineTiming.actionReturned = baselineTiming.clock.elapsed();
     {
       WaitObservation observation{"stock", baselineTiming};
-      QTRY_COMPARE_WITH_TIMEOUT(baselineClicked.count(), 1, 250);
+      if (baselineClicked.isEmpty())
+        QVERIFY2(baselineClicked.wait(250), "Stock Qt accessible press did not click within 250 ms");
+      QCOMPARE(baselineClicked.count(), 1);
     }
     baseline.hide();
     button->setFocus();
@@ -443,10 +445,14 @@ void R3MotionContractTests::buttonStandardActivation()
     animatedTiming.actionReturned = animatedTiming.clock.elapsed();
     {
       WaitObservation observation{"animated", animatedTiming};
-      QTRY_COMPARE_WITH_TIMEOUT(clicked.count(), 1, 250);
+      // Start capturing feedback as soon as Qt dispatches the click. Polling
+      // can leave the event loop running through the first animation frames.
+      if (clicked.isEmpty())
+        QVERIFY2(clicked.wait(250), "Animated accessible press did not click within 250 ms");
+      QCOMPARE(clicked.count(), 1);
     }
-    QVERIFY(baselineTiming.clicked >= 0);
-    QVERIFY(animatedTiming.clicked >= 0);
+    QVERIFY(baselineTiming.clicked >= 0 && baselineTiming.clicked <= 250);
+    QVERIFY(animatedTiming.clicked >= 0 && animatedTiming.clicked <= 250);
     QVERIFY2(
         animatedTiming.clicked <= baselineTiming.clicked + 60,
         "Motion adds delay beyond stock Qt accessible activation scheduling"
