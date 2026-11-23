@@ -376,7 +376,7 @@ bool ServerApp::startServer()
     listener->setServer(m_server);
     m_server->setListener(listener);
     m_listener = listener;
-    LOG_DEBUG("started server, waiting for clients");
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "server started successfully, waiting for clients"));
     ipcSendConnectionState(synergy::core::ConnectionState::Listening);
     m_serverState = Started;
     return true;
