@@ -28,8 +28,8 @@ if /i not "!cmakepath!"=="%toolbin%\cmake.exe" exit /b 1
 if /i not "!cpackpath!"=="%toolbin%\cpack.exe" exit /b 1
 "%toolbin%\cmake.exe" --version || exit /b 1
 "%toolbin%\cpack.exe" --version || exit /b 1
-"%toolbin%\cmake.exe" --version | findstr /x /c:"cmake version 4.3.4" >nul || exit /b 1
-"%toolbin%\cpack.exe" --version | findstr /x /c:"cpack version 4.3.4" >nul || exit /b 1
+python -c "import subprocess,sys; sys.exit(0 if subprocess.check_output([sys.argv[1],'--version'],text=True).splitlines()[0]=='cmake version 4.3.4' else 1)" "%toolbin%\cmake.exe" || exit /b 1
+python -c "import subprocess,sys; sys.exit(0 if subprocess.check_output([sys.argv[1],'--version'],text=True).splitlines()[0]=='cpack version 4.3.4' else 1)" "%toolbin%\cpack.exe" || exit /b 1
 echo Verified cmake=%toolbin%\cmake.exe
 echo Verified cpack=%toolbin%\cpack.exe
 echo %toolbin%>>"%GITHUB_PATH%" || exit /b 1
