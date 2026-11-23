@@ -44,6 +44,7 @@
 #include <QGroupBox>
 #include <QHostAddress>
 #include <QImage>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -939,6 +940,92 @@ private Q_SLOTS:
             << clientMode->text();
     errors = mismatches(changedLanguage, true);
     QVERIFY2(errors.isEmpty(), qPrintable(errors.join("\n")));
+    window.close();
+  }
+  void keyboardOpensOccupiedScreenWithoutCommittingDraft()
+  {
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    const QString originalName = QStringLiteral("Keyboard-Fixture");
+    const QString draftName = QStringLiteral("Keyboard-Fixture-Draft");
+    window.serverConfig().addClient(originalName);
+
+    auto *open = window.findChild<QPushButton *>("btnConfigureServer");
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(open && pages);
+    QTest::mouseClick(open, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 1);
+    auto *parent = window.findChild<ServerConfigDialog *>();
+    QVERIFY(parent);
+    auto *view = parent->findChild<ScreenSetupView *>();
+    QVERIFY(view && view->model());
+    auto *model = view->model();
+
+    QModelIndex occupied;
+    QModelIndex blank;
+    for (int row = 0; row < model->rowCount(); ++row) {
+      for (int column = 0; column < model->columnCount(); ++column) {
+        const auto index = model->index(row, column);
+        const auto contents = model->data(index);
+        if (contents.toString() == originalName)
+          occupied = index;
+        if (!blank.isValid() && !contents.isValid())
+          blank = index;
+      }
+    }
+    QVERIFY(occupied.isValid() && blank.isValid());
+    QVERIFY(settleStaticRender(window));
+    const auto center = view->visualRect(occupied).center();
+    QVERIFY(view->viewport()->rect().contains(center));
+    QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, center);
+    QCOMPARE(view->currentIndex(), occupied);
+    QCOMPARE(pages->count(), 2);
+    QTest::keyClick(view, Qt::Key_Space);
+    QCOMPARE(pages->count(), 2);
+
+    for (const auto key : {Qt::Key_Return, Qt::Key_Enter}) {
+      const auto modifiers = key == Qt::Key_Enter ? Qt::KeypadModifier : Qt::NoModifier;
+      view->setCurrentIndex(occupied);
+      view->setFocus();
+      QTest::keyClick(view, key, modifiers);
+      QTRY_COMPARE(pages->currentIndex(), 2);
+      QCOMPARE(pages->count(), 3);
+      auto *pageEditor = pages->currentWidget()->property("pageEditor").value<QDialog *>();
+      auto *child = qobject_cast<ScreenSettingsDialog *>(pageEditor);
+      QVERIFY(child);
+      auto *name = child->findChild<QLineEdit *>("lineNameEdit");
+      auto *actions = child->findChild<QDialogButtonBox *>();
+      QVERIFY(name && actions && actions->button(QDialogButtonBox::Cancel));
+      QCOMPARE(name->text(), originalName);
+      name->setText(draftName);
+      QTest::mouseClick(actions->button(QDialogButtonBox::Cancel), Qt::LeftButton);
+      QTRY_COMPARE(pages->currentIndex(), 1);
+      QCOMPARE(pages->count(), 2);
+      QCOMPARE(model->data(occupied).toString(), originalName);
+      QVERIFY(window.serverConfig().screenExists(originalName));
+      QVERIFY(!window.serverConfig().screenExists(draftName));
+
+      view->setCurrentIndex(occupied);
+      view->setFocus();
+      QCOMPARE(view->currentIndex(), occupied);
+      QKeyEvent repeat(QEvent::KeyPress, key, modifiers, {}, true);
+      QCoreApplication::sendEvent(view, &repeat);
+      QCOMPARE(pages->currentIndex(), 1);
+      QCOMPARE(pages->count(), 2);
+
+      view->setCurrentIndex(blank);
+      view->setFocus();
+      QTest::keyClick(view, key, modifiers);
+      QCOMPARE(pages->currentIndex(), 1);
+      QCOMPARE(pages->count(), 2);
+      QVERIFY(!model->data(blank).isValid());
+
+      view->setCurrentIndex(QModelIndex());
+      QVERIFY(!view->currentIndex().isValid());
+      QTest::keyClick(view, key, modifiers);
+      QCOMPARE(pages->currentIndex(), 1);
+      QCOMPARE(pages->count(), 2);
+    }
     window.close();
   }
   void selectedScreenDeletionIsDraftAndPrimaryProtected()
