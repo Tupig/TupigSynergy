@@ -242,6 +242,10 @@ jobs:
           qt-version: 6.10.3
           vcpkg-triplet: x64-windows-release
 
+      - name: Pin CMake and CPack for packaging
+        shell: cmd
+        run: scripts\ci\prepare-windows-cmake.bat
+
       # Stage: compile. GUI must be synergy_<X.Y.Z>.exe; core and daemon stay unversioned.
       - name: Configure
         run: ${{ env.CMAKE_CONFIGURE }} -G Ninja ${{ steps.get-deps.outputs.vcpkg-cmake-config }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
