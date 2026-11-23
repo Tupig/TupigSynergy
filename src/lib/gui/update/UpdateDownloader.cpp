@@ -140,8 +140,6 @@ void UpdateDownloader::startRanges()
     const auto first = m_asset.size * index / kRangeCount;
     const auto last = m_asset.size * (index + 1) / kRangeCount - 1;
     QNetworkRequest request(m_asset.url);
-    // Give each range an independent connection on slow or lossy links.
-    request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
     request.setRawHeader("Accept-Encoding", "identity");
     request.setRawHeader("Range", "bytes=" + QByteArray::number(first) + '-' + QByteArray::number(last));
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
@@ -161,6 +159,9 @@ void UpdateDownloader::startRanges()
 
 QNetworkReply *UpdateDownloader::startRequest(QNetworkRequest request)
 {
+  // Keep independent range connections and avoid Qt's HTTP/2 TLS shutdown path
+  // when a package is fetched as a single request or after falling back.
+  request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
   request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Synergy-UpdateDownloader"));
   request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::UserVerifiedRedirectPolicy);
   auto *reply = m_network->get(request);
