@@ -251,7 +251,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -x "$SYNERGY_CI_CMAKE" && test -x "$SYNERGY_CI_CPACK"
+          test -x "$SYNERGY_CI_CMAKE"
+          test -x "$SYNERGY_CI_CPACK"
           "$SYNERGY_CI_CMAKE" --version
           "$SYNERGY_CI_CPACK" --version
           python3 - "$SYNERGY_CI_CMAKE" "cmake version 4.3.4" <<'PYTHON'

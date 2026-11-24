@@ -33,9 +33,12 @@ python -c "import subprocess,sys; sys.exit(0 if subprocess.check_output([sys.arg
 python -c "import subprocess,sys; sys.exit(0 if subprocess.check_output([sys.argv[1],'--version'],text=True).splitlines()[0]=='cpack version 4.3.4' else 1)" "%toolbin%\cpack.exe" || exit /b 1
 echo Verified cmake=%toolbin%\cmake.exe
 echo Verified cpack=%toolbin%\cpack.exe
-echo %toolbin%>>"%GITHUB_PATH%" || exit /b 1
+>>"%GITHUB_PATH%" echo %toolbin%
+if errorlevel 1 exit /b 1
 set "toolbin_slash=%toolbin:\=/%"
-echo SYNERGY_CI_CMAKE=%toolbin_slash%/cmake.exe>>"%GITHUB_ENV%" || exit /b 1
-echo SYNERGY_CI_CPACK=%toolbin_slash%/cpack.exe>>"%GITHUB_ENV%" || exit /b 1
+>>"%GITHUB_ENV%" echo SYNERGY_CI_CMAKE=%toolbin_slash%/cmake.exe
+if errorlevel 1 exit /b 1
+>>"%GITHUB_ENV%" echo SYNERGY_CI_CPACK=%toolbin_slash%/cpack.exe
+if errorlevel 1 exit /b 1
 endlocal
 exit /b 0
