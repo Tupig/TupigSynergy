@@ -1586,6 +1586,14 @@ Now you can connect your client computers to this server. You should see a promp
         <translation>%1 已经在运行中</translation>
     </message>
     <message>
+        <source>Another %1 instance is starting or unavailable.</source>
+        <translation>另一个 %1 正在启动或暂时无法连接。</translation>
+    </message>
+    <message>
+        <source>%1 could not start.</source>
+        <translation>无法启动 %1。</translation>
+    </message>
+    <message>
         <source>Test</source>
         <translation>测试</translation>
     </message>
@@ -2903,6 +2911,10 @@ Package: %3</source>
         <translation>正在启动新进程：%1</translation>
     </message>
     <message>
+        <source>Could not restart %1.</source>
+        <translation>无法重新启动 %1。</translation>
+    </message>
+    <message>
         <source>removing settings file: %1</source>
         <translation>正在删除设置文件：%1</translation>
     </message>
@@ -3672,6 +3684,58 @@ Package: %3</source>
     <message>
         <source>ipc server failed to listen</source>
         <translation>IPC 服务器监听失败</translation>
+    </message>
+    <message>
+        <source>instance lock directory is unavailable</source>
+        <translation>单实例锁目录不可用</translation>
+    </message>
+    <message>
+        <source>instance lock path is unavailable</source>
+        <translation>单实例锁路径不可用</translation>
+    </message>
+    <message>
+        <source>unable to verify the instance lock owner</source>
+        <translation>无法核实单实例锁的持有进程</translation>
+    </message>
+    <message>
+        <source>permission denied while acquiring the instance lock</source>
+        <translation>没有权限取得单实例锁</translation>
+    </message>
+    <message>
+        <source>cannot acquire the instance lock</source>
+        <translation>无法取得单实例锁</translation>
+    </message>
+    <message>
+        <source>activation socket path is unavailable</source>
+        <translation>窗口激活通道路径不可用</translation>
+    </message>
+    <message>
+        <source>activation socket directory is not privately owned</source>
+        <translation>窗口激活通道未位于当前账号独占写入的目录</translation>
+    </message>
+    <message>
+        <source>activation socket path is too long</source>
+        <translation>窗口激活通道路径过长</translation>
+    </message>
+    <message>
+        <source>owned activation socket did not respond</source>
+        <translation>已有实例的窗口激活通道没有响应</translation>
+    </message>
+    <message>
+        <source>cannot use the existing activation socket path</source>
+        <translation>无法使用现有的窗口激活通道路径</translation>
+    </message>
+    <message>
+        <source>permission denied while opening the activation socket</source>
+        <translation>没有权限创建窗口激活通道</translation>
+    </message>
+    <message>
+        <source>activation socket address is already in use</source>
+        <translation>窗口激活通道的地址已被占用</translation>
+    </message>
+    <message>
+        <source>cannot listen on the activation socket</source>
+        <translation>无法监听窗口激活通道</translation>
     </message>
     <message>
         <source>isFatal() not valid for non-secure connections</source>

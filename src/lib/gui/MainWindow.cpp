@@ -70,12 +70,12 @@
 
 using namespace synergy::gui;
 
-MainWindow::MainWindow(const QString &instanceSocketName)
+MainWindow::MainWindow(const QString &instanceSocketName, std::unique_ptr<QLocalServer> activationServer)
     : ui{std::make_unique<Ui::MainWindow>()},
       m_guiSocketName(instanceSocketName),
       m_coreProcess(m_serverConfig),
       m_trayIcon{new QSystemTrayIcon(this)},
-      m_guiDupeChecker{new QLocalServer(this)},
+      m_guiDupeChecker{activationServer ? activationServer.get() : new QLocalServer(this)},
       m_daemonIpcClient{new ipc::DaemonIpcClient(this)},
       m_actionAbout{new QAction(this)},
       m_actionCheckForUpdates{new QAction(this)},
@@ -184,10 +184,14 @@ MainWindow::MainWindow(const QString &instanceSocketName)
   m_actionReportBug->setIcon(synergy::gui::appIcon(QStringLiteral("tools-report-bug")));
   m_actionReportBug->setMenuRole(QAction::NoRole);
 
-  // Setup the Instance Checking
-  // In case of a previous crash remove first
+#if defined(Q_OS_MACOS)
+  if (activationServer)
+    activationServer.release()->setParent(this);
+#else
+  // Retire the previous process's endpoint before listening.
   QLocalServer::removeServer(m_guiSocketName);
   m_guiDupeChecker->listen(m_guiSocketName);
+#endif
 
   createMenuBar();
   setupControls();
@@ -379,7 +383,15 @@ void MainWindow::connectSlots()
 
   connect(m_statusBar, &StatusBar::requestShowMyFingerprints, this, &MainWindow::showMyFingerprint);
 
+#if defined(Q_OS_MACOS)
+  connect(m_guiDupeChecker, &QLocalServer::newConnection, this, [this] {
+    while (auto *notification = m_guiDupeChecker->nextPendingConnection())
+      notification->deleteLater();
+    showAndActivate();
+  });
+#else
   connect(m_guiDupeChecker, &QLocalServer::newConnection, this, &MainWindow::showAndActivate);
+#endif
 
   connect(ui->btnEditName, &QPushButton::clicked, this, &MainWindow::showHostNameEditor);
 

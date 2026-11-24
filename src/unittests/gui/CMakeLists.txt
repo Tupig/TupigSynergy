@@ -48,6 +48,11 @@ if(BUILD_GUI)
   create_test(NAME R3StartupContractTests DEPENDS gui LIBS synergy-gui
     SOURCE R3StartupContractTests.cpp WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/gui")
   target_compile_definitions(R3StartupContractTests PRIVATE R3_STARTUP_PROBE_PATH="$<TARGET_FILE:R3StartupProbe>")
+  if(APPLE)
+    target_sources(R3StartupContractTests PRIVATE ${CMAKE_SOURCE_DIR}/src/apps/synergy-core/CoreArgParser.cpp)
+    target_include_directories(R3StartupContractTests PRIVATE ${CMAKE_SOURCE_DIR}/src/apps/synergy-core)
+    target_link_libraries(R3StartupContractTests app)
+  endif()
   add_dependencies(R3StartupContractTests R3StartupProbe)
   # COMPLETE-R1 test payload completeness; auto-core remains disabled by probe.
   add_dependencies(R3StartupProbe ${CMAKE_PROJECT_NAME}-core)

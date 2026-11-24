@@ -17,6 +17,32 @@
 
 namespace synergy::gui::diagnostic {
 
+#ifdef Q_OS_MACOS
+namespace {
+QString s_restartProgram;
+QStringList s_restartArguments;
+QString s_restartFailure;
+} // namespace
+
+bool launchPendingRestart()
+{
+  if (s_restartProgram.isEmpty())
+    return true;
+  QProcess process;
+  process.setProgram(s_restartProgram);
+  process.setArguments(s_restartArguments);
+  // A detached successor cannot rely on the outgoing process's console pipes.
+  const auto nullDevice = QProcess::nullDevice();
+  process.setStandardInputFile(nullDevice);
+  process.setStandardOutputFile(nullDevice);
+  process.setStandardErrorFile(nullDevice);
+  if (process.startDetached())
+    return true;
+  qCritical().noquote() << s_restartFailure;
+  return false;
+}
+#endif
+
 void restart()
 {
   QString program = QCoreApplication::applicationFilePath();
@@ -27,7 +53,14 @@ void restart()
     arguments.removeAt(resetIndex);
 
   qInfo().noquote() << QCoreApplication::translate("GuiLogMessages", "launching new process: %1").arg(program);
+#ifdef Q_OS_MACOS
+  // main launches this after both the outgoing window and its lock are destroyed.
+  s_restartProgram = program;
+  s_restartArguments = arguments.mid(1);
+  s_restartFailure = QCoreApplication::translate("GuiLogMessages", "Could not restart %1.").arg(program);
+#else
   QProcess::startDetached(program, arguments);
+#endif
 
   qDebug("exiting current process");
   QCoreApplication::exit();

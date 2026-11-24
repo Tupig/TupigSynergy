@@ -9,11 +9,8 @@
 
 #include "ProtocolTypes.h"
 #include "common/Constants.h"
-#include "common/ExitCodes.h"
 #include "common/Settings.h"
 #include "common/VersionInfo.h"
-
-#include <QTextStream>
 
 const QString CoreArgParser::s_headerText = QStringLiteral("%1: %2\n").arg(kCoreBinName, kDisplayVersion);
 
@@ -33,32 +30,23 @@ CoreArgParser::CoreArgParser(const QStringList &args)
   m_singleInstance = !m_parser.isSet(CoreArgs::multiInstanceOption);
 }
 
-void CoreArgParser::parse()
+bool CoreArgParser::parse()
 {
   auto posArgs = m_parser.positionalArguments();
-  if (posArgs.isEmpty()) {
-    showHelpText();
-    exit(s_exitSuccess);
-  }
+  if (posArgs.isEmpty())
+    return false;
 
   const QString mode = posArgs.takeFirst();
   m_serverMode = (mode.compare("server", Qt::CaseInsensitive) == 0);
   m_clientMode = (mode.compare("client", Qt::CaseInsensitive) == 0);
 
-  if ((!m_clientMode && !m_serverMode) || mode.isEmpty()) {
-    showHelpText();
-    exit(s_exitSuccess);
-  }
+  if (!m_clientMode && !m_serverMode)
+    return false;
 
   if (m_parser.isSet(CoreArgs::configOption)) {
     Settings::setSettingsFile(m_parser.value(CoreArgs::configOption));
   }
-}
-
-[[noreturn]] void CoreArgParser::showHelpText() const
-{
-  QTextStream(stdout) << helpText();
-  exit(s_exitSuccess);
+  return true;
 }
 
 QString CoreArgParser::helpText() const

@@ -25,12 +25,15 @@
 
 #include <QApplication>
 #include <QFileInfo>
+#if !defined(Q_OS_MACOS)
 #include <QSharedMemory>
+#endif
 #include <QTextStream>
 #include <QThread>
 #include <QTimer>
 
 #if defined(Q_OS_MACOS)
+#include "platform/macos/InstanceGuard.h"
 #include <ApplicationServices/ApplicationServices.h>
 #endif
 
@@ -127,22 +130,41 @@ int main(int argc, char **argv)
   earlyApp.reset();
 #endif
 
-  // Before we check any more args we need to check for a duplicate process.
-  // Create a shared memory segment with a unique key
-  // This is to prevent a new instance from running if one is already running
-  QSharedMemory sharedMemory(kCoreBinName);
-
-  // Attempt to attach first and detach in order to clean up stale shm chunks
-  // This can happen if the previous instance was killed or crashed
-  if (sharedMemory.attach())
-    sharedMemory.detach();
-
-  if (!sharedMemory.create(1) && parser.singleInstanceOnly()) {
+#if defined(Q_OS_MACOS)
+  using synergy::platform::macos::InstanceStatus;
+  const auto instance = synergy::platform::macos::acquireCoreInstance(parser.singleInstanceOnly());
+  if (instance.status == InstanceStatus::Duplicate) {
     LOG_WARN("an instance of %s is already running", kCoreBinName);
     return s_exitDuplicate;
   }
+  if (instance.status == InstanceStatus::Failure) {
+    LOG_ERR("%s", instance.detail);
+    return s_exitFailed;
+  }
+#else
+  // Before we check any more args we need to check for a duplicate process.
+  // Create a shared memory segment with a unique key
+  // This is to prevent a new instance from running if one is already running
+  std::unique_ptr<QSharedMemory> sharedMemory;
+  if (parser.singleInstanceOnly()) {
+    sharedMemory = std::make_unique<QSharedMemory>(kCoreBinName);
 
-  parser.parse();
+    // Attempt to attach first and detach in order to clean up stale shm chunks
+    // This can happen if the previous instance was killed or crashed
+    if (sharedMemory->attach())
+      sharedMemory->detach();
+
+    if (!sharedMemory->create(1)) {
+      LOG_WARN("an instance of %s is already running", kCoreBinName);
+      return s_exitDuplicate;
+    }
+  }
+#endif
+
+  if (!parser.parse()) {
+    showHelp(parser);
+    return s_exitSuccess;
+  }
 
   EventQueue events;
   const auto processName = QFileInfo(argv[0]).fileName();
