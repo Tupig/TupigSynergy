@@ -236,6 +236,8 @@ endif()
 # The individual geometry and interaction deadlines stay in the test cases.
 if(WIN32)
   set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 90)
+elseif(APPLE)
+  set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 75)
 else()
   set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 60)
 endif()
