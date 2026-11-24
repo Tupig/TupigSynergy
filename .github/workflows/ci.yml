@@ -248,11 +248,63 @@ jobs:
 
       # Stage: compile. GUI must be synergy_<X.Y.Z>.exe; core and daemon stay unversioned.
       - name: Configure
-        run: ${{ env.CMAKE_CONFIGURE }} -G Ninja ${{ steps.get-deps.outputs.vcpkg-cmake-config }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "$SYNERGY_CI_CMAKE" && test -x "$SYNERGY_CI_CPACK"
+          "$SYNERGY_CI_CMAKE" --version
+          "$SYNERGY_CI_CPACK" --version
+          python3 - "$SYNERGY_CI_CMAKE" "cmake version 4.3.4" <<'PYTHON'
+          import subprocess, sys
+          raise SystemExit(subprocess.check_output([sys.argv[1], '--version'], text=True).splitlines()[0] != sys.argv[2])
+          PYTHON
+          python3 - "$SYNERGY_CI_CPACK" "cpack version 4.3.4" <<'PYTHON'
+          import subprocess, sys
+          raise SystemExit(subprocess.check_output([sys.argv[1], '--version'], text=True).splitlines()[0] != sys.argv[2])
+          PYTHON
+          flags="${CMAKE_CONFIGURE#cmake }"
+          test "$flags" != "$CMAKE_CONFIGURE"
+          "$SYNERGY_CI_CMAKE" $flags -G Ninja ${{ steps.get-deps.outputs.vcpkg-cmake-config }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
+          python3 - "$SYNERGY_CI_CPACK" build/build.ninja <<'PYTHON'
+          import re
+          import sys
+
+          expected = sys.argv[1].replace('\\', '/').lower()
+          lines = open(sys.argv[2], encoding='utf-8', errors='replace').read().splitlines()
+
+          package_deps = None
+          for line in lines:
+              if line.startswith('build package:'):
+                  package_deps = line.split(':', 1)[1].split()
+                  break
+          if not package_deps:
+              raise SystemExit("Ninja package phony stanza is missing")
+          util = next((dep for dep in package_deps if dep.endswith('package.util')), None)
+          if not util:
+              raise SystemExit("Ninja package phony stanza does not reference package.util")
+
+          command = None
+          for index, line in enumerate(lines):
+              if line.startswith(f'build {util}:'):
+                  for child in lines[index + 1:]:
+                      if child and not child[0].isspace():
+                          break
+                      if child.lstrip().startswith('COMMAND ='):
+                          command = child.split('=', 1)[1].strip()
+                          break
+                  break
+          if command is None:
+              raise SystemExit("Ninja package.util stanza has no COMMAND")
+
+          normalized = re.sub(r'\\', '/', command).lower()
+          if expected not in normalized:
+              raise SystemExit("Ninja package COMMAND does not select verified CPack")
+          PYTHON
 
       - name: Build
         shell: bash
-        run: cmake --build build --config Release -j8
+        run: |
+          "$SYNERGY_CI_CMAKE" --build build --config Release -j8
 
       - name: Use Windows host fonts for offscreen tests
         shell: cmd
@@ -292,7 +344,7 @@ jobs:
             target=$suite
             if [ "$suite" = R4VisualContractTests ]; then target=R4VisualProbe; fi
             python3 scripts/ci/check-diagnostic-paths.py "build/r3-test-evidence/${suite}-build.log"
-            cmake --build build --config Release --target "$target" -j8 2>&1 | tee "build/r3-test-evidence/${suite}-build.log"
+            "$SYNERGY_CI_CMAKE" --build build --config Release --target "$target" -j8 2>&1 | tee "build/r3-test-evidence/${suite}-build.log"
             python3 scripts/ci/check-diagnostic-paths.py --recursive \
               build/src/unittests/Testing/Temporary "build/src/unittests/test-results/${suite}.txt" \
               "build/r3-test-evidence/${suite}.xml" "build/r3-test-evidence/${suite}.log"
@@ -409,9 +461,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cmake --version
-          cpack --version
-          if cmake --build build --config Release -j8 --target package; then
+          "$SYNERGY_CI_CMAKE" --version
+          "$SYNERGY_CI_CPACK" --version
+          python3 - "$SYNERGY_CI_CMAKE" "cmake version 4.3.4" <<'PYTHON'
+          import subprocess, sys
+          raise SystemExit(subprocess.check_output([sys.argv[1], '--version'], text=True).splitlines()[0] != sys.argv[2])
+          PYTHON
+          python3 - "$SYNERGY_CI_CPACK" "cpack version 4.3.4" <<'PYTHON'
+          import subprocess, sys
+          raise SystemExit(subprocess.check_output([sys.argv[1], '--version'], text=True).splitlines()[0] != sys.argv[2])
+          PYTHON
+          if "$SYNERGY_CI_CMAKE" --build build --config Release -j8 --target package; then
             exit 0
           fi
           # CPack 默认只打印日志路径；失败时保留真正的 WiX 诊断。

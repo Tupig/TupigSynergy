@@ -191,7 +191,7 @@ configure/build requirements remain unchanged. The package step records both
 7Z archive level 9, and passes WiX 5 `-dcl high`. Actual cabinet and archive
 properties remain package acceptance evidence.
 
-Windows CI pins the packaging toolchain to the verified CMake 4.3.4 Windows amd64 wheel in a runner-temporary directory; it does not install CMake globally or change the local build requirements.
+Windows CI pins the packaging toolchain to the verified CMake 4.3.4 Windows amd64 wheel in a runner-temporary directory and binds every Windows configure/build/package helper to its absolute paired paths; this avoids stale PATH or cached CPack selection. It does not install CMake globally or change the local build requirements.
 
 ---
 
@@ -514,7 +514,7 @@ Windows 最高压缩打包要求 CPack 4.3 或更高版本；现有配置与构�
 打包前记录 `cmake --version` 与 `cpack --version`，旧 CPack 明确失败关闭，7Z 请求 level 9，
 并向 WiX 5 传递 `-dcl high`；实际 cabinet 与归档属性仍以包验收证据为准。
 
-Windows CI 将已核验的 CMake 4.3.4 Windows amd64 wheel 解包到 runner 临时目录，仅临时前置其工具目录到 PATH；不全局安装 CMake，也不改变本机现有配置与构建要求。
+Windows CI 将已核验的 CMake 4.3.4 Windows amd64 wheel 解包到 runner 临时目录，并将 Windows 配置/构建/打包 helper 绑定到配对的绝对路径，避免 PATH 或缓存选择旧 CPack；不全局安装 CMake，也不改变本机现有配置与构建要求。
 
 ### 固定版本GitHub交付与翻译维护
 

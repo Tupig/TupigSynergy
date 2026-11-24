@@ -2,6 +2,7 @@
 setlocal EnableExtensions EnableDelayedExpansion
 if not defined RUNNER_TEMP exit /b 1
 if not defined GITHUB_PATH exit /b 1
+if not defined GITHUB_ENV exit /b 1
 set "size="
 set "hash="
 set "cmakepath="
@@ -33,5 +34,8 @@ python -c "import subprocess,sys; sys.exit(0 if subprocess.check_output([sys.arg
 echo Verified cmake=%toolbin%\cmake.exe
 echo Verified cpack=%toolbin%\cpack.exe
 echo %toolbin%>>"%GITHUB_PATH%" || exit /b 1
+set "toolbin_slash=%toolbin:\=/%"
+echo SYNERGY_CI_CMAKE=%toolbin_slash%/cmake.exe>>"%GITHUB_ENV%" || exit /b 1
+echo SYNERGY_CI_CPACK=%toolbin_slash%/cpack.exe>>"%GITHUB_ENV%" || exit /b 1
 endlocal
 exit /b 0
