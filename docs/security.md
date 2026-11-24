@@ -26,13 +26,11 @@ do not control.
 
 ### Network
 
-TLS is **on by default**, and peer checking is **on by default**
-(`security/tlsEnabled` and `security/checkPeers`). Peer checking is
-fingerprint TOFU: the first accepted certificate is remembered, and a later
-change is rejected. This is not a public-CA certificate. A TLS connection
-always requires a peer certificate. RSA keys shorter than 2048 bits are
-rejected. Turning `security/checkPeers` off does not accept a client that has
-no certificate.
+TLS is **on by default** (`security/tlsEnabled`). Both computers present certificates
+and check the other's SHA-256 fingerprint. The app saves a fingerprint after explicit
+confirmation and rejects a later change until the new fingerprint is verified and accepted.
+RSA keys shorter than 2048 bits are rejected. The legacy `security/checkPeerFingerprints`
+setting does not disable these checks.
 
 Turning TLS off switches that connection to plaintext. Plaintext has no
 confidentiality and no peer authentication. There is no separate server
@@ -142,7 +140,7 @@ TuPig Synergy 在你自己控制的几台电脑之间共享键盘、鼠标和剪
 
 ### 网络
 
-TLS **默认开启**，对端校验也 **默认开启**（`security/tlsEnabled` 与 `security/checkPeers`）。对端校验是指纹 TOFU：第一次接受的证书会被记住，之后证书变了就拒绝。这不是公共 CA 签发的证书。TLS 连接始终要求对端证书。短于 2048 位的 RSA 密钥会被拒绝。关掉 `security/checkPeers` 也不会接受没有证书的客户端。
+TLS **默认开启**（`security/tlsEnabled`）。两台电脑都提供证书，并校验对方的 SHA-256 指纹。应用在用户明确确认后保存指纹，后续须重新核对并接受新的指纹才能使用更换后的证书。短于 2048 位的 RSA 密钥会被拒绝。旧设置 `security/checkPeerFingerprints` 无法关闭这些校验。
 
 关掉 TLS 后，这条连接变为明文。明文没有机密性，也没有对端身份。没有单独的服务器密码。设置键和真实的命令行参数见 [`configuration.md`](configuration.md)。
 

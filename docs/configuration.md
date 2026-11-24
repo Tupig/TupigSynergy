@@ -78,7 +78,7 @@ Comments start with `#` or `;`. Only non-default values are written.
 |-----|------|---------|-------------|
 | `coreMode` | int | `0` | `0`=None, `1`=Client, `2`=Server |
 | `display` | int | auto | X11 display number (Linux) |
-| `interface` | IP | auto | Bind address (`0.0.0.0` = all) |
+| `interface` | IP | auto | An empty value selects one current local IP each time the listener starts, with loopback as the fallback. An explicit IP stays fixed. `0.0.0.0` and `::` select wildcard binds. Clients use a reachable IP of the server. |
 | `lastVersion` | string | — | Last run version |
 | `port` | int | `22211` | TCP port |
 | `preventSleep` | bool | `false` | Inhibit system sleep |
@@ -133,7 +133,7 @@ Comments start with `#` or `;`. Only non-default values are written.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `checkPeerFingerprints` | bool | `true` | Verify peer cert fingerprints |
+| `checkPeerFingerprints` | bool | `true` | Legacy setting. TLS always requires both peers to verify certificate fingerprints. |
 | `certificate` | path | — | TLS certificate file |
 | `keySize` | int | `2048` | `2048` or `4096` |
 | `tlsEnabled` | bool | `true` | Enable TLS encryption |
@@ -471,7 +471,7 @@ key=value
 |-----|------|--------|------|
 | `coreMode` | int | `0` | `0`=无, `1`=客户端, `2`=服务端 |
 | `display` | int | 自动 | X11 显示编号 (Linux) |
-| `interface` | IP | 自动 | 绑定地址 (`0.0.0.0`=所有) |
+| `interface` | IP | 自动 | 留空时每次启动监听都挑选一个当前本机 IP，无可用地址时使用回环地址。显式 IP 保持固定。`0.0.0.0` 和 `::` 表示通配绑定，客户端应使用可达的服务端 IP。 |
 | `lastVersion` | string | — | 上次运行版本 |
 | `port` | int | `22211` | TCP 端口 |
 | `preventSleep` | bool | `false` | 阻止系统休眠 |
@@ -526,7 +526,7 @@ key=value
 
 | 键 | 类型 | 默认值 | 说明 |
 |-----|------|--------|------|
-| `checkPeerFingerprints` | bool | `true` | 验证对端证书指纹 |
+| `checkPeerFingerprints` | bool | `true` | 旧设置。使用 TLS 时，始终要求双方校验证书指纹。 |
 | `certificate` | path | — | TLS 证书文件 |
 | `keySize` | int | `2048` | `2048` 或 `4096` |
 | `tlsEnabled` | bool | `true` | 启用 TLS 加密 |
