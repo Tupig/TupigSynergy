@@ -21,6 +21,7 @@
 #include "dialogs/SettingsDialog.h"
 
 #include "common/PlatformInfo.h"
+#include "common/RuntimeContext.h"
 #include "common/Settings.h"
 #include "common/UrlConstants.h"
 #include "common/VersionInfo.h"
@@ -408,7 +409,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 void MainWindow::showAndActivate()
 {
 #ifdef Q_OS_MACOS
-  forceAppActive();
+  if (!synergy::runtime::isIsolatedRuntime())
+    forceAppActive();
 #endif
   showNormal();
   raise();

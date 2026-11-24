@@ -47,6 +47,12 @@ function(create_test)
     WORKING_DIRECTORY "${m_WORKING_DIRECTORY}")
   set_tests_properties(${m_NAME} PROPERTIES DEPENDS ${m_DEPENDS})
 
+  # Keep native Cocoa rendering without promoting test executables to Dock apps.
+  if(APPLE)
+    set_property(TEST ${m_NAME} APPEND PROPERTY ENVIRONMENT
+      "QT_MAC_DISABLE_FOREGROUND_APPLICATION_TRANSFORM=1")
+  endif()
+
   # GUI tests need the Qt platform plugin at run time. A statically linked Qt
   # bakes the plugin into the binary, but a shared Qt (e.g. the dynamic triplet
   # used by the ASan preset) loads qwindows.dll from disk, and Qt then aborts
