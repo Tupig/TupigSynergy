@@ -636,12 +636,15 @@ class GitHubDeliveryContract(unittest.TestCase):
             old.mkdir()
             verified.mkdir(parents=True)
             log = temp / "argv.log"
+            argv_json_log = temp / "argv.jsonl"
 
             def write_tool(directory, tool, label, version):
                 path = directory / (tool + ".exe")
                 path.write_text(
                     "#!/bin/sh\n"
                     "printf '%s\\t%s\\t%s\\n' " + repr(label) + " " + repr(tool) + " \"$*\" >> \"$SYNERGY_TOOL_LOG\"\n"
+                    "python3 -c 'import json, os, sys; open(os.environ[\"SYNERGY_TOOL_ARGV_JSON_LOG\"], \"a\", encoding=\"utf-8\").write(json.dumps({\"label\": sys.argv[1], \"tool\": sys.argv[2], \"argv\": sys.argv[3:]}) + \"\\n\")' "
+                    + repr(label) + " " + repr(tool) + " \"$@\"\n"
                     "if [ \"$1\" = --version ]; then printf '%s\\n' " + repr(tool + " version " + version) + "; fi\n"
                     "if [ " + repr(tool) + " = cmake ]; then\n"
                     "  for arg in \"$@\"; do\n"
@@ -674,9 +677,19 @@ class GitHubDeliveryContract(unittest.TestCase):
 
             controlled_configure = ("cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DSKIP_BUILD_TESTS=ON "
                                    "-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON")
+            generic_vcpkg_config = (
+                r"-DCMAKE_TOOLCHAIN_FILE=D:\ci\workspace\vcpkg\scripts\buildsystems\vcpkg.cmake "
+                "-DVCPKG_TARGET_TRIPLET=x64-windows-release -DVCPKG_MANIFEST_MODE=OFF")
+            expected_vcpkg_argv = generic_vcpkg_config.split()
+            vcpkg_output = "${{ steps.get-deps.outputs.vcpkg-cmake-config }}"
+            vcpkg_binding = re.search(
+                r"^        env:\n(?:          [^\n]*\n)*?"
+                r"          SYNERGY_CI_VCPKG_CONFIG: ([^\n]+)$", configure, re.M)
+            vcpkg_binding_value = vcpkg_binding.group(1).strip() if vcpkg_binding else None
+            bound_vcpkg_config = (generic_vcpkg_config if vcpkg_binding_value == vcpkg_output else None)
             replacements = {
                 "${{ env.CMAKE_CONFIGURE }}": controlled_configure,
-                "${{ steps.get-deps.outputs.vcpkg-cmake-config }}": "-DCMAKE_TOOLCHAIN_FILE=fixture",
+                vcpkg_output: generic_vcpkg_config,
                 "${{ env.SYNERGY_VERSION_RELEASE }}": "false",
                 "${{ env.SYNERGY_VERSION_SNAPSHOT }}": "false",
                 "${{ steps.get-deps.outputs.qt-notice-root }}": str(temp / "notices"),
@@ -699,7 +712,12 @@ class GitHubDeliveryContract(unittest.TestCase):
                 env = dict(os.environ, PATH=str(old) + os.pathsep + os.environ.get("PATH", ""),
                            CMAKE_CONFIGURE=controlled_configure, SYNERGY_CI_CPACK=str(cpack_path),
                            SYNERGY_TOOL_LOG=str(log), GITHUB_ACTIONS="true", RUNNER_TEMP=str(temp),
-                           SYNERGY_FIXTURE_NINJA_MODE=ninja_mode)
+                           SYNERGY_FIXTURE_NINJA_MODE=ninja_mode,
+                           SYNERGY_TOOL_ARGV_JSON_LOG=str(argv_json_log))
+                if bound_vcpkg_config is not None:
+                    env["SYNERGY_CI_VCPKG_CONFIG"] = bound_vcpkg_config
+                else:
+                    env.pop("SYNERGY_CI_VCPKG_CONFIG", None)
                 if cmake_path is not None:
                     env["SYNERGY_CI_CMAKE"] = str(cmake_path)
                 else:
@@ -709,6 +727,12 @@ class GitHubDeliveryContract(unittest.TestCase):
 
             baseline_configure = run_actual(configure_source, verified_cmake, verified_cpack)
             baseline_package = run_actual(package_source, verified_cmake, verified_cpack)
+            baseline_configure_argv = [
+                record["argv"]
+                for record in (json.loads(line) for line in argv_json_log.read_text().splitlines())
+                if record["label"] == "verified" and record["tool"] == "cmake"
+                and "-Bbuild" in record["argv"]
+            ]
             missing_tool = run_actual(configure_source, None, verified_cpack)
             wrong_path = run_actual(configure_source, temp / "missing-cmake.exe", verified_cpack)
             stale_package_command = run_actual(configure_source, verified_cmake, verified_cpack, "stale-package")
@@ -735,6 +759,10 @@ class GitHubDeliveryContract(unittest.TestCase):
                 problems.append("workflow overrides CMAKE_CPACK_COMMAND")
             if not helper.is_file() or "SYNERGY_CI_CMAKE" not in helper.read_text(errors="replace"):
                 problems.append("package verifier does not select verified CMake")
+            if vcpkg_binding is None:
+                problems.append("Configure does not bind vcpkg flags as data")
+            elif vcpkg_binding_value != vcpkg_output:
+                problems.append("Configure does not bind the vcpkg action output")
             if baseline_configure.returncode or baseline_package.returncode:
                 problems.append("verified baseline did not execute actual workflow source")
             if any(label == "old" for label, _, _ in calls):
@@ -745,6 +773,13 @@ class GitHubDeliveryContract(unittest.TestCase):
                     "-DSKIP_BUILD_TESTS=ON", "-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON",
                     "-DCMAKE_COMPILE_WARNING_AS_ERROR=ON")):
                 problems.append("verified Configure did not preserve controlled flags")
+            if len(baseline_configure_argv) != 1:
+                problems.append("fixture did not capture one baseline Configure argv")
+            else:
+                actual = baseline_configure_argv[0]
+                expected_start = actual.index(expected_vcpkg_argv[0]) if expected_vcpkg_argv[0] in actual else -1
+                if actual[expected_start:expected_start + len(expected_vcpkg_argv)] != expected_vcpkg_argv:
+                    problems.append("Configure did not preserve generic Windows vcpkg argv")
             if not any(label == "verified" and tool == "cpack" and argv == "--version"
                        for label, tool, argv in calls):
                 problems.append("Package did not invoke verified CPack version check")

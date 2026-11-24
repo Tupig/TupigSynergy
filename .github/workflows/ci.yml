@@ -249,6 +249,8 @@ jobs:
       # Stage: compile. GUI must be synergy_<X.Y.Z>.exe; core and daemon stay unversioned.
       - name: Configure
         shell: bash
+        env:
+          SYNERGY_CI_VCPKG_CONFIG: ${{ steps.get-deps.outputs.vcpkg-cmake-config }}
         run: |
           set -euo pipefail
           test -x "$SYNERGY_CI_CMAKE"
@@ -265,7 +267,12 @@ jobs:
           PYTHON
           flags="${CMAKE_CONFIGURE#cmake }"
           test "$flags" != "$CMAKE_CONFIGURE"
-          "$SYNERGY_CI_CMAKE" $flags -G Ninja ${{ steps.get-deps.outputs.vcpkg-cmake-config }} -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
+          IFS=$' \t' read -r -a vcpkg_flags <<< "$SYNERGY_CI_VCPKG_CONFIG"
+          test "${#vcpkg_flags[@]}" -eq 3
+          [[ "${vcpkg_flags[0]}" == -DCMAKE_TOOLCHAIN_FILE=?* ]]
+          [[ "${vcpkg_flags[1]}" == -DVCPKG_TARGET_TRIPLET=?* ]]
+          test "${vcpkg_flags[2]}" = "-DVCPKG_MANIFEST_MODE=OFF"
+          "$SYNERGY_CI_CMAKE" $flags -G Ninja "${vcpkg_flags[@]}" -DSYNERGY_VERSION_RELEASE=${{ env.SYNERGY_VERSION_RELEASE }} -DSYNERGY_VERSION_SNAPSHOT=${{ env.SYNERGY_VERSION_SNAPSHOT }} -DSYNERGY_CI_QT_NOTICES="${{ steps.get-deps.outputs.qt-notice-root }}" -DSYNERGY_CI_QT_NOTICES_SHA256="${{ steps.get-deps.outputs.qt-notice-sha256 }}"
           python3 - "$SYNERGY_CI_CPACK" build/build.ninja <<'PYTHON'
           import re
           import sys
