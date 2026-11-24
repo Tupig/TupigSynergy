@@ -32,6 +32,9 @@ layout contains the client's computer name or an alias for it, then verify the c
 fingerprints on both computers. On Windows in service mode, check the daemon log when the
 startup request does not produce a listening message.
 
+If the client reports a refused connection, check the server's actual listening address
+and port first. A timeout calls for checking network reachability and firewall rules.
+
 ```bash
 # 1. Verify server is listening
 netstat -an | grep 22211
@@ -238,6 +241,7 @@ When TLS is enabled, both computers present a certificate and check the other's 
 fingerprint. Each app can create its own certificate. Compare the prompt with the local
 fingerprint shown on the other computer before accepting it.
 The legacy **Require client certificates** control does not change this TLS requirement.
+If you dismissed or declined a fingerprint, use **Start** or **Restart** to review it again.
 
 | Error | Fix |
 |-------|-----|
@@ -332,6 +336,8 @@ The level token is `INFO`, `WARNING`, `ERROR`, `DEBUG`, or `VERBOSE`. The second
 如果日志显示监听所有网卡，客户端填写服务端的局域网地址。TCP 已连通时，
 继续检查服务端布局中是否有客户端的电脑名或对应别名，以及两端是否都验证了对方的证书指纹。
 Windows 服务模式发出启动请求却没有监听日志时，请查看后台服务日志。
+
+如果客户端提示连接被拒绝，先核对服务端实际监听的地址和端口。提示超时时，再检查两台电脑之间的网络和防火墙规则。
 
 ```bash
 # 1. 验证服务端监听
@@ -533,6 +539,7 @@ sc delete "TuPig Synergy"
 开启 TLS 后，两台电脑都提供证书，并校验对方的 SHA-256 指纹。应用可以各自生成证书。
 确认信任前，先把弹窗里的指纹与另一台电脑显示的本机指纹核对一致。
 旧版的「要求客户端证书」选项也不能关闭这项 TLS 要求。
+如果关闭或拒绝过指纹提示，可以点「启动」或「重启」重新核对。
 
 | 错误 | 修复 |
 |------|------|
