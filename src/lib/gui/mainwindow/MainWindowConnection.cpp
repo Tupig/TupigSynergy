@@ -114,7 +114,7 @@ void MainWindow::coreProcessError(CoreProcess::Error error)
   }
 }
 
-void MainWindow::startCore()
+void MainWindow::startCore(CoreStartSource source)
 {
   // Let macOS request accessibility permission before starting the core.
 #if defined(Q_OS_MACOS)
@@ -129,6 +129,9 @@ void MainWindow::startCore()
     return;
   }
 #endif
+
+  if (source == CoreStartSource::Manual)
+    clearDeclinedPeerFingerprints();
 
   m_actionStartCore->setEnabled(false);
   m_actionRestartCore->setEnabled(true);
@@ -248,56 +251,72 @@ void MainWindow::handleMissingKeyboardLayouts(const QString &layouts)
   showPage(msgBox);
 }
 
+void MainWindow::clearDeclinedPeerFingerprints()
+{
+  const auto mode = m_coreProcess.mode();
+  if (mode == CoreMode::Client)
+    m_serverFingerprintPrompts.declined.clear();
+  else if (mode == CoreMode::Server)
+    m_clientFingerprintPrompts.declined.clear();
+}
+
 void MainWindow::handlePeerFingerprint(const QString &fingerprint)
 {
   const auto sha256Text = QString(fingerprint).remove(':');
   const Fingerprint sha256 = {QCryptographicHash::Sha256, QByteArray::fromHex(sha256Text.toLatin1())};
 
   const bool isClient = m_coreProcess.mode() == CoreMode::Client;
-  if ((isClient && m_checkedServers.contains(sha256Text)) || (!isClient && m_checkedClients.contains(sha256Text))) {
+  auto *prompts = isClient ? &m_serverFingerprintPrompts : &m_clientFingerprintPrompts;
+  if (prompts->pending.contains(sha256Text) || prompts->declined.contains(sha256Text)) {
     qDebug("ignoring fingerprint, already handled");
     return;
   }
 
+  const auto databasePath = trustedFingerprintDatabase();
   FingerprintDatabase db;
-  db.read(trustedFingerprintDatabase());
+  db.read(databasePath);
 
   if (db.isTrusted(sha256)) {
     qDebug("fingerprint is trusted");
     return;
   }
 
-  if (isClient) {
-    m_checkedServers.append(sha256Text);
+  prompts->pending.insert(sha256Text);
+  if (isClient)
     m_coreProcess.stop();
-  } else {
-    m_checkedClients.append(sha256Text);
-  }
 
   const auto mode = isClient ? FingerprintDialogMode::Client : FingerprintDialogMode::Server;
-  const auto databasePath = trustedFingerprintDatabase();
   const auto remoteHost = Settings::value(Settings::Client::RemoteHost).toString();
   auto *dialog = new FingerprintDialog(this, m_fingerprint, mode, sha256);
-  connect(dialog, &QDialog::accepted, this, [this, sha256, sha256Text, isClient, databasePath, remoteHost] {
-    // 绑定显示时的信任库；并重新读取以免覆盖另一条已确认的指纹。
-    FingerprintDatabase current;
-    current.read(databasePath);
-    current.addTrusted(sha256);
-    if (!current.write(databasePath)) {
-      qCritical().noquote() << QCoreApplication::translate("GuiLogMessages", "unable to write fingerprint to db:")
-                            << databasePath;
-      m_coreProcess.stop();
-      return;
-    }
-    if (isClient) {
-      m_checkedServers.removeAll(sha256Text);
-      if (m_coreProcess.mode() == CoreMode::Client &&
-          Settings::value(Settings::Client::RemoteHost).toString() == remoteHost)
-        m_coreProcess.start();
-    } else {
-      m_checkedClients.removeAll(sha256Text);
-    }
-  });
+  connect(
+      dialog, &QDialog::finished, this,
+      [this, sha256, sha256Text, prompts, isClient, databasePath, remoteHost](int result) {
+        if (result != QDialog::Accepted) {
+          prompts->declined.insert(sha256Text);
+          prompts->pending.remove(sha256Text);
+          return;
+        }
+
+        // 绑定显示时的信任库；并重新读取以免覆盖另一条已确认的指纹。
+        FingerprintDatabase current;
+        current.read(databasePath);
+        current.addTrusted(sha256);
+        const bool saved = current.write(databasePath);
+        if (!saved)
+          prompts->declined.insert(sha256Text);
+        prompts->pending.remove(sha256Text);
+
+        if (!saved) {
+          qCritical().noquote() << QCoreApplication::translate("GuiLogMessages", "unable to write fingerprint to db:")
+                                << databasePath;
+          m_coreProcess.stop();
+          return;
+        }
+        if (isClient && m_coreProcess.mode() == CoreMode::Client &&
+            Settings::value(Settings::Client::RemoteHost).toString() == remoteHost)
+          m_coreProcess.start();
+      }
+  );
   showPage(dialog);
 }
 

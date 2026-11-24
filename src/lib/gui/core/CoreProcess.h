@@ -20,6 +20,7 @@
 #include <chrono>
 #include <optional>
 
+class MainWindowFlowTests;
 class R3SerializationTests;
 
 namespace synergy::gui {
@@ -31,6 +32,7 @@ class DaemonIpcClient;
 
 class CoreProcess : public QObject
 {
+  friend class ::MainWindowFlowTests;
   friend class ::R3SerializationTests;
 
   using ConnectionState = synergy::core::ConnectionState;
