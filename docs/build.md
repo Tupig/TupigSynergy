@@ -15,7 +15,11 @@ CI never computes a new patch or commits generated changes back to a source bran
 
 After the reviewed PR is integrated into protected `main`, verify the approved source
 manifest and bind a new `v2.1.1` tag to that integrated SHA. Dispatch `ci.yml` at that exact
-existing tag with `package-type=release`. The publication step requires manual dispatch,
+existing tag with `package-type=release`. Supply short user-facing Markdown bullets in both
+`release-notes-zh` and `release-notes-en`, starting each bullet with `- `. The workflow
+provides the section headings and rejects raw HTML and code fences to keep signing and
+provenance information visible.
+The publication step requires manual dispatch,
 the exact version-tag ref, and tag SHA = run SHA = current integrated main SHA. Query errors
 fail closed; only an explicit HTTP 404 establishes that the Release is absent. Any existing
 Release, including a draft, is refused without replacing assets. A failed draft requires
@@ -523,7 +527,10 @@ Windows CI 将已核验的 CMake 4.3.4 Windows amd64 wheel 解包到 runner 临�
 补丁号，也不把生成改动提交回源分支。
 
 已审核PR整合到受保护 `main` 后，先核对获准源码清单，再把新 `v2.1.1` 标签绑定到该整合SHA；
-以此已存在的准确标签触发 `ci.yml`，选择 `package-type=release`。发布步骤只接受手动触发及准确
+以此已存在的准确标签触发 `ci.yml`，选择 `package-type=release`，在 `release-notes-zh` 和
+`release-notes-en` 分别用简短的 Markdown 列表说明用户可见的变化，每条以 `- ` 开头。
+工作流生成分节标题，拒绝原始 HTML 和代码块围栏，确保签名与来源信息可见。
+发布步骤只接受手动触发及准确
 版本标签ref，要求标签SHA = 本次运行SHA = 当前整合main SHA。查询错误均拒绝，只有明确HTTP404
 才表示Release不存在。任何现存Release（包括草稿）都拒绝，绝不替换资产；失败草稿另行审核处置，
 重跑不覆盖它。Windows x64与macOS arm64必须构建、契约和解包载荷审计全部成功，才把完整资产上传

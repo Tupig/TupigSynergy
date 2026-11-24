@@ -29,6 +29,14 @@ on:
           - "all"
           - windows
           - macos
+      release-notes-zh:
+        description: "Chinese release notes (required for releases). Use short Markdown bullets."
+        required: false
+        type: string
+      release-notes-en:
+        description: "English release notes (required for releases). Use short Markdown bullets."
+        required: false
+        type: string
   pull_request:
     branches: [main]
 
@@ -83,6 +91,21 @@ jobs:
 
       - name: Check vcpkg version matches Version.cmake
         run: python3 scripts/ci/check-version-consistency.py
+
+      - name: Require release notes for formal releases
+        if: github.event_name == 'workflow_dispatch' && inputs.package-type == 'release'
+        shell: bash
+        env:
+          RELEASE_NOTES_ZH: ${{ inputs.release-notes-zh }}
+          RELEASE_NOTES_EN: ${{ inputs.release-notes-en }}
+        run: |
+          bullet=$'(^|\n)- [^[:space:]]'
+          for body in "${RELEASE_NOTES_ZH:-}" "${RELEASE_NOTES_EN:-}"; do
+            if [[ ! "$body" =~ $bullet || "$body" == *'<'* || "$body" == *'```'* || "$body" == *'~~~'* ]]; then
+              echo "::error::provide visible Chinese and English release notes as bullets without HTML or code fences"
+              exit 1
+            fi
+          done
 
       - name: Check Mac signing automation
         run: python3 -m unittest src/unittests/ci/test_macos_signing_contract.py src/unittests/ci/test_macos_package_loaded_images.py
@@ -1021,6 +1044,8 @@ jobs:
           # to run git and fails with "not a git repository".
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.get-version.outputs.base }}
+          RELEASE_NOTES_ZH: ${{ inputs.release-notes-zh }}
+          RELEASE_NOTES_EN: ${{ inputs.release-notes-en }}
         run: |
           set -euo pipefail
           if [ "$GITHUB_EVENT_NAME" != workflow_dispatch ] ||
@@ -1044,11 +1069,14 @@ jobs:
           printf ' - %s\n' "${files[@]}"
           tag="v${VERSION}"
           title="TuPig Synergy ${VERSION}"
-          # Every release must carry user-visible update notes. The body starts
-          # with GitHub's generated notes (merged pull requests since the
-          # previous release), then this footer documents provenance and
-          # signing. Keep both bilingual: the project is Chinese-first.
-          notes="## 发布信息 / Release information"$'\n\n'
+          bullet=$'(^|\n)- [^[:space:]]'
+          for body in "${RELEASE_NOTES_ZH:-}" "${RELEASE_NOTES_EN:-}"; do
+            if [[ ! "$body" =~ $bullet || "$body" == *'<'* || "$body" == *'```'* || "$body" == *'~~~'* ]]; then
+              echo "::error::provide visible Chinese and English release notes as bullets without HTML or code fences"
+              exit 1
+            fi
+          done
+          notes="**发布信息 / Release information**"$'\n\n'
           notes+="- 每个安装包都附带 GitHub 构建来源证明 / Every package carries a GitHub build-provenance attestation:"$'\n'
           notes+="  \`gh attestation verify FILE --repo ${GH_REPO}\`"$'\n'
           notes+="- Windows 包在 SignPath 审批前未签名 / Windows packages are unsigned until SignPath approval."$'\n'
@@ -1096,12 +1124,12 @@ jobs:
             fi
           fi
           # All packages are uploaded while private; expose the complete set only last.
-          gh release create "$tag" "${files[@]}" --verify-tag --target "$GITHUB_SHA" --title "$title" --generate-notes --draft
-          generated=$(gh release view "$tag" --json body -q .body)
           notes_file=$(mktemp)
           trap 'rm -f "$notes_file"' EXIT
-          printf '%s\n\n%s\n\n%s\n' "$generated" "$notes" "$marker" > "$notes_file"
-          gh release edit "$tag" --notes-file "$notes_file" --draft=false --latest
+          printf '**本次更新**\n\n%s\n\n**English**\n\n%s\n\n%s\n\n%s\n' \
+            "$RELEASE_NOTES_ZH" "$RELEASE_NOTES_EN" "$notes" "$marker" > "$notes_file"
+          gh release create "$tag" "${files[@]}" --verify-tag --target "$GITHUB_SHA" --title "$title" --notes-file "$notes_file" --draft
+          gh release edit "$tag" --draft=false --latest
 
   ci-passed:
     runs-on: ubuntu-latest

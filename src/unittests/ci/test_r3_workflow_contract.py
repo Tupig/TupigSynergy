@@ -126,10 +126,10 @@ if args and args[0] == "api":
         reply(state["release_status"], state["release"], "--include" in args)
 if len(args) > 1 and args[0] == "release":
     if args[1] in ("create", "upload", "edit"):
-        if args[1] == "edit" and "--notes-file" in args:
+        if "--notes-file" in args:
             notes_path = Path(args[args.index("--notes-file") + 1])
             with Path(os.environ["GH_STUB_LOG"]).open("a") as output:
-                output.write(json.dumps(["release", "edit-notes", notes_path.read_text()]) + "\n")
+                output.write(json.dumps(["release", args[1] + "-notes", notes_path.read_text()]) + "\n")
         if args[1] == "create":
             state["created"] = True
             state_path.write_text(json.dumps(state))
@@ -178,6 +178,8 @@ def release_case(changes=None, environment=None):
                if key in os.environ}
         env.update({"PATH": str(temp / "bin") + os.pathsep + env.get("PATH", ""),
                     "VERSION": "2.1.1", "GH_REPO": "fixture/fixture",
+                    "RELEASE_NOTES_ZH": "- 修复窗口显示。",
+                    "RELEASE_NOTES_EN": "- Fixed window layout.",
                     "GITHUB_SHA": SOURCE_SHA, "GITHUB_REF": "refs/tags/v2.1.1",
                     "GITHUB_EVENT_NAME": "workflow_dispatch", "GH_TOKEN": "synthetic",
                     "GH_STUB_STATE": str(temp / "state.json"),
@@ -856,8 +858,42 @@ class GitHubDeliverySuccessorContract(unittest.TestCase):
         for package in ("dist/synergy-2.1.1-Windows-x64.msi", "dist/synergy package-2.1.1-macOS-arm64.dmg"):
             self.assertIn(package, create)
         self.assertIn("--draft=false", publish)
+        self.assertNotIn("--generate-notes", create)
+        notes = [args[2] for args in calls if args[:2] == ["release", "create-notes"]]
+        self.assertEqual(len(notes), 1)
+        self.assertTrue(notes[0].startswith("**本次更新**"))
+        self.assertIn("**English**", notes[0])
+        self.assertIn("- 修复窗口显示。", notes[0])
+        self.assertIn("- Fixed window layout.", notes[0])
+        self.assertNotIn("Generated release notes", notes[0])
+        self.assertIn("Built-From: " + SOURCE_SHA, notes[0])
         self.assertTrue(any("repos/fixture/fixture/commits/main" in args for args in calls))
         self.assertNotIn("--clobber", [arg for args in calls for arg in args])
+
+    def test_rejects_incomplete_or_hidden_release_notes_before_mutation(self):
+        preparation = next(block for block in steps(job("get-version"))
+                           if block.startswith("name: Require release notes for formal releases\n"))
+        validate = actual_step_run(preparation)
+        for var in ("RELEASE_NOTES_ZH", "RELEASE_NOTES_EN"):
+            for notes in (None, "", " \n\t", "-", "- Text\n<details>",
+                          "<!-- hidden -->", "- Text\n<!-- hides the footer",
+                          "- Text\n```", "- Text\n~~~"):
+                with self.subTest(var=var, notes=notes):
+                    result, calls = release_case(environment={var: notes})
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("provide visible Chinese and English release notes", result.stdout)
+                    self.assertEqual(mutations(calls), [])
+
+                    env = {"RELEASE_NOTES_ZH": "- 修复窗口显示。", "RELEASE_NOTES_EN": "- Fixed window layout."}
+                    if notes is None:
+                        del env[var]
+                    else:
+                        env[var] = notes
+                    checked = subprocess.run(["bash", "-euo", "pipefail", "-c", validate],
+                                             env={"PATH": os.environ["PATH"], **env},
+                                             capture_output=True, text=True)
+                    self.assertNotEqual(checked.returncode, 0)
+                    self.assertIn("provide visible Chinese and English release notes", checked.stdout)
 
     def test_publish_uses_only_the_verified_macos_signing_mode(self):
         expected_notes = {
@@ -869,7 +905,7 @@ class GitHubDeliverySuccessorContract(unittest.TestCase):
             with self.subTest(mode=mode):
                 result, calls = release_case(environment={"MACOS_PACKAGE_SIGNING": mode})
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                notes = [args[2] for args in calls if args[:2] == ["release", "edit-notes"]]
+                notes = [args[2] for args in calls if args[:2] == ["release", "create-notes"]]
                 self.assertEqual(len(notes), 1)
                 self.assertIn(expected_note, notes[0])
 
