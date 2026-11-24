@@ -71,6 +71,8 @@ public:
   uint32_t getSize() const override;
 
 private:
+  friend class QtSocketFactoryTests;
+
   void wireTransport();
   void handleConnected();
   void handleDisconnected();

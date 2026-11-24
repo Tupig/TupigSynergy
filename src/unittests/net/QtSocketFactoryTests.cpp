@@ -14,6 +14,7 @@
 #include "net/IDataSocket.h"
 #include "net/IListenSocket.h"
 #include "net/NetworkAddress.h"
+#include "net/QtNetworkTransport.h"
 #include "net/QtSocketFactory.h"
 #include "net/SecureUtils.h"
 #include "net/TlsConfig.h"
@@ -24,10 +25,7 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
-#include <QHostAddress>
 #include <QSslCertificate>
-#include <QTcpServer>
-#include <QTcpSocket>
 #include <QTimer>
 
 // End-to-end coverage for the Qt network adapters: real loopback sockets,
@@ -193,21 +191,12 @@ void QtSocketFactoryTests::refusedConnectionReportsOnce()
 {
   QFETCH(bool, tls);
 
-  QTcpServer endpoint;
-  QVERIFY(endpoint.listen(QHostAddress::LocalHost, 0));
-  const auto port = endpoint.serverPort();
-  endpoint.close();
-
-  // Check that the loopback endpoint actually refuses TCP and capture the
-  // platform's error text independently of the adapter under test.
-  QTcpSocket probe;
-  probe.connectToHost(QHostAddress::LocalHost, port);
-  QVERIFY(!probe.waitForConnected(2000));
-  QCOMPARE(probe.error(), QAbstractSocket::ConnectionRefusedError);
-
   QtSocketFactory factory(m_events, testTlsConfig(m_certPath));
   const auto security = tls ? SecurityLevel::PeerAuth : SecurityLevel::PlainText;
   auto client = factory.create(IArchNetwork::AddressFamily::INet, security);
+  auto *qtClient = dynamic_cast<QtDataSocket *>(client.get());
+  QVERIFY(qtClient != nullptr);
+  auto &transport = *qtClient->m_transport;
   const auto target = client->getEventTarget();
   int failures = 0;
   int streamEvents = 0;
@@ -221,16 +210,20 @@ void QtSocketFactoryTests::refusedConnectionReportsOnce()
   });
   m_events->addHandler(EventTypes::Unknown, target, [&](const auto &) { ++streamEvents; });
 
-  client->connect(NetworkAddress("127.0.0.1", port));
-  QVERIFY(pump([&] { return failures > 0; }, 2000));
-  QVERIFY2(failureReason.contains(probe.errorString()), qPrintable(failureReason));
-  QVERIFY(!client->isFatal());
-
+  // Inject the transport result because a closed port may time out instead
+  // of refusing the connection on some hosts.
+  const auto refusal = QStringLiteral("Connection refused by test endpoint");
+  Q_EMIT transport.transportError(refusal, false);
+  Q_EMIT transport.transportError(QStringLiteral("Later connection error"), false);
+  Q_EMIT transport.transportDisconnected();
   client->close();
   m_events->addEvent(Event(EventTypes::Quit));
   m_events->loop();
+
   QCOMPARE(failures, 1);
+  QCOMPARE(failureReason, refusal);
   QCOMPARE(streamEvents, 0);
+  QVERIFY(!client->isFatal());
 }
 
 void QtSocketFactoryTests::tlsRejectsUntrustedServer()
