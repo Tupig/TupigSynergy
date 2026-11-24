@@ -15,7 +15,13 @@ namespace synergy::core::ipc {
 
 static CoreIpcServer *s_instance = nullptr;
 
-CoreIpcServer::CoreIpcServer(QObject *parent) : IpcServer(parent, kCoreIpcName, QStringLiteral("core"))
+static QString serverBindAddressMessage(const QString &address)
+{
+  return address.isEmpty() ? QStringLiteral("serverBindAddress") : QStringLiteral("serverBindAddress=%1").arg(address);
+}
+
+CoreIpcServer::CoreIpcServer(QObject *parent, const QString &launchId)
+    : IpcServer(parent, kCoreIpcName, QStringLiteral("core"), launchId)
 {
   assert(s_instance == nullptr);
   s_instance = this;
@@ -25,6 +31,20 @@ CoreIpcServer &CoreIpcServer::instance()
 {
   assert(s_instance != nullptr);
   return *s_instance;
+}
+
+void CoreIpcServer::setServerBindAddress(const QString &address)
+{
+  if (address == m_serverBindAddress)
+    return;
+  m_serverBindAddress = address;
+  broadcastToAuthenticatedClients(serverBindAddressMessage(address));
+}
+
+void CoreIpcServer::clientAuthenticated(QLocalSocket *clientSocket)
+{
+  if (!m_serverBindAddress.isEmpty())
+    writeToClientSocket(clientSocket, serverBindAddressMessage(m_serverBindAddress));
 }
 
 void CoreIpcServer::processCommand(QLocalSocket *clientSocket, const QString &command, const QStringList &parts)

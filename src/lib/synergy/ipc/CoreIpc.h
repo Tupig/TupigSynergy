@@ -12,3 +12,4 @@
 
 void ipcSendToClient(const QString &command, const QString &args = "");
 void ipcSendConnectionState(synergy::core::ConnectionState state);
+void ipcSendServerBindAddress(const QString &address);

@@ -18,6 +18,8 @@ add_library(common STATIC
   I18N.h
   I18N.cpp
   LogLevel.h
+  NetworkInterfaces.cpp
+  NetworkInterfaces.h
   NetworkProtocol.h
   PlatformInfo.h
   RuntimeContext.h
@@ -31,7 +33,7 @@ add_library(common STATIC
   ${CMAKE_CURRENT_BINARY_DIR}/VersionInfo.h
 )
 
-target_link_libraries(common PUBLIC Qt6::Core)
+target_link_libraries(common PUBLIC Qt6::Core PRIVATE Qt6::Network)
 
 if(WIN32)
   target_link_libraries(common PUBLIC advapi32 wtsapi32)

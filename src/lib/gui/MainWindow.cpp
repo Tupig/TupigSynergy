@@ -19,6 +19,7 @@
 #include "dialogs/ServerConfigDialog.h"
 #include "dialogs/SettingsDialog.h"
 
+#include "common/NetworkInterfaces.h"
 #include "common/PlatformInfo.h"
 #include "common/Settings.h"
 #include "common/UrlConstants.h"
@@ -46,12 +47,12 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QHideEvent>
+#include <QHostAddress>
 #include <QLocalServer>
 #include <QLocalSocket>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QNetworkInterface>
 #include <QPointer>
 #include <QPushButton>
 #include <QRegularExpression>
@@ -316,6 +317,7 @@ void MainWindow::connectSlots()
 
   connect(&m_coreProcess, &CoreProcess::error, this, &MainWindow::coreProcessError);
   connect(&m_coreProcess, &CoreProcess::logLine, this, &MainWindow::handleLogLine);
+  connect(&m_coreProcess, &CoreProcess::serverBindAddressChanged, this, &MainWindow::serverBindAddressChanged);
   connect(
       &m_coreProcess, &CoreProcess::processStateChanged, this, &MainWindow::coreProcessStateChanged,
       Qt::QueuedConnection
@@ -501,10 +503,7 @@ void MainWindow::updateNetworkInfo()
     return;
   }
 
-  if (mode == CoreMode::Server)
-    updateIpLabel(NetworkMonitor::validAddresses());
-  else
-    updateIpLabel({Settings::value(Settings::Core::Interface).toString()});
+  updateIpLabel(mode == CoreMode::Server ? NetworkMonitor::validAddresses() : QStringList{});
 }
 
 void MainWindow::serverConnectionConfigureClient(const QString &clientName)
@@ -627,50 +626,46 @@ void MainWindow::updateIpLabel(const QStringList &addresses)
     return;
   }
 
-  const bool serverStarted = m_coreProcess.isStarted();
-  const bool fixedIP = !Settings::value(Settings::Core::Interface).toString().isEmpty();
-
-  if ((!fixedIP && addresses.isEmpty() && !serverStarted) || (serverStarted && m_serverStartSuggestedIP.isEmpty())) {
+  const auto configured = Settings::value(Settings::Core::Interface).toString();
+  const auto selected =
+      mode == CoreMode::Server ? synergy::network::selectServerBindAddress(configured, addresses) : configured;
+  const auto address = mode == CoreMode::Server && !m_serverBindAddress.isEmpty() ? m_serverBindAddress : selected;
+  if (address.isEmpty()) {
     ui->lblIpAddresses->setText(tr("No IP Detected"));
     ui->lblIpAddresses->setToolTip(tr("Unable to detect an IP address. Check your network connection is active."));
     return;
   }
 
-  QString labelText = tr("Local IP") + QStringLiteral("  ");
-  QString toolTipText = tr("<p>If connecting via the hostname fails, try %1</p>");
-
-  const bool filterIpList = (serverStarted || fixedIP);
-  const QRegularExpression ipListFilter(filterIpList ? QStringLiteral("(%1)").arg(m_serverStartIPs.join("|")) : "");
-  const QStringList ipList = addresses.filter(ipListFilter);
-
-  bool IPValid = true;
-  if ((filterIpList && (m_serverStartSuggestedIP != m_currentIpAddress)) ||
-      !ipList.contains(m_serverStartSuggestedIP)) {
-    IPValid = !ipList.isEmpty();
+  ui->lblIpAddresses->setText(tr("Local IP") + QStringLiteral("  ") + address);
+  if (mode != CoreMode::Server) {
+    ui->lblIpAddresses->setToolTip({});
+    return;
   }
 
-  if (IPValid) {
-    m_currentIpAddress = ipList.first();
-    labelText.append(m_currentIpAddress);
-  } else {
-    labelText.append(m_serverStartSuggestedIP);
-    toolTipText.append(tr("\nA bound IP is now invalid, you may need to restart the server."));
+  const QHostAddress ip(address);
+  if (ip.isLoopback()) {
+    ui->lblIpAddresses->setToolTip(tr("This address is reachable only from this computer."));
+    return;
   }
 
-  if (ipList.count() < 2 || fixedIP) {
-    toolTipText = toolTipText.arg(tr("the suggested IP."));
-  } else {
-    toolTipText = toolTipText.arg(tr("one of the following IPs:<br/>%1").arg(ipList.join("<br/>")));
+  const auto connectionTip = tr("<p>If connecting via the hostname fails, try %1</p>");
+  if (ip == QHostAddress::AnyIPv4 || ip == QHostAddress::AnyIPv6 || ip == QHostAddress::Any) {
+    auto tooltip = tr("<p>All interfaces for this address family are selected.</p>");
+    QStringList reachable;
+    for (const auto &candidate : addresses) {
+      if (QHostAddress(candidate).protocol() == ip.protocol())
+        reachable.append(candidate.toHtmlEscaped());
+    }
+    if (!reachable.isEmpty())
+      tooltip += connectionTip.arg(tr("one of the following IPs:<br/>%1").arg(reachable.join("<br/>")));
+    ui->lblIpAddresses->setToolTip(tooltip);
+    return;
   }
 
-  if (mode == CoreMode::Server && !fixedIP) {
-    toolTipText.append(
-        tr("\n<p>%1 listens on all network interfaces because no IP is selected in the settings.</p>").arg(kAppName)
-    );
-  }
-
-  ui->lblIpAddresses->setText(labelText);
-  ui->lblIpAddresses->setToolTip(mode == CoreMode::Server ? toolTipText : QString());
+  auto tooltip = connectionTip.arg(tr("the suggested IP."));
+  if (!m_serverBindAddress.isEmpty() && !ip.isLinkLocal() && !addresses.contains(address))
+    tooltip += tr("\nA bound IP is now invalid, you may need to restart the server.");
+  ui->lblIpAddresses->setToolTip(tooltip);
 }
 
 void MainWindow::updateTimeoutDelay(int newDelay)

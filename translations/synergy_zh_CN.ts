@@ -1081,6 +1081,14 @@ Do you want to connect to the server?
         <translation>本机 IP</translation>
     </message>
     <message>
+        <source>This address is reachable only from this computer.</source>
+        <translation>此地址仅可由本机访问。</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;All interfaces for this address family are selected.&lt;/p&gt;</source>
+        <translation>&lt;p&gt;已选择此地址族的所有网络接口。&lt;/p&gt;</translation>
+    </message>
+    <message>
         <source>Using IP: </source>
         <translation type="vanished">使用 IP 地址： </translation>
     </message>
@@ -3256,6 +3264,10 @@ Package: %3</source>
     <message>
         <source>core/interface is not set: listening on all network interfaces</source>
         <translation>未设置 core/interface：正在监听所有网络接口</translation>
+    </message>
+    <message>
+        <source>No active LAN address. The server will bind to loopback only.</source>
+        <translation>未检测到活动的局域网地址。服务端将仅绑定到回环地址。</translation>
     </message>
     <message>
         <source>could not create environment block</source>

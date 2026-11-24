@@ -25,6 +25,13 @@
 
 #### Cannot Connect to Server
 
+Start the server and check its log for the listening address and port. On the client, use
+that port and a reachable address or hostname of the server computer. If the log shows an
+all-interfaces address, use the server computer's LAN address. If TCP connects but sharing does not start, check that the server
+layout contains the client's computer name or an alias for it, then verify the certificate
+fingerprints on both computers. On Windows in service mode, check the daemon log when the
+startup request does not produce a listening message.
+
 ```bash
 # 1. Verify server is listening
 netstat -an | grep 22211
@@ -56,7 +63,7 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /path/to/synergy-
 | Network instability | Increase `heartbeat` (default 5000ms) |
 | Server sleep | Disable sleep on server (`preventSleep=true`) |
 | Client timeout | Check keep-alive: `CALV` every 3s |
-| TLS handshake fail | Verify cert/key, try without TLS |
+| TLS handshake fail | Verify the certificate, private key, and saved peer fingerprint on both computers |
 
 **Debug**: turn on file logging. When `file` is omitted the default path is `~/synergy.log`.
 ```ini
@@ -227,29 +234,16 @@ sc delete "TuPig Synergy"
 
 #### Certificate Errors
 
+When TLS is enabled, both computers present a certificate and check the other's SHA-256
+fingerprint. Each app can create its own certificate. Compare the prompt with the local
+fingerprint shown on the other computer before accepting it.
+The legacy **Require client certificates** control does not change this TLS requirement.
+
 | Error | Fix |
 |-------|-----|
-| `certificate verify failed` | Check `certificate` path, permissions (readable by user) |
-| `key too small` | Use `keySize=2048` or `4096` |
-| `self-signed` | Disable `checkPeerFingerprints=false` (LAN only) |
-| `expired` | Regenerate cert: `openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 3650 -nodes` |
-
-#### Generate Self-Signed Cert
-
-```bash
-# Server cert
-openssl req -x509 -newkey rsa:2048 -keyout server-key.pem -out server-cert.pem -days 3650 -nodes -subj "/CN=TuPig Synergy Server"
-
-# Client cert (optional)
-openssl req -x509 -newkey rsa:2048 -keyout client-key.pem -out client-cert.pem -days 3650 -nodes -subj "/CN=TuPig Synergy Client"
-
-# Config
-[security]
-certificate = /path/to/server-cert.pem
-keySize = 2048
-tlsEnabled = true
-checkPeerFingerprints = false  # for self-signed
-```
+| `peer has no tls certificate` | Confirm TLS is enabled on both computers and each can read its own certificate and private key |
+| `failed to verify peer certificate fingerprint` | Compare the fingerprint with the actual peer. If a certificate was replaced, verify its new fingerprint before trusting it |
+| `key too small` | Use an RSA key of at least 2048 bits |
 
 ---
 
@@ -334,6 +328,11 @@ The level token is `INFO`, `WARNING`, `ERROR`, `DEBUG`, or `VERBOSE`. The second
 
 #### 无法连接到服务端
 
+启动服务端，在日志中核对实际监听的地址和端口。客户端填写可访问的服务端地址或主机名，以及日志中的端口。
+如果日志显示监听所有网卡，客户端填写服务端的局域网地址。TCP 已连通时，
+继续检查服务端布局中是否有客户端的电脑名或对应别名，以及两端是否都验证了对方的证书指纹。
+Windows 服务模式发出启动请求却没有监听日志时，请查看后台服务日志。
+
 ```bash
 # 1. 验证服务端监听
 netstat -an | grep 22211
@@ -365,7 +364,7 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /path/to/synergy-
 | 网络不稳定 | 增加 `heartbeat` (默认 5000ms) |
 | 服务端休眠 | 设置 `preventSleep=true` |
 | 客户端超时 | 检查保活：`CALV` 每 3 秒 |
-| TLS 握手失败 | 验证证书/密钥，尝试关闭 TLS |
+| TLS 握手失败 | 在两台电脑核对各自的证书、私钥和已保存的对方指纹 |
 
 **调试**：打开文件日志。不写 `file` 时默认是 `~/synergy.log`。
 ```ini
@@ -531,29 +530,15 @@ sc delete "TuPig Synergy"
 
 #### 证书错误
 
+开启 TLS 后，两台电脑都提供证书，并校验对方的 SHA-256 指纹。应用可以各自生成证书。
+确认信任前，先把弹窗里的指纹与另一台电脑显示的本机指纹核对一致。
+旧版的「要求客户端证书」选项也不能关闭这项 TLS 要求。
+
 | 错误 | 修复 |
 |------|------|
-| `certificate verify failed` | 检查 `certificate` 路径、权限 (用户可读) |
-| `key too small` | 用 `keySize=2048` 或 `4096` |
-| `self-signed` | 设 `checkPeerFingerprints=false` (仅局域网) |
-| `expired` | 重新生成：`openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 3650 -nodes` |
-
-#### 生成自签名证书
-
-```bash
-# 服务端证书
-openssl req -x509 -newkey rsa:2048 -keyout server-key.pem -out server-cert.pem -days 3650 -nodes -subj "/CN=TuPig Synergy Server"
-
-# 客户端证书 (可选)
-openssl req -x509 -newkey rsa:2048 -keyout client-key.pem -out client-cert.pem -days 3650 -nodes -subj "/CN=TuPig Synergy Client"
-
-# 配置
-[security]
-certificate = /path/to/server-cert.pem
-keySize = 2048
-tlsEnabled = true
-checkPeerFingerprints = false  # 自签名时
-```
+| `peer has no tls certificate` | 确认两端都开启 TLS，且各自可以读取自己的证书和私钥 |
+| `failed to verify peer certificate fingerprint` | 核对实际对端指纹。更换过证书时，先确认新指纹再信任 |
+| `key too small` | 使用至少 2048 位的 RSA 密钥 |
 
 ---
 

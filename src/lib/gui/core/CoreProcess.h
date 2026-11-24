@@ -95,6 +95,7 @@ Q_SIGNALS:
   void secureSocket(bool enabled);
   void daemonIpcClientConnectionFailed();
   void connectedClientsChanged(const QStringList &clients);
+  void serverBindAddressChanged(const QString &address);
   void securityLevelChanged(QString securityLevel);
   void unrecognisedClient(const QString &clientName);
   void connectionRefused(synergy::core::ConnectionRefusal reason);
@@ -118,8 +119,14 @@ private:
   QStringList desktopProcessArguments() const;
   void startForegroundProcess(const QStringList &args);
   void startProcessFromDaemon();
+  void sendPendingServiceCommands();
+  void retryServiceCancellation();
+  void failServiceStart();
   void stopForegroundProcess();
   void stopProcessFromDaemon();
+  void connectCoreIpc();
+  void closeCoreIpc();
+  void clearConnectionState();
   QPair<bool, QString> persistServerConfig() const;
   void setConnectionState(ConnectionState state);
   void setProcessState(ProcessState state);
@@ -142,6 +149,12 @@ private:
   QString m_secureSocketVersion;
   std::optional<ProcessMode> m_lastProcessMode = std::nullopt;
   QTimer m_retryTimer;
+  QTimer m_coreIpcTimer;
+  QTimer m_serviceStartTimer;
+  QTimer m_serviceCancelTimer;
+  QString m_serviceLaunchId;
+  QString m_pendingServiceConfig;
+  QString m_pendingServiceStop;
   //! delay before the next automatic retry; doubles on consecutive retries
   int m_retryDelayMs = kRetryDelayMs;
   //! when the current desktop process last reached the started state

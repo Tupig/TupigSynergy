@@ -182,13 +182,13 @@ Client                                    Server
 3. Protocol handshake (Hello / HelloBack) over TLS when TLS is on
 ```
 
-TLS is on by default (`security/tlsEnabled`). Peer fingerprint checks are also on by default (`security/checkPeerFingerprints`). Turning peer checks off still encrypts, but skips the fingerprint database. Turning TLS off uses plaintext.
+TLS is on by default (`security/tlsEnabled`). TLS requires both peers to present a certificate and verify the other's saved fingerprint. This remains required when an older configuration sets `security/checkPeerFingerprints` to `false`. Turning TLS off uses plaintext.
 
 **Certificate checks in the default Qt stack** (`src/lib/net/QtSocketFactory.cpp`):
 
 - An RSA key shorter than 2048 bits is rejected.
 - Other algorithms, including EC, are not rejected for length.
-- When peer checks are on, the peer certificate fingerprint must match the saved TOFU database. These are local certificates, not a public CA.
+- Each peer's certificate fingerprint must match the explicitly trusted value saved on the other computer. The app can generate its own certificate on each computer.
 - The legacy stack is `src/lib/net/SecureSocket.h`, used only when `USE_LEGACY_NETWORK=1`.
 
 ---
@@ -404,13 +404,13 @@ Client                                    Server
 3. 开启 TLS 时，协议握手（Hello / HelloBack）走 TLS
 ```
 
-TLS 默认开启（`security/tlsEnabled`）。对端指纹校验也默认开启（`security/checkPeerFingerprints`）。关掉指纹校验后仍然加密，只是不再查指纹库。关掉 TLS 则使用明文。
+TLS 默认开启（`security/tlsEnabled`）。TLS 要求双方都提供证书，并校验对方已保存的指纹。旧配置把 `security/checkPeerFingerprints` 设为 `false` 时仍须校验。关掉 TLS 则使用明文。
 
 **默认 Qt 栈的证书检查**（`src/lib/net/QtSocketFactory.cpp`）：
 
 - 短于 2048 位的 RSA 密钥会被拒绝。
 - 其他算法（包括 EC）不按长度拒绝。
-- 开启对端校验时，证书指纹必须与已保存的 TOFU 记录一致。这是本地证书，不是公共 CA。
+- 双方的证书指纹都必须与另一台电脑明确接受并保存的值一致。每台电脑都可以由应用生成自己的证书。
 - 旧栈是 `src/lib/net/SecureSocket.h`，仅在 `USE_LEGACY_NETWORK=1` 时使用。
 
 ---

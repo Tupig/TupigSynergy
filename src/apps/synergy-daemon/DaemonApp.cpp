@@ -31,6 +31,7 @@
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QSettings>
+#include <QUuid>
 
 using namespace synergy::core;
 
@@ -52,15 +53,15 @@ void DaemonApp::setConfigFile(const QString &configFile)
 {
   if (!synergy::isSafeRelativePath(configFile)) {
     LOG_ERR("config file must be a relative path under the settings directory: %s", qPrintable(configFile));
+    m_configFile.clear();
     return;
   }
 
   LOG_DEBUG("config file updated: %s", configFile.toUtf8().constData());
   m_configFile = configFile;
-  Settings::setValue(Settings::Daemon::ConfigFile, configFile);
 }
 
-void DaemonApp::applyWatchdogCommand() const
+void DaemonApp::applyWatchdogCommand(const QString &launchId)
 {
 #if defined(Q_OS_WIN)
   if (m_configFile.isEmpty()) {
@@ -98,22 +99,40 @@ void DaemonApp::applyWatchdogCommand() const
   }
 
   const auto corePath = QStringLiteral("%1/%2").arg(QCoreApplication::applicationDirPath(), kCoreBinName);
-  const auto command = QStringLiteral("\"%1\" %2 --settings \"%3\"").arg(corePath, modeArg, configPath).toStdString();
+  auto command = QStringLiteral("\"%1\" %2 --settings \"%3\"").arg(corePath, modeArg, configPath);
+  if (!launchId.isEmpty())
+    command += QStringLiteral(" --service-launch-id ") + launchId;
 
   LOG_DEBUG("applying watchdog command (elevate: %s)", elevate ? "yes" : "no");
-  m_watchdog->setProcessConfig(command, elevate);
+  m_launchId = launchId;
+  // Preserve the correlation across service restarts. Bind the identifier to
+  // this config so an older build changing the path cannot reuse the record.
+  Settings::setValue(Settings::Daemon::ConfigFile, m_configFile);
+  Settings::setValue(
+      Settings::Daemon::Launch, launchId.isEmpty() ? QVariant() : QVariant(launchId + ' ' + m_configFile)
+  );
+  Settings::save(false);
+  m_watchdog->setProcessConfig(command.toStdString(), elevate);
 #else
+  Q_UNUSED(launchId)
   LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "applying watchdog command not implemented on this platform"));
 #endif
 }
 
-void DaemonApp::clearWatchdogCommand()
+void DaemonApp::clearWatchdogCommand(const QString &launchId)
 {
+  // A delayed GUI cancellation must not clear a newer accepted request.
+  if (!launchId.isEmpty() && launchId != m_launchId)
+    return;
+
   LOG_DEBUG("clearing watchdog command");
 
   // Clear the persisted config path so the daemon does not auto-start the core on next boot.
   m_configFile.clear();
+  m_launchId.clear();
   Settings::setValue(Settings::Daemon::ConfigFile);
+  Settings::setValue(Settings::Daemon::Launch);
+  Settings::save(false);
 
 #if defined(Q_OS_WIN)
   m_watchdog->setProcessConfig("", false);
@@ -127,6 +146,7 @@ void DaemonApp::clearSettings()
   LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "clearing daemon settings"));
   m_configFile.clear();
   Settings::setValue(Settings::Daemon::ConfigFile);
+  Settings::setValue(Settings::Daemon::Launch);
   Settings::setValue(Settings::Daemon::LogFile);
   Settings::setValue(Settings::Daemon::LogLevel);
 }
@@ -138,12 +158,10 @@ void DaemonApp::connectIpcServer(const ipc::DaemonIpcServer *ipcServer) const
   connect(ipcServer, &ipc::DaemonIpcServer::logLevelChanged, this, &DaemonApp::saveLogLevel, Qt::DirectConnection);
   connect(ipcServer, &ipc::DaemonIpcServer::configFileChanged, this, &DaemonApp::setConfigFile, Qt::DirectConnection);
   connect(
-      ipcServer, &ipc::DaemonIpcServer::startProcessRequested, this, &DaemonApp::applyWatchdogCommand,
-      Qt::DirectConnection
+      ipcServer, &ipc::DaemonIpcServer::startRequested, this, &DaemonApp::applyWatchdogCommand, Qt::DirectConnection
   );
   connect(
-      ipcServer, &ipc::DaemonIpcServer::stopProcessRequested, this, &DaemonApp::clearWatchdogCommand,
-      Qt::DirectConnection
+      ipcServer, &ipc::DaemonIpcServer::stopRequested, this, &DaemonApp::clearWatchdogCommand, Qt::DirectConnection
   );
   connect(
       ipcServer, &ipc::DaemonIpcServer::clearSettingsRequested, this, &DaemonApp::clearSettings, Qt::DirectConnection
@@ -185,11 +203,15 @@ void DaemonApp::run(QThread &daemonThread)
     if (!synergy::isSafeRelativePath(relativeConfig)) {
       LOG_ERR("ignoring stored config path that is not relative: %s", qPrintable(persistedConfig));
       Settings::setValue(Settings::Daemon::ConfigFile);
+      Settings::setValue(Settings::Daemon::Launch);
     } else {
       LOG_DEBUG("using last known config file: %s", qPrintable(relativeConfig));
       m_configFile = relativeConfig;
-      Settings::setValue(Settings::Daemon::ConfigFile, relativeConfig);
-      applyWatchdogCommand();
+      const auto launch = Settings::value(Settings::Daemon::Launch).toString();
+      const auto separator = launch.indexOf(QLatin1Char(' '));
+      const auto launchId =
+          separator > 0 && launch.mid(separator + 1) == relativeConfig ? QUuid(launch.left(separator)) : QUuid();
+      applyWatchdogCommand(launchId.isNull() ? QString() : launchId.toString(QUuid::WithoutBraces));
     }
   }
 #endif

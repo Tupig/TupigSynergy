@@ -12,6 +12,14 @@
 #include "common/Settings.h"
 #include "common/VersionInfo.h"
 
+#include <QUuid>
+
+#if defined(Q_OS_WIN)
+namespace {
+const auto kServiceLaunchIdOption = QCommandLineOption(QStringLiteral("service-launch-id"), {}, QStringLiteral("id"));
+}
+#endif
+
 const QString CoreArgParser::s_headerText = QStringLiteral("%1: %2\n").arg(kCoreBinName, kDisplayVersion);
 
 CoreArgParser::CoreArgParser(const QStringList &args)
@@ -20,6 +28,11 @@ CoreArgParser::CoreArgParser(const QStringList &args)
   m_parser.addPositionalArgument("coremode", "The mode to start in either: server or client", "coremode");
 
   m_parser.addOptions(CoreArgs::options);
+#if defined(Q_OS_WIN)
+  auto launchIdOption = kServiceLaunchIdOption;
+  launchIdOption.setFlags(QCommandLineOption::HiddenFromHelp);
+  m_parser.addOption(launchIdOption);
+#endif
   m_parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
   m_parser.setOptionsAfterPositionalArgumentsMode(QCommandLineParser::ParseAsOptions);
   m_parser.parse(args);
@@ -91,4 +104,15 @@ bool CoreArgParser::clientMode() const
 bool CoreArgParser::singleInstanceOnly() const
 {
   return m_singleInstance;
+}
+
+QString CoreArgParser::serviceLaunchId() const
+{
+#if defined(Q_OS_WIN)
+  const auto text = m_parser.value(kServiceLaunchIdOption);
+  const QUuid id(text);
+  if (!id.isNull() && id.toString(QUuid::WithoutBraces) == text)
+    return text;
+#endif
+  return {};
 }

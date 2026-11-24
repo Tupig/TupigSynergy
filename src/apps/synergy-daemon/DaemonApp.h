@@ -47,8 +47,8 @@ private:
   int daemonLoop();
   void saveLogLevel(const QString &logLevel) const;
   void setConfigFile(const QString &configFile);
-  void applyWatchdogCommand() const;
-  void clearWatchdogCommand();
+  void applyWatchdogCommand(const QString &launchId = {});
+  void clearWatchdogCommand(const QString &launchId);
   void clearSettings();
 
   static void showConsole();
@@ -61,5 +61,6 @@ private:
   FileLogOutputter *m_fileLogOutputter = nullptr;
   synergy::core::ipc::DaemonIpcServer *m_ipcServer = nullptr;
   QString m_configFile;
+  QString m_launchId;
   bool m_foreground = false;
 };

@@ -20,7 +20,7 @@ class IpcServer : public QObject
   Q_OBJECT
 
 public:
-  explicit IpcServer(QObject *parent, const QString &serverName, const QString &typeName);
+  explicit IpcServer(QObject *parent, const QString &serverName, const QString &typeName, const QString &launchId = {});
   ~IpcServer() override;
 
   bool listen();
@@ -29,11 +29,15 @@ public:
 Q_SIGNALS:
   void logLevelChanged(const QString &logLevel);
   void configFileChanged(const QString &configFile);
-  void startProcessRequested();
   void stopProcessRequested();
   void clearSettingsRequested();
 
 protected:
+  void broadcastToAuthenticatedClients(const QString &message);
+  virtual void clientAuthenticated(QLocalSocket *)
+  {
+  }
+
   /**!
    * Write a message to the client socket and append a newline character.
    *
@@ -56,6 +60,7 @@ private:
   QHash<QLocalSocket *, QByteArray> m_readBuffers;
   QString m_serverName;
   QString m_token;
+  const QString m_launchId;
   QStringList m_pendingMessages;
   QByteArray m_typeName;
 };

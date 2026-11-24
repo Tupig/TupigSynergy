@@ -45,12 +45,12 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QHideEvent>
+#include <QHostAddress>
 #include <QLocalServer>
 #include <QLocalSocket>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QNetworkInterface>
 #include <QPixmap>
 #include <QPointer>
 #include <QPushButton>
@@ -123,21 +123,6 @@ void MainWindow::startCore()
     return;
   }
 #endif
-
-  // Save current IP state when server starts
-  if (m_coreProcess.mode() == CoreMode::Server && Settings::value(Settings::Core::Interface).toString().isEmpty()) {
-    m_serverStartIPs = NetworkMonitor::validAddresses();
-    m_serverStartSuggestedIP = m_serverStartIPs.isEmpty() ? "" : m_serverStartIPs.first();
-  }
-
-  if (m_coreProcess.mode() == CoreMode::Server) {
-    // 仅空配置自动选实际接口；显式地址（含所有接口）或暂时离线的绑定不可被静默覆盖。
-    const auto addresses = NetworkMonitor::validAddresses();
-    const auto stored = Settings::value(Settings::Core::Interface).toString();
-    if (!addresses.isEmpty() && stored.isEmpty()) {
-      Settings::setValue(Settings::Core::Interface, addresses.first());
-    }
-  }
 
 #ifdef SYNERGY_EXTRA_HEADER
   if (!synergy::hooks::onCoreStart()) {
@@ -338,12 +323,6 @@ void MainWindow::coreProcessStateChanged(ProcessState state)
   if (state == Started) {
     qDebug() << "recording that core has started";
     Settings::setValue(Settings::Gui::AutoStartCore, true);
-    if (m_coreProcess.mode() == CoreMode::Server &&
-        !Settings::value(Settings::Gui::ShownServerFirstStartMessage).toBool()) {
-      qDebug() << "starting core server for first time";
-      messages::showFirstServerStartMessage(this);
-      Settings::setValue(Settings::Gui::ShownServerFirstStartMessage, true);
-    }
   }
 
   if (state == Started || state == Starting || state == RetryPending) {
@@ -386,6 +365,23 @@ void MainWindow::coreConnectionStateChanged(ConnectionState state)
   } else if (isVisible()) {
     showFirstConnectedMessage();
   }
+}
+
+void MainWindow::serverBindAddressChanged(const QString &address)
+{
+  if (m_coreProcess.mode() != CoreMode::Server || (!address.isEmpty() && !m_coreProcess.isStarted()) ||
+      address == m_serverBindAddress)
+    return;
+  m_serverBindAddress = address;
+  updateNetworkInfo();
+
+  const QHostAddress boundAddress(address);
+  if (boundAddress.isNull() || boundAddress.isLoopback() ||
+      Settings::value(Settings::Gui::ShownServerFirstStartMessage).toBool())
+    return;
+  // The core reports the address only after the listener starts successfully.
+  Settings::setValue(Settings::Gui::ShownServerFirstStartMessage, true);
+  messages::showFirstServerStartMessage(this);
 }
 
 void MainWindow::updateLocalFingerprint()

@@ -4,16 +4,20 @@
  */
 #include "common/RuntimeContext.h"
 #include "common/Settings.h"
+#include "common/VersionInfo.h"
 #include "gui/Action.h"
 #include "gui/Hotkey.h"
 #include "gui/config/ServerConfig.h"
 #include "gui/core/CoreProcess.h"
 #include <QApplication>
 #include <QDebug>
+#include <QDir>
 #include <QFile>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QPointer>
 #include <QScopeGuard>
 #include <QSettings>
-#include <QSignalBlocker>
 #include <QTemporaryDir>
 #include <QTextStream>
 #include <QTranslator>
@@ -107,6 +111,57 @@ QByteArray readFile(const QString &path)
   QFile file(path);
   return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
 }
+
+struct ServiceIpcPeer
+{
+  QLocalServer server;
+  QList<QByteArray> commands;
+  QByteArray helloDetails;
+  QByteArray postHello;
+  QPointer<QLocalSocket> lastGreetingSocket;
+  bool replyToHello = true;
+  int greetings = 0;
+  int stopsToDrop = 0;
+
+  bool listen(const QString &type)
+  {
+    const auto name = synergy::runtime::runtimeInstanceKey({}) + '-' + type;
+    QFile token(Settings::settingsPath() + '/' + name + ".ipc-token");
+    if (!QDir().mkpath(Settings::settingsPath()) || !token.open(QIODevice::WriteOnly) ||
+        token.write("test-token") != 10)
+      return false;
+    token.close();
+    server.setSocketOptions(QLocalServer::UserAccessOption);
+    QObject::connect(&server, &QLocalServer::newConnection, &server, [this] {
+      auto *socket = server.nextPendingConnection();
+      QObject::connect(socket, &QLocalSocket::readyRead, &server, [this, socket] {
+        while (socket->canReadLine()) {
+          const auto line = socket->readLine().trimmed();
+          if (line.startsWith("hello=")) {
+            const QByteArray expected = QByteArray("hello=") + kVersion + " test-token";
+            if (line == expected) {
+              ++greetings;
+              lastGreetingSocket = socket;
+              if (replyToHello)
+                socket->write(QByteArray("hello=") + kVersion + helloDetails + '\n' + postHello);
+            }
+          } else {
+            commands.append(line);
+            if (line.startsWith("stop=")) {
+              if (stopsToDrop > 0) {
+                --stopsToDrop;
+                socket->disconnectFromServer();
+                return;
+              }
+              socket->write(QByteArray("stopAccepted=") + line.mid(5) + '\n');
+            }
+          }
+        }
+      });
+    });
+    return server.listen(name);
+  }
+};
 } // namespace
 class R3SerializationTests : public QObject
 {
@@ -124,6 +179,8 @@ private Q_SLOTS:
   void desktopArgumentsRemainProtocolTokensAcrossLanguages();
   void stopCancelsRetryWithoutRunningProcess_data();
   void stopCancelsRetryWithoutRunningProcess();
+  void serviceStartWaitsForItsCore_data();
+  void serviceStartWaitsForItsCore();
   void translatedClientStartsAndStopsOwnedInertChildTenTimes();
 };
 void R3SerializationTests::invalidConfigCannotTruncateOrPartiallyWrite_data()
@@ -518,6 +575,116 @@ void R3SerializationTests::stopCancelsRetryWithoutRunningProcess()
   }
 }
 
+void R3SerializationTests::serviceStartWaitsForItsCore_data()
+{
+  QTest::addColumn<QString>("scenario");
+  QTest::newRow("matching-core") << QStringLiteral("ready");
+  QTest::newRow("cancel-before-daemon-handshake") << QStringLiteral("cancel-pending");
+  QTest::newRow("cancel-after-daemon-send") << QStringLiteral("cancel-sent");
+  QTest::newRow("no-matching-core") << QStringLiteral("timeout");
+}
+
+void R3SerializationTests::serviceStartWaitsForItsCore()
+{
+  using synergy::core::ConnectionState;
+  using synergy::core::ProcessState;
+  using CoreProcess = synergy::gui::CoreProcess;
+  QFETCH(QString, scenario);
+
+  ServiceIpcPeer daemon;
+  ServiceIpcPeer child;
+  daemon.replyToHello = scenario != QStringLiteral("cancel-pending");
+  child.helloDetails = " legacy-core";
+  child.postHello = "connectionState=Connected\nserverBindAddress=192.0.2.10\n";
+  QVERIFY(daemon.listen(QStringLiteral("daemon")));
+  QVERIFY(child.listen(QStringLiteral("core")));
+
+  synergy::gui::ServerConfig config;
+  CoreProcess core(config);
+  core.setMode(Settings::CoreMode::Client);
+  QSignalSpy errors(&core, &CoreProcess::error);
+  QSignalSpy boundAddress(&core, &CoreProcess::serverBindAddressChanged);
+  core.start(Settings::ProcessMode::Service);
+  QCOMPARE(core.processState(), ProcessState::Starting);
+  QCOMPARE(core.connectionState(), ConnectionState::Connecting);
+
+  const auto sentStart = [&daemon] {
+    for (const auto &command : daemon.commands) {
+      if (command == "start" || command.startsWith("start="))
+        return command;
+    }
+    return QByteArray();
+  };
+  if (!daemon.replyToHello) {
+    QTRY_COMPARE(daemon.greetings, 1);
+    core.stop(Settings::ProcessMode::Service);
+    QVERIFY(daemon.lastGreetingSocket);
+    daemon.lastGreetingSocket->write(QByteArray("hello=") + kVersion + '\n');
+    QTest::qWait(100);
+    QVERIFY(sentStart().isEmpty());
+    QCOMPARE(core.processState(), ProcessState::Stopped);
+    QCOMPARE(core.connectionState(), ConnectionState::Disconnected);
+    QCOMPARE(errors.count(), 0);
+    return;
+  }
+
+  QTRY_VERIFY(!sentStart().isEmpty());
+  QCOMPARE(core.processState(), ProcessState::Starting);
+  const auto args = sentStart().mid(sizeof("start=") - 1);
+  const auto separator = args.indexOf(' ');
+  QVERIFY(separator > 0);
+  const auto launchId = args.left(separator);
+  QCOMPARE(QString::fromUtf8(args.mid(separator + 1)), QFileInfo(Settings::settingsFile()).fileName());
+  QVERIFY(!QUuid(QString::fromLatin1(launchId)).isNull());
+  QTRY_VERIFY(child.greetings >= 1);
+  QCOMPARE(core.processState(), ProcessState::Starting);
+  QCOMPARE(core.connectionState(), ConnectionState::Connecting);
+  QCOMPARE(boundAddress.count(), 0);
+
+  if (scenario == QStringLiteral("ready")) {
+    child.helloDetails = ' ' + launchId;
+    QTRY_COMPARE(core.processState(), ProcessState::Started);
+    QTRY_COMPARE(core.connectionState(), ConnectionState::Connected);
+    QCOMPARE(boundAddress.count(), 1);
+    QCOMPARE(boundAddress.first().first().toString(), QStringLiteral("192.0.2.10"));
+
+    QVERIFY(child.lastGreetingSocket);
+    const auto greetings = child.greetings;
+    child.lastGreetingSocket->disconnectFromServer();
+    QTRY_COMPARE(core.connectionState(), ConnectionState::Disconnected);
+    QTRY_VERIFY(child.greetings > greetings);
+    QTRY_COMPARE(core.connectionState(), ConnectionState::Connected);
+    QCOMPARE(core.processState(), ProcessState::Started);
+    QCOMPARE(daemon.commands.count(sentStart()), 1);
+    core.stop(Settings::ProcessMode::Service);
+    QTRY_VERIFY(daemon.commands.contains("stop=" + launchId));
+    QTRY_VERIFY(core.m_pendingServiceStop.isEmpty());
+    QCOMPARE(core.processState(), ProcessState::Stopped);
+    QCOMPARE(core.connectionState(), ConnectionState::Disconnected);
+    QCOMPARE(boundAddress.last().first().toString(), QString());
+    QCOMPARE(errors.count(), 0);
+    return;
+  }
+
+  if (scenario == QStringLiteral("cancel-sent")) {
+    daemon.stopsToDrop = 1;
+    core.stop(Settings::ProcessMode::Service);
+    QCOMPARE(core.processState(), ProcessState::Stopping);
+  } else {
+    QCOMPARE(core.m_serviceStartTimer.interval(), 20000);
+    core.m_serviceStartTimer.start(100);
+    QTRY_COMPARE(errors.count(), 1);
+  }
+  const int expectedStopWrites = scenario == QStringLiteral("cancel-sent") ? 2 : 1;
+  QTRY_VERIFY(daemon.commands.count("stop=" + launchId) >= expectedStopWrites);
+  QTRY_VERIFY(core.m_pendingServiceStop.isEmpty());
+  QVERIFY(!core.m_serviceCancelTimer.isActive());
+  QCOMPARE(core.processState(), ProcessState::Stopped);
+  QCOMPARE(core.connectionState(), ConnectionState::Disconnected);
+  if (scenario == QStringLiteral("cancel-sent"))
+    QCOMPARE(errors.count(), 0);
+}
+
 void R3SerializationTests::translatedClientStartsAndStopsOwnedInertChildTenTimes()
 {
   ModeTranslator translator;
@@ -561,12 +728,10 @@ void R3SerializationTests::translatedClientStartsAndStopsOwnedInertChildTenTimes
       }
     });
     QSignalSpy output(&core, &synergy::gui::CoreProcess::logLine);
-    {
-      // Exclude the Started self-signal that would otherwise attach to the fixed live core IPC name.
-      // This test exercises the production QProcess launch/argv/stop path, not IPC or state notifications.
-      const QSignalBlocker preventFixedIpc(&core);
-      core.start(Settings::ProcessMode::Desktop);
-    }
+    core.start(Settings::ProcessMode::Desktop);
+    // This case covers the desktop child lifecycle. Service IPC uses separate
+    // isolated peers in serviceStartWaitsForItsCore.
+    core.m_coreIpcTimer.stop();
     QCOMPARE(core.processState(), synergy::core::ProcessState::Started);
     QVERIFY(core.m_process);
     QCOMPARE(core.m_process->state(), QProcess::Running);

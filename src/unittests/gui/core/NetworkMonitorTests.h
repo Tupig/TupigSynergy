@@ -14,4 +14,6 @@ private Q_SLOTS:
   void testVirtualInterface();
   void emitsOnlyWhenAddressesChange();
   void validAddressesExcludeLoopbackAndLinkLocal();
+  void automaticServerBindingUsesTheCurrentCandidate();
+  void explicitServerBindingsArePreserved();
 };

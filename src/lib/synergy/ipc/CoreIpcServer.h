@@ -20,12 +20,15 @@ class CoreIpcServer : public IpcServer
   Q_OBJECT
 
 public:
-  explicit CoreIpcServer(QObject *parent);
+  explicit CoreIpcServer(QObject *parent, const QString &launchId = {});
 
   static CoreIpcServer &instance();
+  void setServerBindAddress(const QString &address);
 
 private:
+  void clientAuthenticated(QLocalSocket *clientSocket) override;
   void processCommand(QLocalSocket *clientSocket, const QString &command, const QStringList &parts) override;
+  QString m_serverBindAddress;
 };
 
 } // namespace synergy::core::ipc

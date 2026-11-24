@@ -6,6 +6,7 @@
 
 #include "NetworkMonitorTests.h"
 
+#include "common/NetworkInterfaces.h"
 #include "gui/core/NetworkMonitor.h"
 
 #include <QHostAddress>
@@ -67,6 +68,31 @@ void NetworkMonitorTests::validAddressesExcludeLoopbackAndLinkLocal()
 
   QVERIFY(!addresses.contains(QStringLiteral("127.0.0.1")));
   QVERIFY(!addresses.contains(QStringLiteral("::1")));
+}
+
+void NetworkMonitorTests::automaticServerBindingUsesTheCurrentCandidate()
+{
+  using synergy::network::selectServerBindAddress;
+  const auto oldAddress = QStringLiteral("192.0.2.10");
+  const auto newAddress = QStringLiteral("192.0.2.11");
+  const auto ipv6Address = QStringLiteral("2001:db8::10");
+
+  QCOMPARE(selectServerBindAddress({}, {oldAddress, ipv6Address}), oldAddress);
+  QCOMPARE(selectServerBindAddress({}, {newAddress, ipv6Address}), newAddress);
+  QCOMPARE(selectServerBindAddress({}, {ipv6Address}), ipv6Address);
+  QCOMPARE(selectServerBindAddress({}, {}), QStringLiteral("127.0.0.1"));
+}
+
+void NetworkMonitorTests::explicitServerBindingsArePreserved()
+{
+  using synergy::network::selectServerBindAddress;
+  const QStringList available{QStringLiteral("192.0.2.11")};
+  for (const auto &address :
+       {QStringLiteral("192.0.2.10"), QStringLiteral("2001:db8::10"), QStringLiteral("0.0.0.0"),
+        QStringLiteral("::")}) {
+    QCOMPARE(selectServerBindAddress(address, available), address);
+    QCOMPARE(selectServerBindAddress(address, {}), address);
+  }
 }
 
 QTEST_MAIN(NetworkMonitorTests)

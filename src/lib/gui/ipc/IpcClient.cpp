@@ -7,6 +7,7 @@
 #include "IpcClient.h"
 
 #include "common/IpcToken.h"
+#include "common/RuntimeContext.h"
 #include "common/VersionInfo.h"
 
 #include <QCoreApplication>
@@ -163,6 +164,7 @@ constexpr int kRetryLimit = 3;
 
 //! Base delay between connection attempts; attempt N waits N * this value.
 constexpr int kRetryBackoffMs = 200;
+constexpr int kHandshakeTimeoutMs = 2000;
 
 } // namespace
 
@@ -177,14 +179,27 @@ static const auto kLocalSocketError = qOverload<QLocalSocket::LocalSocketError>(
 #endif
 
 IpcClient::IpcClient(
-    QObject *parent, const QString &socketName, const QString &typeName, const QString &serverExecutable
+    QObject *parent, const QString &socketName, const QString &typeName, const QString &serverExecutable,
+    const QString &launchId
 )
     : QObject(parent),
       m_socket{new QLocalSocket(this)},
-      m_socketName(socketName), // NOSONAR - Qt memory
+      m_socketName(
+          synergy::runtime::isIsolatedRuntime() ? synergy::runtime::runtimeInstanceKey(socketName) + '-' + typeName
+                                                : socketName
+      ),
       m_typeName(typeName),
-      m_serverExecutable(serverExecutable)
+      m_serverExecutable(serverExecutable),
+      m_launchId(launchId)
 {
+  m_retryTimer.setSingleShot(true);
+  connect(&m_retryTimer, &QTimer::timeout, this, &IpcClient::attemptConnection);
+  m_handshakeTimer.setSingleShot(true);
+  connect(&m_handshakeTimer, &QTimer::timeout, this, [this] {
+    disconnectFromServer();
+    scheduleRetry();
+  });
+  connect(m_socket, &QLocalSocket::connected, this, &IpcClient::handleConnected);
   connect(m_socket, &QLocalSocket::disconnected, this, &IpcClient::handleDisconnected);
   connect(m_socket, kLocalSocketError, this, &IpcClient::handleErrorOccurred);
   connect(m_socket, &QLocalSocket::readyRead, this, &IpcClient::handleReadyRead);
@@ -210,6 +225,7 @@ void IpcClient::connectToServer()
     disconnectFromServer();
   }
 
+  m_retryTimer.stop();
   m_retryCount = 0;
   attemptConnection();
 }
@@ -235,53 +251,43 @@ void IpcClient::attemptConnection()
   m_state = State::Connecting;
   m_retryCount++;
 
-  // Connection failures are handled by handleErrorOccurred, which is
-  // connected once in the constructor. Only the success path needs a
-  // one-shot handler, so a stale connection lambda can never accumulate.
-  connect(
-      m_socket, &QLocalSocket::connected, this,
-      [this] {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        disconnect(m_socket, &QLocalSocket::connected, this, nullptr);
-#endif
-        // A low-privilege process can take the pipe name before the real
-        // server listens.  Never hand the hello token to such a squatter:
-        // only accept a server that runs with the same identity as the
-        // daemon/core (this user, SYSTEM on Windows, root on Unix).
-        if (!verifyServerIsTrusted(m_socket, m_serverExecutable)) {
-          qWarning().noquote() << QCoreApplication::translate(
-                                      "GuiLogMessages", "%1 ipc server failed peer verification, refusing to send hello"
-          )
-                                      .arg(m_typeName);
-          disconnectFromServer();
-          Q_EMIT connectionFailed();
-          return;
-        }
-        // Divergence from upstream: kVersion already carries the build metadata; don't re-append the git sha.
-        const auto versionId = QString::fromUtf8(kVersion);
-        const auto token = synergy::readIpcToken(m_socketName);
-        m_socket->write(QStringLiteral("hello=%1 %2\n").arg(versionId, token).toUtf8());
-        qDebug().noquote() << QStringLiteral("%1 ipc client sent hello with version: %2").arg(m_typeName, versionId);
-      },
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-      Qt::SingleShotConnection
-#else
-      Qt::AutoConnection
-#endif
-  );
-
+  m_handshakeTimer.start(kHandshakeTimeoutMs);
   m_socket->connectToServer(m_socketName);
+}
+
+void IpcClient::handleConnected()
+{
+  if (m_state != State::Connecting)
+    return;
+
+  // Verify the pipe peer before giving it the token.
+  if (!verifyServerIsTrusted(m_socket, m_serverExecutable)) {
+    qWarning().noquote(
+    ) << QCoreApplication::translate("GuiLogMessages", "%1 ipc server failed peer verification, refusing to send hello")
+             .arg(m_typeName);
+    disconnectFromServer();
+    Q_EMIT connectionFailed();
+    return;
+  }
+  // kVersion already carries the build metadata.
+  const auto versionId = QString::fromUtf8(kVersion);
+  const auto token = synergy::readIpcToken(m_socketName);
+  m_socket->write(QStringLiteral("hello=%1 %2\n").arg(versionId, token).toUtf8());
+  qDebug().noquote() << QStringLiteral("%1 ipc client sent hello with version: %2").arg(m_typeName, versionId);
 }
 
 void IpcClient::scheduleRetry()
 {
   // linear backoff (0ms, 200ms, 400ms) so a missing server does not
   // burn all attempts in a single event-loop turn
-  QTimer::singleShot(kRetryBackoffMs * m_retryCount, this, &IpcClient::attemptConnection);
+  m_retryTimer.start(kRetryBackoffMs * m_retryCount);
 }
 
 void IpcClient::disconnectFromServer()
 {
+  m_retryTimer.stop();
+  m_handshakeTimer.stop();
+  m_readBuffer.clear();
   m_state = State::Disconnecting;
   qDebug().noquote() << QStringLiteral("%1 ipc client disconnecting from server").arg(m_typeName);
   m_socket->disconnectFromServer();
@@ -291,6 +297,10 @@ void IpcClient::disconnectFromServer()
 void IpcClient::handleDisconnected()
 {
   if (m_state == State::Connecting) {
+    m_state = State::Unconnected;
+    m_handshakeTimer.stop();
+    m_readBuffer.clear();
+    scheduleRetry();
     return;
   }
 
@@ -308,8 +318,7 @@ void IpcClient::handleErrorOccurred()
   if (m_state == State::Connecting) {
     qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "%1 ipc client failed to connect: %2")
                                 .arg(m_typeName, m_socket->errorString());
-    m_socket->disconnectFromServer();
-    m_state = State::Unconnected;
+    disconnectFromServer();
     scheduleRetry();
     return;
   }
@@ -343,8 +352,13 @@ void IpcClient::handleReadyRead()
 
     if (m_state == State::Connecting) {
       handleHandshakeMessage(parts);
+      if (m_state == State::Unconnected)
+        return;
       continue;
     }
+
+    if (m_state != State::Connected)
+      return;
 
     if (parts.at(0) == QStringLiteral("bye")) {
       qDebug().noquote() << QStringLiteral("%1 ipc server is shutting down").arg(m_typeName);
@@ -381,6 +395,7 @@ void IpcClient::handleHandshakeMessage(const QStringList &parts)
     ) << QCoreApplication::translate("GuiLogMessages", "%1 ipc version mismatch (client: %2, server: %3)")
              .arg(m_typeName, versionId, serverVersion);
     m_state = State::Connected;
+    m_handshakeTimer.stop();
     Q_EMIT versionMismatch();
     return;
   }
@@ -397,7 +412,18 @@ void IpcClient::handleHandshakeMessage(const QStringList &parts)
     return;
   }
 
+  const auto reply = parts.at(1);
+  const auto separator = reply.indexOf(QLatin1Char(' '));
+  const auto peerVersion = separator < 0 ? reply : reply.left(separator);
+  const auto peerLaunchId = separator < 0 ? QString() : reply.mid(separator + 1);
+  if (peerVersion != versionId || (!m_launchId.isEmpty() && peerLaunchId != m_launchId)) {
+    disconnectFromServer();
+    Q_EMIT connectionFailed();
+    return;
+  }
+
   m_state = State::Connected;
+  m_handshakeTimer.stop();
   qDebug().noquote() << QStringLiteral("%1 ipc client connected").arg(m_typeName);
   Q_EMIT connected();
 }
@@ -413,6 +439,15 @@ void IpcClient::sendMessage(const QString &message)
 
   m_socket->write(message.toUtf8() + "\n");
   qDebug().noquote() << QStringLiteral("%1 ipc client sent message: %2").arg(m_typeName, message);
+}
+
+void IpcClient::flushPendingWrites()
+{
+  m_socket->flush();
+  if (m_socket->bytesToWrite() > 0) {
+    constexpr int kShutdownWriteTimeoutMs = 200;
+    m_socket->waitForBytesWritten(kShutdownWriteTimeoutMs);
+  }
 }
 
 } // namespace synergy::gui::ipc

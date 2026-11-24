@@ -59,6 +59,7 @@ public:
   struct Daemon
   {
     inline static const auto ConfigFile = QStringLiteral("daemon/configFile");
+    inline static const auto Launch = QStringLiteral("daemon/launch");
     inline static const auto Elevate = QStringLiteral("daemon/elevate");
     inline static const auto LogFile = QStringLiteral("daemon/logFile");
     inline static const auto LogLevel = QStringLiteral("daemon/logLevel");
@@ -217,6 +218,7 @@ private:
     , Settings::Core::UseHooks
     , Settings::Core::Language
     , Settings::Daemon::ConfigFile
+    , Settings::Daemon::Launch
     , Settings::Daemon::Elevate
     , Settings::Daemon::LogFile
     , Settings::Daemon::LogLevel
