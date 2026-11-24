@@ -79,6 +79,8 @@ if(WIN32)
   )
 elseif(APPLE)
   set(PLATFORM_SOURCES
+    macos/InstanceGuard.cpp
+    macos/InstanceGuard.h
     UpdateInstaller.h
     macos/UpdateInstallerMac.cpp
     ReducedMotion.h

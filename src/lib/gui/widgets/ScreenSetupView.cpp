@@ -22,6 +22,7 @@
 #include <QDragMoveEvent>
 #include <QFontMetricsF>
 #include <QHeaderView>
+#include <QKeyEvent>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
@@ -279,6 +280,23 @@ void ScreenSetupView::resizeEvent(QResizeEvent *event)
 {
   QTableView::resizeEvent(event);
   setTableSize();
+}
+
+void ScreenSetupView::keyPressEvent(QKeyEvent *event)
+{
+  const auto key = event->key();
+  const auto modifiers = event->modifiers();
+  if ((key != Qt::Key_Return && key != Qt::Key_Enter) ||
+      (modifiers != Qt::NoModifier && modifiers != Qt::KeypadModifier)) {
+    QTableView::keyPressEvent(event);
+    return;
+  }
+
+  // Return belongs to the table, even when the current cell cannot be edited.
+  event->accept();
+  const auto index = currentIndex();
+  if (auto *setup = model(); !event->isAutoRepeat() && setup && index.isValid() && !setup->screen(index).isNull())
+    showScreenConfig(index.column(), index.row());
 }
 
 void ScreenSetupView::mouseDoubleClickEvent(QMouseEvent *event)

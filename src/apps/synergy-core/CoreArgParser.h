@@ -23,9 +23,9 @@ public:
   explicit CoreArgParser(const QStringList &args = {});
   /**
    * @brief parse
-   * This method will parse all options other then help and version
+   * Parse the remaining options. Return false when there is no supported mode.
    */
-  void parse();
+  bool parse();
   QString helpText() const;
   QString versionText() const;
   QString errorText() const;
@@ -36,7 +36,6 @@ public:
   bool singleInstanceOnly() const;
 
 private:
-  [[noreturn]] void showHelpText() const;
   QCommandLineParser m_parser;
   QString m_helpText;
   bool m_clientMode = false;

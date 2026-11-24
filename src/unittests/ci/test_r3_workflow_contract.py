@@ -64,6 +64,17 @@ def actual_run(block, indentation=8):
     return script
 
 
+def actual_step_run(block):
+    """Extract one existing workflow step without interpreting YAML generally."""
+    multi = re.search(r"^        run: \|\n((?:          .*\n|\n)+)", block, re.M)
+    if multi:
+        return textwrap.dedent(multi.group(1))
+    single = re.search(r"^        run: (.+)$", block, re.M)
+    if single:
+        return single.group(1) + "\n"
+    raise RuntimeError("EXTRACTION: missing actual step run command")
+
+
 def steps(text):
     return re.split(r"^      - ", text, flags=re.M)[1:]
 
@@ -298,6 +309,8 @@ def native_critical_case(native, mode, unsafe=None):
                if key in os.environ}
         env.update({"PATH": str(temp / "bin") + os.pathsep + env.get("PATH", ""),
                     "COMMAND_LOG": str(temp / "calls.jsonl"), "REAL_CTEST": ctest,
+                    "SYNERGY_CI_CMAKE": str(temp / "bin" / "cmake"),
+                    "SYNERGY_CI_CPACK": str(temp / "bin" / "cpack"),
                     "RUNNER_OS": "Windows" if native == "build-windows" else "macOS",
                     "GITHUB_OUTPUT": str(temp / "output")})
         if mode.startswith("backend"):
@@ -605,6 +618,179 @@ class GitHubDeliveryContract(unittest.TestCase):
         self.assertIsNotNone(create)
         self.assertIn("--verify-tag", create.group(0))
 
+    def test_windows_absolute_tool_contract_when_present(self):
+        """Execute the extracted Configure and Package glue against an old PATH."""
+        workflow = WORKFLOW.read_text()
+        windows = job("build-windows")
+        configure = next(block for block in steps(windows) if block.startswith("name: Configure\n"))
+        package = next(block for block in steps(windows) if block.startswith("name: Package\n"))
+        configure_source = actual_step_run(configure)
+        package_source = actual_step_run(package)
+        helper = ROOT / "scripts/ci/verify-package-windows.bat"
+        with tempfile.TemporaryDirectory(prefix="windows-absolute-tools-") as temporary:
+            temp = Path(temporary)
+            old = temp / "old"
+            # Mirror the exact extracted wheel layout: GitHub Actions receives
+            # absolute .exe paths rooted in RUNNER_TEMP, not a synthetic bin.
+            verified = temp / "cmake-4.3.4" / "cmake" / "data" / "bin"
+            old.mkdir()
+            verified.mkdir(parents=True)
+            log = temp / "argv.log"
+            argv_json_log = temp / "argv.jsonl"
+
+            def write_tool(directory, tool, label, version):
+                path = directory / (tool + ".exe")
+                path.write_text(
+                    "#!/bin/sh\n"
+                    "printf '%s\\t%s\\t%s\\n' " + repr(label) + " " + repr(tool) + " \"$*\" >> \"$SYNERGY_TOOL_LOG\"\n"
+                    "python3 -c 'import json, os, sys; open(os.environ[\"SYNERGY_TOOL_ARGV_JSON_LOG\"], \"a\", encoding=\"utf-8\").write(json.dumps({\"label\": sys.argv[1], \"tool\": sys.argv[2], \"argv\": sys.argv[3:]}) + \"\\n\")' "
+                    + repr(label) + " " + repr(tool) + " \"$@\"\n"
+                    "if [ \"$1\" = --version ]; then printf '%s\\n' " + repr(tool + " version " + version) + "; fi\n"
+                    "if [ " + repr(tool) + " = cmake ]; then\n"
+                    "  for arg in \"$@\"; do\n"
+                    "    if [ \"$arg\" = -Bbuild ]; then\n"
+                    "      mkdir -p build\n"
+                    "      if [ \"${SYNERGY_FIXTURE_NINJA_MODE:-verified}\" = stale-package ]; then\n"
+                    "        printf 'build CMakeFiles/package.util: CUSTOM_COMMAND all\\n  COMMAND = /old/cpack --config ./CPackConfig.cmake\\nbuild package: phony CMakeFiles/package.util\\n# unrelated=%s\\n' \"$SYNERGY_CI_CPACK\" > build/build.ninja\n"
+                    "      else\n"
+                    "        printf 'build CMakeFiles/package.util: CUSTOM_COMMAND all\\n  COMMAND = %s --config ./CPackConfig.cmake\\nbuild package: phony CMakeFiles/package.util\\n' \"$SYNERGY_CI_CPACK\" > build/build.ninja\n"
+                    "      fi\n"
+                    "    fi\n"
+                    "  done\n"
+                    "fi\n"
+                )
+                path.chmod(0o700)
+                # Git Bash resolves .exe names through PATH; the POSIX host
+                # running this fixture does not, so retain only this adapter
+                # for a deliberately selected old-PATH executable.
+                compatibility_name = directory / tool
+                if compatibility_name.exists() or compatibility_name.is_symlink():
+                    compatibility_name.unlink()
+                compatibility_name.symlink_to(path.name)
+                return path
+
+            for directory, label, version in ((old, "old", "3.31.6"), (verified, "verified", "4.3.4")):
+                write_tool(directory, "cmake", label, version)
+                write_tool(directory, "cpack", label, version)
+            verified_cmake = verified / "cmake.exe"
+            verified_cpack = verified / "cpack.exe"
+
+            controlled_configure = ("cmake -Bbuild -DCMAKE_BUILD_TYPE=Release -DSKIP_BUILD_TESTS=ON "
+                                   "-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON")
+            generic_vcpkg_config = (
+                r"-DCMAKE_TOOLCHAIN_FILE=D:\ci\workspace\vcpkg\scripts\buildsystems\vcpkg.cmake "
+                "-DVCPKG_TARGET_TRIPLET=x64-windows-release -DVCPKG_MANIFEST_MODE=OFF")
+            expected_vcpkg_argv = generic_vcpkg_config.split()
+            vcpkg_output = "${{ steps.get-deps.outputs.vcpkg-cmake-config }}"
+            vcpkg_binding = re.search(
+                r"^        env:\n(?:          [^\n]*\n)*?"
+                r"          SYNERGY_CI_VCPKG_CONFIG: ([^\n]+)$", configure, re.M)
+            vcpkg_binding_value = vcpkg_binding.group(1).strip() if vcpkg_binding else None
+            bound_vcpkg_config = (generic_vcpkg_config if vcpkg_binding_value == vcpkg_output else None)
+            replacements = {
+                "${{ env.CMAKE_CONFIGURE }}": controlled_configure,
+                vcpkg_output: generic_vcpkg_config,
+                "${{ env.SYNERGY_VERSION_RELEASE }}": "false",
+                "${{ env.SYNERGY_VERSION_SNAPSHOT }}": "false",
+                "${{ steps.get-deps.outputs.qt-notice-root }}": str(temp / "notices"),
+                "${{ steps.get-deps.outputs.qt-notice-sha256 }}": "fixture",
+            }
+
+            def fixture_script(source):
+                script = source
+                for expression, value in replacements.items():
+                    script = script.replace(expression, value)
+                if "${{" in script:
+                    raise RuntimeError("EXTRACTION: unresolved Windows fixture expression")
+                return script
+
+            bash = shutil.which("bash")
+            if not bash:
+                raise RuntimeError("ENVIRONMENT: bash required for Windows shell-fixture check")
+
+            def run_actual(source, cmake_path, cpack_path, ninja_mode="verified"):
+                env = dict(os.environ, PATH=str(old) + os.pathsep + os.environ.get("PATH", ""),
+                           CMAKE_CONFIGURE=controlled_configure, SYNERGY_CI_CPACK=str(cpack_path),
+                           SYNERGY_TOOL_LOG=str(log), GITHUB_ACTIONS="true", RUNNER_TEMP=str(temp),
+                           SYNERGY_FIXTURE_NINJA_MODE=ninja_mode,
+                           SYNERGY_TOOL_ARGV_JSON_LOG=str(argv_json_log))
+                if bound_vcpkg_config is not None:
+                    env["SYNERGY_CI_VCPKG_CONFIG"] = bound_vcpkg_config
+                else:
+                    env.pop("SYNERGY_CI_VCPKG_CONFIG", None)
+                if cmake_path is not None:
+                    env["SYNERGY_CI_CMAKE"] = str(cmake_path)
+                else:
+                    env.pop("SYNERGY_CI_CMAKE", None)
+                return subprocess.run([bash, "-o", "pipefail", "-c", fixture_script(source)], cwd=temp,
+                                      env=env, capture_output=True, text=True)
+
+            baseline_configure = run_actual(configure_source, verified_cmake, verified_cpack)
+            baseline_package = run_actual(package_source, verified_cmake, verified_cpack)
+            baseline_configure_argv = [
+                record["argv"]
+                for record in (json.loads(line) for line in argv_json_log.read_text().splitlines())
+                if record["label"] == "verified" and record["tool"] == "cmake"
+                and "-Bbuild" in record["argv"]
+            ]
+            missing_tool = run_actual(configure_source, None, verified_cpack)
+            wrong_path = run_actual(configure_source, temp / "missing-cmake.exe", verified_cpack)
+            stale_package_command = run_actual(configure_source, verified_cmake, verified_cpack, "stale-package")
+            # A wrong version must fail even at the valid expected wheel path;
+            # an outside-path rejection alone would not prove the version gate.
+            write_tool(verified, "cmake", "wrong-version", "3.31.6")
+            wrong_cmake_version = run_actual(configure_source, verified_cmake, verified_cpack)
+            write_tool(verified, "cmake", "verified", "4.3.4")
+            write_tool(verified, "cpack", "wrong-version", "3.31.6")
+            wrong_cpack_version = run_actual(package_source, verified_cmake, verified_cpack)
+            write_tool(verified, "cpack", "verified", "4.3.4")
+            calls = [line.split("\t", 2) for line in log.read_text().splitlines()]
+            problems = []
+            expected_cmake = temp / "cmake-4.3.4" / "cmake" / "data" / "bin" / "cmake.exe"
+            expected_cpack = temp / "cmake-4.3.4" / "cmake" / "data" / "bin" / "cpack.exe"
+            if verified_cmake != expected_cmake or verified_cpack != expected_cpack:
+                problems.append("fixture does not model the extracted absolute .exe pair")
+            for text, name in ((windows, "Windows job"), (configure_source, "Configure"),
+                               (package_source, "Package")):
+                for variable in ("SYNERGY_CI_CMAKE", "SYNERGY_CI_CPACK"):
+                    if variable not in text:
+                        problems.append(name + " does not select " + variable)
+            if "-DCMAKE_CPACK_COMMAND" in workflow:
+                problems.append("workflow overrides CMAKE_CPACK_COMMAND")
+            if not helper.is_file() or "SYNERGY_CI_CMAKE" not in helper.read_text(errors="replace"):
+                problems.append("package verifier does not select verified CMake")
+            if vcpkg_binding is None:
+                problems.append("Configure does not bind vcpkg flags as data")
+            elif vcpkg_binding_value != vcpkg_output:
+                problems.append("Configure does not bind the vcpkg action output")
+            if baseline_configure.returncode or baseline_package.returncode:
+                problems.append("verified baseline did not execute actual workflow source")
+            if any(label == "old" for label, _, _ in calls):
+                problems.append("actual workflow source selected old PATH tool")
+            configure_calls = [argv for label, tool, argv in calls if label == "verified" and tool == "cmake"
+                               and "-Bbuild" in argv.split()]
+            if not configure_calls or any(flag not in configure_calls[0] for flag in (
+                    "-DSKIP_BUILD_TESTS=ON", "-DSYNERGY_ENABLE_INTERACTIVE_TESTS=ON",
+                    "-DCMAKE_COMPILE_WARNING_AS_ERROR=ON")):
+                problems.append("verified Configure did not preserve controlled flags")
+            if len(baseline_configure_argv) != 1:
+                problems.append("fixture did not capture one baseline Configure argv")
+            else:
+                actual = baseline_configure_argv[0]
+                expected_start = actual.index(expected_vcpkg_argv[0]) if expected_vcpkg_argv[0] in actual else -1
+                if actual[expected_start:expected_start + len(expected_vcpkg_argv)] != expected_vcpkg_argv:
+                    problems.append("Configure did not preserve generic Windows vcpkg argv")
+            if not any(label == "verified" and tool == "cpack" and argv == "--version"
+                       for label, tool, argv in calls):
+                problems.append("Package did not invoke verified CPack version check")
+            for name, result in (("missing CMake", missing_tool), ("wrong CMake path", wrong_path),
+                                 ("wrong CMake version", wrong_cmake_version),
+                                 ("wrong CPack version", wrong_cpack_version),
+                                 ("stale package command with unrelated verified path", stale_package_command)):
+                if result.returncode == 0:
+                    problems.append(name + " did not fail closed through actual workflow source")
+            self.assertEqual(problems, [])
+
 
 class GitHubDeliverySuccessorContract(unittest.TestCase):
     def test_version_ignores_environment_and_cmake_cache_patch_overrides(self):
@@ -729,7 +915,9 @@ class GitHubDeliverySuccessorContract(unittest.TestCase):
                 with self.subTest(job=native, suite=suite):
                     self.assertIn(suite, text)
             build_steps = [block for block in steps(text)
-                           if "cmake --build" in block and "--target" in block]
+                           if ("cmake --build" in block
+                               or '"$SYNERGY_CI_CMAKE" --build' in block)
+                           and "--target" in block]
             build_commands = "\n".join(build_steps)
             for target in tuple(x for x in CRITICAL_SUITES if x != "R4VisualContractTests") + ("R4VisualProbe",):
                 with self.subTest(job=native, built_target=target):

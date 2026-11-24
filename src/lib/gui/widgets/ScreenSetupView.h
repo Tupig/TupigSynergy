@@ -11,6 +11,7 @@
 #include <QTableView>
 
 class QWidget;
+class QKeyEvent;
 class QMouseEvent;
 class QResizeEvent;
 class QDragEnterEvent;
@@ -29,6 +30,7 @@ private:
   void showScreenConfig(int col, int row);
 
 protected:
+  void keyPressEvent(QKeyEvent *) override;
   void mouseDoubleClickEvent(QMouseEvent *) override;
   void setTableSize();
   void resizeEvent(QResizeEvent *) override;

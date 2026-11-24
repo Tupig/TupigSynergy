@@ -31,17 +31,18 @@
 #include <QCommandLineParser>
 #include <QDebug>
 #include <QDesktopServices>
-#include <QElapsedTimer>
+#if !defined(Q_OS_MACOS)
 #include <QLocalSocket>
+#include <QSharedMemory>
+#endif
 #include <QMessageBox>
 #include <QPushButton>
-#include <QSharedMemory>
 #include <QTextStream>
-#include <QThread>
 #include <QTimer>
 #include <QUrl>
 
 #if defined(Q_OS_MACOS)
+#include "platform/macos/InstanceGuard.h"
 #include "platform/macos/OSXSDKHeaders.h"
 #include <cstdlib>
 #endif
@@ -58,7 +59,7 @@ using namespace synergy::gui;
 
 const static auto kHeader = QStringLiteral("%1: %2\n").arg(kAppName, kDisplayVersion);
 
-int main(int argc, char *argv[])
+static int runGui(int argc, char *argv[])
 {
 #if defined(Q_OS_UNIX) && defined(QT_DEBUG)
   // Fixes Fedora bug where qDebug() messages aren't printed.
@@ -143,10 +144,24 @@ int main(int argc, char *argv[])
     return s_exitSuccess;
   }
 
-  const auto shmId = synergy::runtime::runtimeInstanceKey(QStringLiteral("%1-gui").arg(kAppId));
+  const auto socketName = synergy::runtime::runtimeInstanceKey(QString::fromUtf8(kGuiSocketName));
+#if defined(Q_OS_MACOS)
+  using synergy::platform::macos::InstanceStatus;
+  auto instance = synergy::platform::macos::acquireGuiInstance(socketName);
+  if (instance.status == InstanceStatus::Duplicate)
+    return s_exitDuplicate;
+  if (instance.status != InstanceStatus::Primary) {
+    const auto message = instance.status == InstanceStatus::Busy
+                             ? QObject::tr("Another %1 instance is starting or unavailable.")
+                             : QObject::tr("%1 could not start.");
+    qCritical().noquote() << message.arg(kAppName) << QCoreApplication::translate("EngineLogMessages", instance.detail);
+    QMessageBox::critical(nullptr, kAppName, message.arg(kAppName));
+    return s_exitFailed;
+  }
+#else
   // Create a shared memory segment with a unique key
   // This is to prevent a new instance from running if one is already running
-  QSharedMemory sharedMemory(shmId);
+  QSharedMemory sharedMemory(socketName);
 
   // Attempt to attach first and detach in order to clean up stale shm chunks
   // This can happen if the previous instance was killed or crashed
@@ -157,7 +172,7 @@ int main(int argc, char *argv[])
   if (!sharedMemory.create(1)) {
     // Ping the running instance to have it show itself
     QLocalSocket socket;
-    socket.connectToServer(shmId, QLocalSocket::ReadOnly);
+    socket.connectToServer(socketName, QLocalSocket::ReadOnly);
     // A local-socket connect completes immediately or the peer is gone;
     // do not stall startup on the multi-second default timeout.
     if (!socket.waitForConnected(1000)) {
@@ -168,6 +183,7 @@ int main(int argc, char *argv[])
     socket.disconnectFromServer();
     return s_exitDuplicate;
   }
+#endif
 
 #ifdef SYNERGY_STARTUP_PROBE
   synergy::testing::startupProbePhase("instance-ready");
@@ -202,7 +218,11 @@ int main(int argc, char *argv[])
     diagnostic::clearSettings(false);
   }
 
-  MainWindow mainWindow(synergy::runtime::runtimeInstanceKey(QString::fromUtf8(kGuiSocketName)));
+#if defined(Q_OS_MACOS)
+  MainWindow mainWindow(socketName, std::move(instance.activationServer));
+#else
+  MainWindow mainWindow(socketName);
+#endif
   mainWindow.open();
 #ifdef SYNERGY_STARTUP_PROBE
   synergy::testing::startupProbePhase("mainwindow-ready");
@@ -221,6 +241,16 @@ int main(int argc, char *argv[])
   const int exitCode = QApplication::exec();
 #ifdef SYNERGY_STARTUP_PROBE
   synergy::testing::startupProbeFinished(exitCode);
+#endif
+  return exitCode;
+}
+
+int main(int argc, char *argv[])
+{
+  const int exitCode = runGui(argc, argv);
+#ifdef Q_OS_MACOS
+  if (exitCode == s_exitSuccess && !diagnostic::launchPendingRestart())
+    return s_exitFailed;
 #endif
   return exitCode;
 }

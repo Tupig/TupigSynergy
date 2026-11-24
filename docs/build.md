@@ -8,7 +8,7 @@
 
 ### Fixed-version GitHub delivery and translation maintenance
 
-`cmake/Version.cmake` is the committed version authority (currently 2.1.1), matching
+`cmake/Version.cmake` is the committed version authority, matching
 `vcpkg.json`. Environment variables and cached patch values cannot override it.
 PR builds retain the development suffix and manual snapshots retain the snapshot suffix.
 CI never computes a new patch or commits generated changes back to a source branch.
@@ -184,6 +184,14 @@ The following components are enabled by default:
 ```
 
 A bare `cmake -S` without the vcpkg toolchain from `CMakePresets.json` will not find Qt.
+
+Maximum-compression Windows packaging requires CPack 4.3 or newer; existing
+configure/build requirements remain unchanged. The package step records both
+`cmake --version` and `cpack --version`, fails closed for older CPack, requests
+7Z archive level 9, and passes WiX 5 `-dcl high`. Actual cabinet and archive
+properties remain package acceptance evidence.
+
+Windows CI pins the packaging toolchain to the verified CMake 4.3.4 Windows amd64 wheel in a runner-temporary directory and binds every Windows configure/build/package helper to its absolute paired paths; this avoids stale PATH or cached CPack selection. It does not install CMake globally or change the local build requirements.
 
 ---
 
@@ -502,9 +510,15 @@ Run package checks with `scripts\ci\verify-package-windows.bat build <x64-or-arm
 
 ## 中文
 
+Windows 最高压缩打包要求 CPack 4.3 或更高版本；现有配置与构建要求保持不变。
+打包前记录 `cmake --version` 与 `cpack --version`，旧 CPack 明确失败关闭，7Z 请求 level 9，
+并向 WiX 5 传递 `-dcl high`；实际 cabinet 与归档属性仍以包验收证据为准。
+
+Windows CI 将已核验的 CMake 4.3.4 Windows amd64 wheel 解包到 runner 临时目录，并将 Windows 配置/构建/打包 helper 绑定到配对的绝对路径，避免 PATH 或缓存选择旧 CPack；不全局安装 CMake，也不改变本机现有配置与构建要求。
+
 ### 固定版本GitHub交付与翻译维护
 
-`cmake/Version.cmake` 是已提交版本的唯一来源（当前2.1.1），须与 `vcpkg.json` 一致。
+`cmake/Version.cmake` 是已提交版本的唯一来源，须与 `vcpkg.json` 一致。
 环境变量及缓存补丁号不能覆盖它。PR保留开发版后缀，手动snapshot保留快照后缀；CI不再推算
 补丁号，也不把生成改动提交回源分支。
 

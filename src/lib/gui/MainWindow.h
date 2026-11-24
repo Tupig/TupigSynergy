@@ -9,11 +9,13 @@
 
 #pragma once
 
+#include <QLocalServer>
 #include <QMainWindow>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSystemTrayIcon>
 #include <QTimer>
+#include <memory>
 
 #include "common/Constants.h"
 #include "config/ServerConfig.h"
@@ -27,7 +29,6 @@
 
 class QAction;
 class QMenu;
-class QLocalServer;
 
 class LogPanel;
 class PageHost;
@@ -64,7 +65,10 @@ public:
   };
 
 public:
-  explicit MainWindow(const QString &instanceSocketName = QString::fromUtf8(kGuiSocketName));
+  explicit MainWindow(
+      const QString &instanceSocketName = QString::fromUtf8(kGuiSocketName),
+      std::unique_ptr<QLocalServer> activationServer = {}
+  );
   ~MainWindow() override;
 
   [[nodiscard]] CoreMode coreMode() const

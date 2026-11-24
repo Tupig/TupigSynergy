@@ -10,6 +10,7 @@
 #include "common/RuntimeContext.h"
 #include "common/Settings.h"
 #include "common/UrlConstants.h"
+#include "gui/Diagnostic.h"
 #include "gui/MainWindow.h"
 #include "gui/widgets/PageHost.h"
 #include "synergy/gui/SettingsMigration.h"
@@ -17,17 +18,21 @@
 #include <QApplication>
 #include <QCryptographicHash>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QEvent>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLocalServer>
 #include <QMessageBox>
 #include <QPointer>
 #include <QProcess>
+#include <QSaveFile>
 #include <QSettings>
 #include <QTemporaryDir>
+#include <QThread>
 #include <QTimer>
 #include <QUuid>
 #include <memory>
@@ -36,9 +41,15 @@ namespace synergy::testing {
 namespace {
 QString root;
 QString fixture;
+QString receiptName = QStringLiteral("receipt.json");
 QJsonObject receipt;
 QJsonArray phases;
 std::unique_ptr<QTemporaryDir> nativeDirectory;
+#if defined(Q_OS_MACOS) && !defined(SYNERGY_R4_VISUAL_PROBE)
+QString instanceProbeRole;
+qint64 restartParentPid = 0;
+bool restartSawOldGuard = false;
+#endif
 QString extraFile()
 {
   return Settings::userDir() + "/" + kAppName + ".extra.conf";
@@ -46,9 +57,11 @@ QString extraFile()
 void writeReceipt()
 {
   receipt["phases"] = phases;
-  QFile file(root + "/receipt.json");
-  if (file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+  QSaveFile file(root + QLatin1Char('/') + receiptName);
+  if (file.open(QIODevice::WriteOnly)) {
     file.write(QJsonDocument(receipt).toJson(QJsonDocument::Indented));
+    file.commit();
+  }
 }
 class NoticeObserver : public QObject
 {
@@ -60,6 +73,32 @@ protected:
     auto *message = qobject_cast<QMessageBox *>(object);
     if (!message)
       return false;
+#if defined(Q_OS_MACOS) && !defined(SYNERGY_R4_VISUAL_PROBE)
+    if (!instanceProbeRole.isEmpty() && message->standardButtons() == QMessageBox::Ok &&
+        (message->windowTitle() == kAppName || message->windowTitle().isEmpty())) {
+      QString diagnostic;
+      if (message->icon() == QMessageBox::Information &&
+          message->text() == QObject::tr("%1 is already running").arg(kAppName)) {
+        diagnostic = "legacy-duplicate";
+      } else if (message->icon() == QMessageBox::Critical &&
+                 message->text() == QObject::tr("Another %1 instance is starting or unavailable.").arg(kAppName)) {
+        diagnostic = "busy";
+      } else if (message->icon() == QMessageBox::Critical &&
+                 message->text() == QObject::tr("%1 could not start.").arg(kAppName)) {
+        diagnostic = "startup-failure";
+      }
+      if (!diagnostic.isEmpty()) {
+        receipt["ownedStartupDiagnostic"] = diagnostic;
+        writeReceipt();
+        QPointer<QMessageBox> guarded(message);
+        QTimer::singleShot(0, message, [guarded] {
+          if (guarded)
+            guarded->reject();
+        });
+        return false;
+      }
+    }
+#endif
     // C-UI-R3-STARTUP-NOTICE-R2: macOS may omit QMessageBox titles. Match the
     // complete owned migration notice, its expected icon and sole Ok action;
     // never approve any permission/trust/other message with a broad substring.
@@ -110,14 +149,39 @@ bool configureStartupProbe(const QStringList &arguments)
     nativeDirectory->setAutoRemove(false);
     root = nativeDirectory->path();
   }
-  root = QFileInfo(root).canonicalFilePath();
+  const QFileInfo requestedRoot(root);
+  root = requestedRoot.canonicalFilePath();
   if (fixture != "fresh" && fixture != "current" && fixture != "legacy")
     return false;
+#if defined(Q_OS_MACOS) && !defined(SYNERGY_R4_VISUAL_PROBE)
+  instanceProbeRole = qEnvironmentVariable("SYNERGY_R3_PROBE_INSTANCE_ROLE");
+  if (!instanceProbeRole.isEmpty()) {
+    const QStringList roles{"primary", "contender", "restart", "verify"};
+    if (!roles.contains(instanceProbeRole) || fixture != "current" || requestedRoot.isSymLink())
+      return false;
+    receiptName = instanceProbeRole + QStringLiteral(".json");
+  }
+#endif
   QString error;
   const auto identity =
       qEnvironmentVariable("SYNERGY_R3_PROBE_KEY", "tsr3-" + QUuid::createUuid().toString(QUuid::WithoutBraces));
   if (!runtime::configureIsolatedRuntime({root, identity}, &error))
     return false;
+#if defined(Q_OS_MACOS) && !defined(SYNERGY_R4_VISUAL_PROBE)
+  if (instanceProbeRole == "restart") {
+    QFile ticket(root + "/restart-ticket");
+    if (ticket.exists()) {
+      if (QFileInfo(ticket).isSymLink() || !ticket.open(QIODevice::ReadOnly))
+        return false;
+      restartParentPid = ticket.readAll().toLongLong();
+      if (restartParentPid <= 0)
+        return false;
+      instanceProbeRole = "restart-successor";
+      receiptName = QStringLiteral("restart-successor.json");
+      restartSawOldGuard = QFileInfo::exists(root + "/gui.lock") || QFileInfo::exists(QDir::temp().filePath(identity));
+    }
+  }
+#endif
   for (const auto &path : {"user", "system", "state", "legacy", "logs"})
     if (!QDir().mkpath(root + "/" + path))
       return false;
@@ -161,6 +225,13 @@ bool configureStartupProbe(const QStringList &arguments)
       {"backend", "temporary INI; actual migration algorithm"},
       {"byteIdenticalDeliveredExecutable", false}
   };
+#if defined(Q_OS_MACOS) && !defined(SYNERGY_R4_VISUAL_PROBE)
+  if (instanceProbeRole == "restart-successor") {
+    receipt["successorPid"] = QCoreApplication::applicationPid();
+    receipt["parentPid"] = restartParentPid;
+    receipt["restartSawOldGuard"] = restartSawOldGuard;
+  }
+#endif
   startupProbePhase("context-ready");
   return true;
 }
@@ -174,6 +245,15 @@ void startupProbeApplicationReady(QApplication *application)
   auto *observer = new NoticeObserver;
   observer->setParent(application);
   application->installEventFilter(observer);
+#if defined(Q_OS_MACOS) && !defined(SYNERGY_R4_VISUAL_PROBE)
+  if (instanceProbeRole == "restart-successor") {
+    QTimer::singleShot(12000, application, [] {
+      receipt["restartFixtureTimedOut"] = true;
+      writeReceipt();
+      QApplication::exit(93);
+    });
+  }
+#endif
 }
 bool afterStartupProbePreInit()
 {
@@ -232,6 +312,62 @@ void startupProbeWindowReady(MainWindow *window)
     return;
 #endif
     const bool automated = qEnvironmentVariableIsSet("SYNERGY_R3_PROBE_AUTOMATED");
+#if defined(Q_OS_MACOS) && !defined(SYNERGY_R4_VISUAL_PROBE)
+    if (instanceProbeRole == "restart") {
+      const QFileInfo settings(Settings::settingsFile());
+      const QFileInfo tls(Settings::tlsDir());
+      if (runtime::runtimeRoot() != root || settings.isSymLink() || tls.isSymLink() ||
+          QFileInfo(settings.absolutePath()).canonicalFilePath() != root + QStringLiteral("/user")) {
+        QApplication::exit(92);
+        return;
+      }
+      // Keep the outgoing fixture at its last event-loop phase long enough
+      // to expose an early launch without delaying any delivered application.
+      QObject::connect(qApp, &QCoreApplication::aboutToQuit, guarded, [] {
+        QElapsedTimer elapsed;
+        elapsed.start();
+        while (!QFileInfo::exists(root + "/restart-successor.json") && elapsed.elapsed() < 1500)
+          QThread::msleep(20);
+        receipt["successorSeenBeforeTeardown"] = QFileInfo::exists(root + "/restart-successor.json");
+        writeReceipt();
+      });
+      QFile ticket(root + "/restart-ticket");
+      if (!ticket.open(QIODevice::WriteOnly | QIODevice::NewOnly)) {
+        QApplication::exit(92);
+        return;
+      }
+      ticket.write(QByteArray::number(QCoreApplication::applicationPid()));
+      ticket.close();
+      gui::diagnostic::clearSettings(true);
+      return;
+    }
+    if (instanceProbeRole == "primary" || instanceProbeRole == "contender") {
+      if (auto *server = guarded->findChild<QLocalServer *>(); server && server->isListening()) {
+        receipt["activationSocket"] = server->fullServerName();
+        QObject::connect(server, &QLocalServer::newConnection, guarded, [guarded, server] {
+          receipt["activationDeliveries"] = receipt.value("activationDeliveries").toInt() + 1;
+          receipt["activationWindowVisible"] = guarded->isVisible();
+          receipt["activationQueueDrained"] = !server->hasPendingConnections();
+          writeReceipt();
+        });
+        if (QFileInfo::exists(root + "/hide-primary")) {
+          guarded->setVisible(false);
+          receipt["hiddenBeforeActivation"] = !guarded->isVisible();
+        }
+        writeReceipt();
+      }
+      auto *quit = new QTimer(guarded);
+      QObject::connect(quit, &QTimer::timeout, guarded, [guarded] {
+        if (QFileInfo::exists(root + "/quit-primary"))
+          guarded->close();
+      });
+      quit->start(20);
+      // The test controls normal close through its private marker. Bound the
+      // lifetime even if its originating process dies or an assertion fails.
+      QTimer::singleShot(12000, guarded, [] { QApplication::exit(91); });
+      return;
+    }
+#endif
     QTimer::singleShot(automated ? 10 : 120000, guarded, [guarded] {
       if (guarded)
         guarded->close();
