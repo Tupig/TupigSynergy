@@ -250,6 +250,19 @@ void capture(QWidget &root, const QString &name)
   ));
 }
 
+void placeFullScreenCapFixtureAtScreenTop(MainWindow &window)
+{
+  auto *screen = window.screen();
+  QVERIFY(screen);
+  const int width = window.width();
+  const QPoint position(window.frameGeometry().left(), screen->availableGeometry().top());
+  window.move(position);
+  QVERIFY(settleStaticRender(window));
+  QTRY_COMPARE_WITH_TIMEOUT(window.frameGeometry().topLeft(), position, 1000);
+  QCOMPARE(window.screen(), screen);
+  QCOMPARE(window.width(), width);
+}
+
 void verifyEmbeddedFooter(MainWindow &window, QWidget *bottom, QWidget *actions, const QString &detail)
 {
   auto *pages = window.findChild<QStackedWidget *>("pageStack");
@@ -1187,19 +1200,29 @@ private Q_SLOTS:
       return;
     const int longHeight = window.frameGeometry().height();
 
-    const QPoint ordinary(top.x(), available.top() + (available.height() - longHeight) / 2);
-    QVERIFY2(ordinary.y() > top.y(), "Fixture needs space for an ordinary position as a positive control");
+    const QSize longFrameSize(frameWidth, longHeight);
+    const int centeredY = available.top() + (available.height() - longHeight) / 2;
+    QPoint ordinary(top.x(), qMax(top.y() + 1, centeredY));
+    const bool verticalControl = available.contains(QRect(ordinary, longFrameSize));
+    if (!verticalControl) {
+      const int left = available.left() + inset;
+      ordinary = QPoint(left == top.x() ? top.x() + 1 : left, top.y());
+    }
+    QVERIFY(ordinary != top && available.contains(QRect(ordinary, longFrameSize)));
+    qInfo() << (verticalControl ? "Vertical position control"
+                                : "Horizontal position control; vertical ordinary unavailable")
+            << "top" << top << "second position" << ordinary << "measured long frame size" << longFrameSize;
     selectTab(shortTab);
     window.move(ordinary);
     settle(area);
-    checkFrame("ordinary short", ordinary, area);
+    checkFrame("second position short", ordinary, area);
     if (QTest::currentTestFailed())
       return;
     QCOMPARE(window.frameGeometry().height(), shortHeight);
     selectTab(longTab);
     if (QTest::currentTestFailed())
       return;
-    revealLongFooter("ordinary long", ordinary, false);
+    revealLongFooter("second position long", ordinary, false);
     if (QTest::currentTestFailed())
       return;
     scrollPage(Qt::Key_PageUp, 0);
@@ -1271,6 +1294,9 @@ private Q_SLOTS:
   {
     ControlledHttp server;
     IsolatedWindow window(server, m_width);
+    placeFullScreenCapFixtureAtScreenTop(window);
+    if (QTest::currentTestFailed())
+      return;
     window.serverConfig().addClient("Delete-Fixture");
     auto *open = window.findChild<QPushButton *>("btnConfigureServer");
     auto *back = window.findChild<QPushButton *>("btnBack");
@@ -1713,6 +1739,9 @@ private Q_SLOTS:
   {
     ControlledHttp server;
     IsolatedWindow window(server, m_width);
+    placeFullScreenCapFixtureAtScreenTop(window);
+    if (QTest::currentTestFailed())
+      return;
     auto *pages = window.findChild<QStackedWidget *>("pageStack");
     auto *aboutButton = window.findChild<QPushButton *>("btnAboutShortcut");
     auto *back = window.findChild<QPushButton *>("btnBack");
