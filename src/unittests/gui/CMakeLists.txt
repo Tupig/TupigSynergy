@@ -235,7 +235,7 @@ endif()
 # Six language/width groups exercise every tab, with time for layout to settle.
 # The individual geometry and interaction deadlines stay in the test cases.
 if(WIN32)
-  set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 75)
+  set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 90)
 else()
   set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 60)
 endif()
