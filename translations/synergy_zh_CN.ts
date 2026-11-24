@@ -946,8 +946,8 @@ Do you want to connect to the server?
         <translation>收起日志</translation>
     </message>
     <message>
-        <source>Latest 6 · wrapped</source>
-        <translation>最新 6 条 · 自动换行</translation>
+        <source>Latest %1 · wrapped</source>
+        <translation>最新 %1 条 · 自动换行</translation>
     </message>
     <message>
         <source>Running</source>

@@ -20,13 +20,15 @@ class LogWidget : public QWidget
 {
   Q_OBJECT
 public:
+  static constexpr int kDefaultVisibleRecords = 3;
+
   explicit LogWidget(QWidget *parent = nullptr);
   void appendLine(const QString &msg);
   void findNext(const QString &text);
   void findPrevious(const QString &text);
   void scrollToBottom() const;
 
-  /// 展开时最多显示六条记录；空态不预留高度。
+  /// 设置视窗的记录数；空态不预留高度。
   void setVisibleLines(int lines);
   /// Canonical keys: "" / "info" / "warn" / "error"; keeps retained history.
   void setLevelFilter(const QString &level);
@@ -64,7 +66,7 @@ private:
   std::array<int, 3> m_counts{0, 0, 0};
   QString m_filter;
   QString m_latestLine;
-  int m_visibleLines = 6;
+  int m_visibleLines = kDefaultVisibleRecords;
   int m_messageColumnWidth = 1;
   mutable bool m_followTail = true;
   bool m_adjustingContents = false;
