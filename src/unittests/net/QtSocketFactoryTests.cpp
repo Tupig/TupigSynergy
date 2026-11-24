@@ -24,7 +24,10 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
+#include <QHostAddress>
 #include <QSslCertificate>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include <QTimer>
 
 // End-to-end coverage for the Qt network adapters: real loopback sockets,
@@ -179,6 +182,57 @@ void QtSocketFactoryTests::plaintextRoundTrip()
   QCOMPARE(response, std::string("pong"));
 }
 
+void QtSocketFactoryTests::refusedConnectionReportsOnce_data()
+{
+  QTest::addColumn<bool>("tls");
+  QTest::newRow("plaintext") << false;
+  QTest::newRow("tls") << true;
+}
+
+void QtSocketFactoryTests::refusedConnectionReportsOnce()
+{
+  QFETCH(bool, tls);
+
+  QTcpServer endpoint;
+  QVERIFY(endpoint.listen(QHostAddress::LocalHost, 0));
+  const auto port = endpoint.serverPort();
+  endpoint.close();
+
+  // Check that the loopback endpoint actually refuses TCP and capture the
+  // platform's error text independently of the adapter under test.
+  QTcpSocket probe;
+  probe.connectToHost(QHostAddress::LocalHost, port);
+  QVERIFY(!probe.waitForConnected(2000));
+  QCOMPARE(probe.error(), QAbstractSocket::ConnectionRefusedError);
+
+  QtSocketFactory factory(m_events, testTlsConfig(m_certPath));
+  const auto security = tls ? SecurityLevel::PeerAuth : SecurityLevel::PlainText;
+  auto client = factory.create(IArchNetwork::AddressFamily::INet, security);
+  const auto target = client->getEventTarget();
+  int failures = 0;
+  int streamEvents = 0;
+  QString failureReason;
+  m_events->addHandler(EventTypes::DataSocketConnectionFailed, target, [&](const auto &e) {
+    ++failures;
+    const auto *info = static_cast<const IDataSocket::ConnectionFailedInfo *>(e.getData());
+    if (info != nullptr) {
+      failureReason = QString::fromStdString(info->m_what);
+    }
+  });
+  m_events->addHandler(EventTypes::Unknown, target, [&](const auto &) { ++streamEvents; });
+
+  client->connect(NetworkAddress("127.0.0.1", port));
+  QVERIFY(pump([&] { return failures > 0; }, 2000));
+  QVERIFY2(failureReason.contains(probe.errorString()), qPrintable(failureReason));
+  QVERIFY(!client->isFatal());
+
+  client->close();
+  m_events->addEvent(Event(EventTypes::Quit));
+  m_events->loop();
+  QCOMPARE(failures, 1);
+  QCOMPARE(streamEvents, 0);
+}
+
 void QtSocketFactoryTests::tlsRejectsUntrustedServer()
 {
   QtSocketFactory factory(m_events, testTlsConfig(m_certPath));
@@ -320,13 +374,13 @@ void QtSocketFactoryTests::tlsRejectsSmallRsaKey()
 
   auto client = factory.create(IArchNetwork::AddressFamily::INet, SecurityLevel::EncryptedTestOnly);
   bool clientConnected = false;
-  bool connectFailed = false;
+  int failures = 0;
   QString failureReason;
   m_events->addHandler(synergy::EventTypes::DataSocketSecureConnected, client->getEventTarget(), [&](const auto &) {
     clientConnected = true;
   });
   m_events->addHandler(synergy::EventTypes::DataSocketConnectionFailed, client->getEventTarget(), [&](const auto &e) {
-    connectFailed = true;
+    ++failures;
     if (const auto *info = static_cast<IDataSocket::ConnectionFailedInfo *>(e.getData()); info != nullptr) {
       failureReason = QString::fromStdString(info->m_what);
     }
@@ -334,15 +388,15 @@ void QtSocketFactoryTests::tlsRejectsSmallRsaKey()
 
   client->connect(NetworkAddress("127.0.0.1", port));
 
-  QVERIFY(pump([&] { return connectFailed || clientConnected; }, 20000));
-  QVERIFY(connectFailed);
+  QVERIFY(pump([&] { return failures > 0 || clientConnected; }, 20000));
+  m_events->addEvent(Event(EventTypes::Quit));
+  m_events->loop();
+  QCOMPARE(failures, 1);
   QVERIFY(!clientConnected);
-  // On OpenSSL 3 with the system security level, a 1024-bit key is refused
-  // before the handshake, so accept either message; what matters is that the
-  // weak key never connects.
+  // OpenSSL may reject the weak key before the adapter checks its size.
+  // The backend can report the specific error or only the context failure.
   QVERIFY2(
-      failureReason.contains(QStringLiteral("RSA key too small")) ||
-          failureReason.contains(QStringLiteral("SSL Context")),
+      failureReason.contains(QStringLiteral("key too small")) || failureReason.contains(QStringLiteral("SSL Context")),
       qPrintable(failureReason)
   );
 }

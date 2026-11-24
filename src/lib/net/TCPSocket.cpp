@@ -20,6 +20,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 
 //
 // TCPSocket
@@ -426,10 +427,8 @@ ISocketMultiplexerJob *TCPSocket::newJob()
 
 void TCPSocket::sendConnectionFailedEvent(const char *msg)
 {
-  auto *info = new ConnectionFailedInfo(msg);
-  m_events->addEvent(
-      Event(EventTypes::DataSocketConnectionFailed, getEventTarget(), info, Event::EventFlags::DontFreeData)
-  );
+  auto info = std::make_unique<ConnectionFailedInfo>(msg);
+  m_events->addEvent(Event(EventTypes::DataSocketConnectionFailed, getEventTarget(), std::move(info)));
 }
 
 void TCPSocket::sendEvent(EventTypes type)

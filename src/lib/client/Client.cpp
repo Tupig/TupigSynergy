@@ -584,14 +584,13 @@ void Client::handleConnected()
 
 void Client::handleConnectionFailed(const Event &event)
 {
-  auto *info = static_cast<IDataSocket::ConnectionFailedInfo *>(event.getData());
+  const auto *info = static_cast<const IDataSocket::ConnectionFailedInfo *>(event.getData());
 
   cleanupTimer();
   cleanupConnecting();
   cleanupStream();
   LOG_VERBOSE("connection failed");
   sendConnectionFailedEvent(info->m_what.c_str());
-  delete info;
 }
 
 void Client::handleConnectTimeout()
