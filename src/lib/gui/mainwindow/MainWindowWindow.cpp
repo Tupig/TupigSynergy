@@ -108,10 +108,14 @@ void MainWindow::fitToCurrentPage()
   ui->updateShortcutPresentation(width());
   const int preferred = m_pageHost->preferredContentHeight(m_pageHost->width());
   const auto *currentScreen = screen() ? screen() : QGuiApplication::primaryScreen();
-  const int available = currentScreen ? currentScreen->availableGeometry().height() : 800;
   const int frame = qMax(0, frameGeometry().height() - height());
   const int menuHeight = menuBar()->isNativeMenuBar() ? 0 : menuBar()->sizeHint().height();
   const int chrome = ui->pageBar->height() + ui->statusBar->height() + menuHeight;
+  int available = 800;
+  if (currentScreen) {
+    const QRect workArea = currentScreen->availableGeometry();
+    available = workArea.bottom() + 1 - qMax(workArea.top(), frameGeometry().top());
+  }
   const int bodyCap = qMax(1, qMin(660, available - chrome - frame));
   const int fittedHeight = chrome + qMin(preferred, bodyCap);
   const int defaultHeight = Ui::MainWindow::kWindowHeight;

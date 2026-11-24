@@ -250,6 +250,19 @@ void capture(QWidget &root, const QString &name)
   ));
 }
 
+void placeFullScreenCapFixtureAtScreenTop(MainWindow &window)
+{
+  auto *screen = window.screen();
+  QVERIFY(screen);
+  const int width = window.width();
+  const QPoint position(window.frameGeometry().left(), screen->availableGeometry().top());
+  window.move(position);
+  QVERIFY(settleStaticRender(window));
+  QTRY_COMPARE_WITH_TIMEOUT(window.frameGeometry().topLeft(), position, 1000);
+  QCOMPARE(window.screen(), screen);
+  QCOMPARE(window.width(), width);
+}
+
 void verifyEmbeddedFooter(MainWindow &window, QWidget *bottom, QWidget *actions, const QString &detail)
 {
   auto *pages = window.findChild<QStackedWidget *>("pageStack");
@@ -1028,10 +1041,262 @@ private Q_SLOTS:
     }
     window.close();
   }
+  void sharingTabFitsBelowCurrentWindowPosition()
+  {
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width, true);
+    QVERIFY2(QTest::qWaitForWindowExposed(&window), "Fixture window was not exposed");
+    auto *screen = window.screen();
+    QVERIFY(screen);
+    const QRect available = screen->availableGeometry();
+    constexpr int inset = 4;
+    const bool useNarrowFixture = QGuiApplication::platformName() == "offscreen" && m_width == 820 &&
+                                  window.frameGeometry().width() + 2 * inset > available.width();
+    const int width = useNarrowFixture ? 600 : m_width;
+    if (useNarrowFixture)
+      window.resize(width, window.height());
+    QTRY_COMPARE(window.width(), width);
+    const int frameWidth = window.frameGeometry().width();
+    QVERIFY2(frameWidth + 2 * inset <= available.width(), "Fixture width does not fit the work area");
+    auto *open = window.findChild<QPushButton *>("btnConfigureServer");
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    auto *status = window.findChild<StatusBar *>("statusBar");
+    QVERIFY(open && pages && status);
+    auto *home = qobject_cast<QScrollArea *>(pages->currentWidget());
+    QVERIFY(home);
+
+    const auto globalRect = [](QWidget *widget) { return QRect(widget->mapToGlobal(QPoint()), widget->size()); };
+    const auto settle = [&](QScrollArea *page) {
+      QVERIFY(settleStaticRender(window));
+      QList<QRect> previous;
+      QElapsedTimer stable;
+      const auto geometryStable = [&] {
+        const QList<QRect> current{window.frameGeometry(), globalRect(status), globalRect(page->viewport())};
+        if (!stable.isValid() || current != previous) {
+          previous = current;
+          stable.start();
+        }
+        return stable.elapsed() >= 50;
+      };
+      QTRY_VERIFY_WITH_TIMEOUT(geometryStable(), 1000);
+    };
+    const auto checkFrame = [&](const char *phase, const QPoint &position, QScrollArea *page) {
+      const QRect frame = window.frameGeometry();
+      const QRect statusRect = globalRect(status);
+      qInfo() << phase << QGuiApplication::platformName() << I18N::currentLanguage() << "width" << width << "available"
+              << available << "expected position" << position << "frame" << frame << "viewport"
+              << globalRect(page->viewport()) << "status" << statusRect << "scroll"
+              << page->verticalScrollBar()->value() << "of" << page->verticalScrollBar()->maximum();
+      QCOMPARE(window.screen(), screen);
+      QCOMPARE(screen->availableGeometry(), available);
+      QCOMPARE(window.width(), width);
+      QCOMPARE(frame.width(), frameWidth);
+      QVERIFY2(frame.topLeft() == position, "Content fitting moved the window");
+      QVERIFY2(available.contains(frame), "Content fitting placed the window frame outside the work area");
+      QVERIFY(status->isVisibleTo(&window) && !statusRect.isEmpty());
+      QVERIFY(available.contains(statusRect) && frame.contains(statusRect));
+    };
+
+    const QPoint top(available.left() + (available.width() - frameWidth) / 2, available.top() + inset);
+    window.move(top);
+    settle(home);
+    if (QTest::currentTestFailed())
+      return;
+    checkFrame("top home", top, home);
+    if (QTest::currentTestFailed())
+      return;
+    const int homeHeight = window.frameGeometry().height();
+    const int homeMinimumFrameHeight = window.minimumHeight() + homeHeight - window.height();
+    QVERIFY(open->isVisibleTo(&window) && globalRect(home->viewport()).contains(globalRect(open)));
+    QTest::mouseClick(open, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 1);
+    auto *area = qobject_cast<QScrollArea *>(pages->currentWidget());
+    QVERIFY(area && area->widget());
+    auto *editor = qobject_cast<ServerConfigDialog *>(area->property("pageEditor").value<QDialog *>());
+    QVERIFY(editor);
+    auto *tabs = editor->findChild<QTabWidget *>("tabWidget");
+    auto *shortTab = editor->findChild<QWidget *>("tabConfigFile");
+    auto *longTab = editor->findChild<QWidget *>("tabAdvanced");
+    auto *buttons = editor->findChild<QDialogButtonBox *>("buttonBox");
+    QVERIFY(tabs && shortTab && longTab && buttons);
+    auto *ok = buttons->button(QDialogButtonBox::Ok);
+    auto *cancel = buttons->button(QDialogButtonBox::Cancel);
+    QVERIFY(ok && cancel);
+    auto *scroll = area->verticalScrollBar();
+
+    const auto selectTab = [&](QWidget *tab) {
+      auto *bar = tabs->tabBar();
+      const int index = tabs->indexOf(tab);
+      QVERIFY(index >= 0 && bar->isVisibleTo(&window));
+      const QPoint click = bar->tabRect(index).center();
+      QVERIFY(bar->rect().contains(click));
+      QVERIFY(globalRect(area->viewport()).intersected(available).contains(bar->mapToGlobal(click)));
+      QTest::mouseClick(bar, Qt::LeftButton, Qt::NoModifier, click);
+      QTRY_COMPARE(tabs->currentWidget(), tab);
+      QVERIFY(pages->currentWidget() == area);
+      settle(area);
+    };
+    const auto scrollPage = [&](Qt::Key key, int end) {
+      area->setFocus();
+      QCOMPARE(window.focusWidget(), area);
+      while (scroll->value() != end) {
+        const int before = scroll->value();
+        QTest::keyClick(area, key);
+        QVERIFY(qAbs(scroll->value() - end) < qAbs(before - end));
+      }
+    };
+    const auto checkFooter = [&] {
+      const QRect viewport = globalRect(area->viewport()).intersected(available);
+      const QRect okRect = globalRect(ok);
+      const QRect cancelRect = globalRect(cancel);
+      qInfo() << "footer" << "visible viewport" << viewport << "OK" << okRect << "Cancel" << cancelRect;
+      QVERIFY(ok->isVisibleTo(&window) && cancel->isVisibleTo(&window));
+      QVERIFY(!okRect.isEmpty() && viewport.contains(okRect));
+      QVERIFY(!cancelRect.isEmpty() && viewport.contains(cancelRect));
+      const auto *card = qobject_cast<QGroupBox *>(buttons->parentWidget());
+      QVERIFY(card && tabs->currentWidget()->isAncestorOf(card));
+      const int gap = globalRect(status).top() - card->mapToGlobal(QPoint()).y() - card->height();
+      QVERIFY2(qAbs(gap - 10) <= 2, qPrintable(QStringLiteral("Editor footer gap: %1 px").arg(gap)));
+      QCOMPARE(area->horizontalScrollBar()->maximum(), 0);
+    };
+    const auto revealLongFooter = [&](const char *phase, const QPoint &position, bool requiresScroll) {
+      checkFrame(phase, position, area);
+      if (QTest::currentTestFailed())
+        return;
+      QCOMPARE(area->horizontalScrollBar()->maximum(), 0);
+      if (requiresScroll) {
+        QVERIFY2(scroll->maximum() > 0, "The capped editor must scroll its outer workspace");
+        QVERIFY(area->widget()->height() > area->viewport()->height());
+      }
+      if (scroll->maximum() > 0) {
+        QVERIFY(scroll->value() < scroll->maximum());
+        scrollPage(Qt::Key_PageDown, scroll->maximum());
+        if (QTest::currentTestFailed())
+          return;
+        settle(area);
+        QCOMPARE(scroll->value(), scroll->maximum());
+      }
+      checkFooter();
+      checkFrame(phase, position, area);
+    };
+
+    settle(area);
+    selectTab(shortTab);
+    checkFrame("top short", top, area);
+    checkFooter();
+    if (QTest::currentTestFailed())
+      return;
+    const int shortHeight = window.frameGeometry().height();
+    const int shortScrollRange = scroll->maximum();
+    const int shortScrollValue = scroll->value();
+    selectTab(longTab);
+    if (QTest::currentTestFailed())
+      return;
+    revealLongFooter("top long", top, false);
+    if (QTest::currentTestFailed())
+      return;
+    scrollPage(Qt::Key_PageUp, 0);
+    if (QTest::currentTestFailed())
+      return;
+    const int longHeight = window.frameGeometry().height();
+
+    const QSize longFrameSize(frameWidth, longHeight);
+    const int centeredY = available.top() + (available.height() - longHeight) / 2;
+    QPoint ordinary(top.x(), qMax(top.y() + 1, centeredY));
+    const bool verticalControl = available.contains(QRect(ordinary, longFrameSize));
+    if (!verticalControl) {
+      const int left = available.left() + inset;
+      ordinary = QPoint(left == top.x() ? top.x() + 1 : left, top.y());
+    }
+    QVERIFY(ordinary != top && available.contains(QRect(ordinary, longFrameSize)));
+    qInfo() << (verticalControl ? "Vertical position control"
+                                : "Horizontal position control; vertical ordinary unavailable")
+            << "top" << top << "second position" << ordinary << "measured long frame size" << longFrameSize;
+    selectTab(shortTab);
+    window.move(ordinary);
+    settle(area);
+    checkFrame("second position short", ordinary, area);
+    if (QTest::currentTestFailed())
+      return;
+    QCOMPARE(window.frameGeometry().height(), shortHeight);
+    selectTab(longTab);
+    if (QTest::currentTestFailed())
+      return;
+    revealLongFooter("second position long", ordinary, false);
+    if (QTest::currentTestFailed())
+      return;
+    scrollPage(Qt::Key_PageUp, 0);
+    if (QTest::currentTestFailed())
+      return;
+    QCOMPARE(window.frameGeometry().height(), longHeight);
+
+    selectTab(shortTab);
+    if (QTest::currentTestFailed())
+      return;
+    const int decorations = window.frameGeometry().height() - window.height();
+    const int lowerBound = qMax(qMax(shortHeight, homeHeight), qMax(390 + decorations, homeMinimumFrameHeight));
+    QVERIFY2(longHeight - lowerBound > 2 * inset, "Fixture has no distinct short and tall window heights");
+    const int budget = lowerBound + (longHeight - lowerBound) / 2;
+    const QPoint low(top.x(), available.bottom() + 1 - budget);
+    window.move(low);
+    settle(area);
+    checkFrame("low short precondition", low, area);
+    if (QTest::currentTestFailed())
+      return;
+    QCOMPARE(window.frameGeometry().height(), shortHeight);
+    const int remaining = available.bottom() + 1 - window.frameGeometry().top();
+    qInfo() << "low precondition" << "remaining" << remaining << "minimum" << lowerBound << "short" << shortHeight
+            << "long" << longHeight;
+    QVERIFY(remaining >= lowerBound + inset && remaining <= longHeight - inset);
+
+    selectTab(longTab);
+    if (QTest::currentTestFailed())
+      return;
+    revealLongFooter("low long", low, true);
+    if (QTest::currentTestFailed())
+      return;
+    const bool originalDoubleTap = window.serverConfig().hasSwitchDoubleTap();
+    auto *doubleTap = longTab->findChild<QCheckBox *>("cbSwitchDoubleTap");
+    QVERIFY(doubleTap && doubleTap->isVisibleTo(&window) && doubleTap->isEnabled());
+    QCOMPARE(doubleTap->isChecked(), originalDoubleTap);
+    QStyleOptionButton option;
+    option.initFrom(doubleTap);
+    const QRect indicator = doubleTap->style()->subElementRect(QStyle::SE_CheckBoxIndicator, &option, doubleTap);
+    QVERIFY(!indicator.isEmpty());
+    QVERIFY(globalRect(area->viewport()).intersected(available).contains(doubleTap->mapToGlobal(indicator.center())));
+    QTest::mouseClick(doubleTap, Qt::LeftButton, Qt::NoModifier, indicator.center());
+    QCOMPARE(doubleTap->isChecked(), !originalDoubleTap);
+    QVERIFY(ok->isEnabled());
+    scrollPage(Qt::Key_PageUp, 0);
+    if (QTest::currentTestFailed())
+      return;
+    selectTab(shortTab);
+    checkFrame("low short restored", low, area);
+    QCOMPARE(window.frameGeometry().height(), shortHeight);
+    QCOMPARE(scroll->maximum(), shortScrollRange);
+    QCOMPARE(scroll->value(), shortScrollValue);
+    checkFooter();
+    if (QTest::currentTestFailed())
+      return;
+
+    QSignalSpy finished(editor, &QDialog::finished);
+    QVERIFY(cancel->isEnabled());
+    QTest::mouseClick(cancel, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 0);
+    QCOMPARE(finished.count(), 1);
+    QCOMPARE(finished.at(0).at(0).toInt(), int(QDialog::Rejected));
+    QCOMPARE(window.serverConfig().hasSwitchDoubleTap(), originalDoubleTap);
+    settle(home);
+    checkFrame("low home restored", low, home);
+    QCOMPARE(window.frameGeometry().height(), homeHeight);
+  }
   void selectedScreenDeletionIsDraftAndPrimaryProtected()
   {
     ControlledHttp server;
     IsolatedWindow window(server, m_width);
+    placeFullScreenCapFixtureAtScreenTop(window);
+    if (QTest::currentTestFailed())
+      return;
     window.serverConfig().addClient("Delete-Fixture");
     auto *open = window.findChild<QPushButton *>("btnConfigureServer");
     auto *back = window.findChild<QPushButton *>("btnBack");
@@ -1474,6 +1739,9 @@ private Q_SLOTS:
   {
     ControlledHttp server;
     IsolatedWindow window(server, m_width);
+    placeFullScreenCapFixtureAtScreenTop(window);
+    if (QTest::currentTestFailed())
+      return;
     auto *pages = window.findChild<QStackedWidget *>("pageStack");
     auto *aboutButton = window.findChild<QPushButton *>("btnAboutShortcut");
     auto *back = window.findChild<QPushButton *>("btnBack");
