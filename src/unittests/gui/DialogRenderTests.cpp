@@ -40,6 +40,7 @@
 #include <QTemporaryDir>
 #include <QTextBlock>
 #include <QTextEdit>
+#include <QTextFragment>
 #include <QtTest>
 
 namespace {
@@ -145,6 +146,10 @@ void DialogRenderTests::formatsReleaseNotes()
   QVERIFY(!notes->toPlainText().contains(QStringLiteral("Built-From:")));
   QCOMPARE(notes->document()->firstBlock().text(), QStringLiteral("更新内容"));
   QCOMPARE(notes->document()->firstBlock().blockFormat().headingLevel(), 2);
+  const auto heading = notes->document()->firstBlock().begin().fragment().charFormat();
+  const auto body = notes->document()->firstBlock().next().begin().fragment().charFormat();
+  QCOMPARE(heading.intProperty(QTextFormat::FontSizeAdjustment), body.intProperty(QTextFormat::FontSizeAdjustment));
+  QVERIFY(heading.fontWeight() > body.fontWeight());
   QVERIFY(notes->document()->find(QStringLiteral("保留应用目录")).currentList() != nullptr);
   QVERIFY(notes->document()->find(QStringLiteral("校验失败时恢复旧版")).currentList() != nullptr);
   QVERIFY(!notes->toPlainText().contains(QStringLiteral("https://github.com/")));

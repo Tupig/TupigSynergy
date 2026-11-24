@@ -584,8 +584,8 @@ void NativeDesignTests::mainShellUsesCompactCards()
         window, QStringLiteral("main-%1-%2-%3-expanded-fit")
                     .arg(language, dark ? "dark" : "light", server ? "server" : "client")
     );
-    // A second render fixture matches the reference's five short rows plus one
-    // wrapped row. The all-long stress assertions and captures above remain.
+    // Keep six records with a wrapped latest entry to verify viewport sizing
+    // independently of retained history.
     records->clear();
     for (int index = 0; index < 5; ++index) {
       ui.logPanel->appendLine(QStringLiteral("[00:00:0%1] INFO: %2")
@@ -600,10 +600,12 @@ void NativeDesignTests::mainShellUsesCompactCards()
         QStringLiteral("[00:00:05] INFO: %1")
             .arg(
                 language == QStringLiteral("zh_CN")
-                    ? QStringLiteral("较长的测试记录：自动换行保留全部内容，使用合成数据验证六条记录与统计页脚的显示。")
+                    ? QStringLiteral(
+                          "较长的测试记录：自动换行保留全部内容，使用合成数据验证三条可见记录与统计页脚的显示。"
+                      )
                     : QStringLiteral(
                           "Long render fixture: complete diagnostics wrap within the message column, preserving the "
-                          "six-record view and its footer."
+                          "three-record view and its footer."
                       )
             )
     );
@@ -617,6 +619,15 @@ void NativeDesignTests::mainShellUsesCompactCards()
     QTRY_VERIFY_WITH_TIMEOUT(ui.logPanel->height() >= ui.logPanel->minimumSizeHint().height(), 3000);
     QTRY_VERIFY_WITH_TIMEOUT(ui.logPanel->height() >= records->height() + 52, 3000);
     QVERIFY(table->viewport()->rect().contains(table->visualItemRect(table->item(5, 2))));
+    int recentHeight = 0;
+    for (int row = 3; row < 6; ++row)
+      recentHeight += table->rowHeight(row);
+    QTRY_VERIFY(qAbs(table->viewport()->height() - recentHeight) <= 2);
+    QVERIFY(table->verticalScrollBar()->maximum() > 0);
+    QCOMPARE(
+        footer->text(), language == QStringLiteral("zh_CN") ? QStringLiteral("最新 3 条 · 自动换行")
+                                                            : QStringLiteral("Latest 3 · wrapped")
+    );
     capture(
         window,
         QStringLiteral("main-%1-%2-%3-reference").arg(language, dark ? "dark" : "light", server ? "server" : "client")

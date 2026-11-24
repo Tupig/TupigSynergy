@@ -26,6 +26,8 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QTextBlock>
+#include <QTextCursor>
 #include <QTextDocument>
 #include <QTextEdit>
 #include <QTextOption>
@@ -68,6 +70,21 @@ public:
     auto features = QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub);
     features.setFlag(QTextDocument::MarkdownNoHTML);
     document()->setMarkdown(notes, features);
+    // Markdown headings retain their structure and weight, but use the same
+    // type size as the rest of the compact update panel.
+    QTextCursor cursor(document());
+    cursor.beginEditBlock();
+    for (auto block = document()->begin(); block.isValid(); block = block.next()) {
+      if (block.blockFormat().headingLevel() == 0)
+        continue;
+      cursor.setPosition(block.position());
+      cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+      QTextCharFormat bodySize;
+      bodySize.setProperty(QTextFormat::FontSizeAdjustment, 0);
+      cursor.mergeCharFormat(bodySize);
+    }
+    cursor.endEditBlock();
+    moveCursor(QTextCursor::Start);
 #else
     setPlainText(notes);
 #endif

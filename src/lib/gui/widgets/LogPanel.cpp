@@ -139,7 +139,7 @@ LogPanel::LogPanel(QWidget *parent) : QFrame(parent)
   m_stats = new QLabel(foot);
   m_stats->setObjectName(QStringLiteral("logStats"));
   m_stats->setTextFormat(Qt::RichText);
-  m_hint = new QLabel(tr("Latest 6 · wrapped"), foot);
+  m_hint = new QLabel(tr("Latest %1 · wrapped").arg(LogWidget::kDefaultVisibleRecords), foot);
   m_hint->setObjectName(QStringLiteral("logHint"));
   footLayout->addWidget(m_stats);
   footLayout->addStretch(1);
@@ -235,7 +235,7 @@ void LogPanel::changeEvent(QEvent *e)
 void LogPanel::updateText()
 {
   m_title->setText(tr("Log"));
-  m_hint->setText(tr("Latest 6 · wrapped"));
+  m_hint->setText(tr("Latest %1 · wrapped").arg(LogWidget::kDefaultVisibleRecords));
   m_badge->setText(tr("Log"));
   m_btnCopy->setToolTip(tr("Copy Log"));
   m_btnClear->setToolTip(tr("Clear Log"));
