@@ -22,10 +22,10 @@ private Q_SLOTS:
   void helloWithWrongTokenRejected();
   void helloWithWrongVersionReportsMismatch();
   void validHelloAcceptsCommands();
+  void listenerAddressNotificationsRequireAuthenticatedHello();
   void oversizedMessageDisconnects();
 
 private:
   Log m_log;
-  QString m_testDir;
   QString m_serverName;
 };

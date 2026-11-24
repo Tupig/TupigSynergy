@@ -105,6 +105,7 @@ private:
   void coreProcessError(CoreProcess::Error error);
   void coreConnectionStateChanged(ConnectionState state);
   void coreProcessStateChanged(ProcessState state);
+  void serverBindAddressChanged(const QString &address);
 
   void trayIconActivated(QSystemTrayIcon::ActivationReason reason);
   void serverConnectionConfigureClient(const QString &clientName);
@@ -232,9 +233,5 @@ private:
 
   // Network monitoring
   NetworkMonitor *m_networkMonitor = nullptr;
-  QString m_currentIpAddress;
-
-  // Server IP strategy optimization
-  QStringList m_serverStartIPs;
-  QString m_serverStartSuggestedIP;
+  QString m_serverBindAddress;
 };

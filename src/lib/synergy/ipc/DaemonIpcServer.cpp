@@ -10,6 +10,7 @@
 #include "common/Constants.h"
 
 #include <QLocalSocket>
+#include <QUuid>
 
 namespace synergy::core::ipc {
 
@@ -29,13 +30,39 @@ void DaemonIpcServer::processCommand(QLocalSocket *clientSocket, const QString &
     processLogLevel(clientSocket, parts);
   } else if (command == QStringLiteral("configFile")) {
     processConfigFile(clientSocket, parts);
-  } else if (command == QStringLiteral("start")) {
-    LOG_DEBUG("daemon ipc server got start message");
-    Q_EMIT startProcessRequested();
-    writeToClientSocket(clientSocket, kAckMessage);
-  } else if (command == QStringLiteral("stop")) {
-    LOG_DEBUG("daemon ipc server got stop message");
-    Q_EMIT stopProcessRequested();
+  } else if (command == QStringLiteral("start") || command == QStringLiteral("stop")) {
+    const bool starting = command == QStringLiteral("start");
+    QString launchId;
+    QString configFile;
+    if (parts.size() == 2) {
+      const auto args = parts.at(1);
+      const auto separator = args.indexOf(QLatin1Char(' '));
+      if (starting && (separator < 0 || separator + 1 == args.size())) {
+        writeToClientSocket(clientSocket, kErrorMessage);
+        return;
+      }
+      launchId = starting ? args.left(separator) : args;
+      if (starting)
+        configFile = args.mid(separator + 1);
+      const QUuid id(launchId);
+      if (id.isNull() || id.toString(QUuid::WithoutBraces) != launchId) {
+        writeToClientSocket(clientSocket, kErrorMessage);
+        return;
+      }
+    }
+    if (starting) {
+      if (!configFile.isEmpty())
+        Q_EMIT configFileChanged(configFile);
+      Q_EMIT startRequested(launchId);
+    } else {
+      Q_EMIT stopRequested(launchId);
+      if (!launchId.isEmpty()) {
+        // Receipt means the daemon applied the stop request or had already
+        // replaced it. The watchdog still owns the actual process shutdown.
+        writeToClientSocket(clientSocket, QStringLiteral("stopAccepted=%1").arg(launchId));
+        return;
+      }
+    }
     writeToClientSocket(clientSocket, kAckMessage);
   } else if (command == QStringLiteral("logPath")) {
     LOG_DEBUG("daemon ipc server got log path request");

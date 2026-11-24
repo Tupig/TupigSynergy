@@ -382,6 +382,37 @@ private Q_SLOTS:
     QTRY_COMPARE(window.width(), 500);
     QVERIFY(window.height() >= 390);
   }
+  void serverLabelKeepsTheExplicitAddressWhenTheNetworkChanges()
+  {
+    const auto configured = QStringLiteral("192.0.2.2");
+    Settings::setValue(Settings::Core::Interface, configured);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *monitor = window.findChild<synergy::gui::NetworkMonitor *>();
+    auto *label = window.findChild<QLabel *>("lblIpAddresses");
+    QVERIFY(monitor && label);
+
+    monitor->setIpAddresses({QStringLiteral("192.0.2.20")});
+    QCOMPARE(label->text(), QCoreApplication::translate("MainWindow", "Local IP") + QStringLiteral("  ") + configured);
+    QCOMPARE(Settings::value(Settings::Core::Interface).toString(), configured);
+  }
+  void automaticServerLabelFollowsCandidatesWithoutSavingAnAddress()
+  {
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *monitor = window.findChild<synergy::gui::NetworkMonitor *>();
+    auto *label = window.findChild<QLabel *>("lblIpAddresses");
+    QVERIFY(monitor && label);
+
+    const auto prefix = QCoreApplication::translate("MainWindow", "Local IP") + QStringLiteral("  ");
+    monitor->setIpAddresses({QStringLiteral("192.0.2.10")});
+    QCOMPARE(label->text(), prefix + QStringLiteral("192.0.2.10"));
+    monitor->setIpAddresses({QStringLiteral("192.0.2.11")});
+    QCOMPARE(label->text(), prefix + QStringLiteral("192.0.2.11"));
+    monitor->setIpAddresses({});
+    QCOMPARE(label->text(), prefix + QStringLiteral("127.0.0.1"));
+    QVERIFY(Settings::value(Settings::Core::Interface).toString().isEmpty());
+  }
   void pageShortcutReceivesFocusOnTab()
   {
     ControlledHttp server;

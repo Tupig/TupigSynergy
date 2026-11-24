@@ -57,10 +57,11 @@ static const auto kLocalSocketError = &QLocalSocket::errorOccurred;
 static const auto kLocalSocketError = qOverload<QLocalSocket::LocalSocketError>(&QLocalSocket::error);
 #endif
 
-IpcServer::IpcServer(QObject *parent, const QString &serverName, const QString &typeName)
+IpcServer::IpcServer(QObject *parent, const QString &serverName, const QString &typeName, const QString &launchId)
     : QObject(parent),
       m_server{new QLocalServer(this)}, // NOSONAR - Qt memory
       m_serverName(serverName),
+      m_launchId(launchId),
       m_typeName(typeName.toUtf8())
 {
   // do nothing
@@ -237,7 +238,8 @@ void IpcServer::processMessage(QLocalSocket *clientSocket, const QString &messag
 
     LOG_DEBUG("%s ipc server sending hello back", m_typeName.constData());
     m_authenticated.insert(clientSocket);
-    writeToClientSocket(clientSocket, QStringLiteral("hello=%1").arg(versionId));
+    const auto hello = QStringLiteral("hello=%1").arg(versionId);
+    writeToClientSocket(clientSocket, m_launchId.isEmpty() ? hello : hello + ' ' + m_launchId);
 
     // Replay messages that were queued before any clients connected.
     LOG_VERBOSE("ipc server replaying %d pending messages", m_pendingMessages.size());
@@ -246,6 +248,7 @@ void IpcServer::processMessage(QLocalSocket *clientSocket, const QString &messag
       writeToClientSocket(clientSocket, pending);
     }
     m_pendingMessages.clear();
+    clientAuthenticated(clientSocket);
   } else if (!m_authenticated.contains(clientSocket)) {
     LOG_WARN("%s ipc command before hello: %s", m_typeName.constData(), command.toUtf8().constData());
     writeToClientSocket(clientSocket, QStringLiteral("error=hello required"));
@@ -284,6 +287,18 @@ void IpcServer::broadcastCommand(const QString &command, const QString &args)
   for (auto *client : std::as_const(m_clients)) {
     writeToClientSocket(client, message);
     client->flush();
+  }
+}
+
+void IpcServer::broadcastToAuthenticatedClients(const QString &message)
+{
+  const auto authenticated = m_authenticated;
+  for (auto *client : authenticated) {
+    if (!m_authenticated.contains(client))
+      continue;
+    writeToClientSocket(client, message);
+    if (m_authenticated.contains(client))
+      client->flush();
   }
 }
 

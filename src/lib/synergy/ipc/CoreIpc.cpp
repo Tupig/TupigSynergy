@@ -26,3 +26,11 @@ void ipcSendConnectionState(synergy::core::ConnectionState state)
   const auto metaEnum = QMetaEnum::fromType<synergy::core::ConnectionState>();
   ipcSendToClient(QStringLiteral("connectionState"), metaEnum.valueToKey(static_cast<int>(state)));
 }
+
+void ipcSendServerBindAddress(const QString &address)
+{
+  auto &server = synergy::core::ipc::CoreIpcServer::instance();
+  QMetaObject::invokeMethod(
+      &server, [&server, address] { server.setServerBindAddress(address); }, Qt::QueuedConnection
+  );
+}

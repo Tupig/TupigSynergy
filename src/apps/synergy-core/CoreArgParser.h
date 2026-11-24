@@ -34,6 +34,7 @@ public:
   bool serverMode() const;
   bool clientMode() const;
   bool singleInstanceOnly() const;
+  QString serviceLaunchId() const;
 
 private:
   QCommandLineParser m_parser;

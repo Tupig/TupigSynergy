@@ -7,6 +7,7 @@
 #pragma once
 
 #include <QObject>
+#include <QTimer>
 
 class QLocalSocket;
 
@@ -27,10 +28,12 @@ class IpcClient : public QObject
 
 public:
   explicit IpcClient(
-      QObject *parent, const QString &socketName, const QString &typeName, const QString &serverExecutable
+      QObject *parent, const QString &socketName, const QString &typeName, const QString &serverExecutable,
+      const QString &launchId = {}
   );
   void connectToServer();
   void disconnectFromServer();
+  void flushPendingWrites();
 
   bool isConnected() const
   {
@@ -44,6 +47,7 @@ Q_SIGNALS:
   void versionMismatch();
 
 private Q_SLOTS:
+  void handleConnected();
   void handleDisconnected();
   void handleErrorOccurred();
   void handleReadyRead();
@@ -69,6 +73,9 @@ private:
   int m_retryCount{0};
   QString m_typeName;
   QString m_serverExecutable;
+  const QString m_launchId;
+  QTimer m_retryTimer;
+  QTimer m_handshakeTimer;
 };
 
 } // namespace synergy::gui::ipc

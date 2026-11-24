@@ -34,19 +34,14 @@ void DaemonIpcClient::sendLogLevel(const QString &logLevel)
   sendMessage(QStringLiteral("logLevel=%1").arg(logLevel));
 }
 
-void DaemonIpcClient::sendConfigFile(const QString &configFile)
+void DaemonIpcClient::sendStartProcess(const QString &launchId, const QString &configFile)
 {
-  sendMessage(QStringLiteral("configFile=%1").arg(configFile));
+  sendMessage(QStringLiteral("start=%1 %2").arg(launchId, configFile));
 }
 
-void DaemonIpcClient::sendStartProcess()
+void DaemonIpcClient::sendStopProcess(const QString &launchId)
 {
-  sendMessage(QStringLiteral("start"));
-}
-
-void DaemonIpcClient::sendStopProcess()
-{
-  sendMessage(QStringLiteral("stop"));
+  sendMessage(QStringLiteral("stop=%1").arg(launchId));
 }
 
 void DaemonIpcClient::sendClearSettings()
@@ -61,8 +56,13 @@ void DaemonIpcClient::requestLogPath()
 
 void DaemonIpcClient::processCommand(const QString &command, const QStringList &parts)
 {
-  if (command == QStringLiteral("logPath") && parts.size() == 2) {
+  if (parts.size() != 2) {
+    return;
+  }
+  if (command == QStringLiteral("logPath")) {
     Q_EMIT logPathReceived(parts.at(1));
+  } else if (command == QStringLiteral("stopAccepted")) {
+    Q_EMIT stopAccepted(parts.at(1));
   }
 }
 

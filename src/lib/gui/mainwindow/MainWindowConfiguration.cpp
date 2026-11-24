@@ -133,7 +133,9 @@ void MainWindow::coreModeToggled(bool checked)
 
   qDebug() << QStringLiteral("change mode to: %1").arg(QVariant::fromValue(mode).toString());
 
-  if (m_coreProcess.isStarted() && m_coreProcess.mode() != mode)
+  const auto state = m_coreProcess.processState();
+  if (m_coreProcess.mode() != mode &&
+      (state == ProcessState::Starting || state == ProcessState::Started || state == ProcessState::RetryPending))
     m_coreProcess.stop();
   m_coreProcess.setMode(mode);
 
@@ -230,11 +232,6 @@ void MainWindow::applyConfig()
 
   updateLocalFingerprint();
   setTrayIcon();
-
-  if (const auto ip = Settings::value(Settings::Core::Interface).toString(); !ip.isEmpty()) {
-    m_serverStartIPs = QStringList{ip};
-    m_serverStartSuggestedIP = ip;
-  }
 
   coreModeToggled(true);
 }

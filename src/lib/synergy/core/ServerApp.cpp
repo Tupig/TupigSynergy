@@ -16,6 +16,7 @@
 #include "base/IEventQueue.h"
 #include "base/Log.h"
 #include "common/ExitCodes.h"
+#include "common/NetworkInterfaces.h"
 #include "common/PlatformInfo.h"
 #include "common/Settings.h"
 #include "ipc/CoreIpc.h"
@@ -32,6 +33,7 @@
 
 // must be before screen header includes
 #include <QFileInfo>
+#include <QHostAddress>
 
 #if defined(Q_OS_WIN)
 #include "MSWindowsScreen.h"
@@ -65,17 +67,21 @@ ServerApp::ServerApp(IEventQueue *events, const QString &processName) : App(even
 
 void ServerApp::parseArgs()
 {
-  if (const auto address = Settings::value(Settings::Core::Interface).toString(); !address.isEmpty()) {
-    *m_synergyAddress = NetworkAddress(address.toStdString(), Settings::value(Settings::Core::Port).toInt());
-  } else {
-    // No interface selected: bind every network interface so LAN clients can
-    // connect out of the box.  Say so explicitly - this is an exposure surface.
-    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "core/interface is not set: listening on all network interfaces"));
-    *m_synergyAddress = NetworkAddress(Settings::value(Settings::Core::Port).toInt());
-  }
+  const auto configured = Settings::value(Settings::Core::Interface).toString();
+  if (configured.isEmpty())
+    return;
 
   try {
-    m_synergyAddress->resolve();
+    NetworkAddress address(configured.toStdString(), Settings::value(Settings::Core::Port).toInt());
+    address.resolve();
+    const auto hostname = QString::fromStdString(address.getHostname());
+    if (!hostname.isEmpty() && QHostAddress(hostname).isNull()) {
+      // Both socket backends must bind the resolved host, including when an
+      // explicit interface was configured by name in the settings file.
+      address = NetworkAddress(ARCH->addrToString(address.getAddress()), address.getPort());
+      address.resolve();
+    }
+    *m_synergyAddress = address;
   } catch (SocketAddressException &e) {
     LOG_CRIT("%s: %s" BYE, qPrintable(processName()), e.what(), qPrintable(processName()));
     bye(s_exitArgs);
@@ -208,6 +214,7 @@ void ServerApp::stopServer()
     m_server = nullptr;
     m_listener = nullptr;
     m_serverState = Initialized;
+    ipcSendServerBindAddress({});
   } else if (m_serverState == Starting) {
     stopRetryTimer();
     m_serverState = Initialized;
@@ -371,12 +378,18 @@ bool ServerApp::startServer()
 
   ClientListener *listener = nullptr;
   try {
-    listener = openClientListener(m_config->getSynergyAddress());
+    const auto address = listenerAddress();
+    listener = openClientListener(address);
+    m_config->setSynergyAddress(address);
     m_server = openServer(*m_config, m_primaryClient);
     listener->setServer(m_server);
     m_server->setListener(listener);
     m_listener = listener;
     LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "server started successfully, waiting for clients"));
+    const auto hostname = QString::fromStdString(address.getHostname());
+    const auto boundAddress = hostname.isEmpty() ? QString::fromStdString(ARCH->addrToString(address.getAddress()))
+                                                 : QHostAddress(hostname).toString();
+    ipcSendServerBindAddress(boundAddress);
     ipcSendConnectionState(synergy::core::ConnectionState::Listening);
     m_serverState = Started;
     return true;
@@ -458,7 +471,7 @@ ClientListener *ServerApp::openClientListener(const NetworkAddress &address)
     securityLevel = PeerAuth;
   }
 
-  auto *listen = new ClientListener(getAddress(address), getSocketFactory(), getEvents(), securityLevel);
+  auto *listen = new ClientListener(address, getSocketFactory(), getEvents(), securityLevel);
 
   getEvents()->addHandler(EventTypes::ClientListenerAccepted, listen, [this, listen](const auto &e) {
     handleClientConnected(e, listen);
@@ -502,8 +515,17 @@ std::unique_ptr<ISocketFactory> ServerApp::getSocketFactory() const
   return std::make_unique<QtSocketFactory>(getEvents(), tls);
 }
 
-NetworkAddress ServerApp::getAddress(const NetworkAddress &address) const
+NetworkAddress ServerApp::listenerAddress() const
 {
+  if (m_synergyAddress->isValid())
+    return *m_synergyAddress;
+
+  const auto available = synergy::network::availableAddresses();
+  const auto selected = synergy::network::selectServerBindAddress({}, available);
+  if (available.isEmpty())
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "No active LAN address. The server will bind to loopback only."));
+  NetworkAddress address(selected.toStdString(), Settings::value(Settings::Core::Port).toInt());
+  address.resolve();
   return address;
 }
 
@@ -517,15 +539,6 @@ int ServerApp::mainLoop()
   // as the default
   if (m_config->begin() == m_config->end()) {
     m_config->addScreen(m_name);
-  }
-
-  // set the contact address, if provided, in the config.
-  // otherwise, if the config doesn't have an address, use
-  // the default.
-  if (m_synergyAddress->isValid()) {
-    m_config->setSynergyAddress(*m_synergyAddress);
-  } else if (!m_config->getSynergyAddress().isValid()) {
-    m_config->setSynergyAddress(NetworkAddress(kDefaultPort));
   }
 
   // canonicalize the primary screen name
