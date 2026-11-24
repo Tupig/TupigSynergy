@@ -14,6 +14,7 @@
 #include "net/IDataSocket.h"
 #include "net/IListenSocket.h"
 #include "net/NetworkAddress.h"
+#include "net/QtNetworkTransport.h"
 #include "net/QtSocketFactory.h"
 #include "net/SecureUtils.h"
 #include "net/TlsConfig.h"
@@ -179,6 +180,52 @@ void QtSocketFactoryTests::plaintextRoundTrip()
   QCOMPARE(response, std::string("pong"));
 }
 
+void QtSocketFactoryTests::refusedConnectionReportsOnce_data()
+{
+  QTest::addColumn<bool>("tls");
+  QTest::newRow("plaintext") << false;
+  QTest::newRow("tls") << true;
+}
+
+void QtSocketFactoryTests::refusedConnectionReportsOnce()
+{
+  QFETCH(bool, tls);
+
+  QtSocketFactory factory(m_events, testTlsConfig(m_certPath));
+  const auto security = tls ? SecurityLevel::PeerAuth : SecurityLevel::PlainText;
+  auto client = factory.create(IArchNetwork::AddressFamily::INet, security);
+  auto *qtClient = dynamic_cast<QtDataSocket *>(client.get());
+  QVERIFY(qtClient != nullptr);
+  auto &transport = *qtClient->m_transport;
+  const auto target = client->getEventTarget();
+  int failures = 0;
+  int streamEvents = 0;
+  QString failureReason;
+  m_events->addHandler(EventTypes::DataSocketConnectionFailed, target, [&](const auto &e) {
+    ++failures;
+    const auto *info = static_cast<const IDataSocket::ConnectionFailedInfo *>(e.getData());
+    if (info != nullptr) {
+      failureReason = QString::fromStdString(info->m_what);
+    }
+  });
+  m_events->addHandler(EventTypes::Unknown, target, [&](const auto &) { ++streamEvents; });
+
+  // Inject the transport result because a closed port may time out instead
+  // of refusing the connection on some hosts.
+  const auto refusal = QStringLiteral("Connection refused by test endpoint");
+  Q_EMIT transport.transportError(refusal, false);
+  Q_EMIT transport.transportError(QStringLiteral("Later connection error"), false);
+  Q_EMIT transport.transportDisconnected();
+  client->close();
+  m_events->addEvent(Event(EventTypes::Quit));
+  m_events->loop();
+
+  QCOMPARE(failures, 1);
+  QCOMPARE(failureReason, refusal);
+  QCOMPARE(streamEvents, 0);
+  QVERIFY(!client->isFatal());
+}
+
 void QtSocketFactoryTests::tlsRejectsUntrustedServer()
 {
   QtSocketFactory factory(m_events, testTlsConfig(m_certPath));
@@ -320,13 +367,13 @@ void QtSocketFactoryTests::tlsRejectsSmallRsaKey()
 
   auto client = factory.create(IArchNetwork::AddressFamily::INet, SecurityLevel::EncryptedTestOnly);
   bool clientConnected = false;
-  bool connectFailed = false;
+  int failures = 0;
   QString failureReason;
   m_events->addHandler(synergy::EventTypes::DataSocketSecureConnected, client->getEventTarget(), [&](const auto &) {
     clientConnected = true;
   });
   m_events->addHandler(synergy::EventTypes::DataSocketConnectionFailed, client->getEventTarget(), [&](const auto &e) {
-    connectFailed = true;
+    ++failures;
     if (const auto *info = static_cast<IDataSocket::ConnectionFailedInfo *>(e.getData()); info != nullptr) {
       failureReason = QString::fromStdString(info->m_what);
     }
@@ -334,15 +381,15 @@ void QtSocketFactoryTests::tlsRejectsSmallRsaKey()
 
   client->connect(NetworkAddress("127.0.0.1", port));
 
-  QVERIFY(pump([&] { return connectFailed || clientConnected; }, 20000));
-  QVERIFY(connectFailed);
+  QVERIFY(pump([&] { return failures > 0 || clientConnected; }, 20000));
+  m_events->addEvent(Event(EventTypes::Quit));
+  m_events->loop();
+  QCOMPARE(failures, 1);
   QVERIFY(!clientConnected);
-  // On OpenSSL 3 with the system security level, a 1024-bit key is refused
-  // before the handshake, so accept either message; what matters is that the
-  // weak key never connects.
+  // OpenSSL may reject the weak key before the adapter checks its size.
+  // The backend can report the specific error or only the context failure.
   QVERIFY2(
-      failureReason.contains(QStringLiteral("RSA key too small")) ||
-          failureReason.contains(QStringLiteral("SSL Context")),
+      failureReason.contains(QStringLiteral("key too small")) || failureReason.contains(QStringLiteral("SSL Context")),
       qPrintable(failureReason)
   );
 }

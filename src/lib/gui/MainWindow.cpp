@@ -338,7 +338,7 @@ void MainWindow::connectSlots()
   connect(m_actionQuit, &QAction::triggered, this, &MainWindow::close);
   connect(m_actionRestore, &QAction::triggered, this, &MainWindow::showAndActivate);
   connect(m_actionSettings, &QAction::triggered, this, &MainWindow::openSettings);
-  connect(m_actionStartCore, &QAction::triggered, this, &MainWindow::startCore);
+  connect(m_actionStartCore, &QAction::triggered, this, [this] { startCore(CoreStartSource::Manual); });
   connect(m_actionRestartCore, &QAction::triggered, this, &MainWindow::resetCore);
   connect(m_actionStopCore, &QAction::triggered, this, &MainWindow::stopCore);
 
@@ -480,6 +480,7 @@ void MainWindow::resetCore()
   }
 #endif
 
+  clearDeclinedPeerFingerprints();
   m_coreProcess.restart();
 }
 
@@ -562,7 +563,7 @@ void MainWindow::open()
     }
     if (ui->rbModeClient->isChecked() && ui->lineHostname->text().isEmpty())
       return;
-    startCore();
+    startCore(CoreStartSource::Automatic);
   }
 }
 

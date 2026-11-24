@@ -104,6 +104,9 @@ void QtDataSocket::bind(const NetworkAddress &)
 
 void QtDataSocket::close()
 {
+  if (!m_serverSide && !m_resolved) {
+    m_disconnected = true;
+  }
   if (m_transport) {
     m_transport->close();
   }
@@ -175,6 +178,9 @@ uint32_t QtDataSocket::getSize() const
 
 void QtDataSocket::handleConnected()
 {
+  if (!m_serverSide && m_disconnected) {
+    return;
+  }
   if (!wantsTls()) {
     m_resolved = true;
     sendEvent(synergy::EventTypes::DataSocketConnected);
@@ -231,7 +237,7 @@ void QtDataSocket::handleConnected()
 
 void QtDataSocket::handleDisconnected()
 {
-  if (m_disconnected) {
+  if (m_disconnected || (!m_serverSide && !m_resolved)) {
     return;
   }
   m_disconnected = true;
@@ -250,17 +256,18 @@ void QtDataSocket::handleDisconnected()
 void QtDataSocket::handleError(const QString &message, bool fatal)
 {
   LOG_ERR("QtDataSocket: %s", message.toStdString().c_str());
+  if (!m_serverSide && !m_resolved) {
+    // A retryable transport error still ends this outbound attempt.
+    sendConnectionFailed(message);
+    return;
+  }
   if (!fatal) {
     return;
   }
 
   if (!m_resolved) {
-    if (m_serverSide) {
-      m_resolved = true;
-      sendEvent(synergy::EventTypes::ClientListenerDisconnectedOnAccept);
-    } else {
-      sendConnectionFailed(message);
-    }
+    m_resolved = true;
+    sendEvent(synergy::EventTypes::ClientListenerDisconnectedOnAccept);
     return;
   }
 
@@ -271,8 +278,8 @@ void QtDataSocket::handleTlsFailure(const QString &message)
 {
   LOG_ERR("QtDataSocket: %s", message.toStdString().c_str());
   m_clientFatal = true;
-  m_disconnected = true;
   if (m_serverSide) {
+    m_disconnected = true;
     m_resolved = true;
     sendEvent(synergy::EventTypes::ClientListenerDisconnectedOnAccept);
   } else {
@@ -312,10 +319,12 @@ void QtDataSocket::sendEvent(synergy::EventTypes type)
 
 void QtDataSocket::sendConnectionFailed(const QString &message)
 {
-  auto *info = new ConnectionFailedInfo(message.toStdString().c_str());
-  m_events->addEvent(
-      Event(synergy::EventTypes::DataSocketConnectionFailed, getEventTarget(), info, Event::EventFlags::DontFreeData)
-  );
+  if (m_disconnected) {
+    return;
+  }
+  m_disconnected = true;
+  auto info = std::make_unique<ConnectionFailedInfo>(message.toStdString().c_str());
+  m_events->addEvent(Event(synergy::EventTypes::DataSocketConnectionFailed, getEventTarget(), std::move(info)));
 }
 
 //

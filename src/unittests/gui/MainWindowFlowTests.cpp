@@ -31,6 +31,7 @@
 #include "gui/widgets/PageHost.h"
 #include "gui/widgets/ScreenSetupView.h"
 #include "gui/widgets/StatusBar.h"
+#include "net/FingerprintDatabase.h"
 #include <QAbstractItemView>
 #include <QAction>
 #include <QApplication>
@@ -39,6 +40,7 @@
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QFile>
 #include <QFileInfo>
 #include <QFrame>
 #include <QGroupBox>
@@ -55,6 +57,7 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QRegularExpression>
+#include <QScopedValueRollback>
 #include <QScreen>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -79,6 +82,18 @@ void showNoticeIfPending(QWidget *)
 {
 }
 } // namespace synergy::gui::migration
+
+#ifdef Q_OS_MACOS
+namespace {
+bool allowIsolatedCoreAction = false;
+}
+
+// Replace the GUI permission check in this test executable only.
+bool checkOSXAccessibilityPermission()
+{
+  return allowIsolatedCoreAction;
+}
+#endif
 
 namespace {
 class ControlledHttp final : public QTcpServer
@@ -381,6 +396,152 @@ private Q_SLOTS:
     QCOMPARE(window.minimumSize(), QSize(500, 390));
     QTRY_COMPARE(window.width(), 500);
     QVERIFY(window.height() >= 390);
+  }
+  void manualCoreActionReopensDeclinedPeerFingerprint_data()
+  {
+    QTest::addColumn<Settings::CoreMode>("role");
+    QTest::newRow("client-connect") << Settings::Client;
+    QTest::newRow("server-restart") << Settings::Server;
+  }
+  void manualCoreActionReopensDeclinedPeerFingerprint()
+  {
+    using synergy::core::ProcessState;
+    using synergy::gui::CoreProcess;
+    QFETCH(Settings::CoreMode, role);
+    const bool isClient = role == Settings::Client;
+    Settings::setValue(Settings::Core::CoreMode, role);
+    Settings::setValue(Settings::Client::RemoteHost, QStringLiteral("192.0.2.1"));
+
+    QTemporaryDir fixture(synergy::runtime::runtimeRoot() + QStringLiteral("/peer-fingerprint-XXXXXX"));
+    QVERIFY(fixture.isValid());
+    const auto isolatedSettings = fixture.filePath(QStringLiteral("settings.conf"));
+    QVERIFY(QFile::copy(Settings::settingsFile(), isolatedSettings));
+    Settings::setSettingsFile(isolatedSettings);
+
+    MainWindow window("ts-flow-" + QUuid::createUuid().toString(QUuid::WithoutBraces));
+    window.setAttribute(Qt::WA_DontShowOnScreen);
+    auto &core = window.m_coreProcess;
+    core.m_appPath = fixture.filePath(QStringLiteral("absent-core"));
+    QVERIFY(!QFileInfo::exists(core.m_appPath));
+#ifdef Q_OS_MACOS
+    const QScopedValueRollback<bool> allowFixtureAction(allowIsolatedCoreAction, true);
+#endif
+    // The normal Start and Restart actions can run, but no core binary is available.
+    QObject::disconnect(&core, &CoreProcess::error, &window, nullptr);
+    window.open();
+    QCOMPARE(core.mode(), role);
+
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    auto *toggle = window.findChild<QPushButton *>("btnToggleCore");
+    QVERIFY(pages && back && toggle);
+    const auto currentPrompt = [pages] {
+      return qobject_cast<FingerprintDialog *>(pages->currentWidget()->property("pageEditor").value<QDialog *>());
+    };
+    const auto drainStateUpdates = [&window] { QCoreApplication::sendPostedEvents(&window, QEvent::MetaCall); };
+    const Fingerprint declined{QCryptographicHash::Sha256, QByteArray(32, '\x5a')};
+    const auto peer = QString::fromLatin1(declined.data.toHex(':'));
+    const auto otherRole = isClient ? Settings::Server : Settings::Client;
+    const auto serverDb = Settings::tlsTrustedServersDb();
+    const auto clientDb = Settings::tlsTrustedClientsDb();
+    QVERIFY(!QFileInfo::exists(serverDb));
+    QVERIFY(!QFileInfo::exists(clientDb));
+
+    core.peerFingerprint(peer);
+    auto *prompt = currentPrompt();
+    QVERIFY(prompt);
+    auto *buttons = prompt->findChild<QDialogButtonBox *>();
+    QVERIFY(buttons && buttons->button(QDialogButtonBox::No));
+    if (isClient)
+      buttons->button(QDialogButtonBox::No)->click();
+    else
+      back->click();
+    QCOMPARE(pages->count(), 1);
+    core.peerFingerprint(peer);
+    QCOMPARE(pages->count(), 1);
+
+    // A new startup through the automatic path must keep the prior decision.
+    QSignalSpy stateChanges(&core, &CoreProcess::processStateChanged);
+    Settings::setValue(Settings::Gui::AutoStartCore, true);
+    window.open();
+    Settings::setValue(Settings::Gui::AutoStartCore, false);
+    QVERIFY(!stateChanges.isEmpty());
+    QCOMPARE(core.processState(), ProcessState::Stopped);
+    drainStateUpdates();
+    core.peerFingerprint(peer);
+    QCOMPARE(pages->count(), 1);
+
+    // Suppression belongs to the local role, even for an identical hash.
+    core.setMode(otherRole);
+    core.peerFingerprint(peer);
+    QVERIFY(currentPrompt());
+    back->click();
+    core.setMode(role);
+
+    auto *action = isClient ? window.m_actionStartCore : window.m_actionRestartCore;
+    QVERIFY(window.m_menuFile->actions().contains(action));
+    QVERIFY(window.m_trayIcon->contextMenu()->actions().contains(action));
+    stateChanges.clear();
+    if (isClient) {
+      QVERIFY(toggle->isEnabled());
+      toggle->click();
+    } else {
+      core.setProcessState(ProcessState::RetryPending);
+      drainStateUpdates();
+      stateChanges.clear();
+      QVERIFY(action->isEnabled());
+      action->trigger();
+    }
+    QVERIFY(!stateChanges.isEmpty());
+    QCOMPARE(core.processState(), ProcessState::Stopped);
+    drainStateUpdates();
+
+    core.peerFingerprint(peer);
+    prompt = currentPrompt();
+    QVERIFY2(prompt, "A manual connection action should allow reconsidering this fingerprint.");
+    if (!isClient) {
+      core.setProcessState(ProcessState::RetryPending);
+      drainStateUpdates();
+    }
+    QVERIFY(action->isEnabled());
+    action->trigger();
+    drainStateUpdates();
+    core.peerFingerprint(peer);
+    QCOMPARE(currentPrompt(), prompt);
+    QCOMPARE(pages->count(), 2);
+    back->click();
+    core.peerFingerprint(peer);
+    QCOMPARE(pages->count(), 1);
+
+    core.setMode(otherRole);
+    core.peerFingerprint(peer);
+    QCOMPARE(pages->count(), 1);
+    QVERIFY(!QFileInfo::exists(serverDb));
+    QVERIFY(!QFileInfo::exists(clientDb));
+
+    // Trusting a different peer persists only that fingerprint. The client
+    // continuation starts the core without clearing the earlier rejection.
+    core.setMode(role);
+    const Fingerprint accepted{QCryptographicHash::Sha256, QByteArray(32, '\x6b')};
+    const auto acceptedPeer = QString::fromLatin1(accepted.data.toHex(':'));
+    core.peerFingerprint(acceptedPeer);
+    prompt = currentPrompt();
+    QVERIFY(prompt);
+    buttons = prompt->findChild<QDialogButtonBox *>();
+    QVERIFY(buttons && buttons->button(QDialogButtonBox::Yes));
+    stateChanges.clear();
+    buttons->button(QDialogButtonBox::Yes)->click();
+    QCOMPARE(pages->count(), 1);
+    QCOMPARE(!stateChanges.isEmpty(), isClient);
+    drainStateUpdates();
+    core.peerFingerprint(peer);
+    core.peerFingerprint(acceptedPeer);
+    QCOMPARE(pages->count(), 1);
+    FingerprintDatabase trusted;
+    trusted.read(isClient ? serverDb : clientDb);
+    QVERIFY(trusted.isTrusted(accepted));
+    QVERIFY(!trusted.isTrusted(declined));
+    QVERIFY(!QFileInfo::exists(isClient ? clientDb : serverDb));
   }
   void serverLabelKeepsTheExplicitAddressWhenTheNetworkChanges()
   {

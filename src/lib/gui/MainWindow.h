@@ -13,6 +13,7 @@
 #include <QMainWindow>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QSet>
 #include <QSystemTrayIcon>
 #include <QTimer>
 #include <memory>
@@ -49,6 +50,8 @@ class DaemonIpcClient;
 
 class MainWindow : public QMainWindow
 {
+  friend class MainWindowFlowTests;
+
   using ConnectionState = synergy::core::ConnectionState;
   using CoreMode = Settings::CoreMode;
   using CoreProcess = synergy::gui::CoreProcess;
@@ -114,10 +117,16 @@ private:
   void openAboutDialog();
   void openHelpUrl() const;
   void openSettings();
-  void startCore();
+  enum class CoreStartSource
+  {
+    Manual,
+    Automatic
+  };
+  void startCore(CoreStartSource source);
   void stopCore();
   bool saveServerConfig();
   void resetCore();
+  void clearDeclinedPeerFingerprints();
 
   void showMyFingerprint();
   void updateSecurityIcon(bool visible);
@@ -202,8 +211,13 @@ private:
   QSet<QString> m_ignoredClients;
   bool m_newClientPromptShowing = false;
   bool m_serverConfigDialogVisible = false;
-  QStringList m_checkedClients;
-  QStringList m_checkedServers;
+  struct PeerFingerprintPrompts
+  {
+    QSet<QString> pending;
+    QSet<QString> declined;
+  };
+  PeerFingerprintPrompts m_clientFingerprintPrompts;
+  PeerFingerprintPrompts m_serverFingerprintPrompts;
   QSystemTrayIcon *m_trayIcon = nullptr;
   QLocalServer *m_guiDupeChecker = nullptr;
   synergy::gui::ipc::DaemonIpcClient *m_daemonIpcClient = nullptr;

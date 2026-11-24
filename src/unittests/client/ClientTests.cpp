@@ -111,11 +111,9 @@ void ClientTests::C04_failureOwnership()
   f.begin();
   if (kind == 2) {
     QVERIFY(f.events.state.has(EventTypes::DataSocketConnectionFailed, f.filterTarget));
-    // Production consumes this new non-POD info; synchronous borrowed Event
-    // and fixture never free/delete it a second time.
-    auto info = std::make_unique<IDataSocket::ConnectionFailedInfo>("synthetic socket failure");
-    Event e(EventTypes::DataSocketConnectionFailed, f.filterTarget, info.get(), Event::EventFlags::DontFreeData);
-    info.release();
+    // The handler borrows the payload while the queue owns the real event.
+    IDataSocket::ConnectionFailedInfo info("synthetic socket failure");
+    Event e(EventTypes::DataSocketConnectionFailed, f.filterTarget, &info, Event::EventFlags::DontFreeData);
     QVERIFY(f.events.dispatchEvent(e));
   }
   f.drain();

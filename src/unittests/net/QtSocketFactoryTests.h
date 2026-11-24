@@ -30,6 +30,8 @@ private Q_SLOTS:
 
   void legacyNetworkFlagHonorsEnv();
   void plaintextRoundTrip();
+  void refusedConnectionReportsOnce_data();
+  void refusedConnectionReportsOnce();
   void tlsRejectsUntrustedServer();
   void tlsTrustedServerRoundTrip();
   void tlsRejectsWrongFingerprint();
