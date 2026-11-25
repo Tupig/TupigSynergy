@@ -30,6 +30,7 @@ CRITICAL_SUITES = R2_SUITES + R3_SUITES + (
 )
 SOURCE_SHA = "1" * 40
 OTHER_SHA = "2" * 40
+RELEASE_ASSET_SUFFIXES = ("mac_arm64.dmg", "windows_x64-portable.7z", "windows_x64.msi")
 DIAGNOSTIC_HELPER = ROOT / "scripts/ci/check-diagnostic-paths.py"
 SAFE_UPLOAD_IF = (r"if:\s*\$\{\{\s*always\(\)\s*&&\s*"
                   r"steps\.diagnostics-safe\.outputs\.safe\s*==\s*'true'\s*\}\}")
@@ -148,7 +149,7 @@ sys.exit(91)
 '''
 
 
-def release_case(changes=None, environment=None):
+def release_case(changes=None, environment=None, changed_package=False):
     script = publish_script()
     bash = shutil.which("bash")
     if not bash:
@@ -161,8 +162,16 @@ def release_case(changes=None, environment=None):
         temp = Path(temporary)
         (temp / "bin").mkdir()
         (temp / "dist").mkdir()
-        for name in ("synergy-2.1.1-Windows-x64.msi", "synergy package-2.1.1-macOS-arm64.dmg"):
-            (temp / "dist" / name).write_bytes(b"synthetic package boundary fixture\n")
+        asset_names = tuple("synergy_2.1.1_" + suffix for suffix in RELEASE_ASSET_SUFFIXES)
+        manifest = temp / "release-subjects.txt"
+        records = []
+        for name in asset_names:
+            payload = ("synthetic package boundary fixture: " + name).encode()
+            (temp / "dist" / name).write_bytes(payload)
+            records.append(f"{hashlib.sha256(payload).hexdigest()}  dist/{name}\n")
+        manifest.write_text("".join(records))
+        if changed_package:
+            (temp / "dist" / asset_names[0]).write_bytes(b"different bytes after attestation")
         stub = temp / "bin/gh"
         stub.write_text(GH_DOUBLE)
         stub.chmod(0o700)
@@ -185,6 +194,7 @@ def release_case(changes=None, environment=None):
                     "GH_STUB_STATE": str(temp / "state.json"),
                     "GH_STUB_LOG": str(temp / "calls.jsonl"), "RUNNER_TEMP": str(temp),
                     "GITHUB_OUTPUT": str(temp / "output"),
+                    "RELEASE_SUBJECTS": str(manifest),
                     # The actual native job's verified output is intentionally
                     # explicit. Retain the established unsigned-package
                     # contract for pre-signing fixtures.
@@ -512,6 +522,62 @@ class GitHubDeliveryContract(unittest.TestCase):
         self.assertIn("publish_release == 'true'", condition)
         self.assertIn("needs.get-version.result == 'success'", condition)
         self.assertIn("needs.codeql.result == 'success'", condition)
+
+    def test_native_package_uploads_fail_if_empty(self):
+        for native in ("build-windows", "build-macos"):
+            with self.subTest(native=native):
+                upload = next(block for block in steps(job(native)) if block.startswith("name: Upload package\n"))
+                self.assertRegex(upload, r"(?m)^          if-no-files-found: error$")
+
+    def test_release_hashes_exact_package_inventory_before_attestation(self):
+        publish = job("github-release")
+        self.assertLess(publish.index("name: Hash release packages"), publish.index("name: Attest build provenance"))
+        step = next(block for block in steps(publish) if block.startswith("name: Hash release packages\n"))
+        script = actual_run(step)
+        prefix, version = "fixture-package", "2.7.4"
+        expected = tuple(f"{prefix}_{version}_{suffix}" for suffix in RELEASE_ASSET_SUFFIXES)
+        cases = {
+            "complete": expected,
+            "no-mac": expected[1:],
+            "no-portable": (expected[0], expected[2]),
+            "no-msi": expected[:2],
+            "wrong-version": (expected[0].replace(version, "2.7.3"), *expected[1:]),
+            "wrong-architecture": (expected[0].replace("arm64", "x64"), *expected[1:]),
+            "extra": (*expected, "extra.txt"),
+            "nested": ("nested/" + expected[0], *expected[1:]),
+            "empty-msi": expected,
+            "symlink-msi": expected,
+        }
+        for case, files in cases.items():
+            with self.subTest(case=case), tempfile.TemporaryDirectory(prefix="gh-release-inventory-") as directory:
+                temp = Path(directory)
+                dist = temp / "dist"
+                dist.mkdir()
+                for name in files:
+                    path = dist / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(name.encode())
+                if case == "empty-msi":
+                    (dist / expected[-1]).write_bytes(b"")
+                if case == "symlink-msi":
+                    (dist / expected[-1]).unlink()
+                    (dist / expected[-1]).symlink_to(expected[0])
+                dest = temp / "output"
+                env = {**os.environ, "PACKAGE_PREFIX": prefix, "VERSION": version,
+                       "GITHUB_OUTPUT": str(dest), "RUNNER_TEMP": directory}
+                result = subprocess.run(["bash", "-euo", "pipefail", "-c", script], cwd=temp,
+                                        env=env, capture_output=True, text=True, timeout=30)
+                manifest = temp / "release-subjects.txt"
+                if case == "complete":
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual(dest.read_text(), f"path={manifest}\n")
+                    records = {f"{hashlib.sha256(name.encode()).hexdigest()}  dist/{name}" for name in expected}
+                    self.assertEqual(set(manifest.read_text().splitlines()), records)
+                else:
+                    self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn("release package inventory", result.stdout)
+                    self.assertFalse(manifest.exists())
+                    self.assertFalse(dest.exists())
 
     def test_real_codeql_job_preserves_required_name_permissions_and_no_build(self):
         analysis = job("codeql")
@@ -855,8 +921,8 @@ class GitHubDeliverySuccessorContract(unittest.TestCase):
         self.assertIn("--draft", create)
         self.assertIn(SOURCE_SHA, create)
         self.assertIn("--target", create)
-        for package in ("dist/synergy-2.1.1-Windows-x64.msi", "dist/synergy package-2.1.1-macOS-arm64.dmg"):
-            self.assertIn(package, create)
+        packages = {f"dist/synergy_2.1.1_{suffix}" for suffix in RELEASE_ASSET_SUFFIXES}
+        self.assertEqual({arg for arg in create if arg.startswith("dist/")}, packages)
         self.assertIn("--draft=false", publish)
         self.assertNotIn("--generate-notes", create)
         notes = [args[2] for args in calls if args[:2] == ["release", "create-notes"]]
@@ -869,6 +935,11 @@ class GitHubDeliverySuccessorContract(unittest.TestCase):
         self.assertIn("Built-From: " + SOURCE_SHA, notes[0])
         self.assertTrue(any("repos/fixture/fixture/commits/main" in args for args in calls))
         self.assertNotIn("--clobber", [arg for args in calls for arg in args])
+
+    def test_publish_rejects_package_changed_after_attestation(self):
+        result, calls = release_case(changed_package=True)
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(mutations(calls), [])
 
     def test_rejects_incomplete_or_hidden_release_notes_before_mutation(self):
         preparation = next(block for block in steps(job("get-version"))

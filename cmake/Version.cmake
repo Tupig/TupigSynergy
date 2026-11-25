@@ -8,7 +8,7 @@
 set(SYNERGY_VERSION_MAJOR 2)
 set(SYNERGY_VERSION_MINOR 1)
 # The committed constants are authoritative; environment and cache cannot change a release.
-set(SYNERGY_VERSION_PATCH 17)
+set(SYNERGY_VERSION_PATCH 18)
 set(SYNERGY_VERSION_STAGE "")
 
 # Composes the full version string by applying SYNERGY_VERSION_RELEASE /
