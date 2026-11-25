@@ -11,6 +11,7 @@
 
 #include <QLocalServer>
 #include <QMainWindow>
+#include <QPointer>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSet>
@@ -148,7 +149,7 @@ private:
   bool activateUpdatePage();
   void showAvailableUpdate();
   synergy::gui::update::UpdateChecker *m_updateChecker = nullptr;
-  MessagePage *m_updateCheckPage = nullptr;
+  QPointer<MessagePage> m_updateCheckPage;
   std::unique_ptr<synergy::gui::update::UpdateInfo> m_availableUpdate;
   void handleUnrecognisedClient(const QString &clientName);
   void handleConnectionRefused(synergy::core::ConnectionRefusal reason);

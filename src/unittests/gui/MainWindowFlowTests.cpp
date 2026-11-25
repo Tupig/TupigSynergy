@@ -1979,13 +1979,22 @@ private Q_SLOTS:
   {
     ControlledHttp server;
     QVERIFY(server.isListening());
-    {
-      IsolatedWindow window(server, m_width);
-      window.checkForUpdates(true);
-      QTRY_COMPARE(server.requests, 1);
-      QVERIFY(message(window, QCoreApplication::translate("MainWindow", "Check for Updates")));
+    for (const bool cancelFirst : {false, true}) {
+      const int expectedRequests = server.requests + 1;
+      {
+        IsolatedWindow window(server, m_width);
+        window.checkForUpdates(true);
+        QTRY_COMPARE(server.requests, expectedRequests);
+        auto *checking = message(window, QCoreApplication::translate("MainWindow", "Check for Updates"));
+        QVERIFY(checking);
+        if (cancelFirst) {
+          auto *cancel = button(*checking, QCoreApplication::translate("MainWindow", "Cancel"));
+          QVERIFY(cancel);
+          QTest::mouseClick(cancel, Qt::LeftButton);
+        }
+      }
+      QTRY_VERIFY(server.peers.last()->state() == QAbstractSocket::UnconnectedState);
     }
-    QTRY_VERIFY(server.peers.first()->state() == QAbstractSocket::UnconnectedState);
   }
   void checkingFailureRetryAndCancelAreRealRoutes()
   {

@@ -167,10 +167,11 @@ bool MainWindow::finishUpdateCheck()
   auto *checker = std::exchange(m_updateChecker, nullptr);
   disconnect(checker, nullptr, this, nullptr);
   checker->deleteLater();
-  auto *checking = std::exchange(m_updateCheckPage, nullptr);
-  if (checking)
-    checking->accept();
-  return checking != nullptr;
+  const auto checking = std::exchange(m_updateCheckPage, {});
+  if (!checking)
+    return false;
+  checking->accept();
+  return true;
 }
 
 void MainWindow::checkForUpdates(bool manual)
@@ -241,7 +242,6 @@ void MainWindow::checkForUpdates(bool manual)
       finishUpdateCheck();
     };
     connect(checking, &QDialog::rejected, this, cancelCheck);
-    connect(checking, &QObject::destroyed, this, cancelCheck);
     showPage(checking);
   }
 
