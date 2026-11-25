@@ -57,6 +57,7 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QRegularExpression>
+#include <QResizeEvent>
 #include <QScopedValueRollback>
 #include <QScreen>
 #include <QScrollArea>
@@ -69,6 +70,7 @@
 #include <QStyleOptionButton>
 #include <QTabBar>
 #include <QTabWidget>
+#include <QTableWidget>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTemporaryDir>
@@ -96,6 +98,24 @@ bool checkOSXAccessibilityPermission(bool)
 #endif
 
 namespace {
+class WorkspaceWidthProbe final : public QObject
+{
+public:
+  int widthChanges = 0;
+
+protected:
+  bool eventFilter(QObject *, QEvent *event) override
+  {
+    if (event->type() != QEvent::Resize)
+      return false;
+    const auto *resize = static_cast<QResizeEvent *>(event);
+    if (resize->size().width() != resize->oldSize().width())
+      ++widthChanges;
+    // Stop a runaway layout recursion only after the invariant has already failed.
+    return widthChanges > 8;
+  }
+};
+
 class ControlledHttp final : public QTcpServer
 {
 public:
@@ -943,6 +963,56 @@ private Q_SLOTS:
     QTRY_COMPARE(window.height(), expandedHeight);
     QCOMPARE(window.minimumHeight(), 390);
     QCOMPARE(window.width(), m_width);
+  }
+  void measuringHomePagePreservesScrollOwnedWidth()
+  {
+    Settings::setValue(Settings::Gui::LogExpanded, true);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *host = window.findChild<PageHost *>();
+    auto *workspace = window.findChild<QScrollArea *>("workspace");
+    auto *log = window.findChild<LogPanel *>("logPanel");
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    QVERIFY(host && workspace && log && preferences && back);
+    auto *content = workspace->widget();
+    auto *table = log->findChild<QTableWidget *>("logRecords");
+    QVERIFY(content && workspace->widgetResizable() && table);
+
+    const auto message = QStringLiteral("Workspace width measurement and wrapped log fixture ").repeated(10);
+    for (int index = 0; index < 9; ++index)
+      log->appendLine(QStringLiteral("[10:15:00] INFO: ") + message + QString::number(index));
+    const auto rows = table->findItems(message + QStringLiteral("8"), Qt::MatchExactly);
+    QCOMPARE(rows.size(), 1);
+    const int row = rows.first()->row();
+    QTRY_VERIFY(table->isVisibleTo(&window));
+    QTRY_VERIFY(table->rowHeight(row) > table->fontMetrics().height() * 2);
+    QTRY_VERIFY(table->verticalScrollBar()->maximum() > 0);
+
+    const int managedWidth = content->width();
+    QVERIFY(managedWidth > 0);
+    WorkspaceWidthProbe probe;
+    content->installEventFilter(&probe);
+    const int preferredHeight = host->preferredContentHeight(managedWidth + 160);
+    content->removeEventFilter(&probe);
+
+    QVERIFY(preferredHeight > 0);
+    QCOMPARE(probe.widthChanges, 0);
+    QCOMPARE(content->width(), managedWidth);
+
+    const int resizedWindowWidth = m_width == 500 ? 720 : 500;
+    window.resize(resizedWindowWidth, window.height());
+    QTRY_COMPARE(window.width(), resizedWindowWidth);
+    QTRY_VERIFY(content->width() != managedWidth);
+    QTRY_COMPARE(content->width(), workspace->viewport()->width());
+    QTRY_VERIFY(table->rowHeight(row) > table->fontMetrics().height() * 2);
+
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    QTRY_VERIFY(host->hasEditor());
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_VERIFY(!host->hasEditor());
+    QTRY_VERIFY(table->isVisibleTo(&window));
+    QCOMPARE(table->item(row, 2)->text(), message + QStringLiteral("8"));
   }
   void nameChangesRequireExplicitCommit()
   {
