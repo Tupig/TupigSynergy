@@ -30,6 +30,7 @@ conflict instead of silently breaking the convention.
 | R6 | The vcpkg baseline is pinned in `vcpkg.json` (`builtin-baseline`) and is the **single source of truth**; scripts must read it, never duplicate it. | Keeps clones reproducible. |
 | R7 | `vendor/` (vcpkg checkout) and `build/` are never committed — they are bootstrapped locally. | Repository stays small and clonable. |
 | R8 | Code must compile on Windows, macOS and Linux. Platform code lives under `src/lib/platform/<os>/`. | One source tree, conditional compilation. |
+| R8a | General business, UI, protocol and test code uses C++ (or C only for an external C ABI). Objective-C/Objective-C++ is limited to narrow macOS-native bridges that require Apple runtime syntax, APIs or blocks; prefer `.cpp` whenever those constructs are absent. | Keeps portable code uniform while containing unavoidable Apple integration. |
 | R9 | Documentation is bilingual in a single file (sectioned `## English` + `## 中文`). | One document, two audiences. |
 | R10 | Commit messages are Chinese Conventional Commits: `feat`, `fix`, `docs`, `refactor`, `test`, `ci`, `build`, or `chore`, then a Chinese subject. | Project convention. English subjects would break the existing history and the bilingual docs. |
 | R11 | Every task is tracked on a live todo list before work starts. Update it on each status change and record every step. If the list is missing or stale, stop and repair it before continuing. Procedure: [Task progress](#task-progress-r11). | Progress stays visible. A finished claim with open items is invalid. |
@@ -195,6 +196,7 @@ This section is the authoritative list. The following are deliberate, not defect
 | R6 | vcpkg baseline 固定在 `vcpkg.json` 的 `builtin-baseline`，是**唯一真源**；脚本须读取它，不得复制一份。 | 保证克隆可复现。 |
 | R7 | `vendor/`（vcpkg 检出）与 `build/` 永不入库，一律本地引导生成。 | 保持仓库轻量、可克隆。 |
 | R8 | 代码必须能在 Windows、macOS、Linux 三平台编译。平台相关代码放在 `src/lib/platform/<os>/`。 | 单一源码树 + 条件编译。 |
+| R8a | 通用业务、界面、协议与测试代码使用 C++（仅外部 C ABI 必需时使用 C）。Objective-C/Objective-C++ 仅限必须使用 Apple 运行时语法、API 或 block 的窄 macOS 原生桥接；不存在这些构造时优先使用 `.cpp`。 | 保持可移植代码统一，并收束不可避免的 Apple 集成。 |
 | R9 | 文档在单一文件内中英双语（分节 `## English` + `## 中文`）。 | 一份文档，两类读者。 |
 | R10 | 提交信息使用中文 Conventional Commits：`feat`、`fix`、`docs`、`refactor`、`test`、`ci`、`build` 或 `chore`，后面跟中文说明。 | 项目约定。英文说明会打断现有历史，也和双语文档不一致。 |
 | R11 | 每项任务在动手前都用实时 todo 列表跟踪。状态一变就更新，每个环节都要有条目。列表缺失或过期时，先停下补记再继续。做法见 [任务进度](#任务进度-r11)。 | 进度必须可见。仍有未完成条目时，宣布完成无效。 |

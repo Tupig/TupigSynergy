@@ -961,8 +961,8 @@ Do you want to connect to the server?
 <context>
     <name>MainWindow</name>
     <message>
-        <source>Start blocked: macOS has not granted Accessibility permission.</source>
-        <translation>未能启动：macOS 尚未允许设备控制和数据访问。</translation>
+        <source>macOS denied Accessibility to the app before the sharing engine started (version %1).</source>
+        <translation>macOS 拒绝了主程序的辅助功能访问，共享引擎尚未启动（版本 %1）。</translation>
     </message>
     <message>
         <source>This computer&apos;s name:</source>

@@ -104,8 +104,6 @@ elseif(APPLE)
     macos/OSXClipboardUTF8Converter.h
     macos/OSXClipboardUTF16Converter.cpp
     macos/OSXClipboardUTF16Converter.h
-    macos/OSXCocoaApp.h
-    macos/OSXCocoaApp.m
     macos/OSXEventQueueBuffer.cpp
     macos/OSXEventQueueBuffer.h
     macos/OSXKeyState.cpp
@@ -119,9 +117,9 @@ elseif(APPLE)
     macos/OSXPowerManager.h
     macos/OSXScreen.h
     macos/OSXScreen.mm
-    macos/OSXScreenEvents.mm
-    macos/OSXScreenInput.mm
-    macos/OSXScreenSession.mm
+    macos/OSXScreenEvents.cpp
+    macos/OSXScreenInput.cpp
+    macos/OSXScreenSession.cpp
     macos/OSXScreenSaver.cpp
     macos/OSXScreenSaver.h
     macos/OSXScreenSaverControl.h

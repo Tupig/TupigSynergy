@@ -15,5 +15,5 @@ bool isOSXInterfaceStyleDark();
 void forceAppActive();
 void macOSNativeHide();
 
-// Check the current process's macOS accessibility trust and ask macOS to prompt if needed.
-bool checkOSXAccessibilityPermission();
+// Automatic startup checks trust silently. Manual Start can request the system prompt.
+bool checkOSXAccessibilityPermission(bool prompt);

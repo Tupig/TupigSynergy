@@ -8,8 +8,11 @@
 
 #include <ApplicationServices/ApplicationServices.h>
 
-bool checkOSXAccessibilityPermission()
+bool checkOSXAccessibilityPermission(bool prompt)
 {
+  if (!prompt)
+    return AXIsProcessTrusted();
+
   const void *keys[] = {kAXTrustedCheckOptionPrompt};
   const void *values[] = {kCFBooleanTrue};
   const auto options = CFDictionaryCreate(nullptr, keys, values, 1, nullptr, nullptr);

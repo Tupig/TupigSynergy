@@ -89,7 +89,7 @@ bool allowIsolatedCoreAction = false;
 }
 
 // Replace the GUI permission check in this test executable only.
-bool checkOSXAccessibilityPermission()
+bool checkOSXAccessibilityPermission(bool)
 {
   return allowIsolatedCoreAction;
 }

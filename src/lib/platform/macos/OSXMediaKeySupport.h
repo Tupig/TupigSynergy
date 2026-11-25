@@ -16,6 +16,7 @@ extern "C"
 {
 #endif
   bool fakeNativeMediaKey(KeyID id);
+  double osxDoubleClickInterval(void);
   bool isMediaKeyEvent(CGEventRef event);
   bool getMediaKeyEventInfo(CGEventRef event, KeyID *keyId, bool *down, bool *isRepeat);
 #if defined(__cplusplus)

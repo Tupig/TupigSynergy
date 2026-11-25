@@ -268,11 +268,6 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
     m_received = received;
     m_total = total;
     m_sampleTime = now;
-    if (total > 0) {
-      m_progress->setRange(0, 100);
-      m_progress->setValue(static_cast<int>(qBound(0.0, 100.0 * received / total, 100.0)));
-    }
-    updateProgressText();
   });
   // 信号只在构造时连接一次，失败重试不会重复交付进度或错误。
   connect(m_downloader, &UpdateDownloader::finished, this, [this](const QString &path) {
@@ -349,6 +344,10 @@ void UpdateDialog::setBusy(bool busy)
 
 void UpdateDialog::updateProgressText()
 {
+  if (m_total > 0) {
+    m_progress->setRange(0, 100);
+    m_progress->setValue(static_cast<int>(qBound(0.0, 100.0 * m_received / m_total, 100.0)));
+  }
   if (m_total > 0 && m_received >= m_total) {
     m_meter->hide();
     m_progressText->setText(tr("Verifying download…"));

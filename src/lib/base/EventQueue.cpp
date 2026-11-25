@@ -45,6 +45,19 @@ EventQueue::~EventQueue()
 {
   ARCH->setSignalHandler(Arch::ThreadSignal::Interrupt, nullptr, nullptr);
   ARCH->setSignalHandler(Arch::ThreadSignal::Terminate, nullptr, nullptr);
+
+  {
+    Lock lock(m_readyMutex.get());
+    while (!m_pending.empty()) {
+      Event::deleteData(m_pending.front());
+      m_pending.pop();
+    }
+  }
+
+  std::scoped_lock lock{m_mutex};
+  for (const auto &entry : m_events) {
+    Event::deleteData(entry.second);
+  }
 }
 
 int EventQueue::loop()
@@ -77,6 +90,7 @@ int EventQueue::loop()
   if (exitEvent != nullptr) {
     exitCode = exitEvent->exitCode();
   }
+  Event::deleteData(event);
   return exitCode;
 }
 

@@ -33,8 +33,6 @@
 #include "mt/Mutex.h"
 #include "mt/Thread.h"
 
-#include <AppKit/NSEvent.h>
-#include <AvailabilityMacros.h>
 #include <IOKit/hidsystem/event_status_driver.h>
 #include <cstring>
 #include <dispatch/dispatch.h>

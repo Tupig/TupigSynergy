@@ -17,4 +17,8 @@ private Q_SLOTS:
   void removedHandlerStopsDispatch();
   void deletedTimerDoesNotFire();
   void waitForReadyAfterLoopStarted();
+  void pendingOwnedPayloadIsReleasedWhenQueueNeverStarts();
+  void quitPayloadIsReleased();
+  void ownedPayloadQueuedAfterQuitIsReleased();
+  void borrowedPayloadSurvivesQueueDestruction();
 };

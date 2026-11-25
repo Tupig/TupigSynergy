@@ -31,6 +31,36 @@ def run(args, **kwargs):
     return subprocess.run(args, check=True, text=True, capture_output=True, **kwargs).stdout
 
 
+def verify_disk_image_license(image):
+    resources = plistlib.loads(run(['/usr/bin/hdiutil', 'udifderez', str(image)]).encode())
+    languages = resources['LPic']
+    if len(languages) != 1 or languages[0]['ID'] != '5000':
+        raise ValueError('DMG must contain one license language map')
+    if languages[0]['Data'] != struct.pack('>8H', 0, 2, 0, 0, 0, 52, 1, 1):
+        raise ValueError('DMG license language mapping or Chinese encoding flag is incorrect')
+    source = Path('deploy/mac/sla')
+    for kind in ('TEXT', 'STR#'):
+        entries = resources[kind]
+        if len(entries) != 2 or {entry['ID'] for entry in entries} != {'5000', '5001'}:
+            raise ValueError('DMG must contain English and Simplified Chinese license resources')
+        by_id = {entry['ID']: entry['Data'] for entry in entries}
+        for locale, identifier, encoding in [('en_US', '5000', 'ascii'), ('zh_CN', '5001', 'gb2312')]:
+            subtype = 'license' if kind == 'TEXT' else 'menu'
+            lines = (source / f'{locale}.{subtype}.txt').read_text(encoding='utf-8').splitlines()
+            expected = [line.encode(encoding) for line in lines]
+            if kind == 'TEXT':
+                actual = by_id[identifier]
+                if actual.rstrip(b'\r\n') != b'\r'.join(expected):
+                    raise ValueError(f'{locale} DMG license body did not round-trip')
+            else:
+                packed = struct.pack('>H', len(expected))
+                for line in expected:
+                    packed += bytes([len(line)]) + line
+                if by_id[identifier] != packed:
+                    raise ValueError(f'{locale} DMG license menu did not round-trip')
+    print('PASS: DMG license has separate English and Simplified Chinese text and buttons')
+
+
 def inside(path, root):
     return path == root or root in path.parents
 
@@ -677,6 +707,7 @@ def main():
         mount = root / 'mounted'
         try:
             if source.suffix == '.dmg':
+                verify_disk_image_license(source)
                 mount.mkdir()
                 run(['/usr/bin/hdiutil', 'attach', str(source), '-readonly', '-nobrowse',
                      '-mountpoint', str(mount)], input='Y\n')
