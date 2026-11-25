@@ -1530,6 +1530,22 @@ private Q_SLOTS:
         auto *actions = editor->findChild<QDialogButtonBox *>();
         QVERIFY(file && actions);
         const auto invalid = Settings::userDir() + "/missing-server.conf";
+        QTest::mouseClick(external, Qt::LeftButton, Qt::NoModifier, QPoint(8, external->height() / 2));
+        QVERIFY(external->isChecked());
+        for (int index = 0; index < 3; ++index)
+          QVERIFY(!tabs->isTabEnabled(index));
+        auto *hint = editor->findChild<QLabel *>("label_6");
+        QVERIFY(
+            hint && hint->text().contains(
+                        QCoreApplication::translate(
+                            "ServerConfigDialog", "Clear the checkbox to edit the layout, hotkeys and sharing here."
+                        )
+                    )
+        );
+        QTest::mouseClick(external, Qt::LeftButton, Qt::NoModifier, QPoint(8, external->height() / 2));
+        QVERIFY(!external->isChecked());
+        for (int index = 0; index < 3; ++index)
+          QVERIFY(tabs->isTabEnabled(index));
         external->setChecked(true);
         file->setText(invalid);
         auto *saveConfig = actions->button(QDialogButtonBox::Ok);
