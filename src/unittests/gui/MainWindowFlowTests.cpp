@@ -1975,6 +1975,32 @@ private Q_SLOTS:
     QTRY_VERIFY(message(window, QCoreApplication::translate("MainWindow", "No Updates")));
     QCOMPARE(server.requests, 3);
   }
+  void manualCheckCompletionKeepsAnUnrelatedSettingsDraft()
+  {
+    ControlledHttp server;
+    QVERIFY(server.isListening());
+    IsolatedWindow window(server, m_width);
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(pages);
+    window.checkForUpdates(true);
+    QTRY_COMPARE(server.requests, 1);
+    QVERIFY(message(window, QCoreApplication::translate("MainWindow", "Check for Updates")));
+
+    window.m_actionSettings->trigger();
+    QPointer<SettingsDialog> settings = window.findChild<SettingsDialog *>();
+    QVERIFY(settings && settings->isVisibleTo(&window));
+    auto *draft = settings->findChild<QLineEdit *>("lineTlsCertPath");
+    QVERIFY(draft);
+    draft->setText(Settings::userDir() + "/uncommitted-fixture.pem");
+    const auto uncommitted = draft->text();
+    const auto *settingsPage = pages->currentWidget();
+
+    server.write("HTTP/1.1 503 Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", true);
+    QTRY_VERIFY(window.findChildren<synergy::gui::update::UpdateChecker *>().isEmpty());
+    QVERIFY(settings && settings->isVisibleTo(&window));
+    QCOMPARE(pages->currentWidget(), settingsPage);
+    QCOMPARE(draft->text(), uncommitted);
+  }
   void windowDestructionCancelsPendingUpdateCheck()
   {
     ControlledHttp server;

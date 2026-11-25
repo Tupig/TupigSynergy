@@ -170,8 +170,9 @@ bool MainWindow::finishUpdateCheck()
   const auto checking = std::exchange(m_updateCheckPage, {});
   if (!checking)
     return false;
+  const bool showResult = checking->isVisibleTo(m_pageHost);
   checking->accept();
-  return true;
+  return showResult;
 }
 
 void MainWindow::checkForUpdates(bool manual)
@@ -229,6 +230,7 @@ void MainWindow::checkForUpdates(bool manual)
   if (manual && !m_updateCheckPage) {
     auto *checking =
         new MessagePage(this, MessagePage::Kind::Information, tr("Check for Updates"), tr("Checking for updates…"));
+    checking->setProperty("independentPage", true);
     m_updateCheckPage = checking;
     auto *progress = new QProgressBar(checking);
     progress->setRange(0, 0);

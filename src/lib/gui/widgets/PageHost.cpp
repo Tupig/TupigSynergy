@@ -198,7 +198,8 @@ void PageHost::push(QDialog *editor)
     const int index = pages->indexOf(area);
     const bool current = pages->currentWidget() == area;
     // 父页被外部动作关闭时先拒绝后代，避免编辑器继续持有父页草稿引用。
-    while (index >= 0 && pages->count() > index + 1) {
+    const bool independent = editor->property("independentPage").toBool();
+    while (!independent && index >= 0 && pages->count() > index + 1) {
       auto *childArea = qobject_cast<QScrollArea *>(pages->widget(index + 1));
       if (!childArea)
         break;
