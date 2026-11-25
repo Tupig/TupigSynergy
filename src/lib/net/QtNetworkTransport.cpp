@@ -7,12 +7,15 @@
 
 #include "net/QtNetworkTransport.h"
 
+#include "arch/Arch.h"
 #include "base/Log.h"
 #include "net/NetworkAddress.h"
+#include "net/SocketException.h"
 #include "net/TlsPolicy.h"
 
 #include <QFile>
 #include <QHostAddress>
+#include <QSignalBlocker>
 #include <QSslCertificate>
 #include <QSslConfiguration>
 #include <QSslKey>
@@ -262,9 +265,26 @@ void QtNetworkTransport::connect(const NetworkAddress &address)
   }
 }
 
-void QtNetworkTransport::bind(const NetworkAddress & /*address*/)
+void QtNetworkTransport::bind(const NetworkAddress &address)
 {
-  LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "QtNetworkTransport::bind not supported on client sockets"));
+  if (!m_socket || !address.isValid())
+    throw SocketBindException("invalid local socket address");
+
+  QHostAddress host(QString::fromStdString(ARCH->addrToString(address.getAddress())));
+  if (host.isNull())
+    throw SocketBindException("invalid local socket address");
+  if (host.protocol() == QAbstractSocket::IPv6Protocol)
+    host.setScopeId(QHostAddress(QString::fromStdString(address.getHostname())).scopeId());
+
+  // The caller reports the binding exception before installing connection handlers.
+  const QSignalBlocker blocker(m_socket);
+  if (m_socket->bind(host, static_cast<quint16>(address.getPort()), QAbstractSocket::DontShareAddress))
+    return;
+
+  const auto error = m_socket->errorString().toStdString();
+  if (m_socket->error() == QAbstractSocket::AddressInUseError)
+    throw SocketAddressInUseException(error.c_str());
+  throw SocketBindException(error.c_str());
 }
 
 void QtNetworkTransport::close()
