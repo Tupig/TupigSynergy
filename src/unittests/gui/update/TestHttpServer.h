@@ -12,10 +12,22 @@
 #include <QTcpSocket>
 #include <QUrl>
 
+#include <QList>
+
 //! Minimal loopback HTTP server for update checker/downloader tests.
 class TestHttpServer : public QTcpServer
 {
 public:
+  struct OrdinaryResponse
+  {
+    int status = 200;
+    QByteArray body;
+    qint64 declaredLength = -1;
+    qint64 prefixLength = -1;
+    bool closeAfterPrefix = false;
+    bool stallAfterPrefix = false;
+  };
+
   explicit TestHttpServer(QObject *parent = nullptr) : QTcpServer(parent)
   {
     listen(QHostAddress::LocalHost, 0);
@@ -53,6 +65,12 @@ public:
     m_incorrectRange = incorrect;
   }
 
+  void setOrdinaryResponses(const QList<OrdinaryResponse> &responses)
+  {
+    m_ordinaryResponses = responses;
+    m_ordinaryResponseIndex = 0;
+  }
+
   int partialRequests() const
   {
     return m_partialRequests;
@@ -80,7 +98,6 @@ protected:
         ++m_partialRequests;
       else
         ++m_ordinaryRequests;
-      const auto reason = m_status == 200 ? QByteArrayLiteral("OK") : QByteArrayLiteral("Error");
       QByteArray response;
       if (!m_redirect.isEmpty()) {
         response = "HTTP/1.1 302 Found\r\nLocation: " + m_redirect.toEncoded() +
@@ -93,9 +110,26 @@ protected:
                    QByteArray::number(end) + "/" + QByteArray::number(m_body.size() + m_incorrectRange) +
                    "\r\nContent-Length: " + QByteArray::number(data.size()) + "\r\nConnection: close\r\n\r\n" + data;
       } else {
-        response = "HTTP/1.1 " + QByteArray::number(m_status) + " " + reason + "\r\nContent-Type: " + m_contentType +
-                   "\r\nContent-Length: " + QByteArray::number(m_body.size()) + "\r\nConnection: close\r\n\r\n" +
-                   m_body;
+        OrdinaryResponse ordinary{m_status, m_body};
+        if (!match.hasMatch() && m_ordinaryResponseIndex < m_ordinaryResponses.size())
+          ordinary = m_ordinaryResponses.at(m_ordinaryResponseIndex++);
+        const auto length = ordinary.declaredLength >= 0 ? ordinary.declaredLength : ordinary.body.size();
+        const auto prefix = ordinary.prefixLength >= 0 ? ordinary.prefixLength : ordinary.body.size();
+        const auto sent = ordinary.body.left(static_cast<int>(qMin<qint64>(prefix, ordinary.body.size())));
+        const auto ordinaryReason = ordinary.status == 200 ? QByteArrayLiteral("OK") : QByteArrayLiteral("Error");
+        response = "HTTP/1.1 " + QByteArray::number(ordinary.status) + " " + ordinaryReason +
+                   "\r\nContent-Type: " + m_contentType + "\r\nContent-Length: " + QByteArray::number(length) +
+                   "\r\nConnection: close\r\n\r\n" + sent;
+        socket->write(response);
+        if (ordinary.stallAfterPrefix)
+          return;
+        if (ordinary.closeAfterPrefix) {
+          socket->flush();
+          socket->disconnectFromHost();
+          return;
+        }
+        socket->disconnectFromHost();
+        return;
       }
       socket->write(response);
       socket->disconnectFromHost();
@@ -112,4 +146,6 @@ private:
   bool m_incorrectRange = false;
   int m_partialRequests = 0;
   int m_ordinaryRequests = 0;
+  QList<OrdinaryResponse> m_ordinaryResponses;
+  int m_ordinaryResponseIndex = 0;
 };

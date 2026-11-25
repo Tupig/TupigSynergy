@@ -34,6 +34,8 @@ struct DownloadPolicy
   QString scheme = QStringLiteral("https");
   QString host = QStringLiteral("github.com");
   QString pathPrefix = QStringLiteral("/Tupig/TupigSynergy/releases/download/");
+  // Internal policy seam; preserve the existing five-minute request timeout.
+  int singleRequestTimeoutMs = 300000;
 };
 
 /**
@@ -67,6 +69,7 @@ private:
   };
 
   void startSingleDownload();
+  void restartSingleDownload();
   void startRanges();
   QNetworkReply *startRequest(QNetworkRequest request);
   bool readRange(Range &range);
@@ -89,6 +92,7 @@ private:
   QString m_path;
   qint64 m_received = 0;
   bool m_completed = false;
+  bool m_singleRetryUsed = false;
 };
 
 } // namespace synergy::gui::update
