@@ -17,6 +17,7 @@
 #include "net/QtNetworkTransport.h"
 #include "net/QtSocketFactory.h"
 #include "net/SecureUtils.h"
+#include "net/SocketException.h"
 #include "net/TlsConfig.h"
 
 #include <QCoreApplication>
@@ -126,6 +127,32 @@ void QtSocketFactoryTests::legacyNetworkFlagHonorsEnv()
 
   qputenv("USE_LEGACY_NETWORK", "0");
   QVERIFY(!shouldUseLegacyNetwork());
+}
+
+void QtSocketFactoryTests::clientBindUsesTheSelectedLocalAddress()
+{
+  NetworkAddress local("127.0.0.1", 0);
+  local.resolve();
+  for (const auto security : {SecurityLevel::PlainText, SecurityLevel::PeerAuth}) {
+    QtNetworkTransport transport(security, testTlsConfig(m_certPath));
+    transport.bind(local);
+    QCOMPARE(transport.getTcpSocket()->localAddress(), QHostAddress(QHostAddress::LocalHost));
+    QVERIFY(transport.getTcpSocket()->localPort() != 0);
+  }
+
+  QTcpServer occupied;
+  QVERIFY(occupied.listen(QHostAddress::LocalHost, 0));
+  NetworkAddress taken("127.0.0.1", occupied.serverPort());
+  taken.resolve();
+  QtSocketFactory factory(m_events, testTlsConfig(m_certPath));
+  const auto client = factory.create(IArchNetwork::AddressFamily::INet, SecurityLevel::PlainText);
+  try {
+    client->bind(taken);
+    QFAIL("binding an occupied port should fail");
+  } catch (const SocketAddressInUseException &) {
+  } catch (const SocketBindException &) {
+    // Windows can report access denied for an exclusive local endpoint.
+  }
 }
 
 void QtSocketFactoryTests::plaintextRoundTrip()
@@ -435,6 +462,9 @@ void QtSocketFactoryTests::tlsTrustedServerRoundTrip()
     clientConnected = true;
   });
 
+  NetworkAddress local("127.0.0.1", 0);
+  local.resolve();
+  client->bind(local);
   client->connect(NetworkAddress("127.0.0.1", port));
 
   QVERIFY(pump([&] { return clientConnected && serverAccepted && serverSocket != nullptr; }, 20000));

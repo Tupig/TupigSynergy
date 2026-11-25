@@ -34,6 +34,7 @@
 
 #if defined(Q_OS_MACOS)
 #include "platform/macos/InstanceGuard.h"
+#include "platform/macos/OSXCoreQuitFilter.h"
 #include <ApplicationServices/ApplicationServices.h>
 #endif
 
@@ -230,6 +231,10 @@ int main(int argc, char **argv)
 #endif
 
   QThread coreThread;
+#if defined(Q_OS_MACOS)
+  synergy::platform::OSXCoreQuitFilter quitFilter(coreThread, [coreApp] { coreApp->quit(); });
+  app.installEventFilter(&quitFilter);
+#endif
   QObject::connect(&coreThread, &QThread::finished, &app, &QApplication::quit);
   coreApp->run(coreThread);
 

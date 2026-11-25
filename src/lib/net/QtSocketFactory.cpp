@@ -97,9 +97,11 @@ void QtDataSocket::connect(const NetworkAddress &address)
   m_transport->connect(address);
 }
 
-void QtDataSocket::bind(const NetworkAddress &)
+void QtDataSocket::bind(const NetworkAddress &address)
 {
-  LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "QtDataSocket::bind not supported on data sockets"));
+  if (!m_transport)
+    throw SocketBindException("no transport");
+  m_transport->bind(address);
 }
 
 void QtDataSocket::close()

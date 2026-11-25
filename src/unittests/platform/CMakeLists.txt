@@ -45,6 +45,13 @@ elseif(APPLE)
     SOURCE OSXKeyStateTests.cpp
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/platform"
   )
+  create_test(
+    NAME OSXInputSourceThreadTests
+    DEPENDS platform
+    SOURCE OSXInputSourceThreadTests.cpp
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/platform"
+  )
+  set_tests_properties(OSXInputSourceThreadTests PROPERTIES TIMEOUT 15)
 elseif(UNIX)
   if (BUILD_X11_SUPPORT)
     create_test(
