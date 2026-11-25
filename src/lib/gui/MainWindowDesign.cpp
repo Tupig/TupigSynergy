@@ -78,6 +78,18 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
   btnUpdatesShortcut = textButton(
       pageBar, QStringLiteral("btnUpdatesShortcut"), QObject::tr("Updates"), QStringLiteral("system-software-update")
   );
+  auto *badgeLayout = new QHBoxLayout(btnUpdatesShortcut);
+  badgeLayout->setContentsMargins(0, 3, 4, 0);
+  m_updateBadge = new QWidget(btnUpdatesShortcut);
+  m_updateBadge->setObjectName(QStringLiteral("updateAvailableBadge"));
+  m_updateBadge->setFixedSize(6, 6);
+  m_updateBadge->setAttribute(Qt::WA_StyledBackground);
+  m_updateBadge->setAttribute(Qt::WA_TransparentForMouseEvents);
+  m_updateBadge->setStyleSheet(
+      QStringLiteral("#updateAvailableBadge { background-color: #e5484d; border-radius: 3px; }")
+  );
+  badgeLayout->addWidget(m_updateBadge, 0, Qt::AlignRight | Qt::AlignTop);
+  m_updateBadge->hide();
   btnAboutShortcut =
       textButton(pageBar, QStringLiteral("btnAboutShortcut"), QObject::tr("About"), QStringLiteral("help-about"));
   btnSettingsShortcut->setFocusPolicy(Qt::StrongFocus);
@@ -258,6 +270,7 @@ void Ui::MainWindow::setupUi(QMainWindow *window)
 
   window->setCentralWidget(topLevelWidget);
   updateShortcutPresentation(window->width());
+  setAvailableUpdateVersion(QString());
 }
 
 void Ui::MainWindow::retranslateUi(QMainWindow *window)
@@ -289,6 +302,7 @@ void Ui::MainWindow::retranslateUi(QMainWindow *window)
   btnRestartCore->setText(QObject::tr("&Restart"));
   btnRestartCore->setToolTip(QObject::tr("Restart"));
   updateShortcutPresentation(window->width());
+  setAvailableUpdateVersion(m_availableUpdateVersion);
 }
 
 void Ui::MainWindow::updateShortcutPresentation(int width)
@@ -300,7 +314,8 @@ void Ui::MainWindow::updateShortcutPresentation(int width)
   };
   for (const auto &[button, label] : shortcuts) {
     button->setText(width < 640 ? QString() : label);
-    button->setToolTip(label);
+    if (button != btnUpdatesShortcut)
+      button->setToolTip(label);
     button->setAccessibleName(label);
     if (button->property("iconButton").toBool() != (width < 640)) {
       button->setProperty("iconButton", width < 640);
@@ -314,4 +329,13 @@ void Ui::MainWindow::updateShortcutPresentation(int width)
       button->setMaximumWidth(QWIDGETSIZE_MAX);
     }
   }
+}
+
+void Ui::MainWindow::setAvailableUpdateVersion(const QString &version)
+{
+  m_availableUpdateVersion = version;
+  m_updateBadge->setVisible(!version.isEmpty());
+  const auto updateHint = version.isEmpty() ? QString() : QObject::tr("Update to %1 available").arg(version);
+  btnUpdatesShortcut->setAccessibleDescription(updateHint);
+  btnUpdatesShortcut->setToolTip(updateHint.isEmpty() ? QObject::tr("Updates") : updateHint);
 }

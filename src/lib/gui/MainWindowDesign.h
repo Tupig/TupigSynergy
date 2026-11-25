@@ -37,6 +37,7 @@ public:
   void setupUi(QMainWindow *window);
   void retranslateUi(QMainWindow *window);
   void updateShortcutPresentation(int width);
+  void setAvailableUpdateVersion(const QString &version);
 
   QWidget *topLevelWidget = nullptr;
   QWidget *pageBar = nullptr;
@@ -73,6 +74,10 @@ public:
 
   LogPanel *logPanel = nullptr;
   StatusBar *statusBar = nullptr;
+
+private:
+  QWidget *m_updateBadge = nullptr;
+  QString m_availableUpdateVersion;
 };
 
 } // namespace Ui

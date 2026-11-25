@@ -1421,6 +1421,10 @@ Additionally, check you are able to %1 the server config file: %2</source>
 <context>
     <name>QObject</name>
     <message>
+        <source>Update to %1 available</source>
+        <translation>可更新至 %1</translation>
+    </message>
+    <message>
         <source>fatal error</source>
         <translation>致命错误</translation>
     </message>

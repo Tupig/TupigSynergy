@@ -32,6 +32,7 @@ class QAction;
 class QMenu;
 
 class LogPanel;
+class MessagePage;
 class PageHost;
 class QDialog;
 class StatusBar;
@@ -42,7 +43,8 @@ class MainWindow;
 
 namespace synergy::gui::update {
 class UpdateChecker;
-}
+struct UpdateInfo;
+} // namespace synergy::gui::update
 
 namespace synergy::gui::ipc {
 class DaemonIpcClient;
@@ -142,6 +144,12 @@ private:
   void applyConfig();
   void setTrayIcon();
   void checkForUpdates(bool manual);
+  bool finishUpdateCheck();
+  bool activateUpdatePage();
+  void showAvailableUpdate();
+  synergy::gui::update::UpdateChecker *m_updateChecker = nullptr;
+  MessagePage *m_updateCheckPage = nullptr;
+  std::unique_ptr<synergy::gui::update::UpdateInfo> m_availableUpdate;
   void handleUnrecognisedClient(const QString &clientName);
   void handleConnectionRefused(synergy::core::ConnectionRefusal reason);
   void handlePeerFingerprint(const QString &fingerprint);

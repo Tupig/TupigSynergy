@@ -28,7 +28,9 @@
 #include "gui/TlsUtility.h"
 #include "gui/core/CoreProcess.h"
 #include "gui/ipc/DaemonIpcClient.h"
+#include "gui/update/UpdateChecker.h"
 #include "gui/widgets/LogPanel.h"
+#include "gui/widgets/MessagePage.h"
 #include "net/FingerprintDatabase.h"
 #include "net/TlsPolicy.h"
 #include "widgets/PageHost.h"
@@ -143,7 +145,12 @@ MainWindow::MainWindow(const QString &instanceSocketName, std::unique_ptr<QLocal
     ui->pageTitle->setText(title.isEmpty() ? tr("Devices & Connection") : title);
   });
   connect(ui->btnSettingsShortcut, &QPushButton::clicked, this, [this] { m_actionSettings->trigger(); });
-  connect(ui->btnUpdatesShortcut, &QPushButton::clicked, this, [this] { m_actionCheckForUpdates->trigger(); });
+  connect(ui->btnUpdatesShortcut, &QPushButton::clicked, this, [this] {
+    if (m_availableUpdate)
+      showAvailableUpdate();
+    else
+      m_actionCheckForUpdates->trigger();
+  });
   connect(ui->btnAboutShortcut, &QPushButton::clicked, this, [this] { m_actionAbout->trigger(); });
 
   // Setup Actions
@@ -227,8 +234,7 @@ MainWindow::MainWindow(const QString &instanceSocketName, std::unique_ptr<QLocal
   m_statusBar->setSecurityIcon(TlsUtility::isEnabled());
   restoreWindow();
 
-  // Check GitHub Releases after the window is up; the check is non-blocking and
-  // only surfaces a dialog when a newer version exists or the user asks.
+  // Check after the window is up so the update indicator can appear in place.
   QTimer::singleShot(3000, this, [this]() {
     if (Settings::value(Settings::Gui::CheckForUpdates).toBool()) {
       checkForUpdates(false);
@@ -241,6 +247,13 @@ MainWindow::MainWindow(const QString &instanceSocketName, std::unique_ptr<QLocal
 }
 MainWindow::~MainWindow()
 {
+  if (m_updateCheckPage) {
+    disconnect(m_updateCheckPage, nullptr, this, nullptr);
+    m_updateCheckPage = nullptr;
+  }
+  if (m_updateChecker)
+    finishUpdateCheck();
+
   // Stop network monitoring
   if (m_networkMonitor) {
     m_networkMonitor->stopMonitoring();

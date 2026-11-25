@@ -1882,6 +1882,95 @@ private Q_SLOTS:
     editor->reject();
     window.close();
   }
+  void backgroundUpdateBadgeKeepsTheCurrentPage()
+  {
+    ControlledHttp server;
+    QVERIFY(server.isListening());
+    IsolatedWindow window(server, m_width);
+    auto *shortcut = window.findChild<QPushButton *>("btnUpdatesShortcut");
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(shortcut && preferences && back && pages);
+    auto *badge = shortcut->findChild<QWidget *>("updateAvailableBadge");
+    QVERIFY(badge && badge->isHidden());
+    QVERIFY(settleStaticRender(window));
+    const auto shortcutSize = shortcut->size();
+    const auto respond = [&server](const QByteArray &version) {
+      const QByteArray release = "https://github.com/Tupig/TupigSynergy/releases/";
+      const QByteArray tag = "v" + version;
+      const auto asset = [&release, &tag](const QByteArray &suffix) {
+        const auto name = "synergy_" + suffix;
+        return "{\"name\":\"" + name + "\",\"browser_download_url\":\"" + release + "download/" + tag + "/" + name +
+               "\",\"size\":100,\"digest\":\"sha256:" + QByteArray(64, 'a') + "\"}";
+      };
+      const QByteArray body = "{\"tag_name\":\"" + tag + "\",\"html_url\":\"" + release + "tag/" + tag +
+                              "\",\"assets\":[" + asset("fixture.dmg") + "]}";
+      server.write(
+          "HTTP/1.1 200 OK\r\nContent-Length: " + QByteArray::number(body.size()) + "\r\nConnection: close\r\n\r\n" +
+              body,
+          true
+      );
+    };
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 1);
+    const auto *settingsPage = pages->currentWidget();
+    window.checkForUpdates(false);
+    window.findChild<synergy::gui::update::UpdateChecker *>()->setAssetSuffixes({"_fixture.dmg"});
+    QTRY_COMPARE(server.requests, 1);
+    respond("99.0.0");
+    QTRY_VERIFY(!badge->isHidden());
+    QCOMPARE(pages->currentWidget(), settingsPage);
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_VERIFY(badge->isVisibleTo(&window));
+    QCOMPARE(pages->currentIndex(), 0);
+    QTRY_COMPARE(shortcut->size(), shortcutSize);
+    const auto hint = QCoreApplication::translate("QObject", "Update to %1 available").arg("99.0.0");
+    QCOMPARE(shortcut->toolTip(), hint);
+    QCOMPARE(shortcut->accessibleDescription(), hint);
+    const auto badgeImage = badge->grab().toImage();
+    QVERIFY(!badgeImage.isNull());
+    QCOMPARE(badgeImage.pixelColor(badgeImage.rect().center()), QColor("#e5484d"));
+    if (m_width == 500)
+      capture(window, "update-available-badge");
+
+    QTest::mouseClick(shortcut, Qt::LeftButton);
+    QTRY_VERIFY(window.findChild<synergy::gui::update::UpdateDialog *>());
+    QCOMPARE(server.requests, 1);
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_COMPARE(pages->currentIndex(), 0);
+    QTRY_VERIFY(badge->isVisibleTo(&window));
+    QTRY_VERIFY(window.findChildren<synergy::gui::update::UpdateDialog *>().isEmpty());
+
+    window.checkForUpdates(false);
+    QTRY_COMPARE(server.requests, 2);
+    server.write("HTTP/1.1 503 Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", true);
+    QTRY_VERIFY(window.findChildren<synergy::gui::update::UpdateChecker *>().isEmpty());
+    QVERIFY(badge->isVisibleTo(&window));
+
+    window.checkForUpdates(false);
+    window.findChild<synergy::gui::update::UpdateChecker *>()->setAssetSuffixes({"_fixture.dmg"});
+    QTRY_COMPARE(server.requests, 3);
+    window.checkForUpdates(true);
+    QVERIFY(message(window, QCoreApplication::translate("MainWindow", "Check for Updates")));
+    QCOMPARE(window.checks, 3);
+    respond("1.0.0");
+    QTRY_VERIFY(badge->isHidden());
+    QTRY_VERIFY(message(window, QCoreApplication::translate("MainWindow", "No Updates")));
+    QCOMPARE(server.requests, 3);
+  }
+  void windowDestructionCancelsPendingUpdateCheck()
+  {
+    ControlledHttp server;
+    QVERIFY(server.isListening());
+    {
+      IsolatedWindow window(server, m_width);
+      window.checkForUpdates(true);
+      QTRY_COMPARE(server.requests, 1);
+      QVERIFY(message(window, QCoreApplication::translate("MainWindow", "Check for Updates")));
+    }
+    QTRY_VERIFY(server.peers.first()->state() == QAbstractSocket::UnconnectedState);
+  }
   void checkingFailureRetryAndCancelAreRealRoutes()
   {
     ControlledHttp server;
