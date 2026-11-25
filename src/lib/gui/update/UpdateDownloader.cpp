@@ -81,6 +81,7 @@ void UpdateDownloader::start(const UpdateAsset &asset, const QString &directory)
   m_path = QDir(directory).filePath(fileName);
   m_received = 0;
   m_completed = false;
+  m_singleRetryUsed = false;
   m_hash.reset();
 
   m_file = std::make_unique<QFile>(m_path);
@@ -101,7 +102,7 @@ void UpdateDownloader::startSingleDownload()
 {
   QNetworkRequest request(m_asset.url);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-  request.setTransferTimeout(300000);
+  request.setTransferTimeout(m_policy.singleRequestTimeoutMs);
 #endif
 
   auto *reply = startRequest(request);
@@ -114,13 +115,20 @@ void UpdateDownloader::startSingleDownload()
     }
     const auto chunk = reply->readAll();
     m_received += chunk.size();
-    if (m_received > kMaxPackageSize || (m_asset.size > 0 && m_received > m_asset.size)) {
-      reply->abort();
+    if (m_received > kMaxPackageSize) {
+      cleanup();
+      Q_EMIT failed(tr("Update package is larger than the allowed limit."));
+      return;
+    }
+    if (m_asset.size > 0 && m_received > m_asset.size) {
+      cleanup();
+      Q_EMIT failed(tr("Update package size does not match the release metadata."));
       return;
     }
     m_hash.addData(chunk);
     if (m_file->write(chunk) != chunk.size()) {
-      reply->abort();
+      cleanup();
+      Q_EMIT failed(tr("Could not finish writing the update file."));
       return;
     }
     Q_EMIT progress(m_received, m_asset.size);
@@ -238,12 +246,18 @@ void UpdateDownloader::finishRange(Range &range)
 void UpdateDownloader::fallBackToSingleDownload()
 {
   abortRanges();
+  restartSingleDownload();
+}
+
+void UpdateDownloader::restartSingleDownload()
+{
   m_received = 0;
   if (!m_file->resize(0) || !m_file->seek(0)) {
     cleanup();
     Q_EMIT failed(tr("Could not finish writing the update file."));
     return;
   }
+  m_hash.reset();
   startSingleDownload();
   Q_EMIT progress(0, m_asset.size);
 }
@@ -270,6 +284,17 @@ void UpdateDownloader::finishDownload()
   reply->deleteLater();
 
   if (reply->error() != QNetworkReply::NoError) {
+    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    bool retryable =
+        reply->error() == QNetworkReply::RemoteHostClosedError || reply->error() == QNetworkReply::TimeoutError;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0) && QT_VERSION < QT_VERSION_CHECK(6, 10, 1)
+    retryable = retryable || reply->error() == QNetworkReply::OperationCanceledError;
+#endif
+    if (!m_singleRetryUsed && retryable && status < 400) {
+      m_singleRetryUsed = true;
+      restartSingleDownload();
+      return;
+    }
     const auto reason = tr("Could not download the update: %1").arg(reply->errorString());
     cleanup();
     Q_EMIT failed(reason);

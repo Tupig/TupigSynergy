@@ -22,4 +22,12 @@ private Q_SLOTS:
   void disablesHttp2ForPackageTransfers();
   void rejectsUnrelatedRedirect_data();
   void rejectsUnrelatedRedirect();
+  void retriesAfterPartialDisconnect();
+  void boundsPersistentDisconnect();
+  void doesNotRetryHttpFailure();
+  void retriesRangeFallbackAfterDisconnect();
+  void resetsStateForSecondOperation();
+  void retriesAfterTimeout();
+  void rejectsOversizeResponse();
+  void destroyingDownloadCancelsAndCleansUp();
 };

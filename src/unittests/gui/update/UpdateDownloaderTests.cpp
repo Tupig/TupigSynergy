@@ -238,4 +238,226 @@ void UpdateDownloaderTests::rejectsUnrelatedRedirect()
   QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("package.msi"))));
 }
 
+void UpdateDownloaderTests::retriesAfterPartialDisconnect()
+{
+  TestHttpServer server;
+  const auto bytes = QByteArrayLiteral("recoverable package");
+  server.setOrdinaryResponses({
+      {200, bytes, bytes.size(), 3, true},
+      {200, bytes, bytes.size(), -1, false},
+  });
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  UpdateDownloader downloader(nullptr, loopbackPolicy());
+  QSignalSpy finished(&downloader, &UpdateDownloader::finished);
+  QSignalSpy failed(&downloader, &UpdateDownloader::failed);
+  QSignalSpy progress(&downloader, &UpdateDownloader::progress);
+  const auto digest = QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex();
+  downloader.start(
+      {QStringLiteral("package.msi"), server.url(), bytes.size(), QString::fromLatin1(digest)}, directory.path()
+  );
+  QTRY_COMPARE_WITH_TIMEOUT(finished.count() + failed.count(), 1, 5000);
+  QCOMPARE(finished.count(), 1);
+  QCOMPARE(failed.count(), 0);
+  QCOMPARE(server.ordinaryRequests(), 2);
+  QCOMPARE(server.partialRequests(), 0);
+  bool sawPositive = false;
+  bool sawResetAfterPositive = false;
+  for (const auto &row : progress) {
+    if (row.at(0).toLongLong() > 0)
+      sawPositive = true;
+    if (sawPositive && row.at(0).toLongLong() == 0)
+      sawResetAfterPositive = true;
+  }
+  QVERIFY(sawPositive);
+  QVERIFY(sawResetAfterPositive);
+  QFile file(finished.first().first().toString());
+  QVERIFY(file.open(QIODevice::ReadOnly));
+  QCOMPARE(file.readAll(), bytes);
+}
+
+void UpdateDownloaderTests::boundsPersistentDisconnect()
+{
+  TestHttpServer server;
+  const auto bytes = QByteArrayLiteral("stalled package");
+  server.setOrdinaryResponses({{200, bytes, bytes.size(), 2, true}, {200, bytes, bytes.size(), 2, true}});
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  UpdateDownloader downloader(nullptr, loopbackPolicy());
+  QSignalSpy finished(&downloader, &UpdateDownloader::finished);
+  QSignalSpy failed(&downloader, &UpdateDownloader::failed);
+  downloader.start(
+      {QStringLiteral("package.msi"), server.url(), bytes.size(),
+       QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
+      directory.path()
+  );
+  QTRY_COMPARE_WITH_TIMEOUT(finished.count() + failed.count(), 1, 5000);
+  QCOMPARE(finished.count(), 0);
+  QCOMPARE(failed.count(), 1);
+  QCOMPARE(server.ordinaryRequests(), 2);
+  QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("package.msi"))));
+}
+
+void UpdateDownloaderTests::doesNotRetryHttpFailure()
+{
+  TestHttpServer server;
+  server.setOrdinaryResponses({{500, QByteArrayLiteral("no"), 2, -1, false}});
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  UpdateDownloader downloader(nullptr, loopbackPolicy());
+  QSignalSpy finished(&downloader, &UpdateDownloader::finished);
+  QSignalSpy failed(&downloader, &UpdateDownloader::failed);
+  const QByteArray bytes("no");
+  downloader.start(
+      {QStringLiteral("package.msi"), server.url(), bytes.size(),
+       QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
+      directory.path()
+  );
+  QTRY_COMPARE_WITH_TIMEOUT(finished.count() + failed.count(), 1, 5000);
+  QCOMPARE(finished.count(), 0);
+  QCOMPARE(failed.count(), 1);
+  QCOMPARE(server.ordinaryRequests(), 1);
+  QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("package.msi"))));
+}
+
+void UpdateDownloaderTests::retriesRangeFallbackAfterDisconnect()
+{
+  const auto bytes = QByteArray(9 * 1024 * 1024, 'r');
+  TestHttpServer server;
+  server.setByteRanges(false);
+  server.setOrdinaryResponses({{200, bytes, bytes.size(), 4096, true}, {200, bytes, bytes.size(), -1, false}});
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  UpdateDownloader downloader(nullptr, loopbackPolicy());
+  QSignalSpy finished(&downloader, &UpdateDownloader::finished);
+  QSignalSpy failed(&downloader, &UpdateDownloader::failed);
+  downloader.start(
+      {QStringLiteral("package.msi"), server.url(), bytes.size(),
+       QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
+      directory.path()
+  );
+  QTRY_COMPARE_WITH_TIMEOUT(finished.count() + failed.count(), 1, 5000);
+  QCOMPARE(finished.count(), 1);
+  QCOMPARE(failed.count(), 0);
+  QVERIFY(server.partialRequests() >= 1 && server.partialRequests() <= 3);
+  QCOMPARE(server.ordinaryRequests(), 2);
+  QFile file(finished.first().first().toString());
+  QVERIFY(file.open(QIODevice::ReadOnly));
+  QCOMPARE(file.readAll(), bytes);
+}
+
+void UpdateDownloaderTests::resetsStateForSecondOperation()
+{
+  TestHttpServer server;
+  const auto first = QByteArrayLiteral("first package");
+  const auto second = QByteArrayLiteral("second package");
+  server.setOrdinaryResponses({
+      {200, first, first.size(), 2, true},
+      {200, first, first.size(), -1, false},
+      {200, second, second.size(), 2, true},
+      {200, second, second.size(), -1, false},
+  });
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  UpdateDownloader downloader(nullptr, loopbackPolicy());
+  QSignalSpy finished(&downloader, &UpdateDownloader::finished);
+  QSignalSpy failed(&downloader, &UpdateDownloader::failed);
+  downloader.start(
+      {QStringLiteral("package.msi"), server.url(), first.size(),
+       QString::fromLatin1(QCryptographicHash::hash(first, QCryptographicHash::Sha256).toHex())},
+      directory.path()
+  );
+  QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 5000);
+  downloader.start(
+      {QStringLiteral("package.msi"), server.url(), second.size(),
+       QString::fromLatin1(QCryptographicHash::hash(second, QCryptographicHash::Sha256).toHex())},
+      directory.path()
+  );
+  QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 2, 5000);
+  QCOMPARE(failed.count(), 0);
+  QCOMPARE(server.ordinaryRequests(), 4);
+  QFile file(finished.at(1).first().toString());
+  QVERIFY(file.open(QIODevice::ReadOnly));
+  QCOMPARE(file.readAll(), second);
+}
+
+void UpdateDownloaderTests::retriesAfterTimeout()
+{
+  TestHttpServer server;
+  const auto bytes = QByteArrayLiteral("timeout package");
+  server.setOrdinaryResponses({{200, bytes, bytes.size(), 2, false, true}, {200, bytes, bytes.size(), -1, false}});
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  auto policy = loopbackPolicy();
+  policy.singleRequestTimeoutMs = 350;
+  UpdateDownloader downloader(nullptr, policy);
+  QSignalSpy finished(&downloader, &UpdateDownloader::finished);
+  QSignalSpy failed(&downloader, &UpdateDownloader::failed);
+  downloader.start(
+      {QStringLiteral("package.msi"), server.url(), bytes.size(),
+       QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
+      directory.path()
+  );
+  QTRY_COMPARE_WITH_TIMEOUT(finished.count() + failed.count(), 1, 5000);
+  QCOMPARE(finished.count(), 1);
+  QCOMPARE(failed.count(), 0);
+  QCOMPARE(server.ordinaryRequests(), 2);
+}
+
+void UpdateDownloaderTests::rejectsOversizeResponse()
+{
+  TestHttpServer server;
+  const auto bytes = QByteArrayLiteral("oversize package");
+  server.setBinary(bytes);
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  UpdateDownloader downloader(nullptr, loopbackPolicy());
+  QSignalSpy finished(&downloader, &UpdateDownloader::finished);
+  QSignalSpy failed(&downloader, &UpdateDownloader::failed);
+  downloader.start(
+      {QStringLiteral("package.msi"), server.url(), bytes.size() - 1,
+       QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
+      directory.path()
+  );
+  QTRY_COMPARE_WITH_TIMEOUT(finished.count() + failed.count(), 1, 5000);
+  QCOMPARE(finished.count(), 0);
+  QCOMPARE(failed.count(), 1);
+  QCOMPARE(server.ordinaryRequests(), 1);
+  QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("package.msi"))));
+}
+
+void UpdateDownloaderTests::destroyingDownloadCancelsAndCleansUp()
+{
+  TestHttpServer server;
+  const auto bytes = QByteArrayLiteral("cancel package");
+  server.setOrdinaryResponses({{200, bytes, bytes.size(), 3, false, true}});
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  auto policy = loopbackPolicy();
+  policy.singleRequestTimeoutMs = 350;
+  auto *downloader = new UpdateDownloader(nullptr, policy);
+  QObject observer;
+  int progressCount = 0;
+  int finishedCount = 0;
+  int failedCount = 0;
+  QObject::connect(downloader, &UpdateDownloader::progress, &observer, [&progressCount](qint64 received, qint64) {
+    if (received > 0)
+      ++progressCount;
+  });
+  QObject::connect(downloader, &UpdateDownloader::finished, &observer, [&finishedCount] { ++finishedCount; });
+  QObject::connect(downloader, &UpdateDownloader::failed, &observer, [&failedCount] { ++failedCount; });
+  downloader->start(
+      {QStringLiteral("package.msi"), server.url(), bytes.size(),
+       QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
+      directory.path()
+  );
+  QTRY_VERIFY_WITH_TIMEOUT(progressCount > 0, 5000);
+  delete downloader;
+  QTest::qWait(500);
+  QCOMPARE(server.ordinaryRequests(), 1);
+  QCOMPARE(finishedCount, 0);
+  QCOMPARE(failedCount, 0);
+  QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("package.msi"))));
+}
+
 QTEST_GUILESS_MAIN(UpdateDownloaderTests)
