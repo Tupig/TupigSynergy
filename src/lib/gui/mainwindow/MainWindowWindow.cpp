@@ -72,6 +72,7 @@
 
 #include <memory>
 #include <thread>
+#include <utility>
 
 #if defined(Q_OS_MACOS)
 #include "platform/macos/OSXSDKHeaders.h"
@@ -141,109 +142,111 @@ synergy::gui::update::UpdateChecker *MainWindow::createUpdateChecker()
   return new synergy::gui::update::UpdateChecker(this);
 }
 
-void MainWindow::checkForUpdates(bool manual)
+bool MainWindow::activateUpdatePage()
 {
   using synergy::gui::update::UpdateDialog;
-  const auto showExistingUpdate = [this, manual] {
-    if (!manual)
-      return m_pageHost->findChild<UpdateDialog *>() != nullptr;
-    if (m_pageHost->activateEditor(UpdateDialog::staticMetaObject, true)) {
-      showAndActivate();
-      return true;
-    }
-    if (auto *update = m_pageHost->findChild<UpdateDialog *>(QString(), Qt::FindDirectChildrenOnly)) {
-      showPage(update);
-      return true;
-    }
+  if (m_pageHost->activateEditor(UpdateDialog::staticMetaObject, true)) {
+    showAndActivate();
+    return true;
+  }
+  if (auto *update = m_pageHost->findChild<UpdateDialog *>(QString(), Qt::FindDirectChildrenOnly)) {
+    showPage(update);
+    return true;
+  }
+  return false;
+}
+
+void MainWindow::showAvailableUpdate()
+{
+  if (!activateUpdatePage())
+    showPage(new synergy::gui::update::UpdateDialog(*m_availableUpdate, this));
+}
+
+bool MainWindow::finishUpdateCheck()
+{
+  auto *checker = std::exchange(m_updateChecker, nullptr);
+  disconnect(checker, nullptr, this, nullptr);
+  checker->deleteLater();
+  const auto checking = std::exchange(m_updateCheckPage, {});
+  if (!checking)
     return false;
-  };
-  if (showExistingUpdate())
+  checking->accept();
+  return true;
+}
+
+void MainWindow::checkForUpdates(bool manual)
+{
+  using synergy::gui::update::UpdateChecker;
+  using synergy::gui::update::UpdateDialog;
+  using synergy::gui::update::UpdateInfo;
+
+  if (manual ? activateUpdatePage() : m_pageHost->findChild<UpdateDialog *>() != nullptr)
     return;
-  QPointer<synergy::gui::update::UpdateChecker> checker = createUpdateChecker();
-  if (!checker)
-    return;
-  checker->setParent(this);
-  const auto finished = std::make_shared<bool>(false);
-  QPointer<MessagePage> checking;
-  if (manual) {
-    checking =
+
+  const bool newCheck = m_updateChecker == nullptr;
+  if (newCheck) {
+    m_updateChecker = createUpdateChecker();
+    if (!m_updateChecker)
+      return;
+    m_updateChecker->setParent(this);
+    connect(m_updateChecker, &UpdateChecker::updateAvailable, this, [this](const UpdateInfo &info) {
+      m_availableUpdate = std::make_unique<UpdateInfo>(info);
+      ui->setAvailableUpdateVersion(info.version);
+      if (finishUpdateCheck())
+        showAvailableUpdate();
+    });
+    connect(m_updateChecker, &UpdateChecker::noUpdate, this, [this](const QString &version) {
+      m_availableUpdate.reset();
+      ui->setAvailableUpdateVersion(QString());
+      if (!finishUpdateCheck())
+        return;
+      auto *page = new MessagePage(
+          this, MessagePage::Kind::Information, tr("No Updates"),
+          tr("You are running the latest version (%1).").arg(version)
+      );
+      auto *ok = page->addButton(tr("OK"), true);
+      connect(ok, &QPushButton::clicked, page, &QDialog::accept);
+      showPage(page);
+    });
+    connect(m_updateChecker, &UpdateChecker::failed, this, [this](const QString &reason) {
+      if (!finishUpdateCheck()) {
+        qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "update check failed:") << reason;
+        return;
+      }
+      auto *page = new MessagePage(this, MessagePage::Kind::Warning, tr("Update Check Failed"), reason);
+      auto *close = page->addButton(tr("Close"));
+      connect(close, &QPushButton::clicked, page, &QDialog::reject);
+      auto *retry = page->addButton(tr("Retry"), true);
+      connect(retry, &QPushButton::clicked, this, [this, page, retry] {
+        retry->setEnabled(false);
+        page->accept();
+        checkForUpdates(true);
+      });
+      showPage(page);
+    });
+  }
+
+  if (manual && !m_updateCheckPage) {
+    auto *checking =
         new MessagePage(this, MessagePage::Kind::Information, tr("Check for Updates"), tr("Checking for updates…"));
+    m_updateCheckPage = checking;
     auto *progress = new QProgressBar(checking);
     progress->setRange(0, 0);
     checking->addContentWidget(progress);
     auto *cancel = checking->addButton(tr("Cancel"));
     connect(cancel, &QPushButton::clicked, checking, &QDialog::reject);
-    const auto cancelCheck = [this, checker, finished] {
-      if (*finished || !checker)
+    const auto cancelCheck = [this, checking] {
+      if (checking != m_updateCheckPage)
         return;
-      *finished = true;
-      // Abort may emit failure synchronously; remove result handlers first.
-      disconnect(checker.data(), nullptr, this, nullptr);
-      delete checker.data();
+      m_updateCheckPage = nullptr;
+      finishUpdateCheck();
     };
     connect(checking, &QDialog::rejected, this, cancelCheck);
-    connect(checking, &QObject::destroyed, this, cancelCheck);
     showPage(checking);
   }
-  const auto release = [this, checker, checking, finished]() {
-    if (*finished || !checker)
-      return false;
-    *finished = true;
-    disconnect(checker.data(), nullptr, this, nullptr);
-    checker->deleteLater();
-    if (checking)
-      checking->accept();
-    return true;
-  };
 
-  connect(
-      checker.data(), &synergy::gui::update::UpdateChecker::updateAvailable, this,
-      [this, release, showExistingUpdate](const synergy::gui::update::UpdateInfo &info) {
-        if (!release() || showExistingUpdate())
-          return;
-        showPage(new synergy::gui::update::UpdateDialog(info, this));
-      }
-  );
-  connect(
-      checker.data(), &synergy::gui::update::UpdateChecker::noUpdate, this,
-      [this, manual, release](const QString &version) {
-        if (!release())
-          return;
-        if (manual) {
-          auto *page = new MessagePage(
-              this, MessagePage::Kind::Information, tr("No Updates"),
-              tr("You are running the latest version (%1).").arg(version)
-          );
-          auto *ok = page->addButton(tr("OK"), true);
-          connect(ok, &QPushButton::clicked, page, &QDialog::accept);
-          showPage(page);
-        }
-      }
-  );
-  connect(
-      checker.data(), &synergy::gui::update::UpdateChecker::failed, this,
-      [this, manual, release](const QString &reason) {
-        if (!release())
-          return;
-        if (manual) {
-          auto *page = new MessagePage(this, MessagePage::Kind::Warning, tr("Update Check Failed"), reason);
-          auto *close = page->addButton(tr("Close"));
-          connect(close, &QPushButton::clicked, page, &QDialog::reject);
-          auto *retry = page->addButton(tr("Retry"), true);
-          connect(retry, &QPushButton::clicked, this, [this, page, retry] {
-            retry->setEnabled(false);
-            page->accept();
-            checkForUpdates(true);
-          });
-          showPage(page);
-        } else {
-          qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "update check failed:") << reason;
-        }
-      }
-  );
-
-  if (checker && !*finished)
-    checker->checkForUpdates();
+  if (newCheck && m_updateChecker)
+    m_updateChecker->checkForUpdates();
 }
 
 void MainWindow::setupTrayIcon()

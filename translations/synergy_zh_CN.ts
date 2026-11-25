@@ -1421,6 +1421,10 @@ Additionally, check you are able to %1 the server config file: %2</source>
 <context>
     <name>QObject</name>
     <message>
+        <source>Update to %1 available</source>
+        <translation>可更新至 %1</translation>
+    </message>
+    <message>
         <source>fatal error</source>
         <translation>致命错误</translation>
     </message>
@@ -2182,12 +2186,12 @@ Now you can connect your client computers to this server. You should see a promp
         <translation>核心服务器配置文件</translation>
     </message>
     <message>
-        <source>Use a server config file to create complex computer layouts that are not possible with the simple grid-based computer layout editor.
-
-Enabling this setting will disable the server config GUI.</source>
-        <translation>使用服务器配置文件来创建简单的网格布局编辑器无法实现的复杂计算机布局。
-
-启用此设置将禁用服务器配置 GUI。</translation>
+        <source>Use a configuration file for layouts the grid cannot create.</source>
+        <translation>配置文件可用于网格编辑器无法创建的布局。</translation>
+    </message>
+    <message>
+        <source>Clear the checkbox to edit the layout, hotkeys and sharing here.</source>
+        <translation>取消上方勾选，即可在这里编辑计算机布局、快捷键以及共享与切换。</translation>
     </message>
     <message>
         <source>Use a server config file</source>

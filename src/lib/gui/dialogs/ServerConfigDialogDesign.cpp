@@ -736,11 +736,11 @@ void Ui::ServerConfigDialog::retranslateUi(QDialog *dialog)
   label_5->setText(QCoreApplication::translate("ServerConfigDialog", "Core server config file", nullptr));
   synergy::gui::compact::setSubtleText(
       label_6, QCoreApplication::translate(
-                   "ServerConfigDialog",
-                   "Use a server config file to create complex computer layouts that are not possible with the simple "
-                   "grid-based computer layout editor.\n\nEnabling this setting will disable the server config GUI.",
-                   nullptr
-               )
+                   "ServerConfigDialog", "Use a configuration file for layouts the grid cannot create."
+               ) + QLatin1Char(' ') +
+                   QCoreApplication::translate(
+                       "ServerConfigDialog", "Clear the checkbox to edit the layout, hotkeys and sharing here."
+                   )
   );
   groupExternalConfig->setTitle(QCoreApplication::translate("ServerConfigDialog", "Use a server config file", nullptr));
   cbExternalConfig->setText(groupExternalConfig->title());
