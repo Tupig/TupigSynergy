@@ -103,7 +103,21 @@ if (OSX_BUNDLE)
   set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/deploy/mac/dmg-background.tiff")
   set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${MY_DIR}/generate_ds_store.applescript")
   set(CPACK_DMG_VOLUME_NAME "${CMAKE_PROJECT_PROPER_NAME}")
-  set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/deploy/mac/synergy-eula.txt")
-  set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE ON)
+  set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE OFF)
+  set(CPACK_DMG_SLA_LANGUAGES "en_US;zh_CN")
+  set(CPACK_DMG_SLA_DIR "${CMAKE_CURRENT_BINARY_DIR}/mac-dmg-sla")
+  file(MAKE_DIRECTORY "${CPACK_DMG_SLA_DIR}")
+  foreach(resource IN ITEMS license menu)
+    configure_file("${MY_DIR}/sla/en_US.${resource}.txt"
+      "${CPACK_DMG_SLA_DIR}/en_US.${resource}.txt" COPYONLY)
+    set(chinese_resource "${MY_DIR}/sla/zh_CN.${resource}.txt")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${chinese_resource}")
+    execute_process(
+      COMMAND /usr/bin/iconv -f UTF-8 -t GB2312 "${chinese_resource}"
+      OUTPUT_FILE "${CPACK_DMG_SLA_DIR}/zh_CN.${resource}.txt"
+      COMMAND_ERROR_IS_FATAL ANY
+    )
+  endforeach()
+  list(APPEND CPACK_POST_BUILD_SCRIPTS "${MY_DIR}/dmg-license.cmake")
   set(CPACK_GENERATOR "DragNDrop")
 endif()

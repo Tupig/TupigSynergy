@@ -52,6 +52,7 @@
 #include <QPalette>
 #include <QPixmap>
 #include <QPointer>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QRegularExpression>
@@ -191,6 +192,7 @@ private Q_SLOTS:
   void permissionWarningUsesSelectedLanguage();
   void logFollowsTailWithoutInterruptingHistory();
   void leavingUpdateCancelsPendingDownload();
+  void downloadProgressUiRefreshesAtTimerCadence();
 };
 
 void NativeDesignTests::initTestCase()
@@ -1072,21 +1074,23 @@ void NativeDesignTests::permissionWarningUsesSelectedLanguage()
   auto *table = panel.findChild<QTableWidget *>(QStringLiteral("logRecords"));
   QVERIFY(records && table);
 
-  constexpr auto source = "Start blocked: macOS has not granted Accessibility permission.";
+  constexpr auto source = "macOS denied Accessibility to the app before the sharing engine started (version %1).";
   const auto appendWarning = [] {
-    const auto message = QCoreApplication::translate("MainWindow", source);
+    const auto message = QCoreApplication::translate("MainWindow", source).arg(QStringLiteral("2.1.17"));
     synergy::gui::Logger::instance()->handleMessage(QtWarningMsg, {}, message);
   };
   appendWarning();
   QCOMPARE(table->rowCount(), 1);
-  QCOMPARE(table->item(0, 2)->text(), QString::fromLatin1(source));
+  QCOMPARE(table->item(0, 2)->text(), QString::fromLatin1(source).arg(QStringLiteral("2.1.17")));
 
   QTranslator translator;
   QVERIFY(translator.load(QStringLiteral("synergy_zh_CN.qm"), QStringLiteral(UI_TEST_TRANSLATIONS_DIR)));
   QVERIFY(QCoreApplication::installTranslator(&translator));
   appendWarning();
   QCOMPARE(table->rowCount(), 2);
-  QCOMPARE(table->item(1, 2)->text(), QStringLiteral("未能启动：macOS 尚未允许设备控制和数据访问。"));
+  QCOMPARE(
+      table->item(1, 2)->text(), QStringLiteral("macOS 拒绝了主程序的辅助功能访问，共享引擎尚未启动（版本 2.1.17）。")
+  );
   QCOMPARE(records->levelCounts().at(1), 2);
   QVERIFY(QCoreApplication::removeTranslator(&translator));
 }
@@ -1149,6 +1153,63 @@ void NativeDesignTests::leavingUpdateCancelsPendingDownload()
   QVERIFY(downloader.isNull());
   QTRY_COMPARE_WITH_TIMEOUT(disconnected.count(), 1, 5000);
   QCOMPARE(dialog.result(), static_cast<int>(QDialog::Rejected));
+}
+
+void NativeDesignTests::downloadProgressUiRefreshesAtTimerCadence()
+{
+  QTcpServer server;
+  QVERIFY(server.listen(QHostAddress::LocalHost, 0));
+  auto info = updateInfo();
+  info.asset.url = QUrl(QStringLiteral("http://127.0.0.1:%1/update.dmg").arg(server.serverPort()));
+  info.asset.size = 1000;
+  info.asset.sha256 = QString(64, QLatin1Char('a'));
+  const synergy::gui::update::DownloadPolicy policy{
+      QStringLiteral("http"), QStringLiteral("127.0.0.1"), QStringLiteral("/")
+  };
+  synergy::gui::update::UpdateDialog dialog(info, nullptr, policy);
+  QPointer<synergy::gui::update::UpdateDownloader> downloader =
+      dialog.findChild<synergy::gui::update::UpdateDownloader *>();
+  auto *download = dialog.findChild<QPushButton *>(QStringLiteral("downloadInstall"));
+  auto *amount = dialog.findChild<QLabel *>(QStringLiteral("downloadAmountValue"));
+  auto *progress = dialog.findChild<QProgressBar *>(QStringLiteral("updateProgress"));
+  QVERIFY(downloader && download && amount && progress);
+
+  download->click();
+  QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 5000);
+  auto *socket = server.nextPendingConnection();
+  QVERIFY(socket != nullptr);
+  QSignalSpy disconnected(socket, &QTcpSocket::disconnected);
+  QSignalSpy progressChanges(progress, &QProgressBar::valueChanged);
+
+  // The downloader may report many transport chunks within one UI timer period.
+  // The dialog must keep only the newest sample and render it once at the tick.
+  const auto initialAmount = amount->text();
+  for (int received = 10; received <= 200; received += 10)
+    Q_EMIT downloader->progress(received, info.asset.size);
+  QCOMPARE(amount->text(), initialAmount);
+  QCOMPARE(progressChanges.count(), 0);
+  QTRY_VERIFY_WITH_TIMEOUT(amount->text() != initialAmount, 1000);
+  QCOMPARE(progressChanges.count(), 1);
+  QCOMPARE(progress->value(), 20);
+
+  progressChanges.clear();
+  const auto firstAmount = amount->text();
+  for (int received = 210; received <= 400; received += 10)
+    Q_EMIT downloader->progress(received, info.asset.size);
+  QCOMPARE(amount->text(), firstAmount);
+  QCOMPARE(progressChanges.count(), 0);
+  QTRY_VERIFY_WITH_TIMEOUT(amount->text() != firstAmount, 1000);
+  QCOMPARE(progressChanges.count(), 1);
+  QCOMPARE(progress->value(), 40);
+
+  // Completion and cancellation are state transitions, not timer-coalesced UI work.
+  Q_EMIT downloader->finished(QStringLiteral("/synthetic/verified-update.dmg"));
+  QCOMPARE(progress->value(), 100);
+  QCOMPARE(download->text(), QStringLiteral("Install Now"));
+  QVERIFY(download->isEnabled());
+  dialog.reject();
+  QVERIFY(downloader.isNull());
+  QTRY_COMPARE_WITH_TIMEOUT(disconnected.count(), 1, 5000);
 }
 
 int main(int argc, char **argv)

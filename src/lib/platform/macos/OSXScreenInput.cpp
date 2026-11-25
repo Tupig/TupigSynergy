@@ -33,8 +33,6 @@
 #include "mt/Mutex.h"
 #include "mt/Thread.h"
 
-#include <AppKit/NSEvent.h>
-#include <AvailabilityMacros.h>
 #include <IOKit/hidsystem/event_status_driver.h>
 #include <cstring>
 #include <dispatch/dispatch.h>
@@ -261,7 +259,7 @@ void OSXScreen::fakeMouseButton(ButtonID id, bool press)
   // we define our own defaults.
   const double maxDiff = sqrt(2) + 0.0001;
 
-  double clickTime = [NSEvent doubleClickInterval];
+  double clickTime = osxDoubleClickInterval();
 
   // As long as the click is within the time window and distance window
   // increase clickState (double click, triple click, etc)

@@ -9,8 +9,41 @@
 #include "arch/Arch.h"
 #include "base/EventQueue.h"
 #include "base/Log.h"
+#include "common/ExitCodes.h"
 
 #include <QElapsedTimer>
+
+namespace {
+class CountingEventData : public EventData
+{
+public:
+  explicit CountingEventData(int &destroyed) : m_destroyed(destroyed)
+  {
+  }
+  ~CountingEventData() override
+  {
+    ++m_destroyed;
+  }
+
+private:
+  int &m_destroyed;
+};
+
+class CountingExitEventData : public ExitEventData
+{
+public:
+  CountingExitEventData(int exitCode, int &destroyed) : ExitEventData(exitCode), m_destroyed(destroyed)
+  {
+  }
+  ~CountingExitEventData() override
+  {
+    ++m_destroyed;
+  }
+
+private:
+  int &m_destroyed;
+};
+} // namespace
 
 void EventQueueTests::initTestCase()
 {
@@ -44,6 +77,7 @@ void EventQueueTests::oneShotTimerFiresOnce()
   Event waitForSecond;
   QVERIFY(!events.getEvent(waitForSecond, 0.2));
   QCOMPARE(fired, 1);
+  events.deleteTimer(timer);
 }
 
 void EventQueueTests::postedEventIsDispatched()
@@ -106,6 +140,52 @@ void EventQueueTests::waitForReadyAfterLoopStarted()
   timer.start();
   events.waitForReady();
   QVERIFY2(timer.elapsed() < 2000, "waitForReady lost the ready signal");
+}
+
+void EventQueueTests::pendingOwnedPayloadIsReleasedWhenQueueNeverStarts()
+{
+  int destroyed = 0;
+  {
+    EventQueue events;
+    events.addEvent(Event(EventTypes::ScreenSuspend, nullptr, new CountingEventData(destroyed)));
+  }
+  QCOMPARE(destroyed, 1);
+}
+
+void EventQueueTests::quitPayloadIsReleased()
+{
+  int destroyed = 0;
+  {
+    EventQueue events;
+    events.addEvent(Event(EventTypes::Quit, nullptr, new CountingExitEventData(37, destroyed)));
+    QCOMPARE(events.loop(), 37);
+  }
+  QCOMPARE(destroyed, 1);
+}
+
+void EventQueueTests::ownedPayloadQueuedAfterQuitIsReleased()
+{
+  int destroyed = 0;
+  {
+    EventQueue events;
+    events.addEvent(Event(EventTypes::Quit));
+    events.addEvent(Event(EventTypes::ScreenSuspend, nullptr, new CountingEventData(destroyed)));
+    QCOMPARE(events.loop(), s_exitSuccess);
+  }
+  QCOMPARE(destroyed, 1);
+}
+
+void EventQueueTests::borrowedPayloadSurvivesQueueDestruction()
+{
+  int destroyed = 0;
+  auto *payload = new CountingEventData(destroyed);
+  {
+    EventQueue events;
+    events.addEvent(Event(EventTypes::ScreenSuspend, nullptr, payload, Event::EventFlags::DontFreeData));
+  }
+  QCOMPARE(destroyed, 0);
+  delete payload;
+  QCOMPARE(destroyed, 1);
 }
 
 QTEST_MAIN(EventQueueTests)

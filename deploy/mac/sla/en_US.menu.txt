@@ -1,0 +1,9 @@
+English
+Agree
+Disagree
+Print
+Save...
+Click "Agree" to accept the license agreement.
+Software License Agreement
+The license text could not be saved.
+The license text could not be printed.

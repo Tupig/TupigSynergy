@@ -116,10 +116,11 @@ void MainWindow::coreProcessError(CoreProcess::Error error)
 
 void MainWindow::startCore(CoreStartSource source)
 {
-  // Let macOS request accessibility permission before starting the core.
+  // Only an explicit Start should ask macOS to show its permission prompt.
 #if defined(Q_OS_MACOS)
-  if (!checkOSXAccessibilityPermission()) {
-    qWarning().noquote() << tr("Start blocked: macOS has not granted Accessibility permission.");
+  if (!checkOSXAccessibilityPermission(source == CoreStartSource::Manual)) {
+    qWarning().noquote() << tr("macOS denied Accessibility to the app before the sharing engine started (version %1).")
+                                .arg(QCoreApplication::applicationVersion());
     return;
   }
 #endif

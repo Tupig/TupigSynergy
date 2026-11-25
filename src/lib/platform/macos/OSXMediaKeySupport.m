@@ -92,6 +92,11 @@ static KeyID convertNXKeyTypeToKeyID(uint32_t const type)
   return id;
 }
 
+double osxDoubleClickInterval(void)
+{
+  return [NSEvent doubleClickInterval];
+}
+
 bool isMediaKeyEvent(CGEventRef event)
 {
   NSEvent *nsEvent = nil;

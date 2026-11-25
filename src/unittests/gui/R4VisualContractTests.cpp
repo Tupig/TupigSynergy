@@ -775,7 +775,13 @@ private Q_SLOTS:
       QTest::mouseClick(start, Qt::LeftButton);
       QTRY_COMPARE_WITH_TIMEOUT(download.requests, 1, 2000);
       download.send();
-      QTRY_VERIFY_WITH_TIMEOUT(progress.count() > 0, 2000);
+      QTRY_VERIFY_WITH_TIMEOUT(progress.count() > 0 && progress.last().at(0).toLongLong() == 65536, 2000);
+      auto *progressBar = editor->findChild<QProgressBar *>(QStringLiteral("updateProgress"));
+      QVERIFY(progressBar);
+      // The byte signal arrives before the dialog's scheduled display refresh.
+      QTRY_VERIFY_WITH_TIMEOUT(
+          progressBar->isVisibleTo(editor) && progressBar->maximum() == 100 && progressBar->value() == 6, 2000
+      );
       if (expected.tab == 2) {
         // Observe the real named state, not elapsed time alone. The existing
         // flow contract allows3s for1.5s staleness plus500ms timer delivery.
