@@ -590,6 +590,7 @@ jobs:
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-windows-2022-x64
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
+          if-no-files-found: error
           retention-days: 14
 
       - name: Preserve test probe identities
@@ -937,6 +938,7 @@ jobs:
         with:
           name: package-${{ env.PACKAGE_PREFIX }}-${{ needs.get-version.outputs.version }}-macos-arm64
           path: ${{ github.workspace }}/build/${{ env.PACKAGE_PREFIX }}[-_]*.*
+          if-no-files-found: error
           retention-days: 14
 
       - name: Preserve test probe identities
@@ -1021,13 +1023,28 @@ jobs:
       - name: Hash release packages
         id: subjects
         shell: bash
+        env:
+          VERSION: ${{ needs.get-version.outputs.base }}
         run: |
           set -euo pipefail
-          mapfile -t files < <(find dist -type f ! -name '*.digest' | sort)
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "::error::no package files to attest"
+          base="dist/${PACKAGE_PREFIX}_${VERSION}"
+          files=(
+            "${base}_mac_arm64.dmg"
+            "${base}_windows_x64-portable.7z"
+            "${base}_windows_x64.msi"
+          )
+          shopt -s nullglob dotglob
+          downloaded=(dist/*)
+          if [ "${#downloaded[@]}" -ne "${#files[@]}" ]; then
+            printf '::error::release package inventory requires exactly %s entries; found %s\n' "${#files[@]}" "${#downloaded[@]}"
             exit 1
           fi
+          for file in "${files[@]}"; do
+            if [[ ! -f "$file" || -L "$file" || ! -s "$file" ]]; then
+              printf '::error::release package inventory requires a nonempty regular file at %s\n' "$file"
+              exit 1
+            fi
+          done
           sha256sum "${files[@]}" > "$RUNNER_TEMP/release-subjects.txt"
           echo "path=$RUNNER_TEMP/release-subjects.txt" >> "$GITHUB_OUTPUT"
 
@@ -1044,6 +1061,7 @@ jobs:
           # to run git and fails with "not a git repository".
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.get-version.outputs.base }}
+          RELEASE_SUBJECTS: ${{ steps.subjects.outputs.path }}
           RELEASE_NOTES_ZH: ${{ inputs.release-notes-zh }}
           RELEASE_NOTES_EN: ${{ inputs.release-notes-en }}
         run: |
@@ -1057,14 +1075,12 @@ jobs:
             echo "::error::invalid release identity"
             exit 1
           fi
+          # Publish exactly the files passed to the attestation step.
+          sha256sum -c "$RELEASE_SUBJECTS"
           files=()
-          while IFS= read -r file; do
+          while read -r _ file; do
             files+=("$file")
-          done < <(find dist -type f ! -name '*.digest' | sort)
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "::error::no package files to publish"
-            exit 1
-          fi
+          done < "$RELEASE_SUBJECTS"
           printf 'Publishing %s files to v%s\n' "${#files[@]}" "$VERSION"
           printf ' - %s\n' "${files[@]}"
           tag="v${VERSION}"
