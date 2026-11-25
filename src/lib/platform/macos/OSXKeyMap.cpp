@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: GPL-2.0-only WITH LicenseRef-OpenSSL-Exception
  */
 
+#include "OSXInputSourceThread.h"
 #include "OSXKeyState.h"
 #include "OSXMediaKeySupport.h"
 #include "OSXUchrKeyResource.h"
@@ -52,14 +53,13 @@ KeyButton OSXKeyState::mapKeyFromEvent(KeyIDs &ids, KeyModifierMask *maskOut, CG
   // get keyboard info
   AutoTISInputSourceRef currentKeyboardLayout(nullptr, CFRelease);
   CFDataRef ref = nullptr;
-  {
-    std::lock_guard<std::mutex> lock(g_tisMutex);
+  synergy::platform::onInputSourceThread([&] {
     currentKeyboardLayout = AutoTISInputSourceRef(TISCopyCurrentKeyboardLayoutInputSource(), CFRelease);
     if (currentKeyboardLayout)
       ref = (CFDataRef)TISGetInputSourceProperty(currentKeyboardLayout.get(), kTISPropertyUnicodeKeyLayoutData);
-  }
+  });
 
-  if (!currentKeyboardLayout) {
+  if (!ref) {
     return kKeyNone;
   }
 
@@ -129,10 +129,9 @@ void OSXKeyState::getKeyMap(synergy::KeyMap &keyMap)
     for (int32_t g = 0; g < numGroups; ++g) {
       TISInputSourceRef keyboardLayout = (TISInputSourceRef)CFArrayGetValueAtIndex(m_groups.get(), g);
       CFDataRef id = nullptr;
-      {
-        std::lock_guard<std::mutex> lock(g_tisMutex);
+      synergy::platform::onInputSourceThread([&] {
         id = (CFDataRef)TISGetInputSourceProperty(keyboardLayout, kTISPropertyInputSourceID);
-      }
+      });
       m_groupMap[id] = g;
     }
   }
@@ -149,10 +148,9 @@ void OSXKeyState::getKeyMap(synergy::KeyMap &keyMap)
     // try uchr resource first
     TISInputSourceRef keyboardLayout = (TISInputSourceRef)CFArrayGetValueAtIndex(m_groups.get(), g);
     CFDataRef resourceRef = nullptr;
-    {
-      std::lock_guard<std::mutex> lock(g_tisMutex);
+    synergy::platform::onInputSourceThread([&] {
       resourceRef = (CFDataRef)TISGetInputSourceProperty(keyboardLayout, kTISPropertyUnicodeKeyLayoutData);
-    }
+    });
 
     layoutValid = resourceRef != nullptr;
     if (layoutValid)
@@ -292,12 +290,11 @@ bool OSXKeyState::getGroups(AutoCFArray &groups) const
       CFDictionaryCreate(nullptr, (const void **)keys, (const void **)values, 1, nullptr, nullptr), CFRelease
   );
   AutoCFArray kbds(nullptr, CFRelease);
-  {
-    std::lock_guard<std::mutex> lock(g_tisMutex);
+  synergy::platform::onInputSourceThread([&] {
     kbds = AutoCFArray(TISCreateInputSourceList(dict.get(), false), CFRelease);
-  }
+  });
 
-  if (CFArrayGetCount(kbds.get()) > 0) {
+  if (kbds && CFArrayGetCount(kbds.get()) > 0) {
     groups = std::move(kbds);
   } else {
     LOG_VERBOSE("can't get keyboard layouts");
@@ -315,24 +312,22 @@ void OSXKeyState::setGroup(int32_t group)
     return;
   }
   CFBooleanRef canBeSetted = nullptr;
-  {
-    std::lock_guard<std::mutex> lock(g_tisMutex);
+  synergy::platform::onInputSourceThread([&] {
     AutoTISInputSourceRef source(TISCopyCurrentKeyboardInputSource(), CFRelease);
     if (source)
       canBeSetted = (CFBooleanRef)TISGetInputSourceProperty(source.get(), kTISPropertyInputSourceIsEnableCapable);
-  }
+  });
   if (!canBeSetted) {
     LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "needed keyboard layout is disabled for programmatically selection")
     );
     return;
   }
 
-  {
-    std::lock_guard<std::mutex> lock(g_tisMutex);
+  synergy::platform::onInputSourceThread([&] {
     if (TISSelectInputSource(keyboardLayout) != noErr) {
       LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "failed to set needed keyboard layout"));
     }
-  }
+  });
 
   LOG_VERBOSE("keyboard layout change to %d", group);
 

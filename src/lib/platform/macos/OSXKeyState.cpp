@@ -6,6 +6,7 @@
  */
 
 #include "OSXKeyState.h"
+#include "OSXInputSourceThread.h"
 #include "OSXMediaKeySupport.h"
 #include "OSXUchrKeyResource.h"
 #include "arch/Arch.h"
@@ -335,12 +336,11 @@ int32_t OSXKeyState::pollActiveGroup() const
 {
   AutoTISInputSourceRef keyboardLayout(nullptr, CFRelease);
   CFDataRef id = nullptr;
-  {
-    std::lock_guard<std::mutex> lock(g_tisMutex);
+  synergy::platform::onInputSourceThread([&] {
     keyboardLayout = AutoTISInputSourceRef(TISCopyCurrentKeyboardLayoutInputSource(), CFRelease);
     if (keyboardLayout)
       id = (CFDataRef)TISGetInputSourceProperty(keyboardLayout.get(), kTISPropertyInputSourceID);
-  }
+  });
 
   GroupMap::const_iterator i = m_groupMap.find(id);
   if (i != m_groupMap.end()) {
@@ -351,17 +351,15 @@ int32_t OSXKeyState::pollActiveGroup() const
   // ID has no entry. Resolve the ASCII-capable layout behind it; only a
   // genuinely unknown layout falls back to group 0.
   AutoTISInputSourceRef asciiLayout(nullptr, CFRelease);
-  {
-    std::lock_guard<std::mutex> lock(g_tisMutex);
+  CFDataRef asciiId = nullptr;
+  synergy::platform::onInputSourceThread([&] {
     asciiLayout = AutoTISInputSourceRef(TISCopyCurrentASCIICapableKeyboardLayoutInputSource(), CFRelease);
-    if (asciiLayout) {
-      const auto asciiId = (CFDataRef)TISGetInputSourceProperty(asciiLayout.get(), kTISPropertyInputSourceID);
-      i = m_groupMap.find(asciiId);
-      if (i != m_groupMap.end()) {
-        return i->second;
-      }
-    }
-  }
+    if (asciiLayout)
+      asciiId = (CFDataRef)TISGetInputSourceProperty(asciiLayout.get(), kTISPropertyInputSourceID);
+  });
+  i = m_groupMap.find(asciiId);
+  if (asciiLayout && i != m_groupMap.end())
+    return i->second;
 
   // This is normal while an input method is active. Log it once instead of on
   // every key event, which otherwise floods the log during normal typing.
