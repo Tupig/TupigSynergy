@@ -50,9 +50,8 @@ int layoutHeight(QWidget *widget, int width)
 
 // Qt's default tab and scroll hints retain hidden pages and a minimum viewport.
 // Normalize only the active subtree; the outer workspace owns overflow scrolling.
-void fitActiveContainers(QWidget *root, int width)
+void fitActiveContainers(QWidget *root)
 {
-  root->resize(width, root->height());
   auto children = root->findChildren<QWidget *>();
   for (auto it = children.crbegin(); it != children.crend(); ++it) {
     auto *widget = *it;
@@ -271,10 +270,11 @@ int PageHost::preferredContentHeight(int width)
   normalizeEmbeddedMessageBox(area->property("pageEditor").value<QDialog *>());
   auto *content = area->widget();
   const int contentWidth = qMax(1, width - 2 * area->frameWidth());
-  content->resize(contentWidth, content->height());
+  // The scroll area owns content geometry. Resizing its widget here can make
+  // it synchronously resize the widget back while this measurement is active.
   if (content->layout())
     content->layout()->activate();
-  fitActiveContainers(content, contentWidth);
+  fitActiveContainers(content);
   const int height = layoutHeight(content, contentWidth);
   content->setMinimumHeight(height);
   return height + 2 * area->frameWidth();
