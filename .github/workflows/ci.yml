@@ -370,7 +370,7 @@ jobs:
           suites=(PageHostTests EditorTransactionTests NativeDesignTests LayoutAcceptanceTests
             R3RuntimeContextTests R3OptionContractTests R3SerializationTests R3MotionContractTests
             R3StartupContractTests R3VisualContractTests R3TrayQuitTests
-            R4VisualContractTests MainWindowFlowTests DialogRenderTests)
+            R4VisualContractTests MainWindowFlowTests DialogRenderTests QtSocketFactoryTests)
           for suite in "${suites[@]}"; do
             target=$suite
             if [ "$suite" = R4VisualContractTests ]; then target=R4VisualProbe; fi
@@ -759,7 +759,7 @@ jobs:
           suites=(PageHostTests EditorTransactionTests NativeDesignTests LayoutAcceptanceTests
             R3RuntimeContextTests R3OptionContractTests R3SerializationTests R3MotionContractTests
             R3StartupContractTests R3VisualContractTests R3TrayQuitTests
-            R4VisualContractTests MainWindowFlowTests DialogRenderTests)
+            R4VisualContractTests MainWindowFlowTests DialogRenderTests QtSocketFactoryTests)
           for suite in "${suites[@]}"; do
             target=$suite
             if [ "$suite" = R4VisualContractTests ]; then target=R4VisualProbe; fi
