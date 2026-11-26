@@ -175,24 +175,31 @@ GUI 启动约 3 秒后（也可用 **Help → Check for Updates** 手动触发�
 `https://api.github.com/repos/Tupig/TupigSynergy/releases/latest`。只有语义版本
 更新的正式 Release 才会提示；对话框展示版本号与更新说明，用户确认后才下载。
 
-下载只接受 `https://github.com/Tupig/TupigSynergy/releases/download/` 下的资产。
-下载过程中边写盘边计算 SHA-256，只有与 Release 资产发布的 `digest` 完全一致时才会
-交给系统安装器：Windows 打开 MSI（由 UAC 提示提权），macOS 在 Finder 中打开 DMG，
-Linux 交给 `xdg-open` 的包管理器。任何一步都不会静默安装或静默提权；摘要缺失或
-不匹配时直接拒绝。可在 `[gui]` 中设置 `checkForUpdates=false` 关闭启动检查。
+下载优先使用 `https://github.com/Tupig/TupigSynergy/releases/download/` 下的资产；仅当
+该路由无法继续时，才使用同一 Release 资产 ID 对应的受限 GitHub Asset API 后备路由。
+下载过程中边写盘边计算 SHA-256，并在安装交接前再次校验。摘要缺失、校验不匹配或已下载
+文件发生变化时都会拒绝并要求重新下载。Windows 打开 MSI（由 UAC 提示提权）；macOS 由
+应用的已验证安装助手复制并复核 DMG、挂载它、原子替换应用 bundle 后重新打开应用，必要时
+才显示系统管理员提示；Linux 交给 `xdg-open` 的包管理器。用户仍须点击确认下载，任何一步
+都不会静默安装或静默提权。可在 `[gui]` 中设置 `checkForUpdates=false` 关闭启动检查。
 
 About three seconds after startup (or via **Help → Check for Updates**), the GUI
 queries `https://api.github.com/repos/Tupig/TupigSynergy/releases/latest`. Only a
 newer semantic version triggers a prompt; the dialog shows the version and release
 notes, and nothing downloads until the user agrees.
 
-Downloads are restricted to assets under
-`https://github.com/Tupig/TupigSynergy/releases/download/`. The SHA-256 is computed
-while the bytes are written, and the package is handed to the OS installer only when
-it matches the release asset `digest`: Windows opens the MSI (UAC owns the elevation
-prompt), macOS opens the DMG in Finder, and Linux hands the package to `xdg-open`.
-Nothing installs or elevates silently; a missing or mismatched digest is a hard
-failure. Set `checkForUpdates=false` under `[gui]` to disable the startup check.
+Downloads prefer assets under
+`https://github.com/Tupig/TupigSynergy/releases/download/`; only when that route
+cannot continue does the updater use its constrained GitHub Asset API fallback for
+the same Release asset ID. The SHA-256 is computed while the bytes are written and
+checked again before installer handoff. A missing or mismatched digest, or a changed
+downloaded file, is rejected and requires a fresh download. Windows opens the MSI
+(UAC owns the elevation prompt). On macOS, the app-managed verified installer copies
+and rechecks the DMG, mounts it, atomically replaces the app bundle, and reopens the
+app; it requests system administrator approval only when needed. Linux hands the
+package to `xdg-open`. The user still must confirm the download, and nothing installs
+or elevates silently. Set `checkForUpdates=false` under `[gui]` to disable the startup
+check.
 
 
 ---

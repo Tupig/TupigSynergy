@@ -2802,6 +2802,10 @@ Package: %3</source>
         <translation>下载已校验，可以安装。</translation>
     </message>
     <message>
+        <source>The downloaded update changed. Download it again.</source>
+        <translation>已下载的更新包发生变化，请重新下载。</translation>
+    </message>
+    <message>
         <source>Install Now</source>
         <translation>立即安装</translation>
     </message>

@@ -38,6 +38,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCryptographicHash>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QElapsedTimer>
@@ -2642,6 +2643,68 @@ private Q_SLOTS:
       QVERIFY(handoff.isEmpty());
       QVERIFY(QFileInfo::exists(downloadedPath));
     }
+  }
+  void alteredDownloadRequiresFreshVerification()
+  {
+    ControlledHttp server;
+    QVERIFY(server.isListening());
+    const QByteArray payload("verified fixture");
+    synergy::gui::update::UpdateInfo info;
+    info.version = "99.0.0";
+    info.asset.name = "flow-fixture.dmg";
+    info.asset.url = server.url();
+    info.asset.sha256 = QString::fromLatin1(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    info.asset.size = payload.size();
+    const synergy::gui::update::DownloadPolicy policy{"http", "127.0.0.1", "/"};
+    synergy::gui::update::UpdateDialog dialog(info, nullptr, policy);
+    dialog.setAttribute(Qt::WA_DontShowOnScreen);
+    dialog.show();
+
+    int preparations = 0;
+    dialog.setInstallPreparation([&preparations] {
+      ++preparations;
+      return false;
+    });
+    auto *install = dialog.findChild<QPushButton *>("downloadInstall");
+    auto *feedback = dialog.findChild<QLabel *>("updateProgressText");
+    auto *downloader = dialog.findChild<synergy::gui::update::UpdateDownloader *>();
+    QVERIFY(install && feedback && downloader);
+    QSignalSpy verified(downloader, &synergy::gui::update::UpdateDownloader::finished);
+    QSignalSpy handoff(&dialog, &synergy::gui::update::UpdateDialog::installationStarted);
+
+    install->click();
+    QTRY_COMPARE(server.requests, 1);
+    server.write(
+        "HTTP/1.1 200 OK\r\nContent-Length: " + QByteArray::number(payload.size()) + "\r\nConnection: close\r\n\r\n" +
+            payload,
+        true
+    );
+    QTRY_COMPARE(verified.size(), 1);
+    const QString downloadedPath = verified.first().first().toString();
+    QFile altered(downloadedPath);
+    QVERIFY(altered.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    QCOMPARE(altered.write("altered fixture"), qint64(15));
+    altered.close();
+
+    install->click();
+    QCOMPARE(preparations, 0);
+    QVERIFY(feedback->isVisibleTo(&dialog));
+    QCOMPARE(
+        feedback->text(), synergy::gui::update::UpdateDialog::tr("The downloaded update changed. Download it again.")
+    );
+    QCOMPARE(install->text(), synergy::gui::update::UpdateDialog::tr("Download and Install"));
+    QVERIFY(install->isEnabled());
+    QVERIFY(handoff.isEmpty());
+
+    install->click();
+    QTRY_COMPARE(server.requests, 2);
+    server.write(
+        "HTTP/1.1 200 OK\r\nContent-Length: " + QByteArray::number(payload.size()) + "\r\nConnection: close\r\n\r\n" +
+            payload,
+        true
+    );
+    QTRY_COMPARE(verified.size(), 2);
+    QCOMPARE(install->text(), synergy::gui::update::UpdateDialog::tr("Install Now"));
   }
 };
 

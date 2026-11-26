@@ -14,8 +14,10 @@
 
 #include <QAbstractTextDocumentLayout>
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDesktopServices>
 #include <QDir>
+#include <QFile>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -41,6 +43,26 @@
 namespace synergy::gui::update {
 
 namespace {
+bool matchesExpectedDigest(const QString &path, const QString &expectedSha256, qint64 expectedSize)
+{
+  QFile package(path);
+  if (expectedSize < 0 || !package.open(QIODevice::ReadOnly) || package.size() != expectedSize)
+    return false;
+
+  QCryptographicHash digest(QCryptographicHash::Sha256);
+  qint64 bytesRead = 0;
+  while (true) {
+    const auto block = package.read(64 * 1024);
+    if (block.isEmpty())
+      return package.atEnd() && package.error() == QFile::NoError && bytesRead == expectedSize &&
+             digest.result().toHex() == expectedSha256.toLatin1();
+    if (block.size() > expectedSize - bytesRead)
+      return false;
+    bytesRead += block.size();
+    digest.addData(block);
+  }
+}
+
 QString visibleNotes(QString notes)
 {
   static const QRegularExpression comments(
@@ -409,6 +431,15 @@ void UpdateDialog::startDownload()
 
 void UpdateDialog::installDownloaded(const QString &filePath)
 {
+  if (!matchesExpectedDigest(filePath, m_info.asset.sha256, m_info.asset.size)) {
+    m_downloadedPath.clear();
+    setBusy(false);
+    m_progress->parentWidget()->show();
+    m_progressText->setText(tr("The downloaded update changed. Download it again."));
+    m_progressText->show();
+    m_install->setText(tr("Download and Install"));
+    return;
+  }
   if (m_prepareInstall && !m_prepareInstall()) {
     showInstallFailure(tr("Sharing did not stop. Stop sharing, then try installing again."));
     return;
