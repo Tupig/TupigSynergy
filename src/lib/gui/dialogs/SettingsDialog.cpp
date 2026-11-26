@@ -85,7 +85,6 @@ SettingsDialog::SettingsDialog(QWidget *parent, const synergy::gui::ServerConfig
 
   ui->comboTlsKeyLength->setItemIcon(0, appIcon(QStringLiteral("security-medium")));
   ui->comboTlsKeyLength->setItemIcon(1, appIcon(QStringLiteral("security-high")));
-  ui->lblTlsCertInfo->setFixedSize(28, 28);
 
   ui->rbIconMono->setIcon(QIcon::fromTheme(QStringLiteral("%1-symbolic").arg(kRevFqdnName)));
   ui->rbIconColorful->setIcon(QIcon::fromTheme(kRevFqdnName));
@@ -323,6 +322,10 @@ void SettingsDialog::initConnections()
   connect(ui->groupSecurity, &QGroupBox::toggled, this, &SettingsDialog::setButtonBoxEnabledButtons);
   connect(ui->lineLogFilename, &QLineEdit::textChanged, this, &SettingsDialog::setButtonBoxEnabledButtons);
   connect(ui->lineTlsCertPath, &QLineEdit::textChanged, this, &SettingsDialog::setButtonBoxEnabledButtons);
+  connect(ui->lineTlsCertPath, &QLineEdit::textChanged, this, [this] { ui->lineTlsCertPath->setToolTip({}); });
+  connect(ui->lineTlsCertPath, &QLineEdit::editingFinished, this, [this] {
+    updateKeyLengthOnFile(ui->lineTlsCertPath->text());
+  });
   connect(ui->cbRunEnterCommand, &QCheckBox::toggled, this, &SettingsDialog::setButtonBoxEnabledButtons);
   connect(ui->cbRunExitCommand, &QCheckBox::toggled, this, &SettingsDialog::setButtonBoxEnabledButtons);
   connect(ui->lineCommandEnter, &QLineEdit::textChanged, this, &SettingsDialog::setButtonBoxEnabledButtons);
@@ -338,7 +341,8 @@ void SettingsDialog::regenCertificates()
     // Regeneration is an explicit file action. Commit only its matching metadata
     // so cancelling unrelated drafts cannot leave the saved certificate invalid.
     Settings::setValue(Settings::Security::KeySize, keyLength);
-    updateKeyLengthOnFile(certificate);
+    if (ui->lineTlsCertPath->text() == certificate)
+      updateKeyLengthOnFile(certificate);
     setButtonBoxEnabledButtons();
     ui->tlsRegenerationNotice->show();
     // Wait for PageHost to fit the resizable editor. On short screens its
@@ -363,11 +367,7 @@ void SettingsDialog::browseCertificatePath()
   if (!fileName.isEmpty()) {
     ui->lineTlsCertPath->setText(fileName);
 
-    if (QFile(fileName).exists()) {
-      updateKeyLengthOnFile(fileName);
-    } else {
-      qDebug("no tls certificate file at: %s", qUtf8Printable(fileName));
-    }
+    updateKeyLengthOnFile(fileName);
   }
 }
 
@@ -560,13 +560,11 @@ void SettingsDialog::loadFromConfig()
 void SettingsDialog::updateTlsControls()
 {
   const auto certificate = Settings::value(Settings::Security::Certificate).toString();
-  if (QFile(certificate).exists()) {
-    updateKeyLengthOnFile(certificate);
-  }
+  ui->lineTlsCertPath->setText(certificate);
+  updateKeyLengthOnFile(certificate);
 
   ui->comboTlsKeyLength->setCurrentText(Settings::value(Settings::Security::KeySize).toString());
 
-  ui->lineTlsCertPath->setText(certificate);
   ui->cbRequireClientCert->setChecked(Settings::value(Settings::Security::CheckPeers).toBool());
   ui->groupSecurity->setChecked(TlsUtility::isEnabled());
 
@@ -597,21 +595,8 @@ bool SettingsDialog::isClientMode() const
 
 void SettingsDialog::updateKeyLengthOnFile(const QString &path)
 {
-  if (!QFile(path).exists()) {
-    qCritical().noquote(
-    ) << QCoreApplication::translate("GuiLogMessages", "tls certificate file not found: %1").arg(path);
-    return;
-  }
-
-  auto length = TlsUtility::getCertKeyLength(path);
-  auto labelIcon = QPixmap(appIcon(QStringLiteral("security-low")).pixmap(24, 24));
-  if (length == kMinimumRsaBits)
-    labelIcon = QPixmap(appIcon(QStringLiteral("security-medium")).pixmap(24, 24));
-  if (length == 4096)
-    labelIcon = QPixmap(appIcon(QStringLiteral("security-high")).pixmap(24, 24));
-
-  ui->lblTlsCertInfo->setPixmap(labelIcon);
-  ui->lblTlsCertInfo->setToolTip(tr("Key length: %1 bits").arg(QString::number(length)));
+  const int length = QFile::exists(path) ? TlsUtility::getCertKeyLength(path) : 0;
+  ui->lineTlsCertPath->setToolTip(length > 0 ? tr("Key length: %1 bits").arg(length) : QString());
 }
 
 void SettingsDialog::updateControls()
@@ -784,7 +769,7 @@ void SettingsDialog::resetToDefault()
   ui->comboTlsKeyLength->setCurrentText(Settings::defaultValue(Settings::Security::KeySize).toString());
   ui->groupSecurity->setChecked(Settings::defaultValue(Settings::Security::TlsEnabled).toBool());
   ui->cbRequireClientCert->setChecked(Settings::defaultValue(Settings::Security::CheckPeers).toBool());
-  ui->lblTlsCertInfo->clear();
+  updateKeyLengthOnFile(ui->lineTlsCertPath->text());
 
   ui->comboInterface->setCurrentIndex(0);
 

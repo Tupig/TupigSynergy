@@ -87,7 +87,6 @@ public:
   QWidget *certificateControls = nullptr;
   QLineEdit *lineTlsCertPath = nullptr;
   QPushButton *btnTlsCertPath = nullptr;
-  QLabel *lblTlsCertInfo = nullptr;
   QLabel *lblTlsKeyLength = nullptr;
   QWidget *keyLengthControls = nullptr;
   QComboBox *comboTlsKeyLength = nullptr;

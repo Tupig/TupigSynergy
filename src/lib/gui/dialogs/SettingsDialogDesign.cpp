@@ -410,19 +410,15 @@ void Ui::SettingsDialog::setupUi(QDialog *dialog)
   certificateControlsLayout->setContentsMargins(0, 0, 0, 0);
   lineTlsCertPath = createLineEdit(certificateControls, QStringLiteral("lineTlsCertPath"));
   certificateControlsLayout->addWidget(lineTlsCertPath);
-  btnTlsCertPath = createBrowseButton(certificateControls, QStringLiteral("btnTlsCertPath"));
+  btnTlsCertPath = new QPushButton(certificateControls);
+  btnTlsCertPath->setObjectName(QStringLiteral("btnTlsCertPath"));
+  btnTlsCertPath->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+  btnTlsCertPath->setCursor(Qt::PointingHandCursor);
   certificateControlsLayout->addWidget(btnTlsCertPath);
-  lblTlsCertInfo = new QLabel(certificateControls);
-  lblTlsCertInfo->setObjectName(QStringLiteral("lblTlsCertInfo"));
-  lblTlsCertInfo->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-  lblTlsCertInfo->setText(QString());
-  lblTlsCertInfo->setWordWrap(true);
-  lblTlsCertInfo->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
   certificateForm->addWidget(certificateControls, 0, 1);
   widgetTlsCert->setLayout(certificateForm);
   networkCardLayout->addWidget(widgetTlsCert);
-  certificateControlsLayout->addWidget(lblTlsCertInfo);
 
   auto *keyLengthForm = createForm(QStringLiteral("keyLengthForm"));
   lblTlsKeyLength = createLabel(groupSecurity, QStringLiteral("lblTlsKeyLength"), 120);
@@ -633,8 +629,10 @@ void Ui::SettingsDialog::retranslateUi(QDialog *dialog)
   groupSecurity->setTitle(QCoreApplication::translate("SettingsDialog", "Enable TLS Encryption", nullptr));
   cbTlsEnabled->setText(groupSecurity->title());
   lblTlsCert->setText(QCoreApplication::translate("SettingsDialog", "Certificate", nullptr));
-  btnTlsCertPath->setText(QString());
-  lblTlsCertInfo->setText(QString());
+  btnTlsCertPath->setText(QCoreApplication::translate("SettingsDialog", "Browse…"));
+  const auto browseCertificate = QCoreApplication::translate("SettingsDialog", "Choose TLS certificate file");
+  btnTlsCertPath->setAccessibleName(browseCertificate);
+  btnTlsCertPath->setToolTip(browseCertificate);
   lblTlsKeyLength->setText(QCoreApplication::translate("SettingsDialog", "Key length", nullptr));
   comboTlsKeyLength->setItemText(0, QStringLiteral("2048"));
   comboTlsKeyLength->setItemText(1, QStringLiteral("4096"));

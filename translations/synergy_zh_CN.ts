@@ -2374,6 +2374,14 @@ Now you can connect your client computers to this server. You should see a promp
         <translation>选择要使用的 TLS 证书...</translation>
     </message>
     <message>
+        <source>Browse…</source>
+        <translation>浏览…</translation>
+    </message>
+    <message>
+        <source>Choose TLS certificate file</source>
+        <translation>选择 TLS 证书文件</translation>
+    </message>
+    <message>
         <source>Save log file to...</source>
         <translation>保存日志文件到...</translation>
     </message>
