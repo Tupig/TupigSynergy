@@ -115,7 +115,7 @@ void pulse(QWidget *target, bool content)
   const auto name = content ? QStringLiteral("contentTransitionOverlay") : QStringLiteral("buttonFeedbackOverlay");
   const bool reduced = reducedMotion();
   if (auto *old = dynamic_cast<MotionLayer *>(target->findChild<QWidget *>(name, Qt::FindDirectChildrenOnly))) {
-    // A Qt mouse event and its pressed/released/clicked signals can request the same frame.
+    // A Qt input event and its clicked signal can request the same frame.
     if (!content && !reduced && old->isStarting())
       return;
     old->finish();
@@ -150,13 +150,12 @@ public:
       return;
     widget->setProperty("interactionMotionWatching", true);
     if (auto *button = qobject_cast<QAbstractButton *>(widget)) {
-      const auto feedback = [button] {
+      // Mouse and keyboard events already give immediate feedback. Native
+      // accessible activation may defer clicked after pressed.
+      connect(button, &QAbstractButton::clicked, button, [button] {
         if (button->isEnabled())
           pulse(button, false);
-      };
-      connect(button, &QAbstractButton::pressed, button, feedback);
-      connect(button, &QAbstractButton::released, button, feedback);
-      connect(button, &QAbstractButton::clicked, button, feedback);
+      });
     } else if (auto *tabs = qobject_cast<QTabWidget *>(widget)) {
       connect(tabs, &QTabWidget::currentChanged, tabs, [tabs] {
         if (auto *page = tabs->currentWidget())
