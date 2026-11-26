@@ -785,6 +785,10 @@ Do you want to connect to the server?
         <translation>核心 IPC 收到未知连接状态：%1</translation>
     </message>
     <message>
+        <source>Server is listening and ready for clients (service mode).</source>
+        <translation>服务端启动成功，正在监听并等待客户端连接（服务模式）。</translation>
+    </message>
+    <message>
         <source>Core IPC received an unknown connection refusal: %1</source>
         <translation>核心 IPC 收到未知连接拒绝原因：%1</translation>
     </message>

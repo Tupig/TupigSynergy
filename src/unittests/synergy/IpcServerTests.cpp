@@ -10,6 +10,8 @@
 #include "common/RuntimeContext.h"
 #include "common/Settings.h"
 #include "common/VersionInfo.h"
+#include "ipc/CoreIpc.h"
+#include "ipc/CoreIpcServer.h"
 #include "ipc/IpcServer.h"
 
 #include <QCoreApplication>
@@ -232,6 +234,39 @@ void IpcServerTests::oversizedMessageDisconnects()
   client->flush();
 
   QTRY_VERIFY(client->state() == QLocalSocket::UnconnectedState);
+}
+
+void IpcServerTests::lateGuiReceivesCurrentCoreState()
+{
+  using synergy::core::ConnectionState;
+  QVERIFY(synergy::runtime::isIsolatedRuntime());
+  // Use a production CoreIpcServer with a disposable endpoint.
+  const auto endpoint = synergy::runtime::runtimeInstanceKey({}) + QStringLiteral("-core");
+  synergy::core::ipc::CoreIpcServer server(nullptr);
+  QVERIFY(server.listen());
+  const auto token = synergy::readIpcToken(endpoint);
+  const auto version = QString::fromUtf8(kVersion);
+  QVERIFY(!token.isEmpty());
+
+  ipcSendServerBindAddress(QStringLiteral("192.0.2.10"));
+  ipcSendConnectionState(ConnectionState::Listening);
+  QCoreApplication::processEvents();
+
+  const auto receiveSnapshot = [&](const QByteArray &expected) {
+    auto client = openClient(endpoint);
+    QVERIFY(client);
+    client->write(QStringLiteral("hello=%1 %2\n").arg(version, token).toUtf8());
+    client->flush();
+    QByteArray received;
+    QTRY_VERIFY_WITH_TIMEOUT((received += client->readAll()).contains(expected), 1500);
+    QVERIFY(received.startsWith("hello="));
+  };
+  receiveSnapshot("serverBindAddress=192.0.2.10\nconnectionState=Listening\n");
+
+  ipcSendServerBindAddress({});
+  ipcSendConnectionState(ConnectionState::Disconnected);
+  QCoreApplication::processEvents();
+  receiveSnapshot(QByteArray("hello=") + kVersion + "\nconnectionState=Disconnected\n");
 }
 
 int main(int argc, char **argv)

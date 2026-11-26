@@ -23,6 +23,7 @@ private Q_SLOTS:
   void helloWithWrongVersionReportsMismatch();
   void validHelloAcceptsCommands();
   void listenerAddressNotificationsRequireAuthenticatedHello();
+  void lateGuiReceivesCurrentCoreState();
   void oversizedMessageDisconnects();
 
 private:

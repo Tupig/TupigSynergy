@@ -101,9 +101,13 @@ void StatusBar::setStatus(ConnectionState connectionState, ProcessState processS
         }
 
         case Connecting:
-          updateTimerLabel();
-          if (Settings::value(Settings::Client::DynamicConnectionRetry).toBool())
-            m_retryTimer->start();
+          if (isServer) {
+            m_lblStatus->setText(tr("%1 is starting...").arg(kAppName));
+          } else {
+            updateTimerLabel();
+            if (Settings::value(Settings::Client::DynamicConnectionRetry).toBool())
+              m_retryTimer->start();
+          }
           break;
 
         case Connected: {
