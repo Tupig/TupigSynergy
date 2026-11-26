@@ -2802,6 +2802,10 @@ Package: %3</source>
         <translation>下载已校验，可以安装。</translation>
     </message>
     <message>
+        <source>The downloaded update changed. Download it again.</source>
+        <translation>已下载的更新包发生变化，请重新下载。</translation>
+    </message>
+    <message>
         <source>Install Now</source>
         <translation>立即安装</translation>
     </message>
@@ -3541,6 +3545,10 @@ Package: %3</source>
         <translation>连接服务器失败：连接超时</translation>
     </message>
     <message>
+        <source>failed to connect to server: Timed out waiting for sharing options</source>
+        <translation>连接服务器失败：等待共享选项超时</translation>
+    </message>
+    <message>
         <source>failed to convert ISO639/2 lang code to ISO639/1</source>
         <translation>将 ISO639/2 语言代码转换为 ISO639/1 失败</translation>
     </message>
@@ -3739,6 +3747,10 @@ Package: %3</source>
     <message>
         <source>file transfer: refused unsafe file name from peer</source>
         <translation>文件传输：拒绝了对端提供的不安全文件名</translation>
+    </message>
+    <message>
+        <source>file transfer: discarding content for a refused file name</source>
+        <translation>文件传输：已丢弃文件名被拒绝的内容</translation>
     </message>
     <message>
         <source>file transfer: refusing to write outside the drop directory</source>
@@ -5044,6 +5056,18 @@ Package: %3</source>
     <message>
         <source>skipping "%s": it could not be opened for sending</source>
         <translation>跳过“%s”：无法打开以供发送</translation>
+    </message>
+    <message>
+        <source>stopping file transfer: "%s" could not be opened for sending</source>
+        <translation>已停止文件传输：无法打开“%s”</translation>
+    </message>
+    <message>
+        <source>stopping file transfer: "%s" ended with %llu of %llu byte(s)</source>
+        <translation>已停止文件传输：“%s”只读取了 %llu 字节，预期 %llu 字节</translation>
+    </message>
+    <message>
+        <source>sent %zu file(s), %llu byte(s) of content</source>
+        <translation>已发送 %zu 个文件，共 %llu 字节</translation>
     </message>
     <message>
         <source>socket flush timed out after %.1f seconds</source>

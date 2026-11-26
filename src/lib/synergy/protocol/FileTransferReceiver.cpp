@@ -215,8 +215,10 @@ bool FileTransferReceiver::onDragInfo(synergy::IStream *stream)
       // somewhere the peer never asked for and hide the attempt.
       LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: refused unsafe file name from peer"));
       ++m_refused;
+      m_nameSlots.emplace_back();
       continue;
     }
+    m_nameSlots.push_back(safe);
     m_acceptedNames.push_back(safe);
   }
 
@@ -241,6 +243,16 @@ TransferState FileTransferReceiver::onFileChunk(synergy::IStream *stream)
     return TransferState::Error;
   }
 
+  if (m_rejectRemaining) {
+    // Keep consuming the wire protocol after a terminal frame error, but do not
+    // retain data or publish it under a slot whose preceding frame failed.
+    m_buffer.clear();
+    if (result == TransferState::Error) {
+      ++m_refused;
+    }
+    return TransferState::Error;
+  }
+
   switch (result) {
   case TransferState::Started:
   case TransferState::InProgress:
@@ -253,6 +265,7 @@ TransferState FileTransferReceiver::onFileChunk(synergy::IStream *stream)
   case TransferState::Error:
   default:
     ++m_refused;
+    m_rejectRemaining = true;
     // assemble() already reset its own state; drop the buffer too so a failed
     // transfer cannot leak into the next one.
     m_buffer.clear();
@@ -265,8 +278,10 @@ void FileTransferReceiver::reset()
 {
   m_acceptedNames.clear();
   m_writtenFiles.clear();
+  m_nameSlots.clear();
   m_totalWritten = 0;
   m_nextName = 0;
+  m_rejectRemaining = false;
   m_buffer.clear();
   m_state = {};
 }
@@ -287,17 +302,22 @@ void FileTransferReceiver::writeCurrentFile()
     return;
   }
 
-  if (m_nextName >= m_acceptedNames.size()) {
+  if (m_nextName >= m_nameSlots.size()) {
     // More transfers than announced names: the peer is not following the protocol.
     LOG_ERR(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: received a file with no announced name"));
     ++m_refused;
     return;
   }
 
-  // The Nth completed transfer is paired with the Nth accepted name. A failed
-  // write still consumes that name, otherwise the next file is stored under it.
-  const auto safeName = m_acceptedNames.at(m_nextName);
+  // Every announced item occupies one position, including a name rejected at
+  // announce time. This prevents an unsafe name from shifting its valid sibling.
+  const auto safeName = m_nameSlots.at(m_nextName);
   ++m_nextName;
+
+  if (safeName.empty()) {
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "file transfer: discarding content for a refused file name"));
+    return;
+  }
 
   if (m_totalWritten + content.size() > m_options.maxTotalBytes) {
     LOG_ERR(

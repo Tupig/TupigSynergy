@@ -38,6 +38,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCryptographicHash>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QElapsedTimer>
@@ -939,6 +940,92 @@ private Q_SLOTS:
       QTRY_VERIFY(!view->isVisible());
       QCOMPARE(toggle->isChecked(), !collapsed);
     }
+  }
+  void embeddedEditorScopesStartRestartShortcutsAndKeepsStopAvailable()
+  {
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width, true);
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    QAction *start = nullptr;
+    QAction *restart = nullptr;
+    QAction *stop = nullptr;
+    for (auto *action : window.findChildren<QAction *>()) {
+      if (action->shortcut() == QKeySequence(Qt::CTRL | Qt::Key_S))
+        start = action;
+      else if (action->shortcut() == QKeySequence(Qt::CTRL | Qt::Key_R))
+        restart = action;
+      else if (action->shortcut() == QKeySequence(Qt::CTRL | Qt::Key_T))
+        stop = action;
+    }
+    QVERIFY(preferences && back && start && restart && stop);
+    // IsolatedWindow disconnects real core work but leaves QAction dispatch intact.
+    start->setEnabled(true);
+    restart->setEnabled(true);
+    stop->setEnabled(true);
+    QObject::disconnect(stop, &QAction::triggered, &window, nullptr);
+    QSignalSpy started(start, &QAction::triggered);
+    QSignalSpy restarted(restart, &QAction::triggered);
+    QSignalSpy stopped(stop, &QAction::triggered);
+
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    auto *editor = window.findChild<SettingsDialog *>();
+    QVERIFY(editor && editor->isVisibleTo(&window));
+    QVERIFY(start->isEnabled());
+    QVERIFY(restart->isEnabled());
+    QVERIFY(stop->isEnabled());
+    auto *field = editor->findChild<QComboBox *>("comboLanguage");
+    QVERIFY(field);
+    QVERIFY(field->isVisibleTo(&window));
+    field->setFocus();
+    QTRY_VERIFY(field->hasFocus());
+
+    QTest::keyClick(field, Qt::Key_S, Qt::ControlModifier);
+    QTest::keyClick(field, Qt::Key_R, Qt::ControlModifier);
+    QCOMPARE(started.count(), 0);
+    QCOMPARE(restarted.count(), 0);
+
+    // Stop remains an explicit global emergency command while drafts are open.
+    QTest::keyClick(field, Qt::Key_T, Qt::ControlModifier);
+    QCOMPARE(stopped.count(), 1);
+
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_VERIFY(!window.findChild<SettingsDialog *>());
+    QCOMPARE(start->shortcut(), QKeySequence(Qt::CTRL | Qt::Key_S));
+    QCOMPARE(restart->shortcut(), QKeySequence(Qt::CTRL | Qt::Key_R));
+    auto *pageBar = window.findChild<QWidget *>("pageBar");
+    QVERIFY(pageBar);
+    pageBar->setFocus();
+    QTest::keyClick(pageBar, Qt::Key_S, Qt::ControlModifier);
+    QTest::keyClick(pageBar, Qt::Key_R, Qt::ControlModifier);
+    QCOMPARE(started.count(), 1);
+    QCOMPARE(restarted.count(), 1);
+  }
+  void viewLogIsDisabledWhileAnEmbeddedEditorHidesThePanel()
+  {
+    Settings::setValue(Settings::Gui::LogExpanded, true);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    auto *view = window.findChild<QMenu *>("menuView");
+    auto *log = window.findChild<LogPanel *>("logPanel");
+    QVERIFY(preferences && back && view && log);
+    QCOMPARE(view->actions().size(), 1);
+    auto *toggle = view->actions().first();
+    QVERIFY(toggle->isEnabled());
+    QVERIFY(log->isVisibleTo(&window));
+
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    QVERIFY(window.findChild<SettingsDialog *>());
+    QTRY_VERIFY(log->isHidden());
+    QVERIFY(!toggle->isEnabled());
+
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_VERIFY(!window.findChild<SettingsDialog *>());
+    QTRY_VERIFY(log->isVisibleTo(&window));
+    QVERIFY(toggle->isEnabled());
   }
   void logActionsExplainEmptyCopyAndConfirmClear()
   {
@@ -2556,6 +2643,68 @@ private Q_SLOTS:
       QVERIFY(handoff.isEmpty());
       QVERIFY(QFileInfo::exists(downloadedPath));
     }
+  }
+  void alteredDownloadRequiresFreshVerification()
+  {
+    ControlledHttp server;
+    QVERIFY(server.isListening());
+    const QByteArray payload("verified fixture");
+    synergy::gui::update::UpdateInfo info;
+    info.version = "99.0.0";
+    info.asset.name = "flow-fixture.dmg";
+    info.asset.url = server.url();
+    info.asset.sha256 = QString::fromLatin1(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    info.asset.size = payload.size();
+    const synergy::gui::update::DownloadPolicy policy{"http", "127.0.0.1", "/"};
+    synergy::gui::update::UpdateDialog dialog(info, nullptr, policy);
+    dialog.setAttribute(Qt::WA_DontShowOnScreen);
+    dialog.show();
+
+    int preparations = 0;
+    dialog.setInstallPreparation([&preparations] {
+      ++preparations;
+      return false;
+    });
+    auto *install = dialog.findChild<QPushButton *>("downloadInstall");
+    auto *feedback = dialog.findChild<QLabel *>("updateProgressText");
+    auto *downloader = dialog.findChild<synergy::gui::update::UpdateDownloader *>();
+    QVERIFY(install && feedback && downloader);
+    QSignalSpy verified(downloader, &synergy::gui::update::UpdateDownloader::finished);
+    QSignalSpy handoff(&dialog, &synergy::gui::update::UpdateDialog::installationStarted);
+
+    install->click();
+    QTRY_COMPARE(server.requests, 1);
+    server.write(
+        "HTTP/1.1 200 OK\r\nContent-Length: " + QByteArray::number(payload.size()) + "\r\nConnection: close\r\n\r\n" +
+            payload,
+        true
+    );
+    QTRY_COMPARE(verified.size(), 1);
+    const QString downloadedPath = verified.first().first().toString();
+    QFile altered(downloadedPath);
+    QVERIFY(altered.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    QCOMPARE(altered.write("altered fixture"), qint64(15));
+    altered.close();
+
+    install->click();
+    QCOMPARE(preparations, 0);
+    QVERIFY(feedback->isVisibleTo(&dialog));
+    QCOMPARE(
+        feedback->text(), synergy::gui::update::UpdateDialog::tr("The downloaded update changed. Download it again.")
+    );
+    QCOMPARE(install->text(), synergy::gui::update::UpdateDialog::tr("Download and Install"));
+    QVERIFY(install->isEnabled());
+    QVERIFY(handoff.isEmpty());
+
+    install->click();
+    QTRY_COMPARE(server.requests, 2);
+    server.write(
+        "HTTP/1.1 200 OK\r\nContent-Length: " + QByteArray::number(payload.size()) + "\r\nConnection: close\r\n\r\n" +
+            payload,
+        true
+    );
+    QTRY_COMPARE(verified.size(), 2);
+    QCOMPARE(install->text(), synergy::gui::update::UpdateDialog::tr("Install Now"));
   }
 };
 

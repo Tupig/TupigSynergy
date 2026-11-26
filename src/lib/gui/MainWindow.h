@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <QKeySequence>
 #include <QLocalServer>
 #include <QMainWindow>
 #include <QPointer>
@@ -256,6 +257,8 @@ private:
   QAction *m_actionStartCore = nullptr;
   QAction *m_actionRestartCore = nullptr;
   QAction *m_actionStopCore = nullptr;
+  QKeySequence m_startCoreShortcut;
+  QKeySequence m_restartCoreShortcut;
 
   // Network monitoring
   NetworkMonitor *m_networkMonitor = nullptr;

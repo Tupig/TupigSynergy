@@ -137,6 +137,16 @@ MainWindow::MainWindow(const QString &instanceSocketName, std::unique_ptr<QLocal
   connect(ui->pageHost, &PageHost::editorVisibilityChanged, this, [this](bool visible) {
     ui->btnBack->setVisible(visible);
     ui->logPanel->setVisible(!visible);
+    m_actionLog->setEnabled(!visible);
+    if (visible) {
+      m_startCoreShortcut = m_actionStartCore->shortcut();
+      m_restartCoreShortcut = m_actionRestartCore->shortcut();
+      m_actionStartCore->setShortcut({});
+      m_actionRestartCore->setShortcut({});
+    } else {
+      m_actionStartCore->setShortcut(m_startCoreShortcut);
+      m_actionRestartCore->setShortcut(m_restartCoreShortcut);
+    }
     ui->btnSettingsShortcut->setVisible(!visible);
     ui->btnUpdatesShortcut->setVisible(!visible);
     ui->btnAboutShortcut->setVisible(!visible);
