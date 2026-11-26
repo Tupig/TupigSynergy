@@ -3470,6 +3470,10 @@ Package: %3</source>
         <translation>建立安全套接字连接失败</translation>
     </message>
     <message>
+        <source>failed to connect to server: Timed out</source>
+        <translation>连接服务器失败：连接超时</translation>
+    </message>
+    <message>
         <source>failed to convert ISO639/2 lang code to ISO639/1</source>
         <translation>将 ISO639/2 语言代码转换为 ISO639/1 失败</translation>
     </message>

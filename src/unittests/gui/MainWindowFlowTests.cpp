@@ -417,6 +417,34 @@ private Q_SLOTS:
     QTRY_COMPARE(window.width(), 500);
     QVERIFY(window.height() >= 390);
   }
+  void coreStartFailureDescribesConfigPermissions()
+  {
+    const auto customPath = QDir(Settings::userDir()).filePath(QStringLiteral("custom-server.conf"));
+    Settings::setValue(Settings::Server::ExternalConfigFile, customPath);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(pages);
+
+    for (const bool externalConfig : {false, true}) {
+      Settings::setValue(Settings::Server::ExternalConfig, externalConfig);
+      window.m_coreProcess.error(synergy::gui::CoreProcess::Error::StartFailed);
+      auto *editor = pages->currentWidget()->property("pageEditor").value<QDialog *>();
+      auto *warning = qobject_cast<QMessageBox *>(editor);
+      QVERIFY(warning);
+      const auto mode = externalConfig ? QCoreApplication::translate("MainWindow", "read")
+                                       : QCoreApplication::translate("MainWindow", "read and write");
+      const auto configPath =
+          externalConfig ? customPath : Settings::defaultValue(Settings::Server::ExternalConfigFile).toString();
+      const auto expected = QCoreApplication::translate(
+                                "MainWindow", "\nAdditionally, check you are able to %1 the server config file: %2"
+      )
+                                .arg(mode, configPath);
+      QVERIFY2(warning->text().endsWith(expected), qPrintable(warning->text()));
+      warning->reject();
+      QCOMPARE(pages->currentIndex(), 0);
+    }
+  }
   void manualCoreActionReopensDeclinedPeerFingerprint_data()
   {
     QTest::addColumn<Settings::CoreMode>("role");
