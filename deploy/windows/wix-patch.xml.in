@@ -37,6 +37,8 @@
 
   <CPackWiXFragment Id="#PRODUCT">
     <util:RestartResource Id="SharingServiceRestartResource" ServiceName="@CMAKE_PROJECT_PROPER_NAME@" />
+    <util:RestartResource Id="SharingGuiRestartResource" Path="[INSTALL_ROOT]synergy.exe" />
+    <util:RestartResource Id="SharingCoreRestartResource" Path="[INSTALL_ROOT]@CMAKE_PROJECT_NAME@-core.exe" />
     <UI>
        <Error Id="1610" Message="!(loc.UpdateFilesRequireRestart)" />
        <Error Id="1611" Message="!(loc.UpdateCouldNotCloseApplications)" />
@@ -57,18 +59,6 @@
       Impersonate="yes"
       Return="asyncNoWait" />
 
-    <!-- StopServices owns the daemon and waits for its watchdog to exit.
-         This fallback closes any remaining desktop-mode GUI and core. -->
-    <CustomAction
-      Id="CloseRunningApps"
-      ExeCommand="cmd /c taskkill /F /IM synergy.exe /IM synergy-core.exe /IM synergy_*.exe"
-      Directory="INSTALL_ROOT"
-      Execute="deferred"
-      Impersonate="no"
-      Return="ignore" />
-    <InstallExecuteSequence>
-      <Custom Action="CloseRunningApps" Before="InstallFiles" />
-    </InstallExecuteSequence>
   </CPackWiXFragment>
 
 </CPackWiXPatch>
