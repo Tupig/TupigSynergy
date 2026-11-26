@@ -261,6 +261,51 @@ void FileTransferReceiverTests::refusesShortTransfer()
   QVERIFY(m_receiver->writtenFiles().empty());
 }
 
+void FileTransferReceiverTests::shortTransferRejectsRemainingFramesUntilNextAnnouncement()
+{
+  feedAnnounce({"first.txt", "second.txt"});
+  feedChunk(ChunkType::DataStart, "10");
+  feedChunk(ChunkType::DataChunk, "abc");
+  feedChunk(ChunkType::DataEnd, "");
+
+  // Continue draining this announcement. A complete-looking second frame must
+  // not be written under the first failed frame's reserved name.
+  feedChunk(ChunkType::DataStart, "2");
+  feedChunk(ChunkType::DataChunk, "ok");
+  feedChunk(ChunkType::DataEnd, "");
+
+  QVERIFY(m_receiver->writtenFiles().empty());
+  QVERIFY(!QFile::exists(QDir(m_drop->path()).filePath("first.txt")));
+  QVERIFY(!QFile::exists(QDir(m_drop->path()).filePath("second.txt")));
+
+  // A clean later announcement resets the terminal state.
+  feedAnnounce({"clean.txt"});
+  feedChunk(ChunkType::DataStart, "5");
+  feedChunk(ChunkType::DataChunk, "clean");
+  feedChunk(ChunkType::DataEnd, "");
+
+  QCOMPARE(dropped("clean.txt"), QByteArray("clean"));
+}
+
+void FileTransferReceiverTests::unsafeNameRetainsItsPositionForLaterSibling()
+{
+  feedAnnounce({"../unsafe.txt", "safe.txt"});
+  QCOMPARE(m_receiver->acceptedNames(), (std::vector<std::string>{"safe.txt"}));
+
+  // The first frame occupies the refused name's position and is discarded. The
+  // legitimate sibling must retain its own position rather than being shifted.
+  feedChunk(ChunkType::DataStart, "3");
+  feedChunk(ChunkType::DataChunk, "bad");
+  feedChunk(ChunkType::DataEnd, "");
+
+  feedChunk(ChunkType::DataStart, "4");
+  feedChunk(ChunkType::DataChunk, "safe");
+  feedChunk(ChunkType::DataEnd, "");
+
+  QCOMPARE(dropped("safe.txt"), QByteArray("safe"));
+  QCOMPARE(m_receiver->writtenFiles().size(), static_cast<size_t>(1));
+}
+
 void FileTransferReceiverTests::failedWriteDoesNotReuseTheNextName()
 {
   // The first file exceeds the drag byte budget and is refused. The second file
@@ -378,10 +423,18 @@ void FileTransferReceiverTests::duplicateNamesInOneDragDoNotOverwriteEachOther()
 
 void FileTransferReceiverTests::writesNothingOutsideTheDropDirectory()
 {
-  // A grab-bag of hostile names, then a legitimate transfer: whatever is refused
-  // must not appear anywhere, and the legitimate file must still land.
+  // A grab-bag of hostile names, then a legitimate transfer: every announced
+  // name consumes its own frame, so the refused names cannot shift the safe one.
   feedAnnounce({"../../up.txt", "C:\\Windows\\down.txt", "ok.txt"});
   QCOMPARE(m_receiver->acceptedNames().size(), static_cast<size_t>(1));
+
+  feedChunk(ChunkType::DataStart, "2");
+  feedChunk(ChunkType::DataChunk, "no");
+  feedChunk(ChunkType::DataEnd, "");
+
+  feedChunk(ChunkType::DataStart, "2");
+  feedChunk(ChunkType::DataChunk, "no");
+  feedChunk(ChunkType::DataEnd, "");
 
   feedChunk(ChunkType::DataStart, "2");
   feedChunk(ChunkType::DataChunk, "ok");

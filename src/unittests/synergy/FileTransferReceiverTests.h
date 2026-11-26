@@ -44,8 +44,10 @@ private Q_SLOTS:
   void refusesDeclaredSizeAboveLimit();
   void refusesDataBeyondDeclaredSize();
   void refusesShortTransfer();
+  void shortTransferRejectsRemainingFramesUntilNextAnnouncement();
   void refusesTransferWithNoAnnouncedName();
   void failedWriteDoesNotReuseTheNextName();
+  void unsafeNameRetainsItsPositionForLaterSibling();
 
   // Disk behaviour
   void neverOverwritesAnExistingFile();

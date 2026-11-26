@@ -46,14 +46,16 @@ public:
     std::function<void(uint8_t mark, const std::string &payload)> chunk;
   };
 
-  //! Announce \p entries and stream each one that can be opened.
+  //! Announce \p entries and stream them in their announced order.
   /*!
-  A file that cannot be opened is skipped rather than aborting the transfer: the
-  announcement lists every entry and the protocol has no way to retract one, so
-  the alternative would be to fail the whole drag because one file vanished.
+  Once announced, each entry owns one positional slot at the peer. If an entry
+  cannot be opened, or it becomes shorter while it is read, transmission stops
+  so a later file cannot be stored under the failed entry's name. A started frame
+  is still closed with an end chunk before stopping. Bytes beyond the size
+  declared at the start of a frame are never sent.
   \param entries files to send, in the order they were announced
   \param emitter receives the messages, in order
-  \return total content bytes streamed
+  \return content bytes from complete frames streamed before any failure
   */
   static uint64_t send(const std::vector<FileTransferSource::Entry> &entries, const Emitter &emitter);
 };

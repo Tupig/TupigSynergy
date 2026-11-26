@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cstring>
 #include <deque>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -57,6 +58,8 @@ struct SentMessage
 class RecordingEmitter
 {
 public:
+  std::function<void(uint8_t mark, const std::string &payload)> onChunk;
+
   FileTransferSender::Emitter emitter()
   {
     return {
@@ -73,6 +76,9 @@ public:
           e.mark = mark;
           e.payload = payload;
           m_events.push_back(e);
+          if (onChunk) {
+            onChunk(mark, payload);
+          }
         }
     };
   }
@@ -322,7 +328,7 @@ void FileTransferSenderTests::returnsTotalBytesStreamed()
   QCOMPARE(total, static_cast<uint64_t>(8));
 }
 
-void FileTransferSenderTests::unopenableFileIsSkippedAndLaterFilesStillTransfer()
+void FileTransferSenderTests::unopenableAnnouncedFileStopsBatchBeforeLaterPayload()
 {
   const auto first = writeFile("gone-soon.txt", "data");
   const auto second = writeFile("survivor.txt", "still here");
@@ -335,14 +341,101 @@ void FileTransferSenderTests::unopenableFileIsSkippedAndLaterFilesStillTransfer(
   QVERIFY(QFile::remove(first));
 
   RecordingEmitter recorder;
-  FileTransferSender::send(entries, recorder.emitter());
+  const auto total = FileTransferSender::send(entries, recorder.emitter());
 
-  // The announcement still lists both, because the protocol has no way to retract
-  // one; the surviving file must nevertheless transfer in full.
+  // The announcement is irreversible, so the transfer must not let the later
+  // file occupy the vanished file's name at the receiver.
   QCOMPARE(recorder.events().front().fileCount, static_cast<uint32_t>(2));
+  QCOMPARE(recorder.chunks().size(), static_cast<size_t>(0));
+  QCOMPARE(total, static_cast<uint64_t>(0));
+}
+
+void FileTransferSenderTests::failedLaterFileReturnsOnlyCompletedPredecessorBytes()
+{
+  const auto first = writeFile("complete.txt", "complete");
+  const auto second = writeFile("gone-soon.txt", "gone");
+  const auto third = writeFile("must-not-send.txt", "later");
+  QVERIFY(!first.isEmpty() && !second.isEmpty() && !third.isEmpty());
+
+  const auto entries = Source::inspectAll({first.toStdString(), second.toStdString(), third.toStdString()}, 1024);
+  QCOMPARE(entries.size(), static_cast<size_t>(3));
+  QVERIFY(QFile::remove(second));
+
+  RecordingEmitter recorder;
+  const auto total = FileTransferSender::send(entries, recorder.emitter());
+
+  const auto chunks = recorder.chunks();
+  QCOMPARE(chunks.size(), static_cast<size_t>(3));
+  QCOMPARE(chunks[0].mark, static_cast<uint8_t>(ChunkType::DataStart));
+  QCOMPARE(chunks[1].payload, std::string("complete"));
+  QCOMPARE(chunks[2].mark, static_cast<uint8_t>(ChunkType::DataEnd));
+  QCOMPARE(total, static_cast<uint64_t>(8));
+}
+
+void FileTransferSenderTests::shortReadClosesStartedFrameAndStopsBeforeLaterFile()
+{
+  const auto first = writeFile("truncated.txt", "first data");
+  const auto second = writeFile("later.txt", "later data");
+  QVERIFY(!first.isEmpty() && !second.isEmpty());
+
+  const auto entries = Source::inspectAll({first.toStdString(), second.toStdString()}, 1024);
+  QCOMPARE(entries.size(), static_cast<size_t>(2));
+
+  RecordingEmitter recorder;
+  bool truncated = false;
+  recorder.onChunk = [&first, &truncated](uint8_t mark, const std::string &) {
+    if (!truncated && mark == static_cast<uint8_t>(ChunkType::DataStart)) {
+      truncated = QFile::resize(first, 0);
+    }
+  };
+
+  const auto total = FileTransferSender::send(entries, recorder.emitter());
+
+  QVERIFY(truncated);
+  const auto chunks = recorder.chunks();
+  QCOMPARE(chunks.size(), static_cast<size_t>(2));
+  QCOMPARE(chunks[0].mark, static_cast<uint8_t>(ChunkType::DataStart));
+  QCOMPARE(chunks[1].mark, static_cast<uint8_t>(ChunkType::DataEnd));
   QCOMPARE(recorder.countOf(static_cast<uint8_t>(ChunkType::DataStart)), static_cast<size_t>(1));
   QCOMPARE(recorder.countOf(static_cast<uint8_t>(ChunkType::DataEnd)), static_cast<size_t>(1));
-  QCOMPARE(recorder.chunks()[1].payload, std::string("still here"));
+  QCOMPARE(total, static_cast<uint64_t>(0));
+}
+
+void FileTransferSenderTests::growingSourceSendsOnlyDeclaredBytes()
+{
+  const auto path = writeFile("growing.txt", "old");
+  QVERIFY(!path.isEmpty());
+
+  const auto entries = Source::inspectAll({path.toStdString()}, 1024);
+  QCOMPARE(entries.size(), static_cast<size_t>(1));
+  QCOMPARE(entries.front().size, static_cast<uint64_t>(3));
+
+  RecordingEmitter recorder;
+  bool appended = false;
+  recorder.onChunk = [&path, &appended](uint8_t mark, const std::string &) {
+    if (!appended && mark == static_cast<uint8_t>(ChunkType::DataStart)) {
+      QFile file(path);
+      appended = file.open(QIODevice::WriteOnly | QIODevice::Append) && file.write("new") == 3;
+      file.close();
+    }
+  };
+
+  const auto total = FileTransferSender::send(entries, recorder.emitter());
+
+  QVERIFY(appended);
+  uint64_t declared = 0;
+  uint64_t sent = 0;
+  for (const auto &chunk : recorder.chunks()) {
+    if (chunk.mark == static_cast<uint8_t>(ChunkType::DataStart)) {
+      declared = std::stoull(chunk.payload);
+    } else if (chunk.mark == static_cast<uint8_t>(ChunkType::DataChunk)) {
+      sent += chunk.payload.size();
+    }
+  }
+
+  QCOMPARE(declared, static_cast<uint64_t>(3));
+  QCOMPARE(sent, declared);
+  QCOMPARE(total, declared);
 }
 
 void FileTransferSenderTests::roundTripThroughFileChunkReassemblesFile()

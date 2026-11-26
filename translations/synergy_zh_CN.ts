@@ -3745,6 +3745,10 @@ Package: %3</source>
         <translation>文件传输：拒绝了对端提供的不安全文件名</translation>
     </message>
     <message>
+        <source>file transfer: discarding content for a refused file name</source>
+        <translation>文件传输：已丢弃文件名被拒绝的内容</translation>
+    </message>
+    <message>
         <source>file transfer: refusing to write outside the drop directory</source>
         <translation>文件传输：拒绝写入接收目录之外的位置</translation>
     </message>
@@ -5048,6 +5052,18 @@ Package: %3</source>
     <message>
         <source>skipping "%s": it could not be opened for sending</source>
         <translation>跳过“%s”：无法打开以供发送</translation>
+    </message>
+    <message>
+        <source>stopping file transfer: "%s" could not be opened for sending</source>
+        <translation>已停止文件传输：无法打开“%s”</translation>
+    </message>
+    <message>
+        <source>stopping file transfer: "%s" ended with %llu of %llu byte(s)</source>
+        <translation>已停止文件传输：“%s”只读取了 %llu 字节，预期 %llu 字节</translation>
+    </message>
+    <message>
+        <source>sent %zu file(s), %llu byte(s) of content</source>
+        <translation>已发送 %zu 个文件，共 %llu 字节</translation>
     </message>
     <message>
         <source>socket flush timed out after %.1f seconds</source>

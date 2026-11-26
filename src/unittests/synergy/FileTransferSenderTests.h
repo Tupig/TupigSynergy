@@ -28,7 +28,10 @@ private Q_SLOTS:
   void everyStartedFileIsClosedWithAnEndChunk();
   void multipleFilesAreSentInOrder();
   void returnsTotalBytesStreamed();
-  void unopenableFileIsSkippedAndLaterFilesStillTransfer();
+  void unopenableAnnouncedFileStopsBatchBeforeLaterPayload();
+  void failedLaterFileReturnsOnlyCompletedPredecessorBytes();
+  void shortReadClosesStartedFrameAndStopsBeforeLaterFile();
+  void growingSourceSendsOnlyDeclaredBytes();
 
   void roundTripThroughFileChunkReassemblesFile();
   void roundTripThroughFileChunkReassemblesSeveralFiles();

@@ -39,8 +39,11 @@ What it enforces:
   transfer never appears as a finished file, and an existing file is never
   overwritten - a unique name is chosen instead. Publishing does not replace
   a file that appears between the check and the write.
-- The Nth completed transfer is paired with the Nth accepted name. A write that
-  fails still consumes that name, so the next file is not stored under it.
+- The Nth completed transfer is paired with the Nth announced name slot. Unsafe
+  names retain a refused slot, so they cannot shift a legitimate sibling's
+  content under the wrong name. A write that fails still consumes its slot.
+- A malformed frame rejects the rest of its announcement while their message
+  bodies are still consumed. The next `DDRG` starts cleanly.
 */
 class FileTransferReceiver
 {
@@ -112,8 +115,14 @@ private:
   std::vector<std::string> m_acceptedNames;
   std::vector<std::string> m_writtenFiles;
 
-  //! Index of the name to use for the next completed transfer.
+  //! One item per announced name. An empty item is a refused positional slot.
+  std::vector<std::string> m_nameSlots;
+
+  //! Index of the announced name slot for the next completed transfer.
   size_t m_nextName = 0;
+
+  //! A malformed frame means later frames cannot be safely assigned this drag.
+  bool m_rejectRemaining = false;
 
   size_t m_refused = 0;
   uint64_t m_totalWritten = 0;
