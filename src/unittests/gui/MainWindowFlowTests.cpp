@@ -26,6 +26,7 @@
 #include "gui/update/UpdateDialog.h"
 #include "gui/update/UpdateDownloader.h"
 #include "gui/widgets/LogPanel.h"
+#include "gui/widgets/LogWidget.h"
 #include "gui/widgets/MessagePage.h"
 #include "gui/widgets/ModeCard.h"
 #include "gui/widgets/PageHost.h"
@@ -41,6 +42,7 @@
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
 #include <QGroupBox>
@@ -75,6 +77,7 @@
 #include <QTcpSocket>
 #include <QTemporaryDir>
 #include <QTextBrowser>
+#include <QTimer>
 #include <QUuid>
 #include <utility>
 
@@ -935,6 +938,56 @@ private Q_SLOTS:
       QTRY_COMPARE(log->isCollapsed(), collapsed);
       QTRY_VERIFY(!view->isVisible());
       QCOMPARE(toggle->isChecked(), !collapsed);
+    }
+  }
+  void logActionsExplainEmptyCopyAndConfirmClear()
+  {
+    Settings::setValue(Settings::Gui::LogExpanded, true);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *log = window.findChild<LogPanel *>("logPanel");
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(log && pages);
+    auto *hint = log->findChild<QLabel *>("logHint");
+    auto *records = log->findChild<LogWidget *>();
+    const auto button = [log](const char *source) -> QPushButton * {
+      const auto label = QCoreApplication::translate("LogPanel", source);
+      for (auto *action : log->findChildren<QPushButton *>())
+        if (action->accessibleName() == label)
+          return action;
+      return nullptr;
+    };
+    auto *copy = button("Copy Log");
+    auto *clear = button("Clear Log");
+    QVERIFY(hint && records && copy && clear);
+    records->clear();
+    const auto emptyFeedback = QCoreApplication::translate("LogPanel", "No log entries to copy");
+    QTest::mouseClick(copy, Qt::LeftButton);
+    QCOMPARE(hint->text(), emptyFeedback);
+    QTest::mouseClick(clear, Qt::LeftButton);
+    QCOMPARE(pages->count(), 1);
+
+    log->appendLine(QStringLiteral("[00:00:01] INFO: keep until confirmed"));
+    const auto history = records->allText();
+    QVERIFY(history.contains(QStringLiteral("keep until confirmed")));
+    records->setLevelFilter(QStringLiteral("error"));
+    QVERIFY(records->allText().isEmpty());
+    QTest::mouseClick(copy, Qt::LeftButton);
+    QCOMPARE(hint->text(), emptyFeedback);
+
+    for (const auto choice : {QMessageBox::Cancel, QMessageBox::Yes}) {
+      QTest::mouseClick(clear, Qt::LeftButton);
+      auto *prompt = window.findChild<QMessageBox *>("confirmClearLog");
+      QVERIFY(prompt);
+      QCOMPARE(pages->count(), 2);
+      QCOMPARE(prompt->defaultButton(), prompt->button(QMessageBox::Cancel));
+      QVERIFY(records->hasHistory());
+      QTest::mouseClick(prompt->button(choice), Qt::LeftButton);
+      QTRY_VERIFY(!window.findChild<QMessageBox *>("confirmClearLog"));
+      QCOMPARE(pages->count(), 1);
+      records->setLevelFilter({});
+      QCOMPARE(records->allText(), choice == QMessageBox::Cancel ? history : QString());
+      records->setLevelFilter(QStringLiteral("error"));
     }
   }
   void collapsedLogFitsHomeWithoutExtraSpace()
@@ -1843,6 +1896,80 @@ private Q_SLOTS:
     QCOMPARE(std::as_const(reloaded).hotkeys(), original);
     window.close();
     QVERIFY2(captionErrors.isEmpty(), qPrintable(captionErrors.join('\n')));
+  }
+  void certificateBrowseHasClearAction()
+  {
+    QTemporaryDir certificates;
+    QVERIFY(certificates.isValid());
+    const auto saved = certificates.filePath("saved.pem");
+    const auto selected = certificates.filePath("selected.pem");
+    QVERIFY(synergy::gui::TlsUtility::generateCertificateAt(saved, 2048));
+    Settings::setValue(Settings::Security::Certificate, saved);
+    Settings::setValue(Settings::Security::TlsEnabled, true);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    QVERIFY(preferences);
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    auto *editor = window.findChild<SettingsDialog *>();
+    QVERIFY(editor);
+    auto *tabs = editor->findChild<QTabWidget *>();
+    auto *network = editor->findChild<QWidget *>("tabNetwork");
+    auto *path = editor->findChild<QLineEdit *>("lineTlsCertPath");
+    auto *browse = editor->findChild<QPushButton *>("btnTlsCertPath");
+    QVERIFY(tabs && network && path && browse);
+    tabs->setCurrentWidget(network);
+    QVERIFY(settleStaticRender(window));
+    QVERIFY(browse->isVisibleTo(&window) && browse->isEnabled());
+    QVERIFY(!browse->text().isEmpty());
+    QVERIFY(!browse->accessibleName().isEmpty());
+    QVERIFY(!network->findChild<QLabel *>("lblTlsCertInfo"));
+    QVERIFY(path->toolTip().contains(QStringLiteral("2048")));
+
+    const bool nativeDialogsDisabled = QCoreApplication::testAttribute(Qt::AA_DontUseNativeDialogs);
+    QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
+    const auto clickBrowse = [&](const QString &selection) {
+      bool pickerOpened = false;
+      QTimer probe;
+      connect(&probe, &QTimer::timeout, editor, [&] {
+        auto *picker = editor->findChild<QFileDialog *>();
+        if (!picker || !picker->isVisible())
+          return;
+        if (selection.isEmpty()) {
+          pickerOpened = true;
+          picker->reject();
+          return;
+        }
+        auto *fileName = picker->findChild<QLineEdit *>("fileNameEdit");
+        auto *buttons = picker->findChild<QDialogButtonBox *>();
+        auto *save = buttons ? buttons->button(QDialogButtonBox::Save) : nullptr;
+        if (!fileName || !save)
+          return;
+        pickerOpened = true;
+        fileName->setText(QFileInfo(selection).fileName());
+        QTest::mouseClick(save, Qt::LeftButton);
+      });
+      QTimer abort;
+      abort.setSingleShot(true);
+      connect(&abort, &QTimer::timeout, editor, [&] {
+        if (auto *picker = editor->findChild<QFileDialog *>())
+          picker->reject();
+      });
+      abort.start(2000);
+      probe.start(20);
+      QTest::mouseClick(browse, Qt::LeftButton);
+      return pickerOpened;
+    };
+    const bool cancelled = clickBrowse({});
+    const auto afterCancel = path->text();
+    const bool picked = clickBrowse(selected);
+    QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, nativeDialogsDisabled);
+    QVERIFY(cancelled && picked);
+    QCOMPARE(afterCancel, saved);
+    QCOMPARE(path->text(), selected);
+    QVERIFY(!path->toolTip().contains(QStringLiteral("2048")));
+    QCOMPARE(Settings::value(Settings::Security::Certificate).toString(), saved);
+    QVERIFY(!QFile::exists(selected));
   }
   void certificateResultStaysInNetworkSettings()
   {

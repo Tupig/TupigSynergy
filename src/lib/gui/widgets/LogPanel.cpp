@@ -9,6 +9,7 @@
 #include "LogPanel.h"
 
 #include "LogWidget.h"
+#include "PageHost.h"
 
 #include <QApplication>
 #include <QButtonGroup>
@@ -17,6 +18,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -174,10 +176,32 @@ LogPanel::LogPanel(QWidget *parent) : QFrame(parent)
     });
   }
   connect(m_search, &QLineEdit::returnPressed, this, [this] { m_records->findNext(m_search->text()); });
-  connect(m_btnCopy, &QPushButton::clicked, this, [this] { QApplication::clipboard()->setText(m_records->allText()); });
+  m_copyFeedbackTimer.setSingleShot(true);
+  m_copyFeedbackTimer.setInterval(2500);
+  connect(&m_copyFeedbackTimer, &QTimer::timeout, this, &LogPanel::updateHint);
+  connect(m_btnCopy, &QPushButton::clicked, this, [this] {
+    const auto text = m_records->allText();
+    m_copiedLog = !text.isEmpty();
+    if (m_copiedLog)
+      QApplication::clipboard()->setText(text);
+    m_copyFeedbackTimer.start();
+    updateHint();
+  });
   connect(m_btnClear, &QPushButton::clicked, this, [this] {
-    m_records->clear();
-    updateStats();
+    if (!m_records->hasHistory())
+      return;
+    auto *prompt = new QMessageBox(
+        QMessageBox::Question, tr("Clear Log"), tr("Clear all entries from the log panel?"),
+        QMessageBox::Yes | QMessageBox::Cancel, this
+    );
+    prompt->setObjectName(QStringLiteral("confirmClearLog"));
+    prompt->setDefaultButton(QMessageBox::Cancel);
+    prompt->setEscapeButton(QMessageBox::Cancel);
+    connect(prompt, &QDialog::finished, this, [this](int result) {
+      if (result == QMessageBox::Yes)
+        m_records->clear();
+    });
+    PageHost::present(this, prompt);
   });
   connect(m_btnCollapse, &QPushButton::clicked, this, [this] { setCollapsed(true); });
   connect(m_btnExpand, &QPushButton::clicked, this, [this] { setCollapsed(false); });
@@ -235,7 +259,7 @@ void LogPanel::changeEvent(QEvent *e)
 void LogPanel::updateText()
 {
   m_title->setText(tr("Log"));
-  m_hint->setText(tr("Latest %1 · wrapped").arg(LogWidget::kDefaultVisibleRecords));
+  updateHint();
   m_badge->setText(tr("Log"));
   m_btnCopy->setToolTip(tr("Copy Log"));
   m_btnClear->setToolTip(tr("Clear Log"));
@@ -251,4 +275,11 @@ void LogPanel::updateText()
     buttons.at(i)->setText(labels.at(i));
     buttons.at(i)->setToolTip(labels.at(i));
   }
+}
+
+void LogPanel::updateHint()
+{
+  const auto text = m_copyFeedbackTimer.isActive() ? (m_copiedLog ? tr("Log copied") : tr("No log entries to copy"))
+                                                   : tr("Latest %1 · wrapped").arg(LogWidget::kDefaultVisibleRecords);
+  m_hint->setText(text);
 }

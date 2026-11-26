@@ -7,6 +7,7 @@
 #pragma once
 
 #include <QFrame>
+#include <QTimer>
 
 class LogWidget;
 class QButtonGroup;
@@ -36,6 +37,7 @@ protected:
 private:
   void updateText();
   void updateStats();
+  void updateHint();
 
   LogWidget *m_records = nullptr;
   QWidget *m_expanded = nullptr;
@@ -51,5 +53,7 @@ private:
   QPushButton *m_btnExpand = nullptr;
   QLineEdit *m_search = nullptr;
   QButtonGroup *m_levels = nullptr;
+  QTimer m_copyFeedbackTimer;
+  bool m_copiedLog = false;
   bool m_collapsed = false;
 };

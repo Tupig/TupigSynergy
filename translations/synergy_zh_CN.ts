@@ -954,6 +954,18 @@ Do you want to connect to the server?
         <translation>最新 %1 条 · 自动换行</translation>
     </message>
     <message>
+        <source>Log copied</source>
+        <translation>日志已复制</translation>
+    </message>
+    <message>
+        <source>No log entries to copy</source>
+        <translation>没有可复制的日志</translation>
+    </message>
+    <message>
+        <source>Clear all entries from the log panel?</source>
+        <translation>确定清空日志面板中的所有记录吗？</translation>
+    </message>
+    <message>
         <source>Running</source>
         <translation type="obsolete">运行中</translation>
     </message>
@@ -2360,6 +2372,14 @@ Now you can connect your client computers to this server. You should see a promp
     <message>
         <source>Select a TLS certificate to use...</source>
         <translation>选择要使用的 TLS 证书...</translation>
+    </message>
+    <message>
+        <source>Browse…</source>
+        <translation>浏览…</translation>
+    </message>
+    <message>
+        <source>Choose TLS certificate file</source>
+        <translation>选择 TLS 证书文件</translation>
     </message>
     <message>
         <source>Save log file to...</source>

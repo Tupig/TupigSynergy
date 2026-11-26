@@ -421,25 +421,53 @@ void QtSocketFactoryTests::tlsRejectsSmallRsaKey()
   );
 }
 
+void QtSocketFactoryTests::tlsTrustedServerRoundTrip_data()
+{
+  QTest::addColumn<bool>("requireTrustedClient");
+  QTest::addColumn<bool>("trustClient");
+  QTest::newRow("server-fingerprint") << false << false;
+  QTest::newRow("mutual-fingerprints") << true << true;
+  QTest::newRow("unknown-client-fingerprint") << true << false;
+}
+
 void QtSocketFactoryTests::tlsTrustedServerRoundTrip()
 {
-  QtSocketFactory factory(m_events, testTlsConfig(m_certPath));
+  QFETCH(bool, requireTrustedClient);
+  QFETCH(bool, trustClient);
+  QTemporaryDir serverDirectory;
+  QTemporaryDir clientDirectory;
+  QVERIFY(serverDirectory.isValid() && clientDirectory.isValid());
+  const auto serverCert = serverDirectory.filePath("server.pem");
+  const auto clientCert = clientDirectory.filePath("client.pem");
+  QVERIFY(QFile::copy(m_certPath, serverCert));
+  synergy::generatePemSelfSignedCert(clientCert, kMinimumRsaBits);
 
-  // Trust the generated identity as if the user had accepted it (TOFU).
-  const QList<QSslCertificate> certs = QSslCertificate::fromPath(m_certPath);
-  QVERIFY(!certs.isEmpty());
-  FingerprintDatabase db;
-  db.addTrusted({QCryptographicHash::Sha256, certs.first().digest(QCryptographicHash::Sha256)});
-  const QString dbPath = m_testDir + "/trusted-servers";
-  QDir().mkpath(QFileInfo(dbPath).absolutePath());
-  QVERIFY(db.write(dbPath));
+  const QList<QSslCertificate> serverCerts = QSslCertificate::fromPath(serverCert);
+  const QList<QSslCertificate> clientCerts = QSslCertificate::fromPath(clientCert);
+  QVERIFY(!serverCerts.isEmpty() && !clientCerts.isEmpty());
+  const auto serverFingerprint = serverCerts.first().digest(QCryptographicHash::Sha256);
+  const auto clientFingerprint = clientCerts.first().digest(QCryptographicHash::Sha256);
+  QVERIFY(serverFingerprint != clientFingerprint);
 
-  auto listener = factory.createListen(IArchNetwork::AddressFamily::INet, SecurityLevel::EncryptedTestOnly);
+  FingerprintDatabase trustedServers;
+  trustedServers.addTrusted({QCryptographicHash::Sha256, serverFingerprint});
+  QVERIFY(trustedServers.write(clientDirectory.filePath("trusted-servers")));
+  if (trustClient) {
+    FingerprintDatabase trustedClients;
+    trustedClients.addTrusted({QCryptographicHash::Sha256, clientFingerprint});
+    QVERIFY(trustedClients.write(serverDirectory.filePath("trusted-clients")));
+  }
+
+  QtSocketFactory serverFactory(m_events, testTlsConfig(serverCert));
+  QtSocketFactory clientFactory(m_events, testTlsConfig(clientCert));
+  const auto level = requireTrustedClient ? SecurityLevel::PeerAuth : SecurityLevel::EncryptedTestOnly;
+  auto listener = serverFactory.createListen(IArchNetwork::AddressFamily::INet, level);
   auto *qtListener = dynamic_cast<QtListenSocket *>(listener.get());
   QVERIFY(qtListener != nullptr);
 
   std::unique_ptr<IDataSocket> serverSocket;
   bool serverAccepted = false;
+  bool serverRejected = false;
   m_events->addHandler(synergy::EventTypes::ListenSocketConnecting, listener->getEventTarget(), [&](const auto &) {
     if (!serverSocket) {
       serverSocket = listener->accept();
@@ -447,6 +475,10 @@ void QtSocketFactoryTests::tlsTrustedServerRoundTrip()
         m_events->addHandler(
             synergy::EventTypes::ClientListenerAccepted, serverSocket->getEventTarget(),
             [&](const auto &) { serverAccepted = true; }
+        );
+        m_events->addHandler(
+            synergy::EventTypes::ClientListenerDisconnectedOnAccept, serverSocket->getEventTarget(),
+            [&](const auto &) { serverRejected = true; }
         );
       }
     }
@@ -456,7 +488,7 @@ void QtSocketFactoryTests::tlsTrustedServerRoundTrip()
   const quint16 port = qtListener->serverPort();
   QVERIFY(port != 0);
 
-  auto client = factory.create(IArchNetwork::AddressFamily::INet, SecurityLevel::EncryptedTestOnly);
+  auto client = clientFactory.create(IArchNetwork::AddressFamily::INet, level);
   bool clientConnected = false;
   m_events->addHandler(synergy::EventTypes::DataSocketSecureConnected, client->getEventTarget(), [&](const auto &) {
     clientConnected = true;
@@ -467,6 +499,12 @@ void QtSocketFactoryTests::tlsTrustedServerRoundTrip()
   client->bind(local);
   client->connect(NetworkAddress("127.0.0.1", port));
 
+  if (requireTrustedClient && !trustClient) {
+    QVERIFY(pump([&] { return serverRejected || serverAccepted; }, 5000));
+    QVERIFY(serverRejected);
+    QVERIFY(!serverAccepted);
+    return;
+  }
   QVERIFY(pump([&] { return clientConnected && serverAccepted && serverSocket != nullptr; }, 20000));
 
   // Prove the encrypted channel carries data in both directions.

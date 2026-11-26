@@ -34,6 +34,7 @@ private Q_SLOTS:
   void refusedConnectionReportsOnce_data();
   void refusedConnectionReportsOnce();
   void tlsRejectsUntrustedServer();
+  void tlsTrustedServerRoundTrip_data();
   void tlsTrustedServerRoundTrip();
   void tlsRejectsWrongFingerprint();
   void tlsRejectsSmallRsaKey();

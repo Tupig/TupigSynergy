@@ -33,6 +33,10 @@ public:
   /// Canonical keys: "" / "info" / "warn" / "error"; keeps retained history.
   void setLevelFilter(const QString &level);
   void clear();
+  [[nodiscard]] bool hasHistory() const
+  {
+    return !m_history.empty();
+  }
   [[nodiscard]] QString allText() const;
   [[nodiscard]] QString latestDisplayText() const;
   /// {info, warn, error} counts over the whole history (not just the filter).
