@@ -26,6 +26,7 @@
 #include "gui/update/UpdateDialog.h"
 #include "gui/update/UpdateDownloader.h"
 #include "gui/widgets/LogPanel.h"
+#include "gui/widgets/LogWidget.h"
 #include "gui/widgets/MessagePage.h"
 #include "gui/widgets/ModeCard.h"
 #include "gui/widgets/PageHost.h"
@@ -935,6 +936,56 @@ private Q_SLOTS:
       QTRY_COMPARE(log->isCollapsed(), collapsed);
       QTRY_VERIFY(!view->isVisible());
       QCOMPARE(toggle->isChecked(), !collapsed);
+    }
+  }
+  void logActionsExplainEmptyCopyAndConfirmClear()
+  {
+    Settings::setValue(Settings::Gui::LogExpanded, true);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *log = window.findChild<LogPanel *>("logPanel");
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(log && pages);
+    auto *hint = log->findChild<QLabel *>("logHint");
+    auto *records = log->findChild<LogWidget *>();
+    const auto button = [log](const char *source) -> QPushButton * {
+      const auto label = QCoreApplication::translate("LogPanel", source);
+      for (auto *action : log->findChildren<QPushButton *>())
+        if (action->accessibleName() == label)
+          return action;
+      return nullptr;
+    };
+    auto *copy = button("Copy Log");
+    auto *clear = button("Clear Log");
+    QVERIFY(hint && records && copy && clear);
+    records->clear();
+    const auto emptyFeedback = QCoreApplication::translate("LogPanel", "No log entries to copy");
+    QTest::mouseClick(copy, Qt::LeftButton);
+    QCOMPARE(hint->text(), emptyFeedback);
+    QTest::mouseClick(clear, Qt::LeftButton);
+    QCOMPARE(pages->count(), 1);
+
+    log->appendLine(QStringLiteral("[00:00:01] INFO: keep until confirmed"));
+    const auto history = records->allText();
+    QVERIFY(history.contains(QStringLiteral("keep until confirmed")));
+    records->setLevelFilter(QStringLiteral("error"));
+    QVERIFY(records->allText().isEmpty());
+    QTest::mouseClick(copy, Qt::LeftButton);
+    QCOMPARE(hint->text(), emptyFeedback);
+
+    for (const auto choice : {QMessageBox::Cancel, QMessageBox::Yes}) {
+      QTest::mouseClick(clear, Qt::LeftButton);
+      auto *prompt = window.findChild<QMessageBox *>("confirmClearLog");
+      QVERIFY(prompt);
+      QCOMPARE(pages->count(), 2);
+      QCOMPARE(prompt->defaultButton(), prompt->button(QMessageBox::Cancel));
+      QVERIFY(records->hasHistory());
+      QTest::mouseClick(prompt->button(choice), Qt::LeftButton);
+      QTRY_VERIFY(!window.findChild<QMessageBox *>("confirmClearLog"));
+      QCOMPARE(pages->count(), 1);
+      records->setLevelFilter({});
+      QCOMPARE(records->allText(), choice == QMessageBox::Cancel ? history : QString());
+      records->setLevelFilter(QStringLiteral("error"));
     }
   }
   void collapsedLogFitsHomeWithoutExtraSpace()
