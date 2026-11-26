@@ -179,6 +179,9 @@ private Q_SLOTS:
   void desktopArgumentsRemainProtocolTokensAcrossLanguages();
   void stopCancelsRetryWithoutRunningProcess_data();
   void stopCancelsRetryWithoutRunningProcess();
+#ifdef Q_OS_MACOS
+  void updateStopsOnlyTheOwnedDesktopProcess();
+#endif
   void serviceStartWaitsForItsCore_data();
   void serviceStartWaitsForItsCore();
   void translatedClientStartsAndStopsOwnedInertChildTenTimes();
@@ -574,6 +577,33 @@ void R3SerializationTests::stopCancelsRetryWithoutRunningProcess()
     QVERIFY(process->program().isEmpty());
   }
 }
+
+#ifdef Q_OS_MACOS
+void R3SerializationTests::updateStopsOnlyTheOwnedDesktopProcess()
+{
+  synergy::gui::ServerConfig config;
+  synergy::gui::CoreProcess core(config);
+  core.m_lastProcessMode = Settings::ProcessMode::Desktop;
+  core.m_processState = synergy::core::ProcessState::Started;
+  core.m_process = new QProcess(&core);
+  core.m_process->start(QStringLiteral("/bin/sleep"), {QStringLiteral("30")});
+  QVERIFY(core.m_process->waitForStarted(2000));
+  QProcess unrelated;
+  unrelated.start(QStringLiteral("/bin/sleep"), {QStringLiteral("30")});
+  QVERIFY(unrelated.waitForStarted(2000));
+  const auto stopUnrelated = qScopeGuard([&] {
+    unrelated.terminate();
+    unrelated.waitForFinished(2000);
+  });
+
+  core.m_retryTimer.start(60000);
+  QVERIFY(core.stopDesktopForUpdate());
+  QCOMPARE(core.m_process->state(), QProcess::NotRunning);
+  QCOMPARE(core.processState(), synergy::core::ProcessState::Stopped);
+  QVERIFY(!core.m_retryTimer.isActive());
+  QCOMPARE(unrelated.state(), QProcess::Running);
+}
+#endif
 
 void R3SerializationTests::serviceStartWaitsForItsCore_data()
 {

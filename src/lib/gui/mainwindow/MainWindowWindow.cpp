@@ -158,8 +158,23 @@ bool MainWindow::activateUpdatePage()
 
 void MainWindow::showAvailableUpdate()
 {
-  if (!activateUpdatePage())
-    showPage(new synergy::gui::update::UpdateDialog(*m_availableUpdate, this));
+  if (activateUpdatePage())
+    return;
+  auto *update = new synergy::gui::update::UpdateDialog(*m_availableUpdate, this);
+#ifdef Q_OS_MACOS
+  m_resumeSharingAfterUpdate = false;
+  update->setInstallPreparation([this] {
+    // A retry uses the state before the updater stopped sharing.
+    m_resumeSharingAfterUpdate |= m_coreProcess.isStarted();
+    return m_coreProcess.stopDesktopForUpdate();
+  });
+  connect(update, &synergy::gui::update::UpdateDialog::installationStarted, this, [this] {
+    Settings::setValue(Settings::Gui::WindowGeometry, geometry());
+    Settings::setValue(Settings::Gui::AutoStartCore, m_resumeSharingAfterUpdate);
+    m_saveOnExit = false;
+  });
+#endif
+  showPage(update);
 }
 
 bool MainWindow::finishUpdateCheck()

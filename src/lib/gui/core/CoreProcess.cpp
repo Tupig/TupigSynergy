@@ -683,6 +683,33 @@ void CoreProcess::cleanup()
   }
 }
 
+#ifdef Q_OS_MACOS
+bool CoreProcess::stopDesktopForUpdate()
+{
+  QMutexLocker locker(&m_processMutex);
+  m_retryTimer.stop();
+  if (m_lastProcessMode != ProcessMode::Desktop)
+    return true;
+
+  // The only process we may terminate is the child this GUI started.
+  if (m_process && m_process->state() != QProcess::NotRunning) {
+    setProcessState(ProcessState::Stopping);
+    closeCoreIpc();
+    clearConnectionState();
+    m_process->terminate();
+    if (m_process->state() != QProcess::NotRunning && !m_process->waitForFinished(2000)) {
+      m_process->kill();
+      if (m_process->state() != QProcess::NotRunning && !m_process->waitForFinished(1000))
+        return false;
+    }
+  }
+  closeCoreIpc();
+  clearConnectionState();
+  setProcessState(ProcessState::Stopped);
+  return true;
+}
+#endif
+
 QPair<bool, QString> CoreProcess::persistServerConfig() const
 {
   if (Settings::value(Settings::Server::ExternalConfig).toBool()) {

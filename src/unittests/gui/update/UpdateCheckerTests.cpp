@@ -154,12 +154,14 @@ void UpdateCheckerTests::selectsPlatformAsset()
       {QStringLiteral("browser_download_url"), downloadUrl(QStringLiteral("synergy_1.2.4_mac_arm64.dmg"))},
       {QStringLiteral("size"), 2048},
       {QStringLiteral("digest"), kDigest},
+      {QStringLiteral("id"), 123},
   };
   QJsonObject winAsset{
       {QStringLiteral("name"), QStringLiteral("synergy_1.2.4_windows_x64.msi")},
       {QStringLiteral("browser_download_url"), downloadUrl(QStringLiteral("synergy_1.2.4_windows_x64.msi"))},
       {QStringLiteral("size"), 1024},
       {QStringLiteral("digest"), kDigest},
+      {QStringLiteral("id"), 456},
   };
   const QJsonObject root{
       {QStringLiteral("tag_name"), QStringLiteral("v1.2.4")},
@@ -180,6 +182,28 @@ void UpdateCheckerTests::selectsPlatformAsset()
 
   const auto info = available.first().first().value<UpdateInfo>();
   QCOMPARE(info.asset.name, QStringLiteral("synergy_1.2.4_windows_x64.msi"));
+  QCOMPARE(info.asset.githubId, qint64(456));
+}
+
+void UpdateCheckerTests::rejectsMetadataRedirectOutsideApiOrigin()
+{
+  TestHttpServer initial;
+  TestHttpServer unrelated;
+  initial.setRedirect(unrelated.url());
+  unrelated.setJson(releaseJson(
+      QStringLiteral("v1.2.4"), QStringLiteral("synergy_1.2.4_windows_x64.msi"),
+      downloadUrl(QStringLiteral("synergy_1.2.4_windows_x64.msi")), kDigest
+  ));
+  UpdateChecker checker;
+  checker.setApiUrl(initial.url());
+  checker.setCurrentVersion(QStringLiteral("1.2.3"));
+  checker.setAssetSuffixes({QStringLiteral("_windows_x64.msi")});
+  QSignalSpy failed(&checker, &UpdateChecker::failed);
+  QSignalSpy offered(&checker, &UpdateChecker::updateAvailable);
+  checker.checkForUpdates();
+  QTRY_COMPARE_WITH_TIMEOUT(failed.count() + offered.count(), 1, 5000);
+  QCOMPARE(failed.count(), 1);
+  QCOMPARE(unrelated.ordinaryRequests(), 0);
 }
 
 void UpdateCheckerTests::prereleaseIsIgnored()

@@ -223,18 +223,22 @@ void UpdateDownloaderTests::rejectsUnrelatedRedirect()
   QFETCH(qint64, size);
   TestHttpServer source;
   TestHttpServer unrelated;
+  TestHttpServer alternate;
   source.setRedirect(unrelated.url());
   QTemporaryDir directory;
   QVERIFY(directory.isValid());
-  UpdateDownloader downloader(nullptr, loopbackPolicy());
+  auto policy = loopbackPolicy();
+  policy.assetApiRoot = alternate.url(QStringLiteral("/assets/"));
+  UpdateDownloader downloader(nullptr, policy);
   QSignalSpy failed(&downloader, &UpdateDownloader::failed);
   QSignalSpy finished(&downloader, &UpdateDownloader::finished);
   downloader.start(
-      {QStringLiteral("package.msi"), source.url(), size, QString(64, QLatin1Char('0'))}, directory.path()
+      {QStringLiteral("package.msi"), source.url(), size, QString(64, QLatin1Char('0')), 456}, directory.path()
   );
   QTRY_COMPARE_WITH_TIMEOUT(failed.count(), 1, 5000);
   QCOMPARE(finished.count(), 0);
   QCOMPARE(unrelated.partialRequests() + unrelated.ordinaryRequests(), 0);
+  QCOMPARE(alternate.ordinaryRequests(), 0);
   QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("package.msi"))));
 }
 
@@ -298,25 +302,41 @@ void UpdateDownloaderTests::boundsPersistentDisconnect()
   QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("package.msi"))));
 }
 
+void UpdateDownloaderTests::doesNotRetryHttpFailure_data()
+{
+  QTest::addColumn<int>("status");
+  QTest::addColumn<bool>("stall");
+  QTest::newRow("internal-error") << 500 << false;
+  QTest::newRow("forbidden-with-stalled-body") << 403 << true;
+}
+
 void UpdateDownloaderTests::doesNotRetryHttpFailure()
 {
+  QFETCH(int, status);
+  QFETCH(bool, stall);
   TestHttpServer server;
-  server.setOrdinaryResponses({{500, QByteArrayLiteral("no"), 2, -1, false}});
+  TestHttpServer alternate;
+  server.setOrdinaryResponses({{status, QByteArrayLiteral("no"), 2, stall ? 0 : -1, false, stall}});
   QTemporaryDir directory;
   QVERIFY(directory.isValid());
-  UpdateDownloader downloader(nullptr, loopbackPolicy());
+  auto policy = loopbackPolicy();
+  policy.assetApiRoot = alternate.url(QStringLiteral("/assets/"));
+  policy.singleRequestTimeoutMs = 1000;
+  policy.firstByteTimeoutMs = 150;
+  UpdateDownloader downloader(nullptr, policy);
   QSignalSpy finished(&downloader, &UpdateDownloader::finished);
   QSignalSpy failed(&downloader, &UpdateDownloader::failed);
   const QByteArray bytes("no");
   downloader.start(
       {QStringLiteral("package.msi"), server.url(), bytes.size(),
-       QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
+       QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex()), 456},
       directory.path()
   );
   QTRY_COMPARE_WITH_TIMEOUT(finished.count() + failed.count(), 1, 5000);
   QCOMPARE(finished.count(), 0);
   QCOMPARE(failed.count(), 1);
   QCOMPARE(server.ordinaryRequests(), 1);
+  QCOMPARE(alternate.ordinaryRequests(), 0);
   QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("package.msi"))));
 }
 
@@ -402,6 +422,138 @@ void UpdateDownloaderTests::retriesAfterTimeout()
   QCOMPARE(finished.count(), 1);
   QCOMPARE(failed.count(), 0);
   QCOMPARE(server.ordinaryRequests(), 2);
+}
+
+void UpdateDownloaderTests::fallsBackToOfficialAsset_data()
+{
+  QTest::addColumn<bool>("redirect");
+  QTest::addColumn<bool>("allowCdn");
+  QTest::addColumn<bool>("sizeMismatch");
+  QTest::addColumn<bool>("digestMismatch");
+  QTest::addColumn<bool>("large");
+  QTest::newRow("direct") << false << false << false << false << false;
+  QTest::newRow("redirect") << true << true << false << false << false;
+  QTest::newRow("blocked-redirect") << true << false << false << false << false;
+  QTest::newRow("size-mismatch") << false << false << true << false << false;
+  QTest::newRow("digest-mismatch") << false << false << false << true << false;
+  QTest::newRow("range-fallback") << false << false << false << false << true;
+}
+
+void UpdateDownloaderTests::fallsBackToOfficialAsset()
+{
+  QFETCH(bool, redirect);
+  QFETCH(bool, allowCdn);
+  QFETCH(bool, sizeMismatch);
+  QFETCH(bool, digestMismatch);
+  QFETCH(bool, large);
+  const auto bytes = large ? QByteArray(9 * 1024 * 1024, 'x') : payload();
+  TestHttpServer primary;
+  TestHttpServer alternate;
+  TestHttpServer cdn;
+  // Keep the primary reply alive without package bytes. A second attempt
+  // would stall too, so only the alternate route can complete the download.
+  primary.setOrdinaryResponses({{200, {}, bytes.size(), 0, false, true}, {200, {}, bytes.size(), 0, false, true}});
+  alternate.setBinary(bytes);
+  cdn.setBinary(bytes);
+  if (redirect)
+    alternate.setRedirect(cdn.url(QStringLiteral("/artifact")));
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  auto policy = loopbackPolicy();
+  policy.singleRequestTimeoutMs = 1000;
+  policy.firstByteTimeoutMs = 150;
+  policy.assetApiRoot = alternate.url(QStringLiteral("/assets/"));
+  if (allowCdn)
+    policy.releaseContentOrigin = cdn.url();
+  UpdateDownloader downloader(nullptr, policy);
+  QSignalSpy finished(&downloader, &UpdateDownloader::finished);
+  QSignalSpy failed(&downloader, &UpdateDownloader::failed);
+  QSignalSpy fallback(&downloader, &UpdateDownloader::usingAlternateSource);
+  const auto digest =
+      QCryptographicHash::hash(digestMismatch ? QByteArrayLiteral("wrong") : bytes, QCryptographicHash::Sha256).toHex();
+  downloader.start(
+      {QStringLiteral("package.msi"), primary.url(QStringLiteral("/package.msi")), bytes.size() + sizeMismatch,
+       QString::fromLatin1(digest), 456},
+      directory.path()
+  );
+  QTRY_COMPARE_WITH_TIMEOUT(finished.count() + failed.count(), 1, 5000);
+  QCOMPARE(primary.ordinaryRequests(), 1);
+  QCOMPARE(alternate.ordinaryRequests(), 1);
+  const auto request = alternate.lastRequest().toLower();
+  QVERIFY(request.startsWith("get /assets/456 http/1."));
+  QVERIFY(request.contains("\r\naccept: application/octet-stream\r\n"));
+  QVERIFY(!request.contains("\r\nauthorization:"));
+  QCOMPARE(fallback.count(), 1);
+  QCOMPARE(cdn.ordinaryRequests(), allowCdn ? 1 : 0);
+  if ((redirect && !allowCdn) || sizeMismatch || digestMismatch) {
+    QCOMPARE(failed.count(), 1);
+    QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("package.msi"))));
+    return;
+  }
+  QCOMPARE(finished.count(), 1);
+  QFile file(finished.first().first().toString());
+  QVERIFY(file.open(QIODevice::ReadOnly));
+  QCOMPARE(file.readAll(), bytes);
+}
+
+void UpdateDownloaderTests::firstByteDeadlineDoesNotInterruptProgress()
+{
+  const auto bytes = payload();
+  TestHttpServer primary;
+  TestHttpServer alternate;
+  primary.setOrdinaryResponses({{200, bytes, bytes.size(), 3, false, true, 800}});
+  auto policy = loopbackPolicy();
+  policy.singleRequestTimeoutMs = 3000;
+  policy.firstByteTimeoutMs = 400;
+  policy.assetApiRoot = alternate.url(QStringLiteral("/assets/"));
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  UpdateDownloader downloader(nullptr, policy);
+  QSignalSpy finished(&downloader, &UpdateDownloader::finished);
+  QSignalSpy failed(&downloader, &UpdateDownloader::failed);
+  QSignalSpy fallback(&downloader, &UpdateDownloader::usingAlternateSource);
+  downloader.start(
+      {QStringLiteral("package.msi"), primary.url(), bytes.size(),
+       QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex()), 456},
+      directory.path()
+  );
+  QTRY_COMPARE_WITH_TIMEOUT(finished.count() + failed.count(), 1, 5000);
+  QCOMPARE(finished.count(), 1);
+  QCOMPARE(failed.count(), 0);
+  QCOMPARE(fallback.count(), 0);
+  QCOMPARE(primary.ordinaryRequests(), 1);
+  QCOMPARE(alternate.ordinaryRequests(), 0);
+}
+
+void UpdateDownloaderTests::stopsWhileUsingOfficialAsset()
+{
+  const auto bytes = payload();
+  TestHttpServer primary;
+  TestHttpServer alternate;
+  primary.setOrdinaryResponses({{200, {}, bytes.size(), 0, false, true}, {200, {}, bytes.size(), 0, false, true}});
+  alternate.setOrdinaryResponses({{200, bytes, bytes.size(), 3, false, true}});
+  auto policy = loopbackPolicy();
+  policy.singleRequestTimeoutMs = 1000;
+  policy.firstByteTimeoutMs = 150;
+  policy.assetApiRoot = alternate.url(QStringLiteral("/assets/"));
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  auto downloader = std::make_unique<UpdateDownloader>(nullptr, policy);
+  QSignalSpy progress(downloader.get(), &UpdateDownloader::progress);
+  QSignalSpy finished(downloader.get(), &UpdateDownloader::finished);
+  QSignalSpy failed(downloader.get(), &UpdateDownloader::failed);
+  downloader->start(
+      {QStringLiteral("package.msi"), primary.url(), bytes.size(),
+       QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex()), 456},
+      directory.path()
+  );
+  QTRY_VERIFY_WITH_TIMEOUT(!progress.isEmpty() && progress.last().first().toLongLong() > 0, 5000);
+  downloader.reset();
+  QCOMPARE(primary.ordinaryRequests(), 1);
+  QCOMPARE(alternate.ordinaryRequests(), 1);
+  QCOMPARE(finished.count(), 0);
+  QCOMPARE(failed.count(), 0);
+  QVERIFY(!QFile::exists(directory.filePath(QStringLiteral("package.msi"))));
 }
 
 void UpdateDownloaderTests::rejectsOversizeResponse()

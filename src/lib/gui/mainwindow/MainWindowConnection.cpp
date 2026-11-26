@@ -354,6 +354,9 @@ void MainWindow::coreProcessStateChanged(ProcessState state)
     m_actionStopCore->setEnabled(true);
 
     if (state == Starting) {
+#ifdef Q_OS_MACOS
+      m_resumeSharingAfterUpdate = false;
+#endif
       saveSettings();
     }
 

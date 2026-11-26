@@ -261,7 +261,7 @@ int main(int argc, char **argv)
         self.write_app(unrelated_bundle, "2")
         unrelated = self.start_bundle_process(unrelated_bundle)
         executable_dir = self.destination / "Contents/MacOS"
-        runner = self.runner_script.replace('/usr/bin/open "$dest"', ":")
+        runner = self.headless_runner().replace('/usr/bin/open "$dest"', ":")
         install_marker = "reached image staging"
         install_image = f'printf "%s\\n" "{install_marker}"; exit 65'
 
@@ -270,18 +270,20 @@ int main(int argc, char **argv)
                 "/bin/sh", "-c", runner, "mac-update-run", str(os.getpid()),
                 str(self.root / "fixture.dmg"), "0" * 64, str(self.destination), self.source.name, BUNDLE_ID,
                 str(executable_dir / "Fixture"), str(executable_dir / "FixtureCore"),
-                install_image, self.install_script,
+                install_image, self.install_script, "Update failed", "Still running", "Recovery required", "Try again",
             ], env=self.environment)
 
         # An executable with the same basename in another app must be ignored.
         unrelated_result = update()
         self.assertEqual(unrelated_result.returncode, 65, unrelated_result.stdout + unrelated_result.stderr)
         self.assertIn(install_marker, unrelated_result.stdout)
+        self.assertIn("Update failed: Try again", unrelated_result.stderr)
         old_gui = self.start_bundle_process(self.destination)
         self.old_contents = tree_contents(self.destination)
         result = update()
         self.assertEqual(result.returncode, 75, result.stdout + result.stderr)
         self.assertNotIn(install_marker, result.stdout)
+        self.assertIn("Update failed: Still running", result.stderr)
         self.assertIsNone(old_gui.poll())
         self.assertIsNone(unrelated.poll())
         self.assert_original_installation()
@@ -299,7 +301,7 @@ int main(int argc, char **argv)
         marker = "would relaunch the verified fixture"
         # Run the exact installer chain except for the final GUI launch.
         # Neither fixture is running, so there is no process to stop.
-        runner = self.runner_script.replace(launch, f'printf "%s\\n" "{marker}"')
+        runner = self.headless_runner().replace(launch, f'printf "%s\\n" "{marker}"')
         executable_dir = self.destination / "Contents/MacOS"
 
         def update(expected_digest):
@@ -307,7 +309,8 @@ int main(int argc, char **argv)
                 "/bin/sh", "-c", runner, "mac-update-run",
                 str(os.getpid()), str(image_path), expected_digest, str(self.destination), self.source.name, BUNDLE_ID,
                 str(executable_dir / "Fixture"), str(executable_dir / self.root.name),
-                self.disk_image_script, self.install_script,
+                self.disk_image_script, self.install_script, "Update failed", "Still running", "Recovery required",
+                "Try again",
             ], env=self.environment, timeout=40)
 
         wrong_digest = ("1" if digest[0] == "0" else "0") + digest[1:]
@@ -318,10 +321,18 @@ int main(int argc, char **argv)
         result = update(digest)
         self.assert_success(result)
         self.assertIn(marker, result.stdout)
+        self.assertNotIn("Update failed:", result.stderr)
         self.assertEqual(directory_identity(self.destination), self.old_identity)
         self.assertEqual(tree_contents(self.destination), expected)
         self.assert_success(self.verify_signature(self.destination))
         self.assertEqual(self.neighbor.read_text(encoding="ascii"), "untouched")
+
+    def headless_runner(self):
+        # Keep the real transaction and replace just the native UI display.
+        return self.runner_script.replace(
+            "notify_failure() {\n",
+            "notify_failure() {\n  printf '%s: %s\\n' \"$title\" \"$1\" >&2; return 0\n",
+        )
 
 
 if __name__ == "__main__":

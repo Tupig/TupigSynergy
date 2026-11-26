@@ -25,9 +25,8 @@ namespace synergy::gui::update {
 /**
  * @brief Where a package may be downloaded from.
  *
- * Production always uses the GitHub Release download prefix. Tests inject a
- * loopback server; there is no settings or configuration path that can change
- * this at runtime.
+ * Production uses this repository's GitHub Release download URL and Releases
+ * Asset API. Only test callers can supply a different policy.
  */
 struct DownloadPolicy
 {
@@ -36,6 +35,10 @@ struct DownloadPolicy
   QString pathPrefix = QStringLiteral("/Tupig/TupigSynergy/releases/download/");
   // Internal policy seam; preserve the existing five-minute request timeout.
   int singleRequestTimeoutMs = 300000;
+  // Only the primary route without any received package bytes uses this limit.
+  int firstByteTimeoutMs = 15000;
+  QUrl assetApiRoot = QUrl(QStringLiteral("https://api.github.com/repos/Tupig/TupigSynergy/releases/assets/"));
+  QUrl releaseContentOrigin = QUrl(QStringLiteral("https://release-assets.githubusercontent.com"));
 };
 
 /**
@@ -56,6 +59,7 @@ public:
 
 Q_SIGNALS:
   void progress(qint64 received, qint64 total);
+  void usingAlternateSource();
   void finished(const QString &filePath);
   void failed(const QString &reason);
 
@@ -75,6 +79,8 @@ private:
   bool readRange(Range &range);
   void finishRange(Range &range);
   void fallBackToSingleDownload();
+  bool tryAssetApi();
+  void abortSingleRequest();
   void abortRanges();
   void completeDownload();
   void finishDownload();
@@ -89,10 +95,12 @@ private:
   QCryptographicHash m_hash{QCryptographicHash::Sha256};
   DownloadPolicy m_policy;
   UpdateAsset m_asset;
+  QUrl m_assetApiUrl;
   QString m_path;
   qint64 m_received = 0;
   bool m_completed = false;
   bool m_singleRetryUsed = false;
+  bool m_usingAssetApi = false;
 };
 
 } // namespace synergy::gui::update

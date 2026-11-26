@@ -2381,6 +2381,55 @@ private Q_SLOTS:
     QVERIFY(downloader.isNull());
     QCOMPARE(dialog.result(), int(QDialog::Rejected));
   }
+  void failedInstallPreparationKeepsVerifiedDownload()
+  {
+    ControlledHttp server;
+    QVERIFY(server.isListening());
+    const QByteArray payload("verified fixture");
+    synergy::gui::update::UpdateInfo info;
+    info.version = "99.0.0";
+    info.asset.name = "flow-fixture.dmg";
+    info.asset.url = server.url();
+    info.asset.sha256 = QString::fromLatin1(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    info.asset.size = payload.size();
+    const synergy::gui::update::DownloadPolicy policy{"http", "127.0.0.1", "/"};
+    synergy::gui::update::UpdateDialog dialog(info, nullptr, policy);
+    dialog.setAttribute(Qt::WA_DontShowOnScreen);
+    dialog.show();
+
+    int attempts = 0;
+    dialog.setInstallPreparation([&attempts] {
+      ++attempts;
+      return false;
+    });
+    auto *install = dialog.findChild<QPushButton *>("downloadInstall");
+    auto *feedback = dialog.findChild<QLabel *>("updateProgressText");
+    auto *downloader = dialog.findChild<synergy::gui::update::UpdateDownloader *>();
+    QVERIFY(install && feedback && downloader);
+    QSignalSpy verified(downloader, &synergy::gui::update::UpdateDownloader::finished);
+    QSignalSpy handoff(&dialog, &synergy::gui::update::UpdateDialog::installationStarted);
+    install->click();
+    QTRY_COMPARE(server.requests, 1);
+    server.write(
+        "HTTP/1.1 200 OK\r\nContent-Length: " + QByteArray::number(payload.size()) + "\r\nConnection: close\r\n\r\n" +
+            payload,
+        true
+    );
+    QTRY_COMPARE(verified.size(), 1);
+    const QString downloadedPath = verified.first().first().toString();
+    const auto failed =
+        synergy::gui::update::UpdateDialog::tr("Sharing did not stop. Stop sharing, then try installing again.");
+    for (const int expected : {1, 2}) {
+      install->click();
+      QCOMPARE(attempts, expected);
+      QVERIFY(feedback->isVisibleTo(&dialog));
+      QCOMPARE(feedback->text(), failed);
+      QVERIFY(install->isEnabled());
+      QCOMPARE(server.requests, 1);
+      QVERIFY(handoff.isEmpty());
+      QVERIFY(QFileInfo::exists(downloadedPath));
+    }
+  }
 };
 
 int main(int argc, char **argv)

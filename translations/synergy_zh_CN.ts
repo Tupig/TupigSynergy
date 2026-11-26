@@ -2615,6 +2615,41 @@ Now you can connect your client computers to this server. You should see a promp
     </message>
 </context>
 <context>
+    <name>MacUpdateInstaller</name>
+    <message>
+        <source>Could not locate the installed application bundle.</source>
+        <translation>无法找到已安装的应用。</translation>
+    </message>
+    <message>
+        <source>Could not start the update helper.</source>
+        <translation>无法启动更新助手。</translation>
+    </message>
+    <message>
+        <source>Could not check whether sharing stopped. Try again.</source>
+        <translation>无法确认共享是否已停止，请重试。</translation>
+    </message>
+    <message>
+        <source>The sharing process is still running. Stop sharing, then try installing again.</source>
+        <translation>共享进程仍在运行。请停止共享后重试安装。</translation>
+    </message>
+    <message>
+        <source>Update Failed</source>
+        <translation>更新失败</translation>
+    </message>
+    <message>
+        <source>The app or sharing process is still running. Close it and try the update again.</source>
+        <translation>应用或共享进程仍在运行。请退出后重试更新。</translation>
+    </message>
+    <message>
+        <source>The update could not finish safely. Check the installed app before trying again.</source>
+        <translation>更新未能安全完成。请检查已安装的应用，再重试。</translation>
+    </message>
+    <message>
+        <source>The update could not be completed. Open the installed app and try again.</source>
+        <translation>更新未完成。请打开已安装的应用后重试。</translation>
+    </message>
+</context>
+<context>
     <name>UpdateDialog</name>
     <message>
         <source>Download and Install</source>
@@ -2757,6 +2792,14 @@ Package: %3</source>
     <message>
         <source>The system installer could not be started.</source>
         <translation>无法启动系统安装器。</translation>
+    </message>
+    <message>
+        <source>Sharing did not stop. Stop sharing, then try installing again.</source>
+        <translation>共享未能停止。请停止共享后重试安装。</translation>
+    </message>
+    <message>
+        <source>Trying another GitHub download route…</source>
+        <translation>正在尝试 GitHub 的备用下载地址…</translation>
     </message>
     <message>
         <source>Downloading…</source>

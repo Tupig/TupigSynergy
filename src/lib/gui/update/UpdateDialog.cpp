@@ -36,6 +36,8 @@
 #include <QVariant>
 #include <QtMath>
 
+#include <utility>
+
 namespace synergy::gui::update {
 
 namespace {
@@ -198,6 +200,7 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
   progressLayout->addWidget(m_progress);
 
   m_progressText = new QLabel(progressCard);
+  m_progressText->setObjectName(QStringLiteral("updateProgressText"));
   m_progressText->setWordWrap(true);
   m_progressText->setTextFormat(Qt::PlainText);
   m_progressText->setVisible(false);
@@ -259,6 +262,10 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
 
   m_rateTimer.setInterval(500);
   connect(&m_rateTimer, &QTimer::timeout, this, &UpdateDialog::updateProgressText);
+  connect(m_downloader, &UpdateDownloader::usingAlternateSource, this, [this, summaryHeading] {
+    if (m_busy)
+      summaryHeading->setText(tr("Trying another GitHub download route…"));
+  });
   connect(m_downloader, &UpdateDownloader::progress, this, [this](qint64 received, qint64 total) {
     const auto now = m_downloadTimer.elapsed();
     const auto interval = now - m_sampleTime;
@@ -402,22 +409,33 @@ void UpdateDialog::startDownload()
 
 void UpdateDialog::installDownloaded(const QString &filePath)
 {
+  if (m_prepareInstall && !m_prepareInstall()) {
+    showInstallFailure(tr("Sharing did not stop. Stop sharing, then try installing again."));
+    return;
+  }
   QString error;
   const auto result = synergy::platform::launchUpdateInstaller(filePath, m_info.asset.sha256, &error);
   if (result == synergy::platform::UpdateInstallResult::Launched) {
     // 安装器异步读取包；交接后保留独立临时目录，避免退出时删除安装源。
     m_downloadDirectory.setAutoRemove(false);
+    Q_EMIT installationStarted();
     QCoreApplication::quit();
     return;
   }
 
-  setBusy(false);
-  auto *message = new QMessageBox(
-      QMessageBox::Critical, tr("Update Failed"),
-      error.isEmpty() ? tr("The system installer could not be started.") : error, QMessageBox::Ok, this
-  );
-  message->setTextFormat(Qt::PlainText);
-  PageHost::present(this, message);
+  showInstallFailure(error.isEmpty() ? tr("The system installer could not be started.") : error);
+}
+
+void UpdateDialog::setInstallPreparation(std::function<bool()> preparation)
+{
+  m_prepareInstall = std::move(preparation);
+}
+
+void UpdateDialog::showInstallFailure(const QString &error)
+{
+  m_progressText->setText(error);
+  m_progressText->parentWidget()->show();
+  m_progressText->show();
 }
 
 void UpdateDialog::openReleasePage()
