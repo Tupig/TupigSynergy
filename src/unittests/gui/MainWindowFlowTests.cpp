@@ -940,6 +940,92 @@ private Q_SLOTS:
       QCOMPARE(toggle->isChecked(), !collapsed);
     }
   }
+  void embeddedEditorScopesStartRestartShortcutsAndKeepsStopAvailable()
+  {
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width, true);
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    QAction *start = nullptr;
+    QAction *restart = nullptr;
+    QAction *stop = nullptr;
+    for (auto *action : window.findChildren<QAction *>()) {
+      if (action->shortcut() == QKeySequence(Qt::CTRL | Qt::Key_S))
+        start = action;
+      else if (action->shortcut() == QKeySequence(Qt::CTRL | Qt::Key_R))
+        restart = action;
+      else if (action->shortcut() == QKeySequence(Qt::CTRL | Qt::Key_T))
+        stop = action;
+    }
+    QVERIFY(preferences && back && start && restart && stop);
+    // IsolatedWindow disconnects real core work but leaves QAction dispatch intact.
+    start->setEnabled(true);
+    restart->setEnabled(true);
+    stop->setEnabled(true);
+    QObject::disconnect(stop, &QAction::triggered, &window, nullptr);
+    QSignalSpy started(start, &QAction::triggered);
+    QSignalSpy restarted(restart, &QAction::triggered);
+    QSignalSpy stopped(stop, &QAction::triggered);
+
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    auto *editor = window.findChild<SettingsDialog *>();
+    QVERIFY(editor && editor->isVisibleTo(&window));
+    QVERIFY(start->isEnabled());
+    QVERIFY(restart->isEnabled());
+    QVERIFY(stop->isEnabled());
+    auto *field = editor->findChild<QComboBox *>("comboLanguage");
+    QVERIFY(field);
+    QVERIFY(field->isVisibleTo(&window));
+    field->setFocus();
+    QTRY_VERIFY(field->hasFocus());
+
+    QTest::keyClick(field, Qt::Key_S, Qt::ControlModifier);
+    QTest::keyClick(field, Qt::Key_R, Qt::ControlModifier);
+    QCOMPARE(started.count(), 0);
+    QCOMPARE(restarted.count(), 0);
+
+    // Stop remains an explicit global emergency command while drafts are open.
+    QTest::keyClick(field, Qt::Key_T, Qt::ControlModifier);
+    QCOMPARE(stopped.count(), 1);
+
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_VERIFY(!window.findChild<SettingsDialog *>());
+    QCOMPARE(start->shortcut(), QKeySequence(Qt::CTRL | Qt::Key_S));
+    QCOMPARE(restart->shortcut(), QKeySequence(Qt::CTRL | Qt::Key_R));
+    auto *pageBar = window.findChild<QWidget *>("pageBar");
+    QVERIFY(pageBar);
+    pageBar->setFocus();
+    QTest::keyClick(pageBar, Qt::Key_S, Qt::ControlModifier);
+    QTest::keyClick(pageBar, Qt::Key_R, Qt::ControlModifier);
+    QCOMPARE(started.count(), 1);
+    QCOMPARE(restarted.count(), 1);
+  }
+  void viewLogIsDisabledWhileAnEmbeddedEditorHidesThePanel()
+  {
+    Settings::setValue(Settings::Gui::LogExpanded, true);
+    ControlledHttp server;
+    IsolatedWindow window(server, m_width);
+    auto *preferences = window.findChild<QPushButton *>("btnSettingsShortcut");
+    auto *back = window.findChild<QPushButton *>("btnBack");
+    auto *view = window.findChild<QMenu *>("menuView");
+    auto *log = window.findChild<LogPanel *>("logPanel");
+    QVERIFY(preferences && back && view && log);
+    QCOMPARE(view->actions().size(), 1);
+    auto *toggle = view->actions().first();
+    QVERIFY(toggle->isEnabled());
+    QVERIFY(log->isVisibleTo(&window));
+
+    QTest::mouseClick(preferences, Qt::LeftButton);
+    QVERIFY(window.findChild<SettingsDialog *>());
+    QTRY_VERIFY(log->isHidden());
+    QVERIFY(!toggle->isEnabled());
+
+    QTest::mouseClick(back, Qt::LeftButton);
+    QTRY_VERIFY(!window.findChild<SettingsDialog *>());
+    QTRY_VERIFY(log->isVisibleTo(&window));
+    QVERIFY(toggle->isEnabled());
+  }
   void logActionsExplainEmptyCopyAndConfirmClear()
   {
     Settings::setValue(Settings::Gui::LogExpanded, true);
