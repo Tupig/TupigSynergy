@@ -53,6 +53,9 @@ public:
   void stop(std::optional<ProcessMode> processMode = std::nullopt);
   void restart();
   void cleanup();
+#ifdef Q_OS_MACOS
+  bool stopDesktopForUpdate();
+#endif
   void applyLogLevel();
   void clearSettings();
   void retryDaemon();

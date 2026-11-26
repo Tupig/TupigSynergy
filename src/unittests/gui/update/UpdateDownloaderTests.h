@@ -24,10 +24,15 @@ private Q_SLOTS:
   void rejectsUnrelatedRedirect();
   void retriesAfterPartialDisconnect();
   void boundsPersistentDisconnect();
+  void doesNotRetryHttpFailure_data();
   void doesNotRetryHttpFailure();
   void retriesRangeFallbackAfterDisconnect();
   void resetsStateForSecondOperation();
   void retriesAfterTimeout();
+  void fallsBackToOfficialAsset_data();
+  void fallsBackToOfficialAsset();
+  void firstByteDeadlineDoesNotInterruptProgress();
+  void stopsWhileUsingOfficialAsset();
   void rejectsOversizeResponse();
   void destroyingDownloadCancelsAndCleansUp();
 };

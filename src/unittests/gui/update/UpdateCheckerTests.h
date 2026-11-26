@@ -18,5 +18,6 @@ private Q_SLOTS:
   void nonGithubAssetFails();
   void malformedJsonFails();
   void selectsPlatformAsset();
+  void rejectsMetadataRedirectOutsideApiOrigin();
   void prereleaseIsIgnored();
 };

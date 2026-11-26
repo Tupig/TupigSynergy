@@ -12,6 +12,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QProcess>
+#include <QProcessEnvironment>
 
 namespace synergy::platform {
 
@@ -228,7 +229,23 @@ gui=$7
 core=$8
 install_image=$9
 install_bundle=${10}
-expected_root=$(/usr/bin/stat -f '%d:%i' "$dest") || exit 65
+title=${11}
+still_running=${12}
+recovery_required=${13}
+try_again=${14}
+
+notify_failure() {
+  /usr/bin/osascript - "$title" "$1" <<'APPLESCRIPT' || :
+on run argv
+  display alert (item 1 of argv) message (item 2 of argv) as warning
+end run
+APPLESCRIPT
+}
+
+expected_root=$(/usr/bin/stat -f '%d:%i' "$dest") || {
+  notify_failure "$try_again"
+  exit 65
+}
 
 bundle_is_idle() {
   # The initiating GUI normally exits while this helper is starting.
@@ -246,7 +263,10 @@ while ! bundle_is_idle && [ "$count" -lt 50 ]; do
   /bin/sleep 0.2
   count=$((count + 1))
 done
-bundle_is_idle || exit 75
+bundle_is_idle || {
+  notify_failure "$still_running"
+  exit 75
+}
 
 result=0
 /bin/sh -c "$install_image" mac-update-image "$dmg" "$expected_sha" "$dest" "$source_name" "$bundle_id" "$install_bundle" "$expected_root" "$gui" "$core" || result=$?
@@ -274,9 +294,16 @@ APPLESCRIPT
 fi
 
 case "$result" in
-  0) /usr/bin/open "$dest" ;;
-  74|75) exit "$result" ;;
+  0)
+    /usr/bin/open "$dest" || {
+      notify_failure "$try_again"
+      exit 73
+    }
+    ;;
+  74) notify_failure "$recovery_required"; exit "$result" ;;
+  75) notify_failure "$still_running"; exit "$result" ;;
   *)
+    notify_failure "$try_again"
     if /usr/bin/codesign --verify --deep --strict "$dest"; then
       /usr/bin/open "$dest"
     fi
@@ -284,6 +311,36 @@ case "$result" in
     ;;
 esac
 )SH";
+
+QString installMessage(const char *source)
+{
+  return QCoreApplication::translate("MacUpdateInstaller", source);
+}
+
+bool canReplaceCore(const QString &core, QString *error)
+{
+  QProcess processes;
+  auto environment = QProcessEnvironment::systemEnvironment();
+  environment.insert(QStringLiteral("LC_ALL"), QStringLiteral("en_US.UTF-8"));
+  processes.setProcessEnvironment(environment);
+  processes.start(QStringLiteral("/bin/ps"), {QStringLiteral("-Aww"), QStringLiteral("-o"), QStringLiteral("comm=")});
+  if (!processes.waitForFinished(2000) || processes.exitStatus() != QProcess::NormalExit || processes.exitCode() != 0) {
+    if (error)
+      *error =
+          installMessage(QT_TRANSLATE_NOOP("MacUpdateInstaller", "Could not check whether sharing stopped. Try again.")
+          );
+    return false;
+  }
+  if (QString::fromUtf8(processes.readAllStandardOutput()).split(QLatin1Char('\n')).contains(core)) {
+    if (error) {
+      *error = installMessage(QT_TRANSLATE_NOOP(
+          "MacUpdateInstaller", "The sharing process is still running. Stop sharing, then try installing again."
+      ));
+    }
+    return false;
+  }
+  return true;
+}
 
 } // namespace
 
@@ -295,7 +352,8 @@ UpdateInstallResult launchUpdateInstaller(const QString &packagePath, const QStr
   const auto destination = QFileInfo(appDirectory.absoluteFilePath("../..")).canonicalFilePath();
   if (destination.isEmpty() || !destination.endsWith(QStringLiteral(".app"), Qt::CaseInsensitive)) {
     if (error != nullptr) {
-      *error = QStringLiteral("could not locate the installed application bundle");
+      *error =
+          installMessage(QT_TRANSLATE_NOOP("MacUpdateInstaller", "Could not locate the installed application bundle."));
     }
     return UpdateInstallResult::Failed;
   }
@@ -305,15 +363,30 @@ UpdateInstallResult launchUpdateInstaller(const QString &packagePath, const QStr
   const auto core = executableDirectory.filePath(QString::fromLatin1(kCoreBinName));
   const auto sourceName = QString::fromUtf8(kAppName) + QStringLiteral(".app");
 
+  // Keep the GUI and its verified download available if a core outside its
+  // control is still running. The detached helper rechecks after GUI exit.
+  if (!canReplaceCore(core, error))
+    return UpdateInstallResult::Failed;
+
   if (!QProcess::startDetached(
           QStringLiteral("/bin/sh"),
           {QStringLiteral("-c"), QString::fromLatin1(kRunUpdate), QStringLiteral("mac-update"),
            QString::number(QCoreApplication::applicationPid()), packagePath, expectedSha256, destination, sourceName,
            QString::fromLatin1(kRevFqdnName), gui, core, QString::fromLatin1(kInstallFromDiskImage),
-           QString::fromLatin1(kInstallBundle)}
+           QString::fromLatin1(kInstallBundle),
+           installMessage(QT_TRANSLATE_NOOP("MacUpdateInstaller", "Update Failed")),
+           installMessage(QT_TRANSLATE_NOOP(
+               "MacUpdateInstaller", "The app or sharing process is still running. Close it and try the update again."
+           )),
+           installMessage(QT_TRANSLATE_NOOP(
+               "MacUpdateInstaller", "The update could not finish safely. Check the installed app before trying again."
+           )),
+           installMessage(QT_TRANSLATE_NOOP(
+               "MacUpdateInstaller", "The update could not be completed. Open the installed app and try again."
+           ))}
       )) {
     if (error != nullptr) {
-      *error = QStringLiteral("could not start the update helper");
+      *error = installMessage(QT_TRANSLATE_NOOP("MacUpdateInstaller", "Could not start the update helper."));
     }
     return UpdateInstallResult::Failed;
   }

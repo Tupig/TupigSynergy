@@ -11,7 +11,9 @@
 #include <QFileInfo>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPointer>
 #include <QRegularExpression>
+#include <QTimer>
 
 #include <utility>
 
@@ -23,6 +25,39 @@ constexpr qint64 kParallelThreshold = 8LL * 1024 * 1024;
 constexpr int kRangeCount = 3;
 
 const auto kSha256Pattern = QRegularExpression(QStringLiteral("^[0-9a-f]{64}$"));
+
+int defaultPort(const QUrl &url)
+{
+  return url.scheme() == QLatin1String("https") ? 443 : 80;
+}
+
+bool sameOrigin(const QUrl &url, const QUrl &origin)
+{
+  return url.scheme() == origin.scheme() && url.host() == origin.host() &&
+         url.port(defaultPort(url)) == origin.port(defaultPort(origin));
+}
+
+bool isRetryableInterruption(QNetworkReply::NetworkError error)
+{
+  using enum QNetworkReply::NetworkError;
+  if (error == RemoteHostClosedError || error == TimeoutError)
+    return true;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0) && QT_VERSION < QT_VERSION_CHECK(6, 10, 1)
+  return error == OperationCanceledError;
+#else
+  return false;
+#endif
+}
+
+bool mayTryAlternateSource(const QNetworkReply &reply)
+{
+  using enum QNetworkReply::NetworkError;
+  if (reply.attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() >= 400)
+    return false;
+  const auto error = reply.error();
+  return error == ConnectionRefusedError || error == HostNotFoundError || error == TemporaryNetworkFailureError ||
+         error == NetworkSessionFailedError || isRetryableInterruption(error);
+}
 
 } // namespace
 
@@ -82,6 +117,11 @@ void UpdateDownloader::start(const UpdateAsset &asset, const QString &directory)
   m_received = 0;
   m_completed = false;
   m_singleRetryUsed = false;
+  m_usingAssetApi = false;
+  m_assetApiUrl = QUrl();
+  if (asset.githubId > 0 && asset.size > 0 && !m_policy.assetApiRoot.isEmpty()) {
+    m_assetApiUrl = m_policy.assetApiRoot.resolved(QUrl(QString::number(asset.githubId)));
+  }
   m_hash.reset();
 
   m_file = std::make_unique<QFile>(m_path);
@@ -100,13 +140,25 @@ void UpdateDownloader::start(const UpdateAsset &asset, const QString &directory)
 
 void UpdateDownloader::startSingleDownload()
 {
-  QNetworkRequest request(m_asset.url);
+  QNetworkRequest request(m_usingAssetApi ? m_assetApiUrl : m_asset.url);
+  if (m_usingAssetApi) {
+    request.setRawHeader("Accept", "application/octet-stream");
+    request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
+  }
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
   request.setTransferTimeout(m_policy.singleRequestTimeoutMs);
 #endif
 
   auto *reply = startRequest(request);
   m_reply = reply;
+  if (!m_usingAssetApi && !m_assetApiUrl.isEmpty()) {
+    QTimer::singleShot(m_policy.firstByteTimeoutMs, reply, [this, reply] {
+      const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+      if (m_reply == reply && reply->isRunning() && m_received == 0 && status < 400 &&
+          reply->error() == QNetworkReply::NoError)
+        tryAssetApi();
+    });
+  }
   // Capture the reply so an aborted or superseded download cannot handle the
   // bytes of a newer one.
   connect(reply, &QNetworkReply::readyRead, this, [this, reply]() {
@@ -175,13 +227,8 @@ QNetworkReply *UpdateDownloader::startRequest(QNetworkRequest request)
   auto *reply = m_network->get(request);
   connect(reply, &QNetworkReply::redirected, this, [this, reply](const QUrl &url) {
     const auto target = reply->url().resolved(url);
-    const int defaultPort = m_policy.scheme == QLatin1String("https") ? 443 : 80;
-    const bool sameRepository =
-        isAllowedDownloadUrl(target) && target.port(defaultPort) == m_asset.url.port(defaultPort);
-    const bool releaseCdn = m_policy.scheme == QLatin1String("https") && m_policy.host == QLatin1String("github.com") &&
-                            target.scheme() == QLatin1String("https") && target.port(443) == 443 &&
-                            target.host() == QLatin1String("release-assets.githubusercontent.com") &&
-                            target.userInfo().isEmpty();
+    const bool sameRepository = isAllowedDownloadUrl(target) && sameOrigin(target, m_asset.url);
+    const bool releaseCdn = target.userInfo().isEmpty() && sameOrigin(target, m_policy.releaseContentOrigin);
     if (sameRepository || releaseCdn) {
       Q_EMIT reply->redirectAllowed();
       return;
@@ -219,7 +266,8 @@ void UpdateDownloader::finishRange(Range &range)
 {
   auto *reply = range.reply;
   if (reply->error() != QNetworkReply::NoError) {
-    fallBackToSingleDownload();
+    if (!mayTryAlternateSource(*reply) || !tryAssetApi())
+      fallBackToSingleDownload();
     return;
   }
   if (!readRange(range))
@@ -262,6 +310,30 @@ void UpdateDownloader::restartSingleDownload()
   Q_EMIT progress(0, m_asset.size);
 }
 
+bool UpdateDownloader::tryAssetApi()
+{
+  if (m_assetApiUrl.isEmpty() || m_usingAssetApi)
+    return false;
+  m_usingAssetApi = true;
+  m_singleRetryUsed = true;
+  abortRanges();
+  abortSingleRequest();
+  const QPointer<UpdateDownloader> alive(this);
+  restartSingleDownload();
+  if (alive && m_usingAssetApi && m_reply)
+    Q_EMIT usingAlternateSource();
+  return true;
+}
+
+void UpdateDownloader::abortSingleRequest()
+{
+  if (auto *reply = std::exchange(m_reply, nullptr)) {
+    reply->disconnect(this);
+    reply->abort();
+    reply->deleteLater();
+  }
+}
+
 void UpdateDownloader::abortRanges()
 {
   for (const auto &range : std::as_const(m_ranges)) {
@@ -284,13 +356,10 @@ void UpdateDownloader::finishDownload()
   reply->deleteLater();
 
   if (reply->error() != QNetworkReply::NoError) {
+    if (mayTryAlternateSource(*reply) && tryAssetApi())
+      return;
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    bool retryable =
-        reply->error() == QNetworkReply::RemoteHostClosedError || reply->error() == QNetworkReply::TimeoutError;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0) && QT_VERSION < QT_VERSION_CHECK(6, 10, 1)
-    retryable = retryable || reply->error() == QNetworkReply::OperationCanceledError;
-#endif
-    if (!m_singleRetryUsed && retryable && status < 400) {
+    if (!m_singleRetryUsed && isRetryableInterruption(reply->error()) && status < 400) {
       m_singleRetryUsed = true;
       restartSingleDownload();
       return;
@@ -334,13 +403,7 @@ void UpdateDownloader::completeDownload()
 void UpdateDownloader::cleanup()
 {
   abortRanges();
-  if (m_reply != nullptr) {
-    auto *reply = m_reply;
-    m_reply = nullptr;
-    reply->disconnect(this);
-    reply->abort();
-    reply->deleteLater();
-  }
+  abortSingleRequest();
   if (m_file != nullptr) {
     m_file->close();
     m_file.reset();

@@ -14,6 +14,8 @@
 #include <QTemporaryDir>
 #include <QTimer>
 
+#include <functional>
+
 class QLabel;
 class QProgressBar;
 class QPushButton;
@@ -35,16 +37,22 @@ public:
   explicit UpdateDialog(const UpdateInfo &info, QWidget *parent = nullptr, const DownloadPolicy &policy = {});
   ~UpdateDialog() override;
   void reject() override;
+  void setInstallPreparation(std::function<bool()> preparation);
+
+Q_SIGNALS:
+  void installationStarted();
 
 private:
   void cancelAndClose();
   void startDownload();
   void installDownloaded(const QString &filePath);
+  void showInstallFailure(const QString &error);
   void openReleasePage();
   void setBusy(bool busy);
   void updateProgressText();
 
   QTemporaryDir m_downloadDirectory;
+  std::function<bool()> m_prepareInstall;
   QString m_downloadedPath;
   UpdateInfo m_info;
   UpdateDownloader *m_downloader = nullptr;

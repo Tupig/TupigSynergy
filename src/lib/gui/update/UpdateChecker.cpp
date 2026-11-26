@@ -30,6 +30,16 @@ constexpr auto kDownloadPath = "/Tupig/TupigSynergy/releases/download/";
 constexpr auto kNotesLimit = 64 * 1024;
 constexpr auto kResponseLimit = 4 * 1024 * 1024;
 
+qint64 releaseAssetId(const QJsonValue &id)
+{
+  const double value = id.toDouble();
+  // Qt 5 parses JSON numbers as doubles. Use only exact, positive integers.
+  if (!(value >= 1.0 && value <= 9007199254740991.0))
+    return 0;
+  const auto integer = static_cast<qint64>(value);
+  return value == static_cast<double>(integer) ? integer : 0;
+}
+
 #if defined(Q_OS_LINUX)
 QHash<QString, QString> readOsRelease()
 {
@@ -175,7 +185,7 @@ void UpdateChecker::checkForUpdates()
   request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Synergy-UpdateChecker"));
   request.setRawHeader("Accept", "application/vnd.github+json");
   request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
-  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
   request.setTransferTimeout(30000);
 #endif
@@ -266,7 +276,8 @@ void UpdateChecker::handleResponse(QNetworkReply *reply)
     }
 
     selected = {
-        name, url, static_cast<qint64>(asset.value(QStringLiteral("size")).toDouble(-1)), match.captured(1).toLower()
+        name, url, static_cast<qint64>(asset.value(QStringLiteral("size")).toDouble(-1)), match.captured(1).toLower(),
+        releaseAssetId(asset.value(QStringLiteral("id")))
     };
     break;
   }

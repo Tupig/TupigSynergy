@@ -1025,6 +1025,11 @@ void NativeDesignTests::coreLogUsesChineseCatalogue_data()
                                    << QStringLiteral("客户端已就绪，正在连接服务端。");
   QTest::newRow("client-connected") << QStringLiteral("connected to server successfully")
                                     << QStringLiteral("客户端连接成功。");
+  // The engine assembles this exact message from its format and timeout reason.
+  constexpr auto timeoutMessage = QT_TRANSLATE_NOOP("EngineLogMessages", "failed to connect to server: Timed out");
+  QTest::newRow("client-timeout") << QString::fromLatin1(timeoutMessage) << QStringLiteral("连接服务器失败：连接超时");
+  QTest::newRow("unknown-connection-error") << QStringLiteral("failed to connect to server: fixture system error %1")
+                                            << QStringLiteral("连接服务器失败：fixture system error %1");
   QTest::newRow("tls-listener") << QStringLiteral("QtTransportListenSocket: listening on 192.0.2.42:22211 (tls=1)")
                                 << QStringLiteral("QtTransportListenSocket：正在监听 192.0.2.42:22211（tls=1）");
   QTest::newRow("clipboard") << QStringLiteral("screen \"fixture%1\" grabbed clipboard 0 from \"示例%2\"")

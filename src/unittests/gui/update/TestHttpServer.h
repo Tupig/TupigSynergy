@@ -10,6 +10,7 @@
 #include <QRegularExpression>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QTimer>
 #include <QUrl>
 
 #include <QList>
@@ -26,6 +27,7 @@ public:
     qint64 prefixLength = -1;
     bool closeAfterPrefix = false;
     bool stallAfterPrefix = false;
+    int resumeAfterMs = -1;
   };
 
   explicit TestHttpServer(QObject *parent = nullptr) : QTcpServer(parent)
@@ -80,6 +82,11 @@ public:
     return m_ordinaryRequests;
   }
 
+  QByteArray lastRequest() const
+  {
+    return m_lastRequest;
+  }
+
 protected:
   void incomingConnection(qintptr handle) override
   {
@@ -90,6 +97,7 @@ protected:
       if (!request.contains("\r\n\r\n"))
         return;
       socket->disconnect(this);
+      m_lastRequest = request;
       static const QRegularExpression range(
           QStringLiteral("\\r\\nRange: bytes=(\\d+)-(\\d+)\\r\\n"), QRegularExpression::CaseInsensitiveOption
       );
@@ -121,8 +129,15 @@ protected:
                    "\r\nContent-Type: " + m_contentType + "\r\nContent-Length: " + QByteArray::number(length) +
                    "\r\nConnection: close\r\n\r\n" + sent;
         socket->write(response);
-        if (ordinary.stallAfterPrefix)
+        if (ordinary.stallAfterPrefix) {
+          if (ordinary.resumeAfterMs >= 0) {
+            QTimer::singleShot(ordinary.resumeAfterMs, socket, [socket, tail = ordinary.body.mid(sent.size())] {
+              socket->write(tail);
+              socket->disconnectFromHost();
+            });
+          }
           return;
+        }
         if (ordinary.closeAfterPrefix) {
           socket->flush();
           socket->disconnectFromHost();
@@ -146,6 +161,7 @@ private:
   bool m_incorrectRange = false;
   int m_partialRequests = 0;
   int m_ordinaryRequests = 0;
+  QByteArray m_lastRequest;
   QList<OrdinaryResponse> m_ordinaryResponses;
   int m_ordinaryResponseIndex = 0;
 };

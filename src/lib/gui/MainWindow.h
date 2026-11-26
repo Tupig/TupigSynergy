@@ -214,6 +214,9 @@ private:
 
   bool m_secureSocket = false;
   bool m_saveOnExit = true;
+#ifdef Q_OS_MACOS
+  bool m_resumeSharingAfterUpdate = false;
+#endif
   bool m_clientErrorVisible = false;
   synergy::gui::ServerConfig m_serverConfig;
   synergy::gui::CoreProcess m_coreProcess;

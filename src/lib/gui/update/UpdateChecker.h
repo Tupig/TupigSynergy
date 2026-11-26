@@ -22,7 +22,8 @@ struct UpdateAsset
   QString name;
   QUrl url;
   qint64 size = -1;
-  QString sha256; //!< Lowercase hex digest, never empty.
+  QString sha256;      //!< Lowercase hex digest, never empty.
+  qint64 githubId = 0; //!< Positive GitHub asset ID when present in release metadata.
 };
 
 /**

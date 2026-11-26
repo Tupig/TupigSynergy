@@ -105,8 +105,7 @@ void MainWindow::coreProcessError(CoreProcess::Error error)
                        .arg(kCoreBinName);
 
     if (Settings::value(Settings::Core::CoreMode) == Settings::CoreMode::Server) {
-      const auto mode =
-          Settings::value(Settings::Server::ExternalConfigFile).toBool() ? tr("read") : tr("read and write");
+      const auto mode = Settings::value(Settings::Server::ExternalConfig).toBool() ? tr("read") : tr("read and write");
       message.append(tr("\nAdditionally, check you are able to %1 the server config file: %2")
                          .arg(mode, Settings::serverConfigFile()));
     }
@@ -355,6 +354,9 @@ void MainWindow::coreProcessStateChanged(ProcessState state)
     m_actionStopCore->setEnabled(true);
 
     if (state == Starting) {
+#ifdef Q_OS_MACOS
+      m_resumeSharingAfterUpdate = false;
+#endif
       saveSettings();
     }
 
