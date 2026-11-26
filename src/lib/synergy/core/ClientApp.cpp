@@ -291,6 +291,7 @@ bool ClientApp::startClient()
     }
 
     m_client->setServerAddress(getCurrentServerAddress());
+    ipcSendConnectionState(synergy::core::ConnectionState::Connecting);
     m_client->connect(m_lastServerAddressIndex);
 
     return true;
@@ -320,6 +321,7 @@ void ClientApp::stopClient()
   m_client = nullptr;
   m_clientScreen = nullptr;
   m_retryCount = 0;
+  ipcSendConnectionState(synergy::core::ConnectionState::Disconnected);
 }
 
 int ClientApp::mainLoop()

@@ -758,6 +758,10 @@ void CoreProcess::onCoreIpcMessageReceived(const QString &command, const QString
       qWarning().noquote() << tr("Core IPC received an unknown connection state: %1").arg(args);
       return;
     }
+    if (m_lastProcessMode == ProcessMode::Service && m_mode == Settings::CoreMode::Server &&
+        m_connectionState != ConnectionState::Listening && state == ConnectionState::Listening) {
+      qInfo().noquote() << tr("Server is listening and ready for clients (service mode).");
+    }
     setConnectionState(state);
   } else if (command == "connectedClients") {
     const auto clients = args.isEmpty() ? QStringList() : args.split(",");

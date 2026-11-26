@@ -215,6 +215,7 @@ void ServerApp::stopServer()
     m_listener = nullptr;
     m_serverState = Initialized;
     ipcSendServerBindAddress({});
+    ipcSendConnectionState(synergy::core::ConnectionState::Disconnected);
   } else if (m_serverState == Starting) {
     stopRetryTimer();
     m_serverState = Initialized;

@@ -7,6 +7,7 @@
 #pragma once
 
 #include "IpcServer.h"
+#include "common/Enums.h"
 
 #include <QObject>
 #include <QSet>
@@ -23,11 +24,13 @@ public:
   explicit CoreIpcServer(QObject *parent, const QString &launchId = {});
 
   static CoreIpcServer &instance();
+  void setConnectionState(ConnectionState state);
   void setServerBindAddress(const QString &address);
 
 private:
   void clientAuthenticated(QLocalSocket *clientSocket) override;
   void processCommand(QLocalSocket *clientSocket, const QString &command, const QStringList &parts) override;
+  ConnectionState m_connectionState = ConnectionState::Disconnected;
   QString m_serverBindAddress;
 };
 

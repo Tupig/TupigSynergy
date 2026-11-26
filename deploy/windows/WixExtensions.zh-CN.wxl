@@ -12,6 +12,8 @@ the values are translated.
 <WixLocalization Culture="zh-cn" Codepage="936" xmlns="http://wixtoolset.org/schemas/v4/wxl">
   <!-- 安装完成页的项目自定义文案 -->
   <String Id="LaunchAfterInstall" Value="安装完成后运行 TuPig Synergy" />
+  <String Id="UpdateFilesRequireRestart" Value="部分安装文件或服务仍在使用。继续安装后，需要重新启动 Windows 才能完成更新。" />
+  <String Id="UpdateCouldNotCloseApplications" Value="安装程序未能关闭所有占用文件的程序。请关闭相关程序后重试。" />
 
   <!-- Firewall extension -->
   <String Id="msierrFirewallCannotConnect" Overridable="yes" Value="无法连接 Windows 防火墙。([2] [3] [4] [5])" />

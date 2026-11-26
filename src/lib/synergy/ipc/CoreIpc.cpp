@@ -8,8 +8,6 @@
 
 #include "CoreIpcServer.h"
 
-#include <QMetaEnum>
-
 void ipcSendToClient(const QString &command, const QString &args)
 {
   // Queued because callers may not be on the main thread,
@@ -23,8 +21,8 @@ void ipcSendToClient(const QString &command, const QString &args)
 
 void ipcSendConnectionState(synergy::core::ConnectionState state)
 {
-  const auto metaEnum = QMetaEnum::fromType<synergy::core::ConnectionState>();
-  ipcSendToClient(QStringLiteral("connectionState"), metaEnum.valueToKey(static_cast<int>(state)));
+  auto &server = synergy::core::ipc::CoreIpcServer::instance();
+  QMetaObject::invokeMethod(&server, [&server, state] { server.setConnectionState(state); }, Qt::QueuedConnection);
 }
 
 void ipcSendServerBindAddress(const QString &address)

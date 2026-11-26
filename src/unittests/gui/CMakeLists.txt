@@ -235,7 +235,8 @@ endif()
 # Six language/width groups exercise every tab, with time for layout to settle.
 # The individual geometry and interaction deadlines stay in the test cases.
 if(WIN32)
-  set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 90)
+  # Windows runners can take over 90 seconds to finish the full matrix.
+  set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 120)
 elseif(APPLE)
   set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 75)
 else()
