@@ -71,7 +71,7 @@ void ClientTests::C03_registeredHandshake()
   f.send(hello());
   const auto expected = packet(hello() + text("synthetic-client"));
   QCOMPARE(f.socket()->output, expected);
-  QVERIFY(!f.client->isConnecting());
+  QVERIFY(f.client->isConnecting());
   QVERIFY(f.client->isConnected());
   QCOMPARE(f.screenState->enabled, 0);
   f.send("QINF");
@@ -80,6 +80,7 @@ void ClientTests::C03_registeredHandshake()
   QCOMPARE(f.socket()->output, expected + packet(info));
   f.send("CIAK");
   f.send("DSOP" + options({}));
+  QVERIFY(!f.client->isConnecting());
   QCOMPARE(f.screenState->enabled, 1);
   QCOMPARE(f.events.state.count(EventTypes::ClientConnected), size_t(1));
   QCOMPARE(
@@ -133,24 +134,33 @@ void ClientTests::C04_failureOwnership()
 }
 void ClientTests::C05_timeout_data()
 {
-  QTest::addColumn<bool>("transportConnected");
-  QTest::newRow("connecting") << false;
-  QTest::newRow("waiting-hello") << true;
+  QTest::addColumn<int>("stage");
+  QTest::newRow("connecting") << 0;
+  QTest::newRow("waiting-hello") << 1;
+  QTest::newRow("waiting-sharing-options") << 2;
 }
 void ClientTests::C05_timeout()
 {
-  QFETCH(bool, transportConnected);
+  QFETCH(int, stage);
   Fixture f;
   f.begin();
-  if (transportConnected)
+  if (stage >= 1)
     f.connected();
+  if (stage >= 2) {
+    f.send(hello());
+    f.send("QINF");
+    f.send("CIAK");
+  }
   auto *timer = f.events.state.timerFor(5.0);
   QVERIFY(timer != nullptr);
   QVERIFY(f.events.dispatchEvent(Event(EventTypes::Timer, timer)));
   f.drain();
   f.assertReleased(false);
   QVERIFY(!QTest::currentTestFailed());
-  QCOMPARE(f.events.state.failures.front().what, QStringLiteral("Timed out"));
+  QCOMPARE(
+      f.events.state.failures.front().what,
+      stage >= 2 ? QStringLiteral("Timed out waiting for sharing options") : QStringLiteral("Timed out")
+  );
   f.ready();
   QCOMPARE(f.factoryState->creates, 2);
   QCOMPARE(f.screenState->enabled, 1);

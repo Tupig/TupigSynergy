@@ -208,6 +208,7 @@ void Client::refuseConnection(synergy::core::ConnectionRefusal reason, const cha
 
 void Client::handshakeComplete()
 {
+  cleanupTimer();
   m_ready = true;
   m_screen->enable();
   sendEvent(EventTypes::ClientConnected);
@@ -595,12 +596,13 @@ void Client::handleConnectionFailed(const Event &event)
 
 void Client::handleConnectTimeout()
 {
+  const bool waitingForOptions = m_server != nullptr;
   cleanupTimer();
+  cleanupScreen();
   cleanupConnecting();
   cleanupConnection();
-  cleanupStream();
   LOG_VERBOSE("connection timed out");
-  sendConnectionFailedEvent("Timed out");
+  sendConnectionFailedEvent(waitingForOptions ? "Timed out waiting for sharing options" : "Timed out");
 }
 
 void Client::handleOutputError()
@@ -688,6 +690,7 @@ void Client::handleHello()
   // now connected but waiting to complete handshake
   setupScreen();
   cleanupTimer();
+  setupTimer();
 
   // make sure we process any remaining messages later.  we won't
   // receive another event for already pending messages so we fake
