@@ -42,6 +42,7 @@ private Q_SLOTS:
   void logsFilterCountAndBoundHistory();
   void localizingEngineLogPreservesRawHistory();
   void largeLogHistoryWrapsAfterResizeFontAndFilter();
+  void olderLogRowsWrapWhenSearchedAndScrolled();
   void serverCancelRestoresProtocol();
   void protocolValuesSupportStoredAndDefaultTypes();
   void traySelectorCancelDoesNotWrite();
@@ -374,6 +375,59 @@ void EditorTransactionTests::largeLogHistoryWrapsAfterResizeFontAndFilter()
   log.appendLine(QStringLiteral("[time] INFO: extra row"));
   QCoreApplication::processEvents();
   QCOMPARE(scrollBar->value(), 0);
+}
+
+void EditorTransactionTests::olderLogRowsWrapWhenSearchedAndScrolled()
+{
+  LogWidget log;
+  log.resize(500, 236);
+  log.show();
+  auto *table = log.findChild<QTableWidget *>();
+  QVERIFY(table);
+
+  const auto longText = QStringLiteral("multiline warning detail ").repeated(12).trimmed();
+  log.appendLine(QStringLiteral("[time] WARNING: first record\n") + longText);
+  QTRY_VERIFY(table->columnWidth(2) > 280);
+  const int fontHeight = table->fontMetrics().height();
+  QTRY_VERIFY(table->rowHeight(0) >= 3 * fontHeight);
+  log.appendLine(QStringLiteral("[time] WARNING: search result\n") + longText);
+  for (int index = 0; index < 6; ++index)
+    log.appendLine(QStringLiteral("[time] WARNING: short record %1").arg(index));
+  auto *scroll = table->verticalScrollBar();
+  QTRY_COMPARE(scroll->value(), scroll->maximum());
+  QVERIFY(scroll->maximum() > 0);
+  const int tailHeight = log.height();
+  const auto raw = log.allText();
+
+  log.setLevelFilter(QStringLiteral("warn"));
+  QTRY_COMPARE(scroll->value(), scroll->maximum());
+  log.findNext(QStringLiteral("search result"));
+  QCOMPARE(table->currentRow(), 1);
+  QTRY_VERIFY(table->rowHeight(1) >= 3 * fontHeight);
+  QCOMPARE(log.height(), tailHeight);
+
+  scroll->setValue(0);
+  QTRY_VERIFY(table->rowHeight(0) >= 3 * fontHeight);
+  const int wideColumn = table->columnWidth(2);
+  const int wideHeight = table->rowHeight(0);
+  log.resize(320, tailHeight);
+  QTRY_VERIFY(table->columnWidth(2) < wideColumn && table->rowHeight(0) > wideHeight);
+  QCOMPARE(scroll->value(), 0);
+  QCOMPARE(log.height(), tailHeight);
+
+  QEvent languageChange(QEvent::LanguageChange);
+  QCoreApplication::sendEvent(&log, &languageChange);
+  QTRY_VERIFY(table->rowHeight(0) > wideHeight);
+  QCOMPARE(scroll->value(), 0);
+  QCOMPARE(log.height(), tailHeight);
+  QCOMPARE(log.allText(), raw);
+
+  const int narrowHeight = table->rowHeight(0);
+  scroll->setValue(narrowHeight - 2);
+  QTRY_COMPARE(table->rowAt(0), 0);
+  log.resize(500, tailHeight);
+  QTRY_VERIFY(table->rowHeight(0) < narrowHeight);
+  QCOMPARE(table->rowAt(0), 0);
 }
 
 void EditorTransactionTests::traySelectorCancelDoesNotWrite()

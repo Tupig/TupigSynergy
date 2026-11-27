@@ -65,10 +65,13 @@ LogWidget::LogWidget(QWidget *parent) : QWidget{parent}, m_table{new QTableWidge
   auto *scrollBar = m_table->verticalScrollBar();
   connect(scrollBar, &QScrollBar::valueChanged, this, [this, scrollBar](int value) {
     // User scrolling and search may pause following; content/layout adjustments may not.
-    if (!m_adjustingContents)
-      m_followTail = value == scrollBar->maximum();
+    if (m_adjustingContents)
+      return;
+    m_followTail = value == scrollBar->maximum();
+    if (!m_followTail)
+      requestViewportUpdate();
   });
-  connect(scrollBar, &QScrollBar::rangeChanged, this, [this] { requestTailScroll(); });
+  connect(scrollBar, &QScrollBar::rangeChanged, this, [this] { requestViewportUpdate(); });
   connect(m_table->horizontalHeader(), &QHeaderView::sectionResized, this, [this](int column, int, int newWidth) {
     if (column == 2) {
       m_messageColumnWidth = qMax(1, newWidth);
@@ -176,6 +179,8 @@ bool LogWidget::eventFilter(QObject *watched, QEvent *event)
   if (watched == m_table->viewport() && event->type() == QEvent::Resize) {
     const auto *resize = static_cast<QResizeEvent *>(event);
     updateVisibleHeight(resize->size().width() != resize->oldSize().width());
+  } else if (watched == m_table->viewport() && event->type() == QEvent::Show) {
+    requestViewportUpdate();
   } else if (watched == m_table &&
              (event->type() == QEvent::FontChange || event->type() == QEvent::ApplicationFontChange)) {
     updateVisibleHeight(true);
@@ -186,40 +191,16 @@ bool LogWidget::eventFilter(QObject *watched, QEvent *event)
 void LogWidget::updateVisibleHeight(bool refreshColumnWidth)
 {
   const QScopedValueRollback<bool> adjusting(m_adjustingContents, true);
-  // 根据实际列宽重算换行高度，不能只打开 wordWrap 后仍固定单行高度。
   const int count = m_table->rowCount();
   // Querying sectionSize flushes native ResizeToContents work. Keep that out of
   // bulk append, while small logs and explicit geometry changes stay immediate.
   if (refreshColumnWidth || (count > 0 && count <= m_visibleLines))
     m_messageColumnWidth = qMax(1, m_table->columnWidth(2));
-  const int width = qMax(1, m_messageColumnWidth - 16);
   int height = 0;
   for (int row = qMax(0, count - m_visibleLines); row < count; ++row) {
-    const auto *item = m_table->item(row, 2);
-    if (!item)
+    if (!m_table->item(row, 2))
       continue;
-    // Qt 的表格 sizeHint 在不同平台会忽略长单词换行，显式按消息列宽排版。
-    qreal textHeight = 0;
-    const auto paragraphs = item->text().split(QLatin1Char('\n'));
-    for (const auto &paragraph : paragraphs) {
-      QTextLayout layout(paragraph, m_table->font());
-      QTextOption option;
-      option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-      layout.setTextOption(option);
-      layout.beginLayout();
-      while (true) {
-        auto line = layout.createLine();
-        if (!line.isValid())
-          break;
-        line.setLineWidth(width);
-        textHeight += line.height();
-      }
-      layout.endLayout();
-      if (paragraph.isEmpty())
-        textHeight += m_table->fontMetrics().height();
-    }
-    const int measured = qMax(rowHeight(), qCeil(textHeight) + 8);
-    m_table->setRowHeight(row, qMin(measured, 65535));
+    m_table->setRowHeight(row, wrappedRowHeight(row));
     height += m_table->rowHeight(row);
   }
   const int rows = qMin(count, m_visibleLines);
@@ -228,7 +209,60 @@ void LogWidget::updateVisibleHeight(bool refreshColumnWidth)
   m_table->setVisible(rows > 0);
   m_table->setFixedHeight(height);
   setFixedHeight(height);
-  requestTailScroll();
+  requestViewportUpdate();
+}
+
+int LogWidget::wrappedRowHeight(int row) const
+{
+  const auto *item = m_table->item(row, 2);
+  if (!item)
+    return rowHeight();
+  const int width = qMax(1, m_messageColumnWidth - 16);
+  qreal textHeight = 0;
+  // Qt's size hint can miss wrapping within long words.
+  const auto paragraphs = item->text().split(QLatin1Char('\n'));
+  for (const auto &paragraph : paragraphs) {
+    QTextLayout layout(paragraph, m_table->font());
+    QTextOption option;
+    option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+    layout.setTextOption(option);
+    layout.beginLayout();
+    while (true) {
+      auto line = layout.createLine();
+      if (!line.isValid())
+        break;
+      line.setLineWidth(width);
+      textHeight += line.height();
+    }
+    layout.endLayout();
+    if (paragraph.isEmpty())
+      textHeight += m_table->fontMetrics().height();
+  }
+  return qMin(qMax(rowHeight(), qCeil(textHeight) + 8), 65535);
+}
+
+void LogWidget::wrapViewportRows()
+{
+  const int first = m_table->rowAt(0);
+  if (first < 0 || !m_table->isVisible())
+    return;
+  const QScopedValueRollback<bool> adjusting(m_adjustingContents, true);
+  // Only lay out rows that the user can see. The tail still owns the panel height.
+  const int viewportHeight = m_table->viewport()->height();
+  const int oldOffset = -m_table->rowViewportPosition(first);
+  const int firstHeight = wrappedRowHeight(first);
+  const int offset = qBound(0, oldOffset, firstHeight - 1);
+  m_table->setRowHeight(first, firstHeight);
+  int top = firstHeight - offset;
+  for (int row = first + 1; row < m_table->rowCount() && top < viewportHeight; ++row) {
+    m_table->setRowHeight(row, wrappedRowHeight(row));
+    top += m_table->rowHeight(row);
+  }
+  if (m_table->rowViewportPosition(first) != -offset) {
+    m_table->scrollToItem(m_table->item(first, 2), QAbstractItemView::PositionAtTop);
+    auto *bar = m_table->verticalScrollBar();
+    bar->setValue(bar->value() + offset);
+  }
 }
 
 void LogWidget::setLevelFilter(const QString &level)
@@ -302,8 +336,9 @@ void LogWidget::rebuild(bool resetScroll)
   if (resetScroll || m_followTail) {
     scrollToBottom();
   } else if (anchorRow >= 0 && anchorRow < m_table->rowCount()) {
+    m_table->setRowHeight(anchorRow, wrappedRowHeight(anchorRow));
     m_table->scrollToItem(m_table->item(anchorRow, 0), QAbstractItemView::PositionAtTop);
-    scrollBar->setValue(scrollBar->value() + anchorOffset);
+    scrollBar->setValue(scrollBar->value() + qMin(anchorOffset, m_table->rowHeight(anchorRow) - 1));
   }
   Q_EMIT historyChanged(m_latestLine);
 }
@@ -352,8 +387,7 @@ void LogWidget::findNext(const QString &text)
   for (int offset = 1; offset <= m_table->rowCount(); ++offset) {
     const int row = (qMax(0, current) + offset) % m_table->rowCount();
     if (m_table->item(row, 2) && m_table->item(row, 2)->text().contains(text)) {
-      m_table->setCurrentCell(row, 2);
-      m_table->scrollToItem(m_table->item(row, 2));
+      showMatch(row);
       return;
     }
   }
@@ -367,23 +401,31 @@ void LogWidget::findPrevious(const QString &text)
   for (int offset = 1; offset <= m_table->rowCount(); ++offset) {
     const int row = (current - offset + m_table->rowCount() * 2) % m_table->rowCount();
     if (m_table->item(row, 2) && m_table->item(row, 2)->text().contains(text)) {
-      m_table->setCurrentCell(row, 2);
-      m_table->scrollToItem(m_table->item(row, 2));
+      showMatch(row);
       return;
     }
   }
 }
 
-void LogWidget::requestTailScroll()
+void LogWidget::showMatch(int row)
 {
-  if (!m_followTail || m_tailScrollPending)
+  m_table->setRowHeight(row, wrappedRowHeight(row));
+  m_table->setCurrentCell(row, 2);
+  m_table->scrollToItem(m_table->item(row, 2));
+}
+
+void LogWidget::requestViewportUpdate()
+{
+  if (m_viewportUpdatePending)
     return;
-  m_tailScrollPending = true;
+  m_viewportUpdatePending = true;
   // Wait for Qt's pending row/viewport layout, including appends while hidden.
   QTimer::singleShot(0, this, [this] {
     if (m_followTail)
       scrollToBottom();
-    m_tailScrollPending = false;
+    else
+      wrapViewportRows();
+    m_viewportUpdatePending = false;
   });
 }
 
