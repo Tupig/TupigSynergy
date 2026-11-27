@@ -2313,6 +2313,45 @@ private Q_SLOTS:
     QCOMPARE(pages->currentWidget(), settingsPage);
     QCOMPARE(draft->text(), uncommitted);
   }
+  void manualCheckReopensInFlightPageAndRestoresSettingsDraftAfterCancel()
+  {
+    ControlledHttp server;
+    QVERIFY(server.isListening());
+    IsolatedWindow window(server, m_width);
+    auto *pages = window.findChild<QStackedWidget *>("pageStack");
+    QVERIFY(pages);
+
+    window.m_actionCheckForUpdates->trigger();
+    QTRY_COMPARE(server.requests, 1);
+    QPointer<MessagePage> checking = message(window, QCoreApplication::translate("MainWindow", "Check for Updates"));
+    QVERIFY(checking);
+
+    window.m_actionSettings->trigger();
+    QPointer<SettingsDialog> settings = window.findChild<SettingsDialog *>();
+    QVERIFY(settings && settings->isVisibleTo(&window));
+    auto *draft = settings->findChild<QLineEdit *>("lineTlsCertPath");
+    QVERIFY(draft);
+    draft->setText(Settings::userDir() + "/reopened-check-fixture.pem");
+    const auto uncommitted = draft->text();
+    const auto *settingsPage = pages->currentWidget();
+
+    window.m_actionCheckForUpdates->trigger();
+    QTRY_COMPARE(message(window, QCoreApplication::translate("MainWindow", "Check for Updates")), checking.data());
+    QCOMPARE(server.requests, 1);
+    QVERIFY(!settings->isVisibleTo(&window));
+
+    QVERIFY(checking);
+    auto *cancel = button(*checking, QCoreApplication::translate("MainWindow", "Cancel"));
+    QVERIFY(cancel);
+    QTest::mouseClick(cancel, Qt::LeftButton);
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+    QTRY_VERIFY(window.findChildren<synergy::gui::update::UpdateChecker *>().isEmpty());
+    QCOMPARE(server.requests, 1);
+    QVERIFY(settings && settings->isVisibleTo(&window));
+    QCOMPARE(pages->currentWidget(), settingsPage);
+    QCOMPARE(draft->text(), uncommitted);
+  }
   void windowDestructionCancelsPendingUpdateCheck()
   {
     ControlledHttp server;

@@ -6,6 +6,8 @@
 
 #include <QWidget>
 
+#include <functional>
+
 class QDialog;
 class QStackedWidget;
 
@@ -26,6 +28,7 @@ public:
   [[nodiscard]] bool hasEditor() const;
   // Independent pages may be moved above another editor without closing its draft.
   bool activateEditor(const QMetaObject &type, bool bringToFront = false);
+  bool activateEditor(const QDialog *editor, bool bringToFront = false);
   [[nodiscard]] int preferredContentHeight(int width);
   void requestContentFit();
 
@@ -40,6 +43,7 @@ protected:
 private:
   QStackedWidget *m_stack = nullptr;
   QStackedWidget *stack();
+  bool activateMatchingEditor(const std::function<bool(const QDialog &)> &matches, bool bringToFront);
   bool m_editorVisible = false;
   void updateNavigation();
   void watchContent(QWidget *root);
