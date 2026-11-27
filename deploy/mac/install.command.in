@@ -19,12 +19,86 @@ source_app="$script_dir/$app"
 destination="$applications/$app"
 stage=''
 
+# The worker uses only its explicit source mount and runs after this script exits.
+eject_worker='
+ObjC.import("Foundation");
+ObjC.bindFunction("kill", ["int", ["int", "int"]]);
+
+function hdiutil(args) {
+  const task = $.NSTask.alloc.init;
+  const output = $.NSPipe.pipe;
+  task.launchPath = "/usr/bin/hdiutil";
+  task.arguments = args;
+  task.standardOutput = output;
+  task.standardError = $.NSFileHandle.fileHandleWithNullDevice;
+  task.launch;
+  const data = output.fileHandleForReading.readDataToEndOfFile;
+  task.waitUntilExit;
+  return task.terminationStatus === 0 ? data : null;
+}
+
+function mountIdentity(mount) {
+  const source = ObjC.unwrap($(mount).stringByResolvingSymlinksInPath);
+  const data = hdiutil(["info", "-plist"]);
+  if (!data) return null;
+  const plist = $.NSPropertyListSerialization.propertyListWithDataOptionsFormatError(data, 0, null, null);
+  const info = ObjC.deepUnwrap(plist);
+  const matches = [];
+  for (const image of info.images || []) {
+    const imagePath = image["image-path"];
+    const imagePid = image["hdid-pid"];
+    if (typeof imagePath !== "string" || !imagePath.startsWith("/") || !Number.isInteger(imagePid)) continue;
+    const volumes = (image["system-entities"] || []).filter(entity => entity["mount-point"]);
+    if (volumes.length !== 1) continue;
+    const entity = volumes[0];
+    const device = entity["dev-entry"];
+    const mounted = ObjC.unwrap($(entity["mount-point"]).stringByResolvingSymlinksInPath);
+    if (mounted === source && /^\/dev\/disk[0-9]+(s[0-9]+)*$/.test(device)) {
+      matches.push([mounted, device, imagePath, imagePid]);
+    }
+  }
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function run(args) {
+  const [operation, mount, expected, caller] = args;
+  if (operation === "identify") {
+    const identity = mountIdentity(mount);
+    if (identity) {
+      const data = $(JSON.stringify(identity)).dataUsingEncoding($.NSUTF8StringEncoding);
+      $.NSFileHandle.fileHandleWithStandardOutput.writeData(data);
+    }
+    return;
+  }
+  const pid = Number(caller);
+  if (operation !== "detach" || !Number.isInteger(pid) || pid <= 1) return "";
+  for (let attempt = 0; attempt < 100 && $.kill(pid, 0) === 0; ++attempt) {
+    $.NSThread.sleepForTimeInterval(0.1);
+  }
+  if ($.kill(pid, 0) === 0) return "";
+  for (let attempt = 0; attempt < 3; ++attempt) {
+    const identity = mountIdentity(mount);
+    if (!identity || JSON.stringify(identity) !== expected || hdiutil(["detach", identity[1]]) !== null) break;
+    $.NSThread.sleepForTimeInterval(0.3);
+  }
+  return "";
+}
+'
+
 fail() { printf '%s\n' "Installation refused: $*" >&2; exit 1; }
 existing_installation() { [ ! -e "$destination" ] && [ ! -L "$destination" ]; }
 open_installed_app() {
   /usr/bin/open "$destination" || printf '%s\n' 'macOS may require first-open approval in System Settings.' >&2
   /usr/bin/open 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility' || \
     printf '%s\n' 'Open System Settings > Privacy & Security > Accessibility to allow this app.' >&2
+}
+finish_first_install() {
+  open_installed_app
+  if [ -n "$source_identity" ]; then
+    # Keep the worker off the mounted volume and disconnected from this session.
+    (cd / && /usr/bin/nohup /usr/bin/osascript -l JavaScript -e "$eject_worker" \
+      detach "$script_dir" "$source_identity" "$$") </dev/null >/dev/null 2>&1 &
+  fi
 }
 cleanup() {
   case "$stage" in
@@ -55,6 +129,10 @@ verify_bundle() {
     /usr/bin/codesign --verify --strict -R "$core_requirement" "$bundle/Contents/MacOS/synergy-core"
 }
 
+source_identity=''
+if [ "${1:-}" != --as-root ] && [ "$(/usr/bin/id -u)" -ne 0 ]; then
+  source_identity=$(/usr/bin/osascript -l JavaScript -e "$eject_worker" identify "$script_dir" 2>/dev/null) || source_identity=''
+fi
 [ -d "$source_app" ] && [ ! -L "$source_app" ] || fail 'source app is missing or is a symlink'
 verify_bundle "$source_app" || fail 'source bundle identity or signature did not match'
 existing_installation || { printf '%s\n' 'Existing installation: use the in-app updater.' >&2; exit 2; }
@@ -64,7 +142,7 @@ existing_installation || { printf '%s\n' 'Existing installation: use the in-app 
 # a root shell program.
 if [ "${1:-}" != --as-root ] && [ ! -w "$applications" ]; then
   /usr/bin/sudo /bin/sh "$0" --as-root
-  open_installed_app
+  finish_first_install
   exit 0
 fi
 stage=$(/usr/bin/mktemp -d "$stage_parent/.tupig-synergy-install.XXXXXX") || fail 'could not create private staging directory'
@@ -93,5 +171,6 @@ verify_bundle "$destination" || fail 'installed bundle identity or signature did
 printf '%s\n' "Installed $destination. Gatekeeper and TCC/Accessibility approval remain user-controlled."
 
 if [ "${1:-}" != --as-root ]; then
-  open_installed_app
+  finish_first_install
 fi
+exit 0

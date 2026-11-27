@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: (C) 2026 TuPig Synergy Contributors
 # SPDX-License-Identifier: MIT
-"""Static, non-mutating contract checks for macOS development signing.
+"""Contract checks for macOS development signing and first installation.
 
-These assertions deliberately inspect only repository artifacts.  They do not
-load a Keychain, decode a P12, invoke GitHub, change TCC/quarantine, or install
-an app.  Runtime signing, notarization, Gatekeeper and user TCC acceptance need
-separate trusted-run evidence.
+Tests inspect repository artifacts or work entirely with disposable files and
+disk images. They do not load a Keychain, decode a P12, invoke GitHub, change
+TCC/quarantine, or install an app. Runtime signing, notarization, Gatekeeper and
+user TCC acceptance need separate trusted-run evidence.
 """
 
 from pathlib import Path
 import os
+import plistlib
 import re
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
 
 
@@ -147,7 +150,10 @@ class MacOSSigningContract(unittest.TestCase):
         self.assertIn("Existing installation: use the in-app updater.", installer)
         self.assertIn("/usr/bin/sudo /bin/sh \"$0\" --as-root", installer)
         self.assertNotIn("exec /usr/bin/sudo", installer)
-        self.assertIn('if [ "${1:-}" != --as-root ]; then\n  open_installed_app\nfi', installer)
+        self.assertIn('if [ "${1:-}" != --as-root ]; then\n  finish_first_install\nfi', installer)
+        self.assertIn('nohup /usr/bin/osascript', installer)
+        self.assertNotIn('tell application "Terminal"', installer)
+        self.assertNotIn('"detach", "-force"', installer)
         self.assertIn("com.apple.quarantine", installer)
         self.assertIn("umask 077", installer)
         self.assertIn("verify_bundle \"$stage/$app\"", installer)
@@ -183,6 +189,72 @@ class MacOSSigningContract(unittest.TestCase):
             self.assertFalse(destination.exists())
             self.assertFalse(log.exists())
 
+    @unittest.skipUnless(sys.platform == "darwin", "requires a disposable Darwin disk image")
+    def test_ejection_waits_for_the_invoking_process_and_matches_the_exact_image(self):
+        installer = source(INSTALLER)
+        match = re.search(r"^eject_worker='\n(.*?)\n'\n", installer, re.MULTILINE | re.DOTALL)
+        self.assertIsNotNone(match, "The installer has no owned-image ejection worker")
+        worker = ["/usr/bin/osascript", "-l", "JavaScript", "-e", match.group(1)]
+        hdiutil = "/usr/bin/hdiutil"
+
+        def attached_images():
+            inventory = subprocess.check_output([hdiutil, "info", "-plist"], timeout=15)
+            return {Path(record["image-path"]).resolve() for record in plistlib.loads(inventory)["images"]
+                    if "image-path" in record}
+
+        with tempfile.TemporaryDirectory(prefix="tupig-first-install-ejection-") as temporary:
+            root = Path(temporary).resolve()
+            payload = root / "payload"
+            payload.mkdir()
+            (payload / "fixture").write_text("ejection fixture", encoding="ascii")
+            fixtures = []
+            try:
+                for name in ("target owner's disk", "untouched disk"):
+                    mount = root / name
+                    mount.mkdir()
+                    image = root / (name + ".dmg")
+                    subprocess.run([hdiutil, "create", "-quiet", "-format", "UDRO", "-srcfolder",
+                                    str(payload), str(image)], check=True, timeout=35)
+                    fixtures.append((image, mount))
+                    subprocess.run([hdiutil, "attach", "-nobrowse", "-noautoopen", "-readonly",
+                                    "-mountpoint", str(mount), str(image)], check=True, capture_output=True,
+                                   timeout=40)
+
+                (target, target_mount), (untouched, _) = fixtures
+                expected = subprocess.check_output(worker + ["identify", str(target_mount)],
+                                                   text=True, timeout=15).strip()
+                self.assertTrue(expected)
+                copied_script = subprocess.check_output(worker + ["identify", str(payload)],
+                                                       text=True, timeout=15).strip()
+                self.assertFalse(copied_script)
+
+                with subprocess.Popen(["/bin/sh", "-c", "read finish"], stdin=subprocess.PIPE,
+                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as owner:
+                    owner.stdin.close()
+                    owner.wait(timeout=5)
+                    subprocess.run(worker + ["detach", str(target_mount), expected + "-stale", str(owner.pid)],
+                                   check=True, capture_output=True, timeout=15)
+                self.assertTrue({target, untouched}.issubset(attached_images()))
+
+                with subprocess.Popen(["/bin/sh", "-c", "read finish"], stdin=subprocess.PIPE,
+                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as owner:
+                    with subprocess.Popen(worker + ["detach", str(target_mount), expected, str(owner.pid)],
+                                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as eject:
+                        try:
+                            time.sleep(0.3)
+                            self.assertIsNone(owner.poll())
+                            self.assertIn(target, attached_images())
+                        finally:
+                            owner.stdin.close()
+                            owner.wait(timeout=5)
+                        self.assertEqual(0, eject.wait(timeout=25))
+                self.assertNotIn(target, attached_images())
+                self.assertIn(untouched, attached_images())
+            finally:
+                for image, mount in fixtures:
+                    if image in attached_images():
+                        subprocess.run([hdiutil, "detach", str(mount)], check=True, capture_output=True, timeout=15)
+
     def _run_install_fixture(self, raw, root, privileged, expect=None, existing=False, reject_signature=False):
         root.mkdir()
         applications = root / "Applications"
@@ -208,6 +280,7 @@ class MacOSSigningContract(unittest.TestCase):
         private_stage_parent.mkdir(mode=0o700)
         log = root / "xattr.log"
         open_log = root / "open.log"
+        eject_log = root / "eject.log"
         scripts = {
             "codesign": "#!/bin/sh\n[ \"${TEST_CODESIGN_FAIL:-0}\" = 1 ] && exit 1\nexit 0\n",
             # A source bundle may be read-only. This stub models ditto copying
@@ -220,7 +293,14 @@ class MacOSSigningContract(unittest.TestCase):
             # does. The outer script must open the GUI/settings only there.
             "sudo": "#!/bin/sh\nTEST_FAKE_ROOT=1 \"$@\"\n",
             "open": "#!/bin/sh\nprintf '%s:%s\\n' \"${TEST_FAKE_ROOT:-0}\" \"$*\" >> \"$TEST_OPEN_LOG\"\nexit 0\n",
-            "osascript": "#!/usr/bin/env python3\nimport shutil, sys\nshutil.move(sys.argv[-2], sys.argv[-1])\n",
+            "osascript": (
+                "#!/usr/bin/env python3\nimport os, shutil, sys\n"
+                "if '-e' not in sys.argv:\n    shutil.move(sys.argv[-2], sys.argv[-1])\n"
+                "elif sys.argv[5] == 'identify':\n    print('fixture image identity')\n"
+                "elif sys.argv[5] == 'detach':\n"
+                "    with open(os.environ['TEST_EJECT_LOG'], 'a') as log:\n"
+                "        log.write(os.environ.get('TEST_FAKE_ROOT', '0') + ':' + sys.argv[6] + '\\n')\n"
+            ),
         }
         for name, body in scripts.items():
             path = tools / name
@@ -238,6 +318,7 @@ class MacOSSigningContract(unittest.TestCase):
         program.write_text(rendered)
         program.chmod(0o700)
         environment = {**os.environ, "TEST_XATTR_LOG": str(log), "TEST_OPEN_LOG": str(open_log),
+                       "TEST_EJECT_LOG": str(eject_log),
                        "TEST_CODESIGN_FAIL": "1" if reject_signature else "0"}
         if privileged:
             environment["TEST_FORCE_SUDO"] = "1"
@@ -258,6 +339,13 @@ class MacOSSigningContract(unittest.TestCase):
             self.assertTrue(all(line.startswith("0:") for line in opened), opened)
             self.assertIn(str(destination), opened[0])
             self.assertIn("Privacy_Accessibility", opened[1])
+            for _ in range(40):
+                if eject_log.exists() and eject_log.stat().st_size:
+                    break
+                time.sleep(0.05)
+            self.assertEqual(["0:" + str(image.resolve())], eject_log.read_text().splitlines())
+        else:
+            self.assertFalse(eject_log.exists())
         return result, destination, log, rendered
 
     def test_docs_describe_actual_secret_variable_and_permission_limits(self):
