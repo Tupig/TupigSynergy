@@ -209,7 +209,6 @@ if(BUILD_GUI)
   target_include_directories(SettingsMigrationTests PRIVATE ${CMAKE_SOURCE_DIR}/src/lib)
 endif()
 
-# Explicit native observation harness; never part of default builds or CTest.
 # Additive executable checks for accepted M-C01/M-C05/M-C06. The core is copied
 # only to satisfy constructor payload checks; the fixture blocks all core paths.
 create_test(NAME MainWindowFlowTests DEPENDS gui LIBS ${extra_libs}
@@ -234,15 +233,14 @@ if(UNIX AND NOT APPLE)
 endif()
 # Six language/width groups exercise every tab, with time for layout to settle.
 # The individual geometry and interaction deadlines stay in the test cases.
-if(WIN32)
-  # Windows runners can take over 90 seconds to finish the full matrix.
+if(WIN32 OR APPLE)
+  # Native release runners have exceeded 90 seconds on Windows and 75 on macOS.
   set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 120)
-elseif(APPLE)
-  set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 75)
 else()
   set_tests_properties(MainWindowFlowTests PROPERTIES TIMEOUT 60)
 endif()
 
+# Explicit native observation harness; never part of default builds or CTest.
 add_executable(R2UiPreview EXCLUDE_FROM_ALL MACOSX_BUNDLE
   R2UiPreview.cpp
   ${CMAKE_SOURCE_DIR}/src/apps/res/branding/synergy.qrc
