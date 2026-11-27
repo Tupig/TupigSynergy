@@ -121,24 +121,36 @@ bool PageHost::hasEditor() const
 
 bool PageHost::activateEditor(const QMetaObject &type, bool bringToFront)
 {
+  return activateMatchingEditor(
+      [&type](const QDialog &editor) { return editor.metaObject()->inherits(&type); }, bringToFront
+  );
+}
+
+bool PageHost::activateEditor(const QDialog *target, bool bringToFront)
+{
+  return target && activateMatchingEditor([target](const QDialog &editor) { return &editor == target; }, bringToFront);
+}
+
+bool PageHost::activateMatchingEditor(const std::function<bool(const QDialog &)> &matches, bool bringToFront)
+{
   auto *pages = stack();
   if (pages == nullptr)
     return false;
   for (int index = 1; index < pages->count(); ++index) {
     auto *area = qobject_cast<QScrollArea *>(pages->widget(index));
     auto *editor = area ? area->property("pageEditor").value<QDialog *>() : nullptr;
-    if (editor != nullptr && editor->metaObject()->inherits(&type)) {
-      if (bringToFront && pages->currentWidget() != area) {
-        pages->removeWidget(area);
-        pages->addWidget(area);
-        pages->setCurrentWidget(area);
-        updateNavigation();
-        synergy::gui::animateContentTransition(this);
-      }
-      // 保持后代草稿所在的当前页，不让父编辑器在子页仍存活时被更改。
-      pages->currentWidget()->setFocus();
-      return true;
+    if (editor == nullptr || !matches(*editor))
+      continue;
+    if (bringToFront && pages->currentWidget() != area) {
+      pages->removeWidget(area);
+      pages->addWidget(area);
+      pages->setCurrentWidget(area);
+      updateNavigation();
+      synergy::gui::animateContentTransition(this);
     }
+    // Keep descendants' drafts intact while bringing the independent page forward.
+    pages->currentWidget()->setFocus();
+    return true;
   }
   return false;
 }

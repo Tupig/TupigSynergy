@@ -145,6 +145,10 @@ synergy::gui::update::UpdateChecker *MainWindow::createUpdateChecker()
 bool MainWindow::activateUpdatePage()
 {
   using synergy::gui::update::UpdateDialog;
+  if (m_pageHost->activateEditor(m_updateCheckPage, true)) {
+    showAndActivate();
+    return true;
+  }
   if (m_pageHost->activateEditor(UpdateDialog::staticMetaObject, true)) {
     showAndActivate();
     return true;
