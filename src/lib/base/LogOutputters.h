@@ -11,6 +11,7 @@
 #include "base/ILogOutputter.h"
 
 #include <QFile>
+#include <QMutex>
 #include <QString>
 //! Stop traversing log chain outputter
 /*!
@@ -73,7 +74,8 @@ private:
   //! Rotate the log file when it exceeds the size limit.
   void rotateIfNeeded();
 
-  QString m_fileName;
+  // Serialize file writes and path changes across log producers.
+  QMutex m_fileMutex;
   //! Long-lived append handle: avoids an open/write/close cycle per line.
   QFile m_file;
   //! Bytes written since the last rotation check; file.size() is only called

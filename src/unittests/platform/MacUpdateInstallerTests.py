@@ -264,37 +264,57 @@ int main(int argc, char **argv)
         runner = self.headless_runner().replace('/usr/bin/open "$dest"', ":")
         install_marker = "reached image staging"
         install_image = f'printf "%s\\n" "{install_marker}"; exit 65'
+        image = b"test image"
+        digest = hashlib.sha256(image).hexdigest()
+        directory = self.root / f"tupig-synergy-update-{digest}.Abc123"
+        directory.mkdir(mode=0o700)
+        image_path = directory / "Fixture.dmg"
+        image_path.write_bytes(image)
+        ready = directory / ".retry-ready"
+        helper_environment = dict(self.environment)
+        del helper_environment["TMPDIR"]
 
         def update():
             return run([
                 "/bin/sh", "-c", runner, "mac-update-run", str(os.getpid()),
-                str(self.root / "fixture.dmg"), "0" * 64, str(self.destination), self.source.name, BUNDLE_ID,
+                str(image_path), digest, str(self.destination), self.source.name, BUNDLE_ID,
                 str(executable_dir / "Fixture"), str(executable_dir / "FixtureCore"),
                 install_image, self.install_script, "Update failed", "Still running", "Recovery required", "Try again",
-            ], env=self.environment)
+                str(directory), str(self.root),
+            ], env=helper_environment)
 
         # An executable with the same basename in another app must be ignored.
         unrelated_result = update()
         self.assertEqual(unrelated_result.returncode, 65, unrelated_result.stdout + unrelated_result.stderr)
         self.assertIn(install_marker, unrelated_result.stdout)
         self.assertIn("Update failed: Try again", unrelated_result.stderr)
+        self.assertFalse(ready.exists())
         old_gui = self.start_bundle_process(self.destination)
         self.old_contents = tree_contents(self.destination)
         result = update()
         self.assertEqual(result.returncode, 75, result.stdout + result.stderr)
         self.assertNotIn(install_marker, result.stdout)
         self.assertIn("Update failed: Still running", result.stderr)
+        self.assertTrue(ready.is_dir(), "An occupied installation must publish the retained package for retry")
+        self.assertEqual(ready.stat().st_mode & 0o777, 0o700)
+        self.assertEqual(image_path.read_bytes(), image)
         self.assertIsNone(old_gui.poll())
         self.assertIsNone(unrelated.poll())
         self.assert_original_installation()
 
     def test_runner_verifies_downloaded_image_and_installs_without_replacing_outer_directory(self):
-        image_path = self.root / "test download's 更新.dmg"
+        download_directory = Path(tempfile.mkdtemp(dir=self.root))
+        image_path = download_directory / "test download's 更新.dmg"
         self.assert_success(run([
             "/usr/bin/hdiutil", "create", "-quiet", "-format", "UDRO",
             "-volname", "Update fixture", "-srcfolder", str(self.source.parent), str(image_path),
         ], timeout=40))
         digest = hashlib.sha256(image_path.read_bytes()).hexdigest()
+        retry_directory = self.root / f"tupig-synergy-update-{digest}.Abc123"
+        download_directory.rename(retry_directory)
+        download_directory = retry_directory
+        image_path = download_directory / image_path.name
+        ready = download_directory / ".retry-ready"
         expected = tree_contents(self.source)
         launch = '/usr/bin/open "$dest"'
         self.assertEqual(self.runner_script.count(launch), 2)
@@ -303,6 +323,8 @@ int main(int argc, char **argv)
         # Neither fixture is running, so there is no process to stop.
         runner = self.headless_runner().replace(launch, f'printf "%s\\n" "{marker}"')
         executable_dir = self.destination / "Contents/MacOS"
+        different_temp = self.root / "different helper temp"
+        different_temp.mkdir()
 
         def update(expected_digest):
             return run([
@@ -310,14 +332,31 @@ int main(int argc, char **argv)
                 str(os.getpid()), str(image_path), expected_digest, str(self.destination), self.source.name, BUNDLE_ID,
                 str(executable_dir / "Fixture"), str(executable_dir / self.root.name),
                 self.disk_image_script, self.install_script, "Update failed", "Still running", "Recovery required",
-                "Try again",
-            ], env=self.environment, timeout=40)
+                "Try again", str(download_directory), str(self.root),
+            ], env={**self.environment, "TMPDIR": str(different_temp)}, timeout=40)
 
         wrong_digest = ("1" if digest[0] == "0" else "0") + digest[1:]
         rejected = update(wrong_digest)
         self.assertNotEqual(rejected.returncode, 0, rejected.stdout + rejected.stderr)
         self.assertIn(marker, rejected.stdout)
         self.assert_original_installation()
+        self.assertEqual(hashlib.sha256(image_path.read_bytes()).hexdigest(), digest)
+        self.assertFalse(ready.exists())
+
+        held = os.open(self.destination, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            blocked = update(digest)
+            self.assertEqual(blocked.returncode, 75, blocked.stdout + blocked.stderr)
+            self.assertIn("Update failed: Still running", blocked.stderr)
+            self.assertTrue(ready.is_dir())
+            self.assertEqual(hashlib.sha256(image_path.read_bytes()).hexdigest(), digest)
+            self.assert_original_installation()
+        finally:
+            os.close(held)
+
+        # Match the GUI's atomic claim before launching the same helper again.
+        ready.rmdir()
         result = update(digest)
         self.assert_success(result)
         self.assertIn(marker, result.stdout)
@@ -326,6 +365,75 @@ int main(int argc, char **argv)
         self.assertEqual(tree_contents(self.destination), expected)
         self.assert_success(self.verify_signature(self.destination))
         self.assertEqual(self.neighbor.read_text(encoding="ascii"), "untouched")
+        self.assertFalse(image_path.exists(), "Successful helper must release the downloaded DMG")
+        self.assertFalse(download_directory.exists(), "Successful helper must remove the empty download directory")
+
+    def test_runner_never_offers_rollback_or_replaced_downloads_for_retry(self):
+        image = b"test image"
+        digest = hashlib.sha256(image).hexdigest()
+        executable_dir = self.destination / "Contents/MacOS"
+        runner = self.headless_runner().replace('/usr/bin/open "$dest"', ":")
+        for index, (scenario, code, install_image) in enumerate((
+            ("rollback", 74, "exit 74"),
+            ("replaced", 75, '/bin/mv "$1" "$1.old"; printf replaced > "$1"; exit 75'),
+            ("wrong-directory", 75, "exit 75"),
+            ("shared-directory", 75, "exit 75"),
+            ("wrong-parent", 75, "exit 75"),
+        )):
+            with self.subTest(scenario=scenario):
+                name = f"tupig-synergy-update-{digest}.Abc12{index}"
+                if scenario == "wrong-directory":
+                    name = "unrelated-private-directory"
+                directory = self.root / name
+                directory.mkdir(mode=0o755 if scenario == "shared-directory" else 0o700)
+                image_path = directory / "Fixture.dmg"
+                image_path.write_bytes(image)
+                result = run([
+                    "/bin/sh", "-c", runner, "mac-update-run", str(os.getpid()),
+                    str(image_path), digest, str(self.destination), self.source.name, BUNDLE_ID,
+                    str(executable_dir / "Fixture"), str(executable_dir / "FixtureCore"),
+                    install_image, self.install_script, "Update failed", "Still running", "Recovery required", "Try again",
+                    str(directory), str(self.root.parent if scenario == "wrong-parent" else self.root),
+                ], env=self.environment)
+                self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+                self.assertTrue(image_path.exists())
+                self.assertFalse((directory / ".retry-ready").exists())
+
+    def test_runner_cleanup_preserves_replacements_and_other_files(self):
+        for scenario in ("neighbor", "replaced", "unowned", "relaunch-failed"):
+            with self.subTest(scenario=scenario):
+                download_directory = Path(tempfile.mkdtemp(dir=self.root))
+                image_path = download_directory / "download.dmg"
+                image_path.write_bytes(b"original")
+                neighbor = download_directory / "keep.txt"
+                neighbor.write_bytes(b"keep")
+                launch = '/usr/bin/open "$dest"'
+                success = '/usr/bin/true'
+                if scenario == "replaced":
+                    success = '/bin/mv "$dmg" "$dmg.previous" && printf replacement > "$dmg"'
+                elif scenario == "relaunch-failed":
+                    success = '/usr/bin/false'
+                runner = self.headless_runner().replace(launch, success)
+                executable_dir = self.destination / "Contents/MacOS"
+                result = run([
+                    "/bin/sh", "-c", runner, "mac-update-run", str(os.getpid()),
+                    str(image_path), "0" * 64, str(self.destination), self.source.name, BUNDLE_ID,
+                    str(executable_dir / "Fixture"), str(executable_dir / "FixtureCore"),
+                    "exit 0", self.install_script, "Update failed", "Still running", "Recovery required", "Try again",
+                    "" if scenario == "unowned" else str(download_directory), str(self.root),
+                ], env=self.environment)
+                if scenario == "relaunch-failed":
+                    self.assertEqual(result.returncode, 73, result.stdout + result.stderr)
+                else:
+                    self.assert_success(result)
+                self.assertEqual(neighbor.read_bytes(), b"keep")
+                if scenario == "neighbor":
+                    self.assertFalse(image_path.exists())
+                elif scenario == "replaced":
+                    self.assertEqual(image_path.read_bytes(), b"replacement")
+                    self.assertEqual(image_path.with_suffix(".dmg.previous").read_bytes(), b"original")
+                else:
+                    self.assertEqual(image_path.read_bytes(), b"original")
 
     def headless_runner(self):
         # Keep the real transaction and replace just the native UI display.

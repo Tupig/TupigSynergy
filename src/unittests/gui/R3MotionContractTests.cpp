@@ -27,6 +27,7 @@
 #include <QStackedWidget>
 #include <QTabWidget>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QUuid>
 #include <QVBoxLayout>
 #include <QVariantAnimation>
@@ -349,7 +350,7 @@ void R3MotionContractTests::buttonStandardActivation()
   button->setFocus();
   QCoreApplication::processEvents();
   const auto geometry = button->geometry();
-  auto *focus = QApplication::focusWidget();
+  auto *const focus = QApplication::focusWidget();
   QSignalSpy clicked(button, &QPushButton::clicked);
   ButtonFrameTrace trace(button);
   QScopedValueRollback<QPointer<ButtonFrameTrace>> traceHook(
@@ -371,92 +372,81 @@ void R3MotionContractTests::buttonStandardActivation()
   else if (activation == "Enter")
     QTest::keyClick(button, Qt::Key_Enter);
   else if (activation == "accessible-press") {
-    // Qt may implement AX press using animateClick and its intrinsic release delay.
-    // Compare stock scheduling under Reduced, then require Animated adds no delay.
+    // Qt's accessible press uses a 100 ms coarse timer to release and click.
+    // Time an independent timer in the same event loop to account for late wake-ups.
+    constexpr int nativePressDelayMs = 100;
+    constexpr int clickTimeoutMs = 250;
+    constexpr int additionalDelayMs = 60;
     struct ActivationTiming
     {
-      QElapsedTimer clock;
-      qint64 pressed = -1;
-      qint64 released = -1;
+      qint64 control = -1;
       qint64 clicked = -1;
       qint64 actionReturned = -1;
-      qint64 observed = -1;
-    };
-    struct WaitObservation
-    {
-      const char *mode;
-      ActivationTiming &timing;
-      ~WaitObservation()
+
+      qint64 adjustedClick() const
       {
-        timing.observed = timing.clock.elapsed();
-        qInfo().nospace() << "AX1 mode=" << mode << " pressedMs=" << timing.pressed << " releasedMs=" << timing.released
-                          << " clickedMs=" << timing.clicked << " actionReturnedMs=" << timing.actionReturned
-                          << " observedMs=" << timing.observed;
+        // Credit only delays observed by the time the action clicked.
+        const auto wakeupDelay = control <= clicked ? qMax<qint64>(0, control - nativePressDelayMs) : 0;
+        return clicked - wakeupDelay;
       }
     };
-    ActivationTiming baselineTiming;
-    ActivationTiming animatedTiming;
-    // Connections must end before their captured timing state, while the button survives this branch.
-    QObject timingContext;
-    const auto recordSignals = [&timingContext](QPushButton *target, ActivationTiming &timing) {
-      connect(target, &QPushButton::pressed, &timingContext, [&timing] {
-        if (timing.pressed < 0)
-          timing.pressed = timing.clock.elapsed();
-      });
-      connect(target, &QPushButton::released, &timingContext, [&timing] {
-        if (timing.released < 0)
-          timing.released = timing.clock.elapsed();
-      });
-      connect(target, &QPushButton::clicked, &timingContext, [&timing] {
-        if (timing.clicked < 0)
-          timing.clicked = timing.clock.elapsed();
-      });
-    };
-    synergy::gui::setMotionModeForTesting(synergy::gui::MotionMode::Reduced);
-    QPushButton baseline("Stock accessible baseline");
-    baseline.setAttribute(Qt::WA_DontShowOnScreen);
-    baseline.show();
-    auto *baselineInterface = QAccessible::queryAccessibleInterface(&baseline);
-    QVERIFY(baselineInterface && baselineInterface->actionInterface());
-    QSignalSpy baselineClicked(&baseline, &QPushButton::clicked);
-    recordSignals(&baseline, baselineTiming);
-    baselineTiming.clock.start();
-    baselineInterface->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
-    baselineTiming.actionReturned = baselineTiming.clock.elapsed();
-    {
-      WaitObservation observation{"stock", baselineTiming};
-      if (baselineClicked.isEmpty())
-        QVERIFY2(baselineClicked.wait(250), "Stock Qt accessible press did not click within 250 ms");
-      QCOMPARE(baselineClicked.count(), 1);
-    }
-    baseline.hide();
-    button->setFocus();
-    focus = QApplication::focusWidget();
-    synergy::gui::setMotionModeForTesting(synergy::gui::MotionMode::Animated);
+    using synergy::gui::MotionMode;
+    ActivationTiming baseline;
     auto *interface = QAccessible::queryAccessibleInterface(button);
     QVERIFY(interface);
     auto *actions = interface->actionInterface();
     QVERIFY(actions);
     QVERIFY(actions->actionNames().contains(QAccessibleActionInterface::pressAction()));
-    recordSignals(button, animatedTiming);
-    animatedTiming.clock.start();
-    trace.begin();
-    actions->doAction(QAccessibleActionInterface::pressAction());
-    animatedTiming.actionReturned = animatedTiming.clock.elapsed();
-    {
-      WaitObservation observation{"animated", animatedTiming};
-      // Start capturing feedback as soon as Qt dispatches the click. Polling
-      // can leave the event loop running through the first animation frames.
+    for (const auto mode : {MotionMode::Reduced, MotionMode::Animated}) {
+      synergy::gui::setMotionModeForTesting(mode);
+      clicked.clear();
+      const bool animated = mode == MotionMode::Animated;
+      ActivationTiming timing;
+      QElapsedTimer clock;
+      QTimer control;
+      control.setTimerType(Qt::CoarseTimer);
+      control.setSingleShot(true);
+      QSignalSpy controlFired(&control, &QTimer::timeout);
+      connect(&control, &QTimer::timeout, &control, [&] { timing.control = clock.elapsed(); });
+      connect(button, &QPushButton::clicked, &control, [&] {
+        if (timing.clicked < 0)
+          timing.clicked = clock.elapsed();
+      });
+      if (animated)
+        trace.begin();
+      clock.start();
+      control.start(nativePressDelayMs);
+      actions->doAction(QAccessibleActionInterface::pressAction());
+      timing.actionReturned = clock.elapsed();
+      if (animated && clicked.isEmpty()) {
+        QVERIFY2(
+            !button->findChild<QWidget *>("buttonFeedbackOverlay"),
+            "Accessible press must defer custom feedback until the click is dispatched"
+        );
+      }
       if (clicked.isEmpty())
-        QVERIFY2(clicked.wait(250), "Animated accessible press did not click within 250 ms");
+        QVERIFY2(clicked.wait(clickTimeoutMs), "Accessible press did not trigger a click");
       QCOMPARE(clicked.count(), 1);
+      if (controlFired.isEmpty())
+        QVERIFY2(controlFired.wait(qMax(0, clickTimeoutMs - static_cast<int>(clock.elapsed()))), "No timer control");
+      qInfo().nospace() << "AX2 mode=" << (animated ? "animated" : "stock") << " clickedMs=" << timing.clicked
+                        << " controlMs=" << timing.control << " actionReturnedMs=" << timing.actionReturned
+                        << " adjustedMs=" << timing.adjustedClick();
+      QVERIFY(timing.clicked >= 0 && timing.clicked <= clickTimeoutMs);
+      QVERIFY(timing.control >= 0 && timing.control <= clickTimeoutMs);
+      if (animated) {
+        QVERIFY2(
+            timing.actionReturned <= baseline.actionReturned + additionalDelayMs,
+            "Motion delays the accessible press handler"
+        );
+        QVERIFY2(
+            timing.adjustedClick() <= baseline.adjustedClick() + additionalDelayMs,
+            "Motion adds delay beyond stock Qt activation"
+        );
+      } else {
+        baseline = timing;
+      }
     }
-    QVERIFY(baselineTiming.clicked >= 0 && baselineTiming.clicked <= 250);
-    QVERIFY(animatedTiming.clicked >= 0 && animatedTiming.clicked <= 250);
-    QVERIFY2(
-        animatedTiming.clicked <= baselineTiming.clicked + 60,
-        "Motion adds delay beyond stock Qt accessible activation scheduling"
-    );
   } else
     button->click();
   // Business action must already be routed before waiting for feedback frames.

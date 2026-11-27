@@ -62,7 +62,10 @@ private:
   static Record parse(const QString &line);
   void rebuild(bool resetScroll = true);
   void updateVisibleHeight(bool refreshColumnWidth = false);
-  void requestTailScroll();
+  void requestViewportUpdate();
+  void wrapViewportRows();
+  void showMatch(int row);
+  int wrappedRowHeight(int row) const;
   int rowHeight() const;
 
   QTableWidget *m_table = nullptr;
@@ -74,5 +77,5 @@ private:
   int m_messageColumnWidth = 1;
   mutable bool m_followTail = true;
   bool m_adjustingContents = false;
-  bool m_tailScrollPending = false;
+  bool m_viewportUpdatePending = false;
 };

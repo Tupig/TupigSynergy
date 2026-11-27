@@ -6,6 +6,11 @@
  */
 
 #include "LogTests.h"
+#include "base/LogOutputters.h"
+
+#include <QFile>
+#include <QTemporaryDir>
+
 #include <clocale>
 #include <iostream>
 #include <sstream>
@@ -118,6 +123,54 @@ void LogTests::printErrWithFileAndLine()
   std::cerr.rdbuf(old);
 
   QCOMPARE(string, "ERROR: test message test file:123");
+}
+
+void LogTests::fileLogAppendsAndChangesDestination()
+{
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  const auto firstPath = directory.filePath(QStringLiteral("first.log"));
+  const auto secondPath = directory.filePath(QStringLiteral("second.log"));
+
+  FileLogOutputter log(firstPath);
+  const auto firstMessage = QString::fromUtf8("连接成功");
+  QVERIFY(log.write(LogLevel::Level::Info, firstMessage));
+  log.close();
+  QVERIFY(log.write(LogLevel::Level::Info, QStringLiteral("second entry")));
+  log.setLogFilename({});
+  QVERIFY(!log.write(LogLevel::Level::Info, QStringLiteral("disabled destination")));
+  log.setLogFilename(secondPath);
+  QVERIFY(log.write(LogLevel::Level::Info, QStringLiteral("new destination")));
+  log.close();
+
+  QFile first(firstPath);
+  QVERIFY(first.open(QIODevice::ReadOnly));
+  QCOMPARE(first.readAll(), firstMessage.toUtf8() + "\nsecond entry\n");
+
+  QFile second(secondPath);
+  QVERIFY(second.open(QIODevice::ReadOnly));
+  QCOMPARE(second.readAll(), QByteArray("new destination\n"));
+}
+
+void LogTests::fileLogRotatesAndReopens()
+{
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  const auto logPath = directory.filePath(QStringLiteral("core.log"));
+
+  FileLogOutputter log(logPath);
+  const QString largeMessage(1100000, QLatin1Char('x'));
+  QVERIFY(log.write(LogLevel::Level::Info, largeMessage));
+  QVERIFY(log.write(LogLevel::Level::Info, QStringLiteral("after rotation")));
+  log.close();
+
+  QFile rotated(logPath + QStringLiteral(".1"));
+  QVERIFY(rotated.open(QIODevice::ReadOnly));
+  QCOMPARE(rotated.readAll(), largeMessage.toUtf8() + '\n');
+
+  QFile current(logPath);
+  QVERIFY(current.open(QIODevice::ReadOnly));
+  QCOMPARE(current.readAll(), QByteArray("after rotation\n"));
 }
 
 QTEST_MAIN(LogTests)

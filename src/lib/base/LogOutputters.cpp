@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include <QFile>
+#include <QMutexLocker>
 #include <QString>
 
 constexpr auto s_logFileSizeLimit = 1024 * 1024; //!< Max Log size before rotating (1Mb)
@@ -127,12 +128,12 @@ FileLogOutputter::FileLogOutputter(const QString &logFile)
 
 void FileLogOutputter::setLogFilename(const QString &logFile)
 {
-  assert(logFile != nullptr);
-  if (m_fileName == logFile) {
+  const QMutexLocker lock(&m_fileMutex);
+  if (m_file.fileName() == logFile) {
     return;
   }
   m_file.close();
-  m_fileName = logFile;
+  m_file.setFileName(logFile);
   m_bytesSinceCheck = 0;
 }
 
@@ -141,7 +142,7 @@ bool FileLogOutputter::ensureOpen()
   if (m_file.isOpen()) {
     return true;
   }
-  return m_file.open(QFile::WriteOnly | QFile::Append);
+  return !m_file.fileName().isEmpty() && m_file.open(QFile::WriteOnly | QFile::Append);
 }
 
 void FileLogOutputter::rotateIfNeeded()
@@ -151,27 +152,27 @@ void FileLogOutputter::rotateIfNeeded()
     return;
   }
 
-  const auto oldFile = QStringLiteral("%1.1").arg(m_fileName);
+  const auto logFile = m_file.fileName();
+  const auto oldFile = logFile + QStringLiteral(".1");
   // rotate: drop any previous backup, then rename the current log into
   // its place; the next write recreates the log file from scratch
   m_file.close();
   QFile::remove(oldFile);
-  QFile::rename(m_fileName, oldFile);
+  QFile::rename(logFile, oldFile);
 }
 
 bool FileLogOutputter::write(LogLevel::Level, const QString &message)
 {
+  const QMutexLocker lock(&m_fileMutex);
   if (!ensureOpen()) {
     return false;
   }
 
   const auto line = message.toUtf8() + '\n';
-  if (m_file.write(line) != line.size()) {
+  // Flush each complete line so the GUI can tail the service log immediately.
+  if (m_file.write(line) != line.size() || !m_file.flush()) {
     return false;
   }
-  // flush per line so log tails (the GUI log dock) see new lines promptly
-  m_file.flush();
-
   m_bytesSinceCheck += line.size();
   if (m_bytesSinceCheck >= s_logFileSizeCheckBytes) {
     rotateIfNeeded();
@@ -187,5 +188,6 @@ void FileLogOutputter::open(const QString &)
 
 void FileLogOutputter::close()
 {
+  const QMutexLocker lock(&m_fileMutex);
   m_file.close();
 }
