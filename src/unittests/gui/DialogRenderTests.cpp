@@ -29,6 +29,7 @@
 #include <QCryptographicHash>
 #include <QDialog>
 #include <QDir>
+#include <QFile>
 #include <QListWidget>
 #include <QPixmap>
 #include <QProgressBar>
@@ -73,6 +74,9 @@ private Q_SLOTS:
   void rendersUpdateAndFingerprint();
   void formatsReleaseNotes();
   void keepsUpdateDownloadWhenReturningToAnotherPage();
+#if defined(Q_OS_MACOS)
+  void reopensVerifiedUpdateAfterBusyInstaller();
+#endif
   void rendersConfigurationPages();
   void animatedButtonStillDeliversClick();
 };
@@ -260,6 +264,65 @@ void DialogRenderTests::keepsUpdateDownloadWhenReturningToAnotherPage()
   QCOMPARE(install->text(), updateText("Install Now"));
   QCOMPARE(server.ordinaryRequests(), 1);
 }
+
+#if defined(Q_OS_MACOS)
+void DialogRenderTests::reopensVerifiedUpdateAfterBusyInstaller()
+{
+  TestHttpServer server;
+  const auto payload = QUuid::createUuid().toString().toUtf8();
+  const auto digest = QString::fromLatin1(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+  const synergy::gui::update::DownloadPolicy policy{"http", "127.0.0.1", "/"};
+  synergy::gui::update::UpdateInfo info;
+  info.asset = {QStringLiteral("retained.dmg"), server.url(), payload.size(), digest};
+  QTemporaryDir retained(QDir::temp().filePath(QStringLiteral("tupig-synergy-update-%1.XXXXXX").arg(digest)));
+  QVERIFY(retained.isValid());
+  QFile package(QDir(retained.path()).filePath(info.asset.name));
+  QVERIFY(package.open(QIODevice::WriteOnly));
+  QCOMPARE(package.write(payload), payload.size());
+  package.close();
+
+  // A download still owned by a detached installer has no retry marker.
+  {
+    synergy::gui::update::UpdateDialog dialog(info, nullptr, policy);
+    auto *install = dialog.findChild<QPushButton *>(QStringLiteral("downloadInstall"));
+    QVERIFY(install);
+    QCOMPARE(install->text(), updateText("Download and Install"));
+  }
+  QVERIFY(QDir(retained.path()).mkdir(QStringLiteral(".retry-ready")));
+  QVERIFY(
+      QFile::setPermissions(
+          QDir(retained.path()).filePath(QStringLiteral(".retry-ready")),
+          QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner
+      )
+  );
+
+  int preparations = 0;
+  for (const bool altered : {false, true}) {
+    if (altered) {
+      QVERIFY(package.open(QIODevice::WriteOnly | QIODevice::Truncate));
+      QCOMPARE(package.write(QByteArray(payload.size(), 'x')), payload.size());
+      package.close();
+    }
+    synergy::gui::update::UpdateDialog dialog(info, nullptr, policy);
+    dialog.setInstallPreparation([&] {
+      ++preparations;
+      return false;
+    });
+    auto *install = dialog.findChild<QPushButton *>(QStringLiteral("downloadInstall"));
+    QVERIFY(install);
+    QCOMPARE(install->text(), updateText("Install Now"));
+    install->click();
+    QCOMPARE(install->text(), updateText(altered ? "Download and Install" : "Install Now"));
+    QCOMPARE(preparations, 1);
+    QCOMPARE(server.ordinaryRequests(), 0);
+    QVERIFY(QFileInfo::exists(package.fileName()));
+  }
+  synergy::gui::update::UpdateDialog reopened(info, nullptr, policy);
+  auto *install = reopened.findChild<QPushButton *>(QStringLiteral("downloadInstall"));
+  QVERIFY(install);
+  QCOMPARE(install->text(), updateText("Download and Install"));
+}
+#endif
 
 void DialogRenderTests::rendersConfigurationPages()
 {

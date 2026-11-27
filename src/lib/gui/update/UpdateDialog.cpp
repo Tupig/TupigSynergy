@@ -18,6 +18,7 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -45,6 +46,9 @@ namespace synergy::gui::update {
 namespace {
 bool matchesExpectedDigest(const QString &path, const QString &expectedSha256, qint64 expectedSize)
 {
+  const QFileInfo downloaded(path);
+  if (!downloaded.isFile() || downloaded.isSymLink())
+    return false;
   QFile package(path);
   if (expectedSize < 0 || !package.open(QIODevice::ReadOnly) || package.size() != expectedSize)
     return false;
@@ -145,6 +149,9 @@ private:
 
 UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const DownloadPolicy &policy)
     : QDialog(parent),
+#if defined(Q_OS_MACOS)
+      m_downloadDirectory(synergy::platform::macUpdateDownloadTemplate(info.asset.sha256)),
+#endif
       m_info(info),
       m_downloader(new UpdateDownloader(this, policy))
 {
@@ -272,6 +279,11 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
   m_install->setIcon(synergy::gui::appIcon(QStringLiteral("download")));
   m_install->setProperty("primary", true);
   m_install->setDefault(true);
+#if defined(Q_OS_MACOS)
+  m_downloadedPath = synergy::platform::findMacUpdateRetry(info.asset.name, info.asset.sha256, info.asset.size);
+  if (!m_downloadedPath.isEmpty())
+    m_install->setText(tr("Install Now"));
+#endif
   connect(m_install, &QPushButton::clicked, this, [this] {
     if (m_downloadedPath.isEmpty())
       startDownload();
@@ -432,6 +444,9 @@ void UpdateDialog::startDownload()
 void UpdateDialog::installDownloaded(const QString &filePath)
 {
   if (!matchesExpectedDigest(filePath, m_info.asset.sha256, m_info.asset.size)) {
+#if defined(Q_OS_MACOS)
+    synergy::platform::forgetMacUpdateRetry(filePath, m_info.asset.sha256);
+#endif
     m_downloadedPath.clear();
     setBusy(false);
     m_progress->parentWidget()->show();
@@ -449,7 +464,8 @@ void UpdateDialog::installDownloaded(const QString &filePath)
       synergy::platform::launchUpdateInstaller(filePath, m_info.asset.sha256, m_downloadDirectory, &error);
   if (result == synergy::platform::UpdateInstallResult::Launched) {
     // 安装器异步读取包；交接后保留独立临时目录，避免退出时删除安装源。
-    m_downloadDirectory.setAutoRemove(false);
+    if (QFileInfo(filePath).absolutePath() == QDir(m_downloadDirectory.path()).absolutePath())
+      m_downloadDirectory.setAutoRemove(false);
     Q_EMIT installationStarted();
     QCoreApplication::quit();
     return;

@@ -10,10 +10,16 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QProcess>
 #include <QProcessEnvironment>
+#include <QRegularExpression>
 #include <QTemporaryDir>
+
+#include <optional>
+#include <sys/stat.h>
+#include <unistd.h>
 
 namespace synergy::platform {
 
@@ -235,6 +241,7 @@ still_running=${12}
 recovery_required=${13}
 try_again=${14}
 download_dir=${15:-}
+temp_parent=${16}
 
 download_identity() {
   [ -n "$download_dir" ] && [ "${dmg%/*}" = "$download_dir" ] || return 1
@@ -245,6 +252,29 @@ download_identity() {
 }
 
 download_id=$(download_identity) || download_id=
+
+publish_retry() (
+  umask 077
+  export LC_ALL=C
+  case "$expected_sha" in
+    ''|*[!0-9a-f]*) return 0 ;;
+  esac
+  [ "${#expected_sha}" -eq 64 ] || return 0
+  prefix="tupig-synergy-update-$expected_sha."
+  name=${download_dir##*/}
+  case "$name" in
+    "$prefix"??????) ;;
+    *) return 0 ;;
+  esac
+  case "${name#"$prefix"}" in
+    *[!A-Za-z0-9]*) return 0 ;;
+  esac
+  parent=$(cd -P "${download_dir%/*}" && pwd -P) || return 0
+  [ "$parent" = "$temp_parent" ] || return 0
+  [ -n "$download_id" ] && [ "$(download_identity)" = "$download_id" ] || return 0
+  [ "$(/usr/bin/stat -f '%u:%l' "$dmg")" = "$(/usr/bin/id -u):1" ] || return 0
+  /bin/mkdir "$download_dir/.retry-ready" 2>/dev/null || :
+)
 
 notify_failure() {
   /usr/bin/osascript - "$title" "$1" <<'APPLESCRIPT' || :
@@ -276,6 +306,7 @@ while ! bundle_is_idle && [ "$count" -lt 50 ]; do
   count=$((count + 1))
 done
 bundle_is_idle || {
+  publish_retry
   notify_failure "$still_running"
   exit 75
 }
@@ -319,7 +350,7 @@ case "$result" in
     fi
     ;;
   74) notify_failure "$recovery_required"; exit "$result" ;;
-  75) notify_failure "$still_running"; exit "$result" ;;
+  75) publish_retry; notify_failure "$still_running"; exit "$result" ;;
   *)
     notify_failure "$try_again"
     if /usr/bin/codesign --verify --deep --strict "$dest"; then
@@ -329,6 +360,68 @@ case "$result" in
     ;;
 esac
 )SH";
+
+constexpr auto kRetryMarker = ".retry-ready";
+
+QString retryDirectoryPrefix(const QString &sha256)
+{
+  static const QRegularExpression digest(QStringLiteral("\\A[0-9a-f]{64}\\z"));
+  return digest.match(sha256).hasMatch() ? QStringLiteral("tupig-synergy-update-%1.").arg(sha256) : QString();
+}
+
+bool privateDirectory(const QString &path, struct stat &info)
+{
+  return ::lstat(QFile::encodeName(path).constData(), &info) == 0 && S_ISDIR(info.st_mode) &&
+         info.st_uid == ::geteuid() && (info.st_mode & 0777) == 0700;
+}
+
+bool removeRetryMarker(const QString &marker)
+{
+  struct stat info{};
+  return privateDirectory(marker, info) && ::rmdir(QFile::encodeName(marker).constData()) == 0;
+}
+
+struct RetryDownloadIdentity
+{
+  dev_t directoryDevice;
+  ino_t directoryInode;
+  dev_t fileDevice;
+  ino_t fileInode;
+  off_t size;
+  time_t modifiedSeconds;
+  long modifiedNanoseconds;
+
+  bool operator==(const RetryDownloadIdentity &) const = default;
+};
+
+std::optional<RetryDownloadIdentity> retryDownloadIdentity(const QString &path, const QString &sha256)
+{
+  const QFileInfo package(path);
+  const QFileInfo directory(package.absolutePath());
+  const auto prefix = retryDirectoryPrefix(sha256);
+  const auto name = directory.fileName();
+  static const QRegularExpression suffix(QStringLiteral("\\A[A-Za-z0-9]{6}\\z"));
+  const auto temp = QDir::temp().canonicalPath();
+  if (prefix.isEmpty() || !name.startsWith(prefix) || !suffix.match(name.mid(prefix.size())).hasMatch() ||
+      temp.isEmpty() || directory.dir().canonicalPath() != temp)
+    return std::nullopt;
+
+  struct stat folderInfo{}, fileInfo{};
+  if (!privateDirectory(directory.absoluteFilePath(), folderInfo) ||
+      ::lstat(QFile::encodeName(package.absoluteFilePath()).constData(), &fileInfo) != 0 ||
+      !S_ISREG(fileInfo.st_mode) || fileInfo.st_uid != ::geteuid() || fileInfo.st_nlink != 1)
+    return std::nullopt;
+
+  return RetryDownloadIdentity{
+      folderInfo.st_dev,
+      folderInfo.st_ino,
+      fileInfo.st_dev,
+      fileInfo.st_ino,
+      fileInfo.st_size,
+      fileInfo.st_mtimespec.tv_sec,
+      fileInfo.st_mtimespec.tv_nsec
+  };
+}
 
 QString installMessage(const char *source)
 {
@@ -362,6 +455,41 @@ bool canReplaceCore(const QString &core, QString *error)
 
 } // namespace
 
+QString macUpdateDownloadTemplate(const QString &sha256)
+{
+  const auto prefix = retryDirectoryPrefix(sha256);
+  return QDir::temp().filePath(
+      (prefix.isEmpty() ? QStringLiteral("tupig-synergy-update.") : prefix) + QStringLiteral("XXXXXX")
+  );
+}
+
+QString findMacUpdateRetry(const QString &assetName, const QString &sha256, qint64 size)
+{
+  const auto prefix = retryDirectoryPrefix(sha256);
+  if (prefix.isEmpty() || size <= 0 || QFileInfo(assetName).fileName() != assetName ||
+      !assetName.endsWith(QStringLiteral(".dmg"), Qt::CaseInsensitive))
+    return {};
+
+  const auto directories = QDir::temp().entryInfoList(
+      {prefix + QStringLiteral("??????")}, QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks, QDir::Time
+  );
+  for (const auto &directory : directories) {
+    const auto path = directory.dir().filePath(directory.fileName() + QLatin1Char('/') + assetName);
+    const auto identity = retryDownloadIdentity(path, sha256);
+    struct stat markerInfo{};
+    if (identity && identity->size == size &&
+        privateDirectory(QDir(directory.absoluteFilePath()).filePath(QLatin1String(kRetryMarker)), markerInfo))
+      return path;
+  }
+  return {};
+}
+
+void forgetMacUpdateRetry(const QString &packagePath, const QString &sha256)
+{
+  if (retryDownloadIdentity(packagePath, sha256))
+    removeRetryMarker(QDir(QFileInfo(packagePath).absolutePath()).filePath(QLatin1String(kRetryMarker)));
+}
+
 UpdateInstallResult launchUpdateInstaller(
     const QString &packagePath, const QString &expectedSha256, const QTemporaryDir &downloadDirectory, QString *error
 )
@@ -388,6 +516,19 @@ UpdateInstallResult launchUpdateInstaller(
   if (!canReplaceCore(core, error))
     return UpdateInstallResult::Failed;
 
+  const auto failedToStart = [error] {
+    if (error != nullptr)
+      *error = installMessage(QT_TRANSLATE_NOOP("MacUpdateInstaller", "Could not start the update helper."));
+    return UpdateInstallResult::Failed;
+  };
+  const auto packageDirectory = QFileInfo(packagePath).absolutePath();
+  const auto ownedDirectory = QDir::cleanPath(downloadDirectory.path());
+  const bool recovered = packageDirectory != ownedDirectory;
+  const auto identity = recovered ? retryDownloadIdentity(packagePath, expectedSha256) : std::nullopt;
+  const auto marker = QDir(packageDirectory).filePath(QLatin1String(kRetryMarker));
+  if (recovered && (!identity || !removeRetryMarker(marker)))
+    return failedToStart();
+
   if (!QProcess::startDetached(
           QStringLiteral("/bin/sh"),
           {QStringLiteral("-c"), QString::fromLatin1(kRunUpdate), QStringLiteral("mac-update"),
@@ -404,12 +545,11 @@ UpdateInstallResult launchUpdateInstaller(
            installMessage(QT_TRANSLATE_NOOP(
                "MacUpdateInstaller", "The update could not be completed. Open the installed app and try again."
            )),
-           downloadDirectory.path()}
+           packageDirectory, QDir::temp().canonicalPath()}
       )) {
-    if (error != nullptr) {
-      *error = installMessage(QT_TRANSLATE_NOOP("MacUpdateInstaller", "Could not start the update helper."));
-    }
-    return UpdateInstallResult::Failed;
+    if (identity && retryDownloadIdentity(packagePath, expectedSha256) == identity)
+      ::mkdir(QFile::encodeName(marker).constData(), 0700);
+    return failedToStart();
   }
 
   return UpdateInstallResult::Launched;

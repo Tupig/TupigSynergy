@@ -37,4 +37,16 @@ UpdateInstallResult launchUpdateInstaller(
     QString *error = nullptr
 );
 
+#ifdef Q_OS_MACOS
+//! Private temporary download directory template for one release digest.
+QString macUpdateDownloadTemplate(const QString &sha256);
+
+//! Find an owned, size-matched download left ready by the Mac helper after status 75.
+//! The caller must verify its digest again before installation.
+QString findMacUpdateRetry(const QString &assetName, const QString &sha256, qint64 size);
+
+//! Stop offering a rejected download for retry without removing the package.
+void forgetMacUpdateRetry(const QString &packagePath, const QString &sha256);
+#endif
+
 } // namespace synergy::platform
