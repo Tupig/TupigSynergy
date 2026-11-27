@@ -13,6 +13,7 @@
 #include <QFileInfo>
 #include <QProcess>
 #include <QProcessEnvironment>
+#include <QTemporaryDir>
 
 namespace synergy::platform {
 
@@ -233,6 +234,17 @@ title=${11}
 still_running=${12}
 recovery_required=${13}
 try_again=${14}
+download_dir=${15:-}
+
+download_identity() {
+  [ -n "$download_dir" ] && [ "${dmg%/*}" = "$download_dir" ] || return 1
+  [ -d "$download_dir" ] && [ ! -L "$download_dir" ] || return 1
+  [ -f "$dmg" ] && [ ! -L "$dmg" ] || return 1
+  [ "$(/usr/bin/stat -f '%u:%Lp' "$download_dir")" = "$(/usr/bin/id -u):700" ] || return 1
+  /usr/bin/stat -f '%d:%i' "$download_dir" && /usr/bin/stat -f '%d:%i:%m:%z' "$dmg"
+}
+
+download_id=$(download_identity) || download_id=
 
 notify_failure() {
   /usr/bin/osascript - "$title" "$1" <<'APPLESCRIPT' || :
@@ -299,6 +311,12 @@ case "$result" in
       notify_failure "$try_again"
       exit 73
     }
+    # This runs as the original user, even after an administrator retry.
+    # Keep unrecognized paths and any other contents of the directory.
+    if [ -n "$download_id" ] && [ "$(download_identity)" = "$download_id" ]; then
+      /bin/rm -f "$dmg" || :
+      /bin/rmdir "$download_dir" 2>/dev/null || :
+    fi
     ;;
   74) notify_failure "$recovery_required"; exit "$result" ;;
   75) notify_failure "$still_running"; exit "$result" ;;
@@ -344,7 +362,9 @@ bool canReplaceCore(const QString &core, QString *error)
 
 } // namespace
 
-UpdateInstallResult launchUpdateInstaller(const QString &packagePath, const QString &expectedSha256, QString *error)
+UpdateInstallResult launchUpdateInstaller(
+    const QString &packagePath, const QString &expectedSha256, const QTemporaryDir &downloadDirectory, QString *error
+)
 {
   // The GUI is inside <bundle>/Contents/MacOS. Use its canonical bundle path,
   // but locate the downloaded payload by its build name even if this app was renamed.
@@ -383,7 +403,8 @@ UpdateInstallResult launchUpdateInstaller(const QString &packagePath, const QStr
            )),
            installMessage(QT_TRANSLATE_NOOP(
                "MacUpdateInstaller", "The update could not be completed. Open the installed app and try again."
-           ))}
+           )),
+           downloadDirectory.path()}
       )) {
     if (error != nullptr) {
       *error = installMessage(QT_TRANSLATE_NOOP("MacUpdateInstaller", "Could not start the update helper."));

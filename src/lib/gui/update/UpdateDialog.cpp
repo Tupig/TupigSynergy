@@ -445,7 +445,8 @@ void UpdateDialog::installDownloaded(const QString &filePath)
     return;
   }
   QString error;
-  const auto result = synergy::platform::launchUpdateInstaller(filePath, m_info.asset.sha256, &error);
+  const auto result =
+      synergy::platform::launchUpdateInstaller(filePath, m_info.asset.sha256, m_downloadDirectory, &error);
   if (result == synergy::platform::UpdateInstallResult::Launched) {
     // 安装器异步读取包；交接后保留独立临时目录，避免退出时删除安装源。
     m_downloadDirectory.setAutoRemove(false);

@@ -10,7 +10,8 @@
 
 namespace synergy::platform {
 
-UpdateInstallResult launchUpdateInstaller(const QString &packagePath, const QString &, QString *error)
+UpdateInstallResult
+launchUpdateInstaller(const QString &packagePath, const QString &, const QTemporaryDir &, QString *error)
 {
   // xdg-open hands the .deb/.rpm/.pkg.tar.zst/.flatpak to the desktop's
   // package handler, so the distribution performs the upgrade.

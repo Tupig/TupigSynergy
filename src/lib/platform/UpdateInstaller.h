@@ -8,6 +8,8 @@
 
 #include <QString>
 
+class QTemporaryDir;
+
 namespace synergy::platform {
 
 /**
@@ -25,11 +27,14 @@ enum class UpdateInstallResult
  *
  * Windows opens the MSI through ShellExecute so UAC owns the elevation prompt.
  * macOS rechecks the package digest in the detached installer, replaces the
- * application contents and relaunches it.
+ * application contents and relaunches it. On success the helper releases the
+ * package in the caller-owned temporary download directory.
  * Linux opens the package with xdg-open so the distribution's package manager
  * performs the upgrade. The caller must quit once the result is Launched.
  */
-UpdateInstallResult
-launchUpdateInstaller(const QString &packagePath, const QString &expectedSha256, QString *error = nullptr);
+UpdateInstallResult launchUpdateInstaller(
+    const QString &packagePath, const QString &expectedSha256, const QTemporaryDir &downloadDirectory,
+    QString *error = nullptr
+);
 
 } // namespace synergy::platform

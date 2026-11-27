@@ -289,7 +289,8 @@ int main(int argc, char **argv)
         self.assert_original_installation()
 
     def test_runner_verifies_downloaded_image_and_installs_without_replacing_outer_directory(self):
-        image_path = self.root / "test download's 更新.dmg"
+        download_directory = Path(tempfile.mkdtemp(dir=self.root))
+        image_path = download_directory / "test download's 更新.dmg"
         self.assert_success(run([
             "/usr/bin/hdiutil", "create", "-quiet", "-format", "UDRO",
             "-volname", "Update fixture", "-srcfolder", str(self.source.parent), str(image_path),
@@ -310,7 +311,7 @@ int main(int argc, char **argv)
                 str(os.getpid()), str(image_path), expected_digest, str(self.destination), self.source.name, BUNDLE_ID,
                 str(executable_dir / "Fixture"), str(executable_dir / self.root.name),
                 self.disk_image_script, self.install_script, "Update failed", "Still running", "Recovery required",
-                "Try again",
+                "Try again", str(download_directory),
             ], env=self.environment, timeout=40)
 
         wrong_digest = ("1" if digest[0] == "0" else "0") + digest[1:]
@@ -318,6 +319,7 @@ int main(int argc, char **argv)
         self.assertNotEqual(rejected.returncode, 0, rejected.stdout + rejected.stderr)
         self.assertIn(marker, rejected.stdout)
         self.assert_original_installation()
+        self.assertEqual(hashlib.sha256(image_path.read_bytes()).hexdigest(), digest)
         result = update(digest)
         self.assert_success(result)
         self.assertIn(marker, result.stdout)
@@ -326,6 +328,44 @@ int main(int argc, char **argv)
         self.assertEqual(tree_contents(self.destination), expected)
         self.assert_success(self.verify_signature(self.destination))
         self.assertEqual(self.neighbor.read_text(encoding="ascii"), "untouched")
+        self.assertFalse(image_path.exists(), "Successful helper must release the downloaded DMG")
+        self.assertFalse(download_directory.exists(), "Successful helper must remove the empty download directory")
+
+    def test_runner_cleanup_preserves_replacements_and_other_files(self):
+        for scenario in ("neighbor", "replaced", "unowned", "relaunch-failed"):
+            with self.subTest(scenario=scenario):
+                download_directory = Path(tempfile.mkdtemp(dir=self.root))
+                image_path = download_directory / "download.dmg"
+                image_path.write_bytes(b"original")
+                neighbor = download_directory / "keep.txt"
+                neighbor.write_bytes(b"keep")
+                launch = '/usr/bin/open "$dest"'
+                success = '/usr/bin/true'
+                if scenario == "replaced":
+                    success = '/bin/mv "$dmg" "$dmg.previous" && printf replacement > "$dmg"'
+                elif scenario == "relaunch-failed":
+                    success = '/usr/bin/false'
+                runner = self.headless_runner().replace(launch, success)
+                executable_dir = self.destination / "Contents/MacOS"
+                result = run([
+                    "/bin/sh", "-c", runner, "mac-update-run", str(os.getpid()),
+                    str(image_path), "0" * 64, str(self.destination), self.source.name, BUNDLE_ID,
+                    str(executable_dir / "Fixture"), str(executable_dir / "FixtureCore"),
+                    "exit 0", self.install_script, "Update failed", "Still running", "Recovery required", "Try again",
+                    "" if scenario == "unowned" else str(download_directory),
+                ], env=self.environment)
+                if scenario == "relaunch-failed":
+                    self.assertEqual(result.returncode, 73, result.stdout + result.stderr)
+                else:
+                    self.assert_success(result)
+                self.assertEqual(neighbor.read_bytes(), b"keep")
+                if scenario == "neighbor":
+                    self.assertFalse(image_path.exists())
+                elif scenario == "replaced":
+                    self.assertEqual(image_path.read_bytes(), b"replacement")
+                    self.assertEqual(image_path.with_suffix(".dmg.previous").read_bytes(), b"original")
+                else:
+                    self.assertEqual(image_path.read_bytes(), b"original")
 
     def headless_runner(self):
         # Keep the real transaction and replace just the native UI display.
