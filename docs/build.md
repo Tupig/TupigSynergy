@@ -6,6 +6,9 @@
 
 ## English
 
+On macOS, the manifest baseline and the native CI package use Qt 6.11.3. It checks the Cocoa event type before reading mouse-click properties, preventing the macOS 27 status-menu exception. The Windows CI Qt version is independent.
+
+
 ### Fixed-version GitHub delivery and translation maintenance
 
 `cmake/Version.cmake` is the committed version authority, matching
@@ -515,6 +518,9 @@ Run package checks with `scripts\ci\verify-package-windows.bat build <x64-or-arm
 ---
 
 ## 中文
+
+macOS 的清单基线和原生 CI 安装包使用 Qt 6.11.3。这个版本会先核对 Cocoa 事件类型再读取鼠标点击属性，修正 macOS 27 状态栏菜单异常。Windows CI 的 Qt 版本独立固定。
+
 
 Windows 最高压缩打包要求 CPack 4.3 或更高版本；现有配置与构建要求保持不变。
 打包前记录 `cmake --version` 与 `cpack --version`，旧 CPack 明确失败关闭，7Z 请求 level 9，

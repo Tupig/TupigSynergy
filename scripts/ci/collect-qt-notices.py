@@ -21,6 +21,8 @@ SOURCE_SHA256 = {
     ('6.10.3', 'qtsvg'): 'b3223fe005f6a4c7f21f34e4ee6ce0094737cff9503ba15bbb171ac18794f76d',
     ('6.11.1', 'qtbase'): 'd9594a31228aa23ad6b531719a29b45f0f3989fe6c136d45767ea179f233c1ac',
     ('6.11.1', 'qtsvg'): '7f3cf02f4824bf03c2c5859ea6db173bf1482a1daf24e6cdf7bc78cfa26a8a94',
+    ('6.11.3', 'qtbase'): '46de0710b594945a5d446ae44354daa386141c6903c53781b2ca547bc62f8f8f',
+    ('6.11.3', 'qtsvg'): '9bdf6fa4b5a2d91c3eaa2edd12263fdff0ae19d0ac25d3c99946cd4189a07123',
 }
 MODULES = {'qtbase': 'Core', 'qtsvg': 'Svg'}
 
