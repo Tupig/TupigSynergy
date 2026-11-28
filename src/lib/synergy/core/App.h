@@ -79,7 +79,10 @@ public:
   void run(QThread &coreThread);
   void quit() const;
   void setupFileLogging();
-  void loggingFilterWarning() const;
+  void setServiceLaunch(bool serviceLaunch)
+  {
+    m_serviceLaunch = serviceLaunch;
+  }
   void initApp() override;
 
   void setEvents(EventQueue &events)
@@ -135,6 +138,7 @@ private:
   IEventQueue *m_events = nullptr;
   static App *s_instance;
   FileLogOutputter *m_fileLog = nullptr;
+  bool m_serviceLaunch = false;
   ARCH_APP_UTIL m_appUtil;
   std::unique_ptr<SocketMultiplexer> m_socketMultiplexer;
   QString m_pname;

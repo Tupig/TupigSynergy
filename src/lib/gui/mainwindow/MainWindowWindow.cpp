@@ -10,6 +10,7 @@
 #include "MainWindow.h"
 #include "MainWindowDesign.h"
 #include "gui/AppMenus.h"
+#include "gui/Logger.h"
 
 #include "Diagnostic.h"
 #include "StyleUtils.h"
@@ -210,12 +211,14 @@ void MainWindow::checkForUpdates(bool manual)
       return;
     m_updateChecker->setParent(this);
     connect(m_updateChecker, &UpdateChecker::updateAvailable, this, [this](const UpdateInfo &info) {
+      qCInfo(synergy::gui::updateLog).noquote() << tr("New version available: %1").arg(info.version);
       m_availableUpdate = std::make_unique<UpdateInfo>(info);
       ui->setAvailableUpdateVersion(info.version);
       if (finishUpdateCheck())
         showAvailableUpdate();
     });
     connect(m_updateChecker, &UpdateChecker::noUpdate, this, [this](const QString &version) {
+      qCDebug(synergy::gui::updateLog).noquote() << tr("You are running the latest version (%1).").arg(version);
       m_availableUpdate.reset();
       ui->setAvailableUpdateVersion(QString());
       if (!finishUpdateCheck())
@@ -229,8 +232,9 @@ void MainWindow::checkForUpdates(bool manual)
       showPage(page);
     });
     connect(m_updateChecker, &UpdateChecker::failed, this, [this](const QString &reason) {
+      qCWarning(synergy::gui::updateLog).noquote()
+          << QCoreApplication::translate("GuiLogMessages", "update check failed:") << reason;
       if (!finishUpdateCheck()) {
-        qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "update check failed:") << reason;
         return;
       }
       auto *page = new MessagePage(this, MessagePage::Kind::Warning, tr("Update Check Failed"), reason);

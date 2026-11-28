@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <DirectoryRef Id="INSTALL_ROOT">
+      <Directory Id="SynergyLogs" Name="logs">
+        <Directory Id="SynergyLogAccounts" Name="accounts" />
+        <Directory Id="SynergyLogService" Name="service" />
+      </Directory>
+    </DirectoryRef>
+    <ComponentGroup Id="SynergyLogDirectories">
+      <Component Id="SynergyLogRootPermissions" Directory="SynergyLogs" Guid="B8BD14F7-8A54-481F-94C2-A28EBB3BA119" KeyPath="yes">
+        <CreateFolder><PermissionEx Sddl="D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;;FRFX;;;IU)" /></CreateFolder>
+      </Component>
+      <Component Id="SynergyLogAccountsPermissions" Directory="SynergyLogAccounts" Guid="67F535F7-E873-475C-BFD0-52C1BF0D95E6" KeyPath="yes">
+        <CreateFolder><PermissionEx Sddl="D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;;0x1200ad;;;AU)" /></CreateFolder>
+      </Component>
+      <Component Id="SynergyLogServicePermissions" Directory="SynergyLogService" Guid="087E331D-4E5C-4D66-A2B9-E0856D3C4488" KeyPath="yes">
+        <CreateFolder><PermissionEx Sddl="D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FRFX;;;IU)" /></CreateFolder>
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

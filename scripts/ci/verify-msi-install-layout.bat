@@ -39,7 +39,27 @@ if not exist "%install_root%\licenses\LICENSE" goto :failed
 "%system_bin%\findstr.exe" /i /l /c:"%install_root%\bin\synergy-daemon.exe" "%evidence%\service.txt" >nul || goto :failed
 "%system_bin%\sc.exe" query "%service_name%" > "%evidence%\service-state.txt" || goto :failed
 "%system_bin%\findstr.exe" /r /c:": *4 " "%evidence%\service-state.txt" >nul || goto :failed
-"%system_bin%\reg.exe" query "%arp%" /s /f "%install_root%\" /d /e /reg:64 > "%evidence%\registered-location.txt" || goto :failed
+if not exist "%install_root%\logs\service" goto :failed
+if not exist "%install_root%\logs\accounts" goto :failed
+if not exist "%install_root%\bin\synergy.install" goto :failed
+set /a log_wait=0
+:wait_for_service_log
+for %%G in ("%install_root%\logs\service\*.log") do (
+  if exist "%%~fG" (
+    "%system_bin%\findstr.exe" /i /l /c:"daemon is running" "%%~fG" >nul && goto :service_log_ready
+  )
+)
+if %log_wait% GEQ 10 goto :failed
+"%system_bin%\ping.exe" -n 2 127.0.0.1 >nul
+set /a log_wait+=1
+goto :wait_for_service_log
+:service_log_ready
+"%system_bin%\icacls.exe" "%install_root%\logs\service" > "%evidence%\service-log-acl.txt" || goto :failed
+"%system_bin%\findstr.exe" /i /l /c:"SYSTEM" /c:"BUILTIN\Administrators" "%evidence%\service-log-acl.txt" >nul || goto :failed
+"%system_bin%\icacls.exe" "%install_root%\logs\accounts" > "%evidence%\account-log-acl.txt" || goto :failed
+"%system_bin%\findstr.exe" /i /l /c:"SYSTEM" /c:"BUILTIN\Administrators" "%evidence%\account-log-acl.txt" >nul || goto :failed
+"%system_bin%\icacls.exe" "%install_root%\bin" > "%evidence%\bin-acl.txt" || goto :failed
+"%system_bin%\reg.exe" query "%arp%" /s /f "%install_root%" /d /reg:64 > "%evidence%\registered-location.txt" || goto :failed
 "%system_bin%\findstr.exe" /i /l /c:"InstallLocation" "%evidence%\registered-location.txt" >nul || goto :failed
 
 call :remove_msi || goto :failed

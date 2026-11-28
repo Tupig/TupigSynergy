@@ -156,6 +156,7 @@ add_library(${target} STATIC
 
 target_link_libraries(
   ${target}
+  base
   common
   platform
   Qt6::Core
@@ -165,7 +166,6 @@ target_link_libraries(
 if(WIN32)
   target_link_libraries(
     ${target}
-    base
     arch
     net
   )

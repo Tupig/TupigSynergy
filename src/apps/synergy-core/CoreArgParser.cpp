@@ -17,7 +17,8 @@
 #if defined(Q_OS_WIN)
 namespace {
 const auto kServiceLaunchIdOption = QCommandLineOption(QStringLiteral("service-launch-id"), {}, QStringLiteral("id"));
-}
+const auto kServiceLaunchOption = QCommandLineOption(QStringLiteral("service-launch"));
+} // namespace
 #endif
 
 const QString CoreArgParser::s_headerText = QStringLiteral("%1: %2\n").arg(kCoreBinName, kDisplayVersion);
@@ -32,6 +33,9 @@ CoreArgParser::CoreArgParser(const QStringList &args)
   auto launchIdOption = kServiceLaunchIdOption;
   launchIdOption.setFlags(QCommandLineOption::HiddenFromHelp);
   m_parser.addOption(launchIdOption);
+  auto serviceOption = kServiceLaunchOption;
+  serviceOption.setFlags(QCommandLineOption::HiddenFromHelp);
+  m_parser.addOption(serviceOption);
 #endif
   m_parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
   m_parser.setOptionsAfterPositionalArgumentsMode(QCommandLineParser::ParseAsOptions);
@@ -115,4 +119,13 @@ QString CoreArgParser::serviceLaunchId() const
     return text;
 #endif
   return {};
+}
+
+bool CoreArgParser::isServiceLaunch() const
+{
+#if defined(Q_OS_WIN)
+  return m_parser.isSet(kServiceLaunchOption) || !serviceLaunchId().isEmpty();
+#else
+  return false;
+#endif
 }

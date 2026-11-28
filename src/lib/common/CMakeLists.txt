@@ -24,6 +24,8 @@ add_library(common STATIC
   PlatformInfo.h
   RuntimeContext.h
   RuntimeContext.cpp
+  RuntimeLogPaths.cpp
+  RuntimeLogPaths.h
   Settings.h
   Settings.cpp
   QSettingsProxy.cpp
@@ -36,6 +38,7 @@ add_library(common STATIC
 target_link_libraries(common PUBLIC Qt6::Core PRIVATE Qt6::Network)
 
 if(WIN32)
+  target_sources(common PRIVATE ../platform/win32/WindowsInstalledLogs.cpp ../platform/win32/WindowsInstalledLogs.h)
   target_link_libraries(common PUBLIC advapi32 wtsapi32)
 endif()
 

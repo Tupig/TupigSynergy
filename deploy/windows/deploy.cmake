@@ -137,3 +137,4 @@ configure_file(
 
 # This patch sets up firewall rules and the service.
 set(CPACK_WIX_PATCH_FILE "${CMAKE_CURRENT_BINARY_DIR}/wix-patch.xml")
+set(CPACK_WIX_EXTRA_SOURCES "${MY_DIR}/wix-log-directories.wxs")

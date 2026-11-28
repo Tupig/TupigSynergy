@@ -10,23 +10,23 @@
 
 #include "gui/Logger.h"
 
+#include "common/RuntimeContext.h"
+#include "common/RuntimeLogPaths.h"
+
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QSignalSpy>
 
 using namespace synergy::gui;
 
 void LoggerTests::initTestCase()
 {
-  QDir dir;
-  QVERIFY(dir.mkpath(m_settingsPath));
-
-  QFile oldSettings(m_settingsFile);
-  if (oldSettings.exists())
-    oldSettings.remove();
-
-  Settings::setSettingsFile(m_settingsFile);
-  Settings::setStateFile(m_stateFile);
+  QVERIFY(m_directory.isValid());
+  const auto root = QFileInfo(m_directory.path()).canonicalFilePath();
+  QVERIFY(synergy::runtime::configureIsolatedRuntime({root, QStringLiteral("synergy-logger-unit-test")}));
+  Settings::setSettingsFile(m_directory.filePath(QStringLiteral("Synergy.conf")));
+  Settings::setStateFile(m_directory.filePath(QStringLiteral("Synergy.state")));
 }
 
 void LoggerTests::newLine()
@@ -40,6 +40,13 @@ void LoggerTests::newLine()
   QCOMPARE(spy.count(), 1);
   QVERIFY(qvariant_cast<QString>(spy.takeFirst().at(0)).contains("test"));
   Settings::setValue(Settings::Log::GuiDebug, false);
+
+  const QDir logs(synergy::managedRuntimeLogDirectory(synergy::RuntimeLogRole::Gui));
+  const auto files = logs.entryList({QStringLiteral("*.log")}, QDir::Files);
+  QCOMPARE(files.size(), 1);
+  QFile log(logs.absoluteFilePath(files.first()));
+  QVERIFY(log.open(QIODevice::ReadOnly));
+  QVERIFY(log.readAll().contains("test"));
 }
 
 void LoggerTests::noNewLine()

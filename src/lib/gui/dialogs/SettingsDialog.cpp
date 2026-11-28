@@ -11,6 +11,8 @@
 #include "SettingsDialogDesign.h"
 #include "common/LogLevel.h"
 #include "common/PlatformInfo.h"
+#include "common/RuntimeContext.h"
+#include "common/RuntimeLogPaths.h"
 #include "gui/StyleUtils.h"
 #include "widgets/PageHost.h"
 
@@ -645,7 +647,11 @@ void SettingsDialog::updateControls()
     ui->groupService->setVisible(false);
   }
 
-  ui->widgetLogFilename->setEnabled(writable && logToFile);
+  const bool managedLogs = !synergy::runtime::isIsolatedRuntime() && synergy::usesManagedRuntimeLogs();
+  ui->cbLogToFile->setEnabled(writable && !managedLogs);
+  ui->lineLogFilename->setReadOnly(managedLogs);
+  ui->btnBrowseLog->setVisible(!managedLogs);
+  ui->widgetLogFilename->setEnabled(logToFile && (writable || managedLogs));
 
   updateTlsControlsEnabled();
 }

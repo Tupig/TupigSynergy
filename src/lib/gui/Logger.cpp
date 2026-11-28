@@ -5,6 +5,8 @@
  */
 
 #include "Logger.h"
+#include "base/LogOutputters.h"
+#include "common/RuntimeLogPaths.h"
 #include "common/Settings.h"
 
 #include <QDateTime>
@@ -13,11 +15,15 @@
 #include <QTextStream>
 #include <QTime>
 
+#include <cstdio>
+
 #if defined(Q_OS_WIN)
 #include <Windows.h>
 #endif
 
 namespace synergy::gui {
+
+Q_LOGGING_CATEGORY(updateLog, "synergy.update")
 
 const auto kForceDebugMessages = QStringList{
     QStringLiteral("No functional TLS backend was found"), QStringLiteral("No TLS backend is available"),
@@ -44,7 +50,7 @@ QString printLine(FILE *out, const QString &type, const QString &message, const 
   // the debug output API, because it's difficult to view stdout and stderr from
   // a Windows GUI app.
   (void)out;
-  OutputDebugStringA(terminatedLogLine.toLocal8Bit().constData());
+  OutputDebugStringW(reinterpret_cast<LPCWSTR>(terminatedLogLine.utf16()));
 #else
   QTextStream(out) << terminatedLogLine;
 #endif
@@ -52,7 +58,7 @@ QString printLine(FILE *out, const QString &type, const QString &message, const 
   return logLine;
 }
 
-void Logger::handleMessage(const QtMsgType type, const QString &fileLine, const QString &message)
+void Logger::handleMessage(const QtMsgType type, const QString &fileLine, const QString &message, bool update)
 {
   auto mutatedType = type;
   if (kForceDebugMessages.contains(message)) {
@@ -85,12 +91,42 @@ void Logger::handleMessage(const QtMsgType type, const QString &fileLine, const 
   }
 
   const auto logLine = printLine(out, typeString, message, fileLine);
+  auto *output = update && m_updateFileLog ? m_updateFileLog.get() : m_fileLog.get();
+  auto level = LogLevel::Level::Info;
+  switch (type) {
+  case QtDebugMsg:
+    level = LogLevel::Level::Debug;
+    break;
+  case QtInfoMsg:
+    break;
+  case QtWarningMsg:
+    level = LogLevel::Level::Warning;
+    break;
+  case QtCriticalMsg:
+    level = LogLevel::Level::Error;
+    break;
+  case QtFatalMsg:
+    level = LogLevel::Level::Fatal;
+    break;
+  }
+  if (output && !output->write(level, logLine) && !m_fileErrorReported.exchange(true)) {
+    std::fputs("TuPig Synergy: unable to write managed GUI log\n", stderr);
+  }
   Q_EMIT newLine(logLine);
 }
 
 Logger::Logger()
 {
   m_guiDebug = Settings::value(Settings::Log::GuiDebug).toBool();
+  const auto createWriter = [](RuntimeLogRole role) -> std::unique_ptr<FileLogOutputter> {
+    const auto path = managedRuntimeLogDirectory(role);
+    if (path.isEmpty() || !QDir().mkpath(path)) {
+      return {};
+    }
+    return std::make_unique<FileLogOutputter>(path, FileLogOutputter::Mode::SegmentedDirectory);
+  };
+  m_fileLog = createWriter(RuntimeLogRole::Gui);
+  m_updateFileLog = createWriter(RuntimeLogRole::Update);
   connect(Settings::instance(), &Settings::settingsChanged, this, &Logger::settingChanged);
 }
 

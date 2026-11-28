@@ -40,6 +40,7 @@ private Q_SLOTS:
   void followsRotationAndRecreation();
   void handlesAppendAndTruncation();
   void switchesPath();
+  void followsRotatingDirectory();
 };
 
 void FileTailTests::followsFirstCreation()
@@ -111,6 +112,23 @@ void FileTailTests::switchesPath()
   tail.setWatchedFile(second);
   writeFile(second, QStringLiteral("later\n"), QIODevice::Append);
   QTRY_COMPARE_WITH_TIMEOUT(lines(spy), QStringList({QStringLiteral("later")}), 2000);
+}
+
+void FileTailTests::followsRotatingDirectory()
+{
+  QTemporaryDir temp;
+  QVERIFY(temp.isValid());
+  const auto first = temp.filePath(QStringLiteral("20261128120000.log"));
+  writeFile(first, QStringLiteral("old\n"));
+  FileTail tail(temp.path());
+  QSignalSpy spy(&tail, &FileTail::newLine);
+  writeFile(first, QStringLiteral("tail\n"), QIODevice::Append);
+  QTRY_COMPARE_WITH_TIMEOUT(lines(spy), QStringList({QStringLiteral("tail")}), 2000);
+  spy.clear();
+  const auto second = temp.filePath(QStringLiteral("20261128120001.log"));
+  writeFile(second, QStringLiteral("new\n"));
+  writeFile(first, QStringLiteral("late\n"), QIODevice::Append);
+  QTRY_COMPARE_WITH_TIMEOUT(lines(spy), QStringList({QStringLiteral("late"), QStringLiteral("new")}), 2000);
 }
 
 QTEST_GUILESS_MAIN(FileTailTests)

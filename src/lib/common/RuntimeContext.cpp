@@ -69,6 +69,10 @@ bool configureIsolatedRuntime(const IsolatedRuntimeContext &context, QString *er
       QStringLiteral("legacy/system.ini"),
       QStringLiteral("test-settings.ini"),
       QStringLiteral("logs/app.log"),
+      QStringLiteral("logs/gui"),
+      QStringLiteral("logs/core"),
+      QStringLiteral("logs/service"),
+      QStringLiteral("logs/update"),
       QStringLiteral("user/tls"),
       QStringLiteral("system/tls")
   };

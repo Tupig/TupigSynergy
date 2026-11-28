@@ -22,6 +22,7 @@ class FileTail : public QObject
 public:
   explicit FileTail(const QString &filePath, QObject *parent = nullptr);
   void setWatchedFile(const QString &filePath);
+  void setWatchedDirectory(const QString &directoryPath);
 
 Q_SIGNALS:
   void newLine(const QString &line);
@@ -35,6 +36,8 @@ private:
   QString m_directoryPath;
   qint64 m_lastPos = 0;
   QByteArray m_tailAnchor;
+  bool m_directoryMode = false;
+  QString m_currentSegment;
 };
 
 } // namespace synergy::gui

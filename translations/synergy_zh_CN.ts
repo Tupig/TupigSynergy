@@ -1399,6 +1399,10 @@ Additionally, check you are able to %1 the server config file: %2</source>
         <source>Close</source>
         <translation>关闭</translation>
     </message>
+    <message>
+        <source>New version available: %1</source>
+        <translation>发现新版本：%1</translation>
+    </message>
 </context>
 <context>
     <name>ModeCard</name>
@@ -2746,6 +2750,10 @@ Now you can connect your client computers to this server. You should see a promp
 
 [发行说明已截断]</translation>
     </message>
+    <message>
+        <source>Checking for updates…</source>
+        <translation>正在检查更新…</translation>
+    </message>
 </context>
 <context>
     <name>synergy::gui::update::UpdateDialog</name>
@@ -2896,6 +2904,10 @@ Package: %3</source>
     <message>
         <source>%1 s remaining</source>
         <translation>剩余 %1 秒</translation>
+    </message>
+    <message>
+        <source>The update was handed off to the system installer.</source>
+        <translation>更新已交给系统安装程序。</translation>
     </message>
 </context>
 <context>
@@ -4124,6 +4136,22 @@ Package: %3</source>
         <source>watchdog not initialized</source>
         <translation>看门狗未初始化</translation>
     </message>
+    <message>
+        <source>could not prepare the core log directory</source>
+        <translation>无法准备核心日志目录</translation>
+    </message>
+    <message>
+        <source>could not prepare the service log directory</source>
+        <translation>无法准备服务日志目录</translation>
+    </message>
+    <message>
+        <source>managed core logging is limited to DEBUG</source>
+        <translation>核心文件日志最多记录到一级调试</translation>
+    </message>
+    <message>
+        <source>failed to connect to server: Timed out waiting for the server greeting</source>
+        <translation>连接服务端失败：等待服务端回应超时</translation>
+    </message>
 </context>
 <context>
     <name>EngineLogFormats</name>
@@ -5156,6 +5184,30 @@ Package: %3</source>
     <message>
         <source>writef: string format specifier with unexpected length: '%d'</source>
         <translation>writef：字符串格式说明符的长度异常：“%d”</translation>
+    </message>
+    <message>
+        <source>core file log ready: %s</source>
+        <translation>核心日志目录已就绪：%s</translation>
+    </message>
+    <message>
+        <source>connection %zu: starting</source>
+        <translation>连接 %zu：开始</translation>
+    </message>
+    <message>
+        <source>connection %zu: transport ready, waiting for the server greeting</source>
+        <translation>连接 %zu：传输已就绪，正在等待服务端回应</translation>
+    </message>
+    <message>
+        <source>connection %zu: sharing handshake complete</source>
+        <translation>连接 %zu：共享握手完成</translation>
+    </message>
+    <message>
+        <source>connection %zu: server greeting accepted</source>
+        <translation>连接 %zu：已收到服务端回应</translation>
+    </message>
+    <message>
+        <source>connection %zu: timed out</source>
+        <translation>连接 %zu：超时</translation>
     </message>
 </context>
 </TS>

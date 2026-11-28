@@ -8,7 +8,9 @@
 #include "LogTests.h"
 #include "base/LogOutputters.h"
 
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QTemporaryDir>
 
 #include <clocale>
@@ -70,6 +72,22 @@ void LogTests::printTestWithArgs()
   std::cout.rdbuf(old);
 
   QCOMPARE(string, "INFO: test IamARG");
+}
+
+void LogTests::printPreservesBoundaryAndBoundsLongRecords()
+{
+  std::stringstream buffer;
+  auto *old = std::cout.rdbuf(buffer.rdbuf());
+  const std::string boundary(1024, 'x');
+  const std::string large(300 * 1024, 'y');
+  m_log.print(nullptr, 0, LEVEL_PRINT "%s", boundary.c_str());
+  m_log.print(nullptr, 0, LEVEL_PRINT "%s", large.c_str());
+  std::cout.rdbuf(old);
+
+  const auto lines = QString::fromStdString(buffer.str()).split(u'\n');
+  QCOMPARE(lines.value(0), QString::fromStdString(boundary));
+  QCOMPARE(lines.value(1).size(), 256 * 1024 - 1);
+  QVERIFY(lines.value(1).endsWith(QStringLiteral("...")));
 }
 
 void LogTests::printTestLogString()
@@ -171,6 +189,53 @@ void LogTests::fileLogRotatesAndReopens()
   QFile current(logPath);
   QVERIFY(current.open(QIODevice::ReadOnly));
   QCOMPARE(current.readAll(), QByteArray("after rotation\n"));
+}
+
+void LogTests::segmentedLogRotatesAtSizeAndMidnight()
+{
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  auto now = QDateTime::fromString(QStringLiteral("2026-11-28T23:59:59"), Qt::ISODate);
+  FileLogOutputter log(directory.path(), FileLogOutputter::Mode::SegmentedDirectory, [&now] { return now; });
+  constexpr qsizetype limit = 10 * 1024 * 1024;
+  QVERIFY(log.write(LogLevel::Level::Info, QString(limit - 1, u'x')));
+  QCOMPARE(QFileInfo(directory.filePath(QStringLiteral("20261128235959.log"))).size(), limit);
+
+  const auto next = QStringLiteral("连接完成");
+  QVERIFY(log.write(LogLevel::Level::Info, next));
+  const auto secondPath = directory.filePath(QStringLiteral("20261128235959-01.log"));
+  QFile second(secondPath);
+  QVERIFY(second.open(QIODevice::ReadOnly));
+  QCOMPARE(second.readAll(), next.toUtf8() + '\n');
+  second.close();
+
+  now = now.addSecs(1);
+  QVERIFY(log.write(LogLevel::Level::Warning, QStringLiteral("new day")));
+  QVERIFY(!log.write(LogLevel::Level::Debug, QString(limit, u'x')));
+  QCOMPARE(QFileInfo(directory.filePath(QStringLiteral("20261129000000.log"))).size(), 8);
+}
+
+void LogTests::segmentedLogPrunesOnlyManagedHistory()
+{
+  QTemporaryDir directory;
+  QVERIFY(directory.isValid());
+  for (const auto &name :
+       {QStringLiteral("keep.log"), QStringLiteral("20180101120000.log"), QStringLiteral("20261128120000-ab.log")}) {
+    QFile old(directory.filePath(name));
+    QVERIFY(old.open(QIODevice::WriteOnly));
+  }
+  const auto now = QDateTime::fromString(QStringLiteral("2026-11-28T12:00:00"), Qt::ISODate);
+  FileLogOutputter log(directory.path(), FileLogOutputter::Mode::SegmentedDirectory, [now] { return now; });
+  for (int i = 0; i < 12; ++i) {
+    QVERIFY(log.write(LogLevel::Level::Info, QStringLiteral("session")));
+    log.close();
+  }
+  QVERIFY(!QFileInfo::exists(directory.filePath(QStringLiteral("20180101120000.log"))));
+  QVERIFY(QFileInfo::exists(directory.filePath(QStringLiteral("keep.log"))));
+  QVERIFY(QFileInfo::exists(directory.filePath(QStringLiteral("20261128120000-ab.log"))));
+  const QDir logs(directory.path());
+  QCOMPARE(logs.entryList({QStringLiteral("20261128120000-??.log")}, QDir::Files).size(), 11);
+  QVERIFY(QFileInfo::exists(directory.filePath(QStringLiteral("20261128120000-11.log"))));
 }
 
 QTEST_MAIN(LogTests)

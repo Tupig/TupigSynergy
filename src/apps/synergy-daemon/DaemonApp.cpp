@@ -13,6 +13,7 @@
 #include "base/LogOutputters.h"
 #include "common/ExitCodes.h"
 #include "common/RelativePath.h"
+#include "common/RuntimeLogPaths.h"
 #include "common/Settings.h"
 #include "ipc/DaemonIpcServer.h"
 
@@ -99,7 +100,7 @@ void DaemonApp::applyWatchdogCommand(const QString &launchId)
   }
 
   const auto corePath = QStringLiteral("%1/%2").arg(QCoreApplication::applicationDirPath(), kCoreBinName);
-  auto command = QStringLiteral("\"%1\" %2 --settings \"%3\"").arg(corePath, modeArg, configPath);
+  auto command = QStringLiteral("\"%1\" %2 --settings \"%3\" --service-launch").arg(corePath, modeArg, configPath);
   if (!launchId.isEmpty())
     command += QStringLiteral(" --service-launch-id ") + launchId;
 
@@ -278,6 +279,9 @@ int DaemonApp::mainLoop()
 
 QString DaemonApp::logFilename()
 {
+  if (synergy::usesManagedRuntimeLogs()) {
+    return synergy::managedRuntimeLogDirectory(synergy::RuntimeLogRole::Daemon);
+  }
   return Settings::value(Settings::Daemon::LogFile).toString();
 }
 
@@ -297,8 +301,16 @@ void DaemonApp::initLogging()
   }
 #endif
 
-  m_fileLogOutputter = new FileLogOutputter(qPrintable(logFilename())); // NOSONAR - Adopted by `Log`
-  CLOG->insert(m_fileLogOutputter);
+  const auto file = logFilename();
+  if (file.isEmpty()) {
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "could not prepare the service log directory"));
+  }
+
+  m_fileLogOutputter = new FileLogOutputter(
+      file, synergy::usesManagedRuntimeLogs() ? FileLogOutputter::Mode::SegmentedDirectory
+                                              : FileLogOutputter::Mode::SingleFile
+  ); // NOSONAR - Adopted by `Log`
+  CLOG->insert(m_fileLogOutputter, true);
 }
 
 void DaemonApp::showConsole()

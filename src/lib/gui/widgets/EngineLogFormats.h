@@ -9,6 +9,11 @@
 namespace synergy::gui {
 // Source templates for display translation. / 用于显示翻译的源模板。
 inline constexpr const char *kEngineLogFormats[] = {
+    QT_TRANSLATE_NOOP("EngineLogFormats", "connection %zu: starting"),
+    QT_TRANSLATE_NOOP("EngineLogFormats", "connection %zu: transport ready, waiting for the server greeting"),
+    QT_TRANSLATE_NOOP("EngineLogFormats", "connection %zu: sharing handshake complete"),
+    QT_TRANSLATE_NOOP("EngineLogFormats", "connection %zu: server greeting accepted"),
+    QT_TRANSLATE_NOOP("EngineLogFormats", "connection %zu: timed out"),
     QT_TRANSLATE_NOOP("EngineLogFormats", "%s ipc client hello missing version"),
     QT_TRANSLATE_NOOP("EngineLogFormats", "%s ipc client version mismatch (client: %s, server: %s)"),
     QT_TRANSLATE_NOOP("EngineLogFormats", "%s ipc command before hello: %s"),

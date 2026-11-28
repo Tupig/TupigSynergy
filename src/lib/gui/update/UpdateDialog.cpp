@@ -8,6 +8,7 @@
 
 #include "UpdateDownloader.h"
 #include "common/VersionInfo.h"
+#include "gui/Logger.h"
 #include "gui/StyleUtils.h"
 #include "gui/widgets/PageHost.h"
 #include "platform/UpdateInstaller.h"
@@ -297,8 +298,10 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
   m_rateTimer.setInterval(500);
   connect(&m_rateTimer, &QTimer::timeout, this, &UpdateDialog::updateProgressText);
   connect(m_downloader, &UpdateDownloader::usingAlternateSource, this, [this, summaryHeading] {
-    if (m_busy)
+    if (m_busy) {
+      qCInfo(updateLog).noquote() << tr("Trying another GitHub download route…");
       summaryHeading->setText(tr("Trying another GitHub download route…"));
+    }
   });
   connect(m_downloader, &UpdateDownloader::progress, this, [this](qint64 received, qint64 total) {
     const auto now = m_downloadTimer.elapsed();
@@ -319,10 +322,12 @@ UpdateDialog::UpdateDialog(const UpdateInfo &info, QWidget *parent, const Downlo
     m_progress->setRange(0, 100);
     m_progress->setValue(100);
     m_progressText->setVisible(true);
+    qCInfo(updateLog).noquote() << tr("Download verified. Ready to install.");
     m_progressText->setText(tr("Download verified. Ready to install."));
     m_install->setText(tr("Install Now"));
   });
   connect(m_downloader, &UpdateDownloader::failed, this, [this](const QString &reason) {
+    qCWarning(updateLog).noquote() << tr("Update Failed") << reason;
     setBusy(false);
     m_progress->parentWidget()->show();
     m_progressText->setText(reason);
@@ -423,6 +428,7 @@ void UpdateDialog::updateProgressText()
 
 void UpdateDialog::startDownload()
 {
+  qCInfo(updateLog).noquote() << tr("Downloading update %1").arg(m_info.version);
   m_downloadTimer.start();
   m_received = 0;
   m_total = -1;
@@ -434,6 +440,7 @@ void UpdateDialog::startDownload()
   if (!m_downloadDirectory.isValid()) {
     setBusy(false);
     m_progressText->parentWidget()->show();
+    qCWarning(updateLog).noquote() << tr("Could not create a temporary download directory.");
     m_progressText->setText(tr("Could not create a temporary download directory."));
     m_progressText->show();
     return;
@@ -450,6 +457,7 @@ void UpdateDialog::installDownloaded(const QString &filePath)
     m_downloadedPath.clear();
     setBusy(false);
     m_progress->parentWidget()->show();
+    qCWarning(updateLog).noquote() << tr("The downloaded update changed. Download it again.");
     m_progressText->setText(tr("The downloaded update changed. Download it again."));
     m_progressText->show();
     m_install->setText(tr("Download and Install"));
@@ -463,6 +471,7 @@ void UpdateDialog::installDownloaded(const QString &filePath)
   const auto result =
       synergy::platform::launchUpdateInstaller(filePath, m_info.asset.sha256, m_downloadDirectory, &error);
   if (result == synergy::platform::UpdateInstallResult::Launched) {
+    qCInfo(updateLog).noquote() << tr("The update was handed off to the system installer.");
     // 安装器异步读取包；交接后保留独立临时目录，避免退出时删除安装源。
     if (QFileInfo(filePath).absolutePath() == QDir(m_downloadDirectory.path()).absolutePath())
       m_downloadDirectory.setAutoRemove(false);
@@ -481,6 +490,7 @@ void UpdateDialog::setInstallPreparation(std::function<bool()> preparation)
 
 void UpdateDialog::showInstallFailure(const QString &error)
 {
+  qCWarning(updateLog).noquote() << tr("Update Failed") << error;
   m_progressText->setText(error);
   m_progressText->parentWidget()->show();
   m_progressText->show();

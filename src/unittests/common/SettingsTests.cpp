@@ -7,6 +7,7 @@
 #include "SettingsTests.h"
 
 #include "common/Constants.h"
+#include "common/RuntimeLogPaths.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -15,6 +16,11 @@
 
 void SettingsTests::initTestCase()
 {
+  if (synergy::usesManagedRuntimeLogs()) {
+    QCOMPARE(Settings::defaultValue(Settings::Log::Level).toString(), QStringLiteral("DEBUG"));
+    QCOMPARE(Settings::defaultValue(Settings::Daemon::LogLevel).toString(), QStringLiteral("DEBUG"));
+    QVERIFY(Settings::defaultValue(Settings::Log::GuiDebug).toBool());
+  }
   QFile oldSettings(m_settingsFile);
   if (oldSettings.exists())
     oldSettings.remove();
@@ -67,6 +73,11 @@ void SettingsTests::checkValidSettings()
     QCOMPARE(Settings::defaultValue(setting).toString(), value);
 
     Settings::setValue(setting, "NEW_VALUE");
+    if (synergy::usesManagedRuntimeLogs() && (setting == Settings::Log::File || setting == Settings::Log::ToFile)) {
+      QCOMPARE(spy.count(), 0);
+      QCOMPARE(Settings::value(setting).toString(), value);
+      continue;
+    }
     QCOMPARE(spy.count(), 1);
     QCOMPARE(qvariant_cast<QString>(spy.first().at(0)), setting);
     QCOMPARE(Settings::value(setting).toString(), "NEW_VALUE");
