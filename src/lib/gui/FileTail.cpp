@@ -12,77 +12,104 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
-#include <QObject>
 #include <QTextStream>
 
 namespace synergy::gui {
 
+namespace {
+QByteArray tailAnchor(QFile &file, qint64 position)
+{
+  constexpr qint64 kAnchorBytes = 128;
+  const auto count = qMin(position, kAnchorBytes);
+  return file.seek(position - count) ? file.read(count) : QByteArray{};
+}
+} // namespace
+
 FileTail::FileTail(const QString &filePath, QObject *parent) : QObject(parent), m_watcher(new QFileSystemWatcher(this))
 {
+  connect(m_watcher, &QFileSystemWatcher::fileChanged, this, &FileTail::handlePathChanged);
+  connect(m_watcher, &QFileSystemWatcher::directoryChanged, this, &FileTail::handlePathChanged);
   setWatchedFile(filePath);
-  connect(m_watcher, &QFileSystemWatcher::fileChanged, this, &FileTail::handleFileChanged);
 }
 
 void FileTail::setWatchedFile(const QString &filePath)
 {
-  if (filePath.isEmpty())
+  if (filePath.isEmpty()) {
     return;
-
-  if (m_file.fileName() == filePath)
-    return;
-
-  if (!m_file.fileName().isEmpty()) {
-    m_watcher->removePath(m_file.fileName());
-    m_file.close();
-    m_file.setFileName(filePath);
   }
-
-  m_file.setFileName(filePath);
-  if (!m_file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-    qCritical().noquote() << QCoreApplication::translate("GuiLogMessages", "failed to open file for tail:") << filePath;
+  const QFileInfo pathInfo(filePath);
+  const auto absolutePath = pathInfo.absoluteFilePath();
+  if (m_filePath == absolutePath) {
     return;
   }
 
-  qDebug() << "starting file tail:" << filePath;
-  m_watcher->addPath(filePath);
-  m_lastPos = m_file.size();
+  if (m_watcher->files().contains(m_filePath)) {
+    m_watcher->removePath(m_filePath);
+  }
+  if (m_watcher->directories().contains(m_directoryPath)) {
+    m_watcher->removePath(m_directoryPath);
+  }
+  m_filePath = absolutePath;
+  m_directoryPath = pathInfo.absolutePath();
+  m_lastPos = 0;
+  m_tailAnchor.clear();
+
+  // A service can create a new log after the old file's watch has been removed.
+  m_watcher->addPath(m_directoryPath);
+  if (pathInfo.isFile()) {
+    QFile file(m_filePath);
+    if (file.open(QIODevice::ReadOnly)) {
+      m_lastPos = file.size();
+      m_tailAnchor = tailAnchor(file, m_lastPos);
+    } else {
+      qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "failed to open file for tail:")
+                           << m_filePath;
+    }
+    m_watcher->addPath(m_filePath);
+  }
+  qDebug() << "starting file tail:" << m_filePath;
 }
 
-void FileTail::handleFileChanged(const QString &path)
+void FileTail::handlePathChanged(const QString &path)
 {
-  if (path != m_file.fileName()) {
+  const bool watched = m_watcher->files().contains(m_filePath);
+  if (path != m_filePath && (path != m_directoryPath || watched)) {
     return;
   }
-
-  // the watcher drops the path when the file is renamed or removed (log
-  // rotation); re-arm it so a recreated file is watched again
-  if (!m_watcher->files().contains(path)) {
-    m_watcher->addPath(path);
+  if (!QFileInfo(m_filePath).isFile()) {
+    m_lastPos = 0;
+    m_tailAnchor.clear();
+    return;
+  }
+  if (!watched) {
+    m_lastPos = 0;
+    m_tailAnchor.clear();
+    m_watcher->addPath(m_filePath);
   }
 
-  // rotation leaves this handle on the renamed file and truncation resets a
-  // same-name file below our position; reopen and start from the beginning in
-  // both cases so the recreated file is read
-  const bool replaced = !QFileInfo::exists(path) || QFileInfo(path).size() < m_file.size();
-  if (replaced || m_file.size() < m_lastPos) {
-    m_file.close();
-    if (!m_file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-      qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "failed to reopen tailed file:") << path;
-      return;
-    }
+  // Close the read handle after every notification so the service can rotate it.
+  QFile file(m_filePath);
+  if (!file.open(QIODevice::ReadOnly)) {
+    qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "failed to reopen tailed file:")
+                         << m_filePath;
+    return;
+  }
+  // Some watcher backends report a same-path replacement as a modification.
+  // Check the bytes preceding the old offset before resuming in the new file.
+  if (file.size() < m_lastPos || (!m_tailAnchor.isEmpty() && tailAnchor(file, m_lastPos) != m_tailAnchor)) {
     m_lastPos = 0;
   }
-
-  if (!m_file.seek(m_lastPos)) {
-    qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "failed to seek in tailed file:") << path;
+  if (!file.seek(m_lastPos)) {
+    qWarning().noquote() << QCoreApplication::translate("GuiLogMessages", "failed to seek in tailed file:")
+                         << m_filePath;
     return;
   }
-  QTextStream stream(&m_file);
+  QTextStream stream(&file);
   while (!stream.atEnd()) {
-    QString line = stream.readLine();
-    Q_EMIT newLine(line);
+    Q_EMIT newLine(stream.readLine());
   }
-  m_lastPos = m_file.pos();
+  m_lastPos = file.pos();
+  m_tailAnchor = tailAnchor(file, m_lastPos);
 }
 
 } // namespace synergy::gui
