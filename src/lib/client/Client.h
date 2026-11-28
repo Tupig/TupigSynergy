@@ -202,6 +202,7 @@ private:
   EventQueueTimer *m_timer = nullptr;
   ServerProxy *m_server = nullptr;
   bool m_ready = false;
+  bool m_waitingForServerGreeting = false;
   bool m_active = false;
   bool m_suspended = false;
   bool m_connectOnResume = false;
@@ -215,6 +216,7 @@ private:
   size_t m_maximumClipboardReceiveSize = 0;
   size_t m_maximumClipboardSize = INT_MAX;
   size_t m_resolvedAddressesCount = 0;
+  size_t m_connectionAttempt = 0;
 
   //! Network interface to bind to; empty leaves the choice to the OS.
   std::string m_connectInterface;

@@ -296,6 +296,7 @@ void ServerTests::loopbackClientSwitchesAndReconnects()
         handshakeCompleted,
         connectionFailure.isEmpty() ? "Timed out waiting for the client handshake" : qPrintable(connectionFailure)
     );
+    QCOMPARE(listener.connectionCount(), 1u);
     QCOMPARE(secondaryPlatform->enables, cycle);
 
     IPrimaryScreen::MotionInfo edge{799, 300};
@@ -330,6 +331,7 @@ void ServerTests::loopbackClientSwitchesAndReconnects()
         connectionFailure.isEmpty() ? "Timed out waiting for both peers to disconnect" : qPrintable(connectionFailure)
     );
     QVERIFY(!client.isConnected());
+    QCOMPARE(listener.connectionCount(), 0u);
     QCOMPARE(secondaryPlatform->disables, cycle);
   }
 }

@@ -54,6 +54,11 @@ public:
   bool adoptedStream() const;
 
 protected:
+  void adoptStream() noexcept
+  {
+    m_adopted = true;
+  }
+
   //! Handle events from source stream
   /*!
   Does the event filtering.  The default simply dispatches an event
