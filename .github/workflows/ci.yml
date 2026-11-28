@@ -583,6 +583,11 @@ jobs:
         with:
           expected-arch: x64
 
+      - name: Verify Windows MSI installation and removal
+        shell: cmd
+        timeout-minutes: 5
+        run: scripts\ci\verify-msi-install-layout.bat --disposable build "%RUNNER_TEMP%\TuPig Synergy MSI Test" build\r3-test-evidence\windows-msi-lifecycle
+
       - name: Upload package
         # 每次构建都上传产物，便于直接下载 GitHub 构建版本做验收。
         if: ${{ success() }}
