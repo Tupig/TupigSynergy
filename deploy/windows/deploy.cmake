@@ -104,7 +104,7 @@ set(CPACK_PACKAGE_EXECUTABLES "synergy" "${CMAKE_PROJECT_PROPER_NAME}")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CMAKE_PROJECT_PROPER_NAME}")
 
 # Wix Specific Values
-set(CPACK_WIX_UPGRADE_GUID "027D1C8A-E7A5-4754-BB93-B2D45BFDBDC8")
+set(CPACK_WIX_UPGRADE_GUID "${SYNERGY_WINDOWS_UPGRADE_GUID}")
 # Chinese-first product: the WiX 5.0.2 UI extension ships WixUI_zh-CN.wxl,
 # but the Firewall and Util extensions do not ship a zh-CN catalogue. Supply
 # their strings from WixExtensions.zh-CN.wxl via -loc; the Windows job uploads

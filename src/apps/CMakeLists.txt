@@ -50,6 +50,7 @@ endif()
 
 add_subdirectory(synergy-core)
 add_subdirectory(synergy-daemon) #Only used on windows
+add_subdirectory(synergy-uninstall) #Only used on windows
 if(BUILD_GUI)
   add_subdirectory(synergy-gui)
 endif()

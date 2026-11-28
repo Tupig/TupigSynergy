@@ -67,6 +67,7 @@ I18N::I18N(QObject *parent) : QObject{parent}
 
   const QList<QDir> qtTrDirs{
       {QStringLiteral("%1/%2").arg(appDir, QStringLiteral("translations"))},
+      {QStringLiteral("%1/../translations").arg(appDir)},
       {QStringLiteral("%1/../Resources/translations").arg(appDir)},
       {QStringLiteral("%1/../qt-depends/translations").arg(appDir)},
       {QStringLiteral("%1/../share/%2/translations").arg(appDir, qt6)},
