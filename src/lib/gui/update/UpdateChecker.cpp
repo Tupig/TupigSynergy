@@ -8,6 +8,7 @@
 
 #include "UpdateVersion.h"
 #include "common/VersionInfo.h"
+#include "gui/Logger.h"
 
 #include <QFile>
 #include <QHash>
@@ -174,6 +175,7 @@ QString UpdateChecker::sanitizedNotes(const QString &notes)
 
 void UpdateChecker::checkForUpdates()
 {
+  qCDebug(updateLog).noquote() << tr("Checking for updates…");
   if (m_reply != nullptr) {
     auto *previous = m_reply;
     m_reply = nullptr;

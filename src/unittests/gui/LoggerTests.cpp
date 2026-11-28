@@ -10,23 +10,23 @@
 
 #include "gui/Logger.h"
 
+#include "common/RuntimeContext.h"
+#include "common/RuntimeLogPaths.h"
+
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QSignalSpy>
 
 using namespace synergy::gui;
 
 void LoggerTests::initTestCase()
 {
-  QDir dir;
-  QVERIFY(dir.mkpath(m_settingsPath));
-
-  QFile oldSettings(m_settingsFile);
-  if (oldSettings.exists())
-    oldSettings.remove();
-
-  Settings::setSettingsFile(m_settingsFile);
-  Settings::setStateFile(m_stateFile);
+  QVERIFY(m_directory.isValid());
+  const auto root = QFileInfo(m_directory.path()).canonicalFilePath();
+  QVERIFY(synergy::runtime::configureIsolatedRuntime({root, QStringLiteral("synergy-logger-unit-test")}));
+  Settings::setSettingsFile(m_directory.filePath(QStringLiteral("Synergy.conf")));
+  Settings::setStateFile(m_directory.filePath(QStringLiteral("Synergy.state")));
 }
 
 void LoggerTests::newLine()
@@ -40,6 +40,13 @@ void LoggerTests::newLine()
   QCOMPARE(spy.count(), 1);
   QVERIFY(qvariant_cast<QString>(spy.takeFirst().at(0)).contains("test"));
   Settings::setValue(Settings::Log::GuiDebug, false);
+
+  const QDir logs(synergy::managedRuntimeLogDirectory(synergy::RuntimeLogRole::Gui));
+  const auto files = logs.entryList({QStringLiteral("*.log")}, QDir::Files);
+  QCOMPARE(files.size(), 1);
+  QFile log(logs.absoluteFilePath(files.first()));
+  QVERIFY(log.open(QIODevice::ReadOnly));
+  QVERIFY(log.readAll().contains("test"));
 }
 
 void LoggerTests::noNewLine()
@@ -50,6 +57,27 @@ void LoggerTests::noNewLine()
   Settings::setValue(Settings::Log::GuiDebug, false);
   Logger::instance()->handleMessage(QtDebugMsg, "stub", "test");
   QCOMPARE(spy.count(), 0);
+}
+
+void LoggerTests::updateLogRedactsDownloadUrls()
+{
+  QSignalSpy spy(Logger::instance(), &Logger::newLine);
+  Logger::instance()->handleMessage(
+      QtWarningMsg, {}, QStringLiteral("Download failed: https://example.invalid/package?token=fixture-secret"), true
+  );
+  QCOMPARE(spy.count(), 1);
+  const auto visible = spy.takeFirst().first().toString();
+  QVERIFY(visible.contains(QStringLiteral("Download failed: [URL]")));
+  QVERIFY(!visible.contains(QStringLiteral("fixture-secret")));
+
+  const QDir logs(synergy::managedRuntimeLogDirectory(synergy::RuntimeLogRole::Update));
+  const auto files = logs.entryList({QStringLiteral("*.log")}, QDir::Files);
+  QCOMPARE(files.size(), 1);
+  QFile file(logs.absoluteFilePath(files.first()));
+  QVERIFY(file.open(QIODevice::ReadOnly));
+  const auto data = file.readAll();
+  QVERIFY(data.contains("Download failed: [URL]"));
+  QVERIFY(!data.contains("fixture-secret"));
 }
 
 QTEST_MAIN(LoggerTests)

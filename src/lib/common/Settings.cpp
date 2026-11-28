@@ -9,6 +9,7 @@
 
 #include "LogLevel.h"
 #include "NetworkProtocol.h"
+#include "RuntimeLogPaths.h"
 #include "net/TlsPolicy.h"
 #include "synergy/protocol/ProtocolTypes.h"
 
@@ -245,6 +246,16 @@ QString Settings::cleanComputerName(const QString &name)
 
 QVariant Settings::defaultValue(const QString &key)
 {
+  if ((key == Log::File || key == Log::ToFile || key == Log::Level || key == Log::GuiDebug || key == Daemon::LogLevel
+      ) &&
+      !synergy::runtime::isIsolatedRuntime() && synergy::usesManagedRuntimeLogs()) {
+    if (key == Log::File)
+      return synergy::managedRuntimeLogDirectory(synergy::RuntimeLogRole::Core);
+    if (key == Log::ToFile || key == Log::GuiDebug)
+      return true;
+    return LogLevel::toOption(LogLevel::Level::Debug);
+  }
+
   if (m_defaultFalseValues.contains(key))
     return false;
 
@@ -389,6 +400,11 @@ QString Settings::logLevelText()
 
 void Settings::setValue(const QString &key, const QVariant &value)
 {
+  if ((key == Log::File || key == Log::ToFile) && !synergy::runtime::isIsolatedRuntime() &&
+      synergy::usesManagedRuntimeLogs()) {
+    return;
+  }
+
   const bool useState = Settings::m_stateKeys.contains(key) && !instance()->isPortableMode();
   auto settings = useState ? instance()->m_stateSettings : instance()->m_settings;
 
@@ -410,6 +426,11 @@ void Settings::setValue(const QString &key, const QVariant &value)
 
 QVariant Settings::value(const QString &key)
 {
+  if ((key == Log::File || key == Log::ToFile) && !synergy::runtime::isIsolatedRuntime() &&
+      synergy::usesManagedRuntimeLogs()) {
+    return defaultValue(key);
+  }
+
   const bool useState = Settings::m_stateKeys.contains(key) && !instance()->isPortableMode();
   auto settings = useState ? instance()->m_stateSettings : instance()->m_settings;
   return settings->value(key, defaultValue(key));

@@ -17,12 +17,15 @@ private Q_SLOTS:
   void printWithErrorValidOutput();
   void printTestPrintLevel();
   void printTestWithArgs();
+  void printPreservesBoundaryAndBoundsLongRecords();
   void printTestLogString();
   void printLevelToHigh();
   void printInfoWithFileAndLine();
   void printErrWithFileAndLine();
   void fileLogAppendsAndChangesDestination();
   void fileLogRotatesAndReopens();
+  void segmentedLogRotatesAtSizeAndMidnight();
+  void segmentedLogPrunesOnlyManagedHistory();
 
 private:
   Log m_log;

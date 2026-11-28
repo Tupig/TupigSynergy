@@ -90,6 +90,8 @@ void Client::connect(size_t addressIndex)
     return;
   }
 
+  ++m_connectionAttempt;
+  LOG_DEBUG("connection %zu: starting", m_connectionAttempt);
   const auto hostname = QString::fromStdString(m_serverAddress.getHostname());
   if (hostname.isEmpty()) {
     continueConnect(addressIndex);
@@ -210,6 +212,7 @@ void Client::handshakeComplete()
 {
   cleanupTimer();
   m_ready = true;
+  LOG_DEBUG("connection %zu: sharing handshake complete", m_connectionAttempt);
   m_screen->enable();
   sendEvent(EventTypes::ClientConnected);
 }
@@ -567,11 +570,13 @@ void Client::cleanupStream()
 {
   delete m_stream;
   m_stream = nullptr;
+  m_waitingForServerGreeting = false;
 }
 
 void Client::handleConnected()
 {
-  LOG_VERBOSE("connected, waiting for hello");
+  LOG_DEBUG("connection %zu: transport ready, waiting for the server greeting", m_connectionAttempt);
+  m_waitingForServerGreeting = true;
   cleanupConnecting();
   setupConnection();
 
@@ -597,12 +602,16 @@ void Client::handleConnectionFailed(const Event &event)
 void Client::handleConnectTimeout()
 {
   const bool waitingForOptions = m_server != nullptr;
+  const bool waitingForGreeting = m_waitingForServerGreeting;
   cleanupTimer();
   cleanupScreen();
   cleanupConnecting();
   cleanupConnection();
-  LOG_VERBOSE("connection timed out");
-  sendConnectionFailedEvent(waitingForOptions ? "Timed out waiting for sharing options" : "Timed out");
+  LOG_DEBUG("connection %zu: timed out", m_connectionAttempt);
+  sendConnectionFailedEvent(
+      waitingForOptions ? "Timed out waiting for sharing options"
+                        : (waitingForGreeting ? "Timed out waiting for the server greeting" : "Timed out")
+  );
 }
 
 void Client::handleOutputError()
@@ -687,7 +696,7 @@ void Client::handleHello()
   std::string helloBackMessage = protocolName + kMsgHelloBackArgs;
   ProtocolUtil::writef(m_stream, helloBackMessage.c_str(), kProtocolMajorVersion, kProtocolMinorVersion, &m_name);
 
-  // now connected but waiting to complete handshake
+  LOG_DEBUG("connection %zu: server greeting accepted", m_connectionAttempt);
   setupScreen();
   cleanupTimer();
   setupTimer();

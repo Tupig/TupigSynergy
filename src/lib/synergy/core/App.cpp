@@ -13,6 +13,7 @@
 #include "base/Log.h"
 #include "base/LogOutputters.h"
 #include "common/ExitCodes.h"
+#include "common/RuntimeLogPaths.h"
 #include "common/Settings.h"
 #include "mt/ThreadException.h"
 
@@ -20,6 +21,8 @@
 #include "base/IEventQueue.h"
 #endif
 
+#include <QDir>
+#include <QFileInfo>
 #include <stdexcept>
 
 #if defined(Q_OS_MAC)
@@ -111,22 +114,28 @@ void App::run(QThread &coreThread)
 
 void App::setupFileLogging()
 {
-  if (Settings::value(Settings::Log::ToFile).toBool()) {
-    const auto file = Settings::value(Settings::Log::File).toString();
-    m_fileLog = new FileLogOutputter(file); // NOSONAR - Adopted by `Log`
-    CLOG->insert(m_fileLog);
-    LOG_VERBOSE("logging to file (%s) enabled", qPrintable(file));
+  if (m_fileLog || m_serviceLaunch) {
+    return;
   }
-}
 
-void App::loggingFilterWarning() const
-{
-  if ((CLOG->getFilter() > CLOG->getConsoleMaxLevel()) && (Settings::value(Settings::Log::ToFile).toBool())) {
-    LOG_WARN(
-        "log messages above %s are NOT sent to console (use file logging)",
-        qPrintable(LogLevel::toOption(CLOG->getConsoleMaxLevel()))
-    );
+  const bool managed = synergy::usesManagedRuntimeLogs();
+  if (!managed && !Settings::value(Settings::Log::ToFile).toBool()) {
+    return;
   }
+
+  const auto file = managed ? synergy::managedRuntimeLogDirectory(synergy::RuntimeLogRole::Core)
+                            : Settings::value(Settings::Log::File).toString();
+  if (file.isEmpty() || (managed && !QDir().mkpath(file))) {
+    LOG_WARN(QT_TRANSLATE_NOOP("EngineLogMessages", "could not prepare the core log directory"));
+    return;
+  }
+
+  m_fileLog = new FileLogOutputter(
+      file, managed ? FileLogOutputter::Mode::SegmentedDirectory : FileLogOutputter::Mode::SingleFile
+  ); // NOSONAR - Adopted by `Log`
+  // A file error must not interrupt console messages or the GUI's log stream.
+  CLOG->insert(m_fileLog, true);
+  LOG_DEBUG(QT_TRANSLATE_NOOP("EngineLogFormats", "core file log ready: %s"), qUtf8Printable(file));
 }
 
 void App::initApp()
@@ -141,7 +150,12 @@ void App::initApp()
     );
     m_bye(s_exitArgs);
   }
-  loggingFilterWarning();
+  // Managed logs can be shared for diagnosis. Verbose traces can contain raw
+  // protocol fields and key IDs. Keep the complete DEBUG level for these logs.
+  if (synergy::usesManagedRuntimeLogs() && CLOG->getFilter() > LogLevel::Level::Debug) {
+    CLOG->setFilter(QStringLiteral("DEBUG"));
+    LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "managed core logging is limited to DEBUG"));
+  }
 
   // setup file logging after parsing args
   setupFileLogging();

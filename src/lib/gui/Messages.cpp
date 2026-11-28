@@ -94,7 +94,9 @@ QString fileLine(const QMessageLogContext &context)
 void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &message)
 {
   const auto fileLine = messages::fileLine(context);
-  Logger::instance()->handleMessage(type, fileLine, message);
+  Logger::instance()->handleMessage(
+      type, fileLine, message, qstrcmp(context.category, updateLog().categoryName()) == 0
+  );
 
   if (type == QtFatalMsg || type == QtCriticalMsg) {
     if (QThread::currentThread() == QCoreApplication::instance()->thread()) {

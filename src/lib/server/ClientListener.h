@@ -12,6 +12,7 @@
 #include "server/Config.h"
 
 #include <deque>
+#include <map>
 #include <memory>
 #include <set>
 
@@ -23,6 +24,7 @@ class ISocketFactory;
 class Server;
 class IEventQueue;
 class IDataSocket;
+class ServerTests;
 
 class ClientListener
 {
@@ -65,6 +67,13 @@ public:
   //@}
 
 private:
+  friend class ServerTests;
+
+  std::size_t connectionCount() const
+  {
+    return m_clientSockets.size() + *m_activeConnectionCount;
+  }
+
   // client connection event handlers
   void handleClientConnecting();
   void handleClientAccepted(IDataSocket *socket);
@@ -81,7 +90,7 @@ private:
 private:
   using NewClients = std::set<ClientProxyUnknown *>;
   using WaitingClients = std::deque<ClientProxy *>;
-  using ClientSockets = std::set<IDataSocket *>;
+  using ClientSockets = std::map<IDataSocket *, std::unique_ptr<IDataSocket>>;
 
   std::unique_ptr<IListenSocket> m_listen;
   std::unique_ptr<ISocketFactory> m_socketFactory;
@@ -91,5 +100,6 @@ private:
   IEventQueue *m_events;
   SecurityLevel m_securityLevel;
   ClientSockets m_clientSockets;
+  std::shared_ptr<std::size_t> m_activeConnectionCount = std::make_shared<std::size_t>(0);
   NetworkAddress m_address;
 };

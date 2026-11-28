@@ -110,7 +110,7 @@ TransferState ClipboardChunk::assemble(
     bool ok = false;
     const auto expected = QString::fromStdString(data).toULongLong(&ok);
     if (!ok || expected > std::numeric_limits<size_t>::max()) {
-      LOG_ERR("clipboard invalid size header: %s", data.c_str());
+      LOG_ERR("clipboard size header could not be parsed (%zu bytes)", data.size());
       reset();
       return Error;
     }

@@ -285,7 +285,9 @@ If you dismissed or declined a fingerprint, use **Start** or **Restart** to revi
 [2026-10-09T16:26:01.000] ERROR: QtDataSocket: peer has no tls certificate
 ```
 
-The level token is `INFO`, `WARNING`, `ERROR`, `DEBUG`, or `VERBOSE`. The second sample line is an error: a TLS peer with no certificate is disconnected, not accepted. File logging is off until `[log] toFile=true`. The default path is `~/synergy.log` (`kAppId`), not `synergy-debug.log`. The GUI log panel shows the same lines when file logging is off.
+The level token is `INFO`, `WARNING`, `ERROR`, `DEBUG`, or `VERBOSE`. The second sample line is an error: a TLS peer with no certificate is disconnected, not accepted. Installed builds on macOS and Windows enable DEBUG logging by default and respect saved log levels. The logs live in `~/Library/Logs/TuPig Synergy` on macOS and in `logs` inside the Windows installation folder. The GUI, core and update each have a folder. Windows stores service logs in `logs/service` and desktop logs under the current account's folder in `logs/accounts`.
+
+Each managed log is named for the local time it was opened, for example `20261128193827.log`. A new session, a new local day or the next record exceeding 10 MiB starts a new file. The app keeps up to 10 files from the last 14 days per role. On Linux and in Windows portable builds, file logging remains available through `[log] toFile=true`.
 
 ---
 
@@ -296,14 +298,14 @@ The level token is `INFO`, `WARNING`, `ERROR`, `DEBUG`, or `VERBOSE`. The second
 | **GitHub Issues** | Bugs and crashes. Use the bug-report template |
 | **Feature request issue** | Setup questions. Discussions are not enabled |
 | **This directory** | Build, configuration, and this file. The wiki is only a short index |
-| **Logs** | Attach the GUI log, or `~/synergy.log` after `[log] toFile=true` |
+| **Logs** | Attach the relevant GUI, core or service log files |
 
 **Minimal bug report template:**
 ```markdown
 **OS/Version**: Windows 11 23H2 / TuPig Synergy (see `cmake/Version.cmake`)
 **Role**: Server (Desktop) ↔ Client (Laptop)
 **Config**: [paste relevant config sections]
-**Logs**: [GUI log, or ~/synergy.log when toFile is true]
+**Logs**: [relevant log files and approximate time]
 **Steps**: 1. Start server 2. Start client 3. Move mouse to edge
 **Expected**: Cursor moves to client
 **Actual**: Cursor stops at edge, log shows [error]
@@ -372,7 +374,7 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /path/to/synergy-
 | 客户端超时 | 检查保活：`CALV` 每 3 秒 |
 | TLS 握手失败 | 在两台电脑核对各自的证书、私钥和已保存的对方指纹 |
 
-**调试**：打开文件日志。不写 `file` 时默认是 `~/synergy.log`。
+**调试**：安装版默认写入日志。日志目录与切分规则见下文的「日志分析」。
 ```ini
 [log]
 level=DEBUG
@@ -583,7 +585,9 @@ sc delete "TuPig Synergy"
 [2026-10-09T16:26:01.000] ERROR: QtDataSocket: peer has no tls certificate
 ```
 
-级别标记是 `INFO`、`WARNING`、`ERROR`、`DEBUG` 或 `VERBOSE`。示例第二行是错误：TLS 对端没有证书时会断开，不会接受这条连接。`[log] toFile=true` 之前不会写文件。默认路径是 `~/synergy.log`（`kAppId`），不是 `synergy-debug.log`。未写文件时，GUI 日志面板里是同样的行。
+级别标记是 `INFO`、`WARNING`、`ERROR`、`DEBUG` 或 `VERBOSE`。示例第二行是错误：TLS 对端没有证书时会断开，不会接受这条连接。macOS 和 Windows 安装版默认记录一级调试日志，保存过的级别继续生效。macOS 日志在 `~/Library/Logs/TuPig Synergy`，Windows 日志在实际安装目录的 `logs`。界面、核心和更新各有目录。Windows 后台服务使用 `logs/service`，桌面端使用 `logs/accounts` 下自己的账号目录。
+
+文件按本地时间命名，例如 `20261128193827.log`。启动新会话、跨天后的首条记录或下一条会超过 10 MiB 时另起文件。每类最多保留最近 14 天内的 10 份文件。Linux 和 Windows 便携版可通过 `[log] toFile=true` 启用文件日志。
 
 ---
 
@@ -594,14 +598,14 @@ sc delete "TuPig Synergy"
 | **GitHub Issues** | Bug 和崩溃，使用 bug 报告模板 |
 | **功能请求 issue** | 安装和配置问题。Discussions 未开启 |
 | **本目录文档** | 编译、配置和本文。Wiki 只是简短索引 |
-| **日志** | 附上 GUI 日志，或在 `[log] toFile=true` 后附上 `~/synergy.log` |
+| **日志** | 附上对应的界面、核心或服务日志 |
 
 **最小 Bug 报告模板：**
 ```markdown
 **OS/版本**: Windows 11 23H2 / TuPig Synergy（见 `cmake/Version.cmake`）
 **角色**: 服务端(台式机) ↔ 客户端(笔记本)
 **配置**: [粘贴相关配置节]
-**日志**: [GUI 日志，或 toFile 打开后的 ~/synergy.log]
+**日志**: [相关日志文件和大概发生时间]
 **步骤**: 1. 启动服务端 2. 启动客户端 3. 移动鼠标到边缘
 **预期**: 光标进入客户端
 **实际**: 光标停在边缘，日志显示 [error]

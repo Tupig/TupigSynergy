@@ -35,6 +35,29 @@ constexpr size_t kMaxConnections = 32;
 //! tiny, so a short deadline limits how long silent connections hold resources.
 constexpr double kHandshakeTimeoutSeconds = 10.0;
 
+class ListenerPacketStream final : public PacketStreamFilter
+{
+public:
+  ListenerPacketStream(
+      IEventQueue *events, std::unique_ptr<IDataSocket> socket, std::shared_ptr<std::size_t> activeConnectionCount
+  )
+      : PacketStreamFilter(events, socket.get(), false),
+        m_activeConnectionCount(std::move(activeConnectionCount))
+  {
+    adoptStream();
+    socket.release();
+    ++*m_activeConnectionCount;
+  }
+
+  ~ListenerPacketStream() override
+  {
+    --*m_activeConnectionCount;
+  }
+
+private:
+  std::shared_ptr<std::size_t> m_activeConnectionCount;
+};
+
 } // namespace
 
 ClientListener::ClientListener(
@@ -147,13 +170,14 @@ void ClientListener::handleClientConnecting()
   if (!socket)
     return;
 
-  if (m_clientSockets.size() >= kMaxConnections) {
-    LOG_WARN("refusing client connection: %zu connections already active or pending", m_clientSockets.size());
+  const auto connections = connectionCount();
+  if (connections >= kMaxConnections) {
+    LOG_WARN("refusing client connection: %zu connections already active or pending", connections);
     return;
   }
 
-  auto rawSocketPointer = socket.release();
-  m_clientSockets.insert(rawSocketPointer);
+  auto *rawSocketPointer = socket.get();
+  m_clientSockets.emplace(rawSocketPointer, std::move(socket));
 
   m_events->addHandler(
       EventTypes::ClientListenerAccepted, rawSocketPointer->getEventTarget(),
@@ -177,17 +201,21 @@ void ClientListener::handleClientConnecting()
 
 void ClientListener::handleClientAccepted(IDataSocket *socket)
 {
-  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "accepted client connection"));
-
   if (m_server == nullptr) {
     throw SocketException(QStringLiteral("client listener has no server"));
   }
 
-  // filter socket messages, including a packetizing filter
-  synergy::IStream *stream = new PacketStreamFilter(m_events, socket, false);
+  // Transfer the socket and its capacity slot to the protocol stream.
+  auto pending = m_clientSockets.extract(socket);
+  if (pending.empty()) {
+    return;
+  }
+  LOG_INFO(QT_TRANSLATE_NOOP("EngineLogMessages", "accepted client connection"));
+  auto stream = std::make_unique<ListenerPacketStream>(m_events, std::move(pending.mapped()), m_activeConnectionCount);
 
   // create proxy for unknown client
-  auto *client = new ClientProxyUnknown(stream, kHandshakeTimeoutSeconds, m_server, m_events);
+  auto *client = new ClientProxyUnknown(stream.get(), kHandshakeTimeoutSeconds, m_server, m_events);
+  stream.release();
 
   m_newClients.insert(client);
 
@@ -196,15 +224,7 @@ void ClientListener::handleClientAccepted(IDataSocket *socket)
     handleUnknownClient(client);
   });
   m_events->addHandler(EventTypes::ClientProxyUnknownFailure, client, [this, client](const auto &) {
-    auto *filter = dynamic_cast<StreamFilter *>(client->getStream());
-    IDataSocket *socket = nullptr;
-    if (filter && !filter->adoptedStream()) {
-      socket = dynamic_cast<IDataSocket *>(filter->getStream());
-    }
     removeUnknownClient(client);
-    if (socket) {
-      removeClientSocket(socket);
-    }
   });
 }
 
@@ -242,19 +262,7 @@ void ClientListener::handleClientDisconnected(ClientProxy *client)
       m_waitingClients.erase(i);
       m_events->removeHandler(EventTypes::ClientProxyDisconnected, client);
 
-      // pull out the socket before deleting the client so
-      // we know which socket we no longer need; the stream is the
-      // packet filter wrapping the socket, so unwrap it the same way
-      // the unknown-client failure path does
-      auto *filter = dynamic_cast<StreamFilter *>(client->getStream());
-      IDataSocket *socket = nullptr;
-      if (filter && !filter->adoptedStream()) {
-        socket = dynamic_cast<IDataSocket *>(filter->getStream());
-      }
       delete client;
-      if (socket) {
-        removeClientSocket(socket);
-      }
 
       break;
     }
@@ -263,9 +271,12 @@ void ClientListener::handleClientDisconnected(ClientProxy *client)
 
 void ClientListener::removeClientSocket(IDataSocket *socket)
 {
-  m_clientSockets.erase(socket);
+  auto pending = m_clientSockets.find(socket);
+  if (pending == m_clientSockets.end()) {
+    return;
+  }
   m_events->removeHandlers(socket->getEventTarget());
-  delete socket;
+  m_clientSockets.erase(pending);
 }
 
 void ClientListener::cleanupListenSocket()
@@ -275,8 +286,8 @@ void ClientListener::cleanupListenSocket()
 
 void ClientListener::cleanupClientSockets()
 {
-  for (auto client : m_clientSockets) {
-    delete client;
+  for (const auto &client : m_clientSockets) {
+    m_events->removeHandlers(client.first->getEventTarget());
   }
   m_clientSockets.clear();
 }

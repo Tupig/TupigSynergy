@@ -158,8 +158,9 @@ void ClientTests::C05_timeout()
   f.assertReleased(false);
   QVERIFY(!QTest::currentTestFailed());
   QCOMPARE(
-      f.events.state.failures.front().what,
-      stage >= 2 ? QStringLiteral("Timed out waiting for sharing options") : QStringLiteral("Timed out")
+      f.events.state.failures.front().what, stage == 0   ? QStringLiteral("Timed out")
+                                            : stage == 1 ? QStringLiteral("Timed out waiting for the server greeting")
+                                                         : QStringLiteral("Timed out waiting for sharing options")
   );
   f.ready();
   QCOMPARE(f.factoryState->creates, 2);

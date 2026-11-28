@@ -160,7 +160,7 @@ jobs:
           fi
           # Builds and distribution are limited to Windows x64 and macOS arm64.
           windows_targets='[{"name":"windows-2022-x64","runs-on":"windows-2022","vcpkg-triplet":"x64-windows-release","arch":"amd64","qt-version":"6.10.3"}]'
-          macos_targets='[{"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.1","config-args":"-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}]'
+          macos_targets='[{"name":"macos-arm64","expected-arch":"arm64","runs-on":"macos-15","timeout":20,"qt-version":"6.11.3","config-args":"-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0"}]'
           {
             echo "windows_targets=$windows_targets"
             echo "macos_targets=$macos_targets"
@@ -583,6 +583,11 @@ jobs:
         with:
           expected-arch: x64
 
+      - name: Verify Windows MSI installation and removal
+        shell: cmd
+        timeout-minutes: 5
+        run: scripts\ci\verify-msi-install-layout.bat --disposable build "%RUNNER_TEMP%\TuPig Synergy MSI Test" build\r3-test-evidence\windows-msi-lifecycle
+
       - name: Upload package
         # 每次构建都上传产物，便于直接下载 GitHub 构建版本做验收。
         if: ${{ success() }}
@@ -724,7 +729,7 @@ jobs:
         id: get-deps
         uses: ./.github/actions/install-dependencies
         with:
-          qt-version: 6.11.1
+          qt-version: 6.11.3
 
       - name: Configure
         shell: bash

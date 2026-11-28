@@ -6,9 +6,16 @@
 
 #pragma once
 
+#include <QLoggingCategory>
 #include <QObject>
+#include <atomic>
+#include <memory>
+
+class FileLogOutputter;
 
 namespace synergy::gui {
+
+Q_DECLARE_LOGGING_CATEGORY(updateLog)
 
 class Logger : public QObject
 {
@@ -21,7 +28,7 @@ public:
     return &m;
   }
 
-  void handleMessage(const QtMsgType type, const QString &fileLine, const QString &message);
+  void handleMessage(const QtMsgType type, const QString &fileLine, const QString &message, bool update = false);
 
 Q_SIGNALS:
   void newLine(const QString &line);
@@ -30,7 +37,10 @@ private:
   explicit Logger();
   ~Logger() override;
   void settingChanged(const QString &key);
-  bool m_guiDebug = false;
+  std::unique_ptr<FileLogOutputter> m_fileLog;
+  std::unique_ptr<FileLogOutputter> m_updateFileLog;
+  std::atomic_bool m_fileErrorReported{false};
+  std::atomic_bool m_guiDebug{false};
 };
 
 } // namespace synergy::gui

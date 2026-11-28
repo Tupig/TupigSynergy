@@ -821,17 +821,17 @@ void CoreProcess::setupDaemonLogTail(const QString &logPath)
 {
   qDebug() << "daemon log path:" << logPath;
 
-  if (QFileInfo logFile(logPath); !logFile.isFile()) {
-    auto file = QFile(logPath);
-    if (!file.open(QFile::ReadWrite)) {
-      qCritical().noquote() << tr("Cannot write to the service log file: %1").arg(logPath);
-      return;
-    }
-    file.write(""); // Create an empty file
+  // The daemon reports either its managed directory or a legacy file path.
+  if (logPath.isEmpty()) {
+    return;
   }
 
   if (m_daemonFileTail) {
-    m_daemonFileTail->setWatchedFile(logPath);
+    if (QFileInfo(logPath).isDir()) {
+      m_daemonFileTail->setWatchedDirectory(logPath);
+    } else {
+      m_daemonFileTail->setWatchedFile(logPath);
+    }
   } else {
     m_daemonFileTail = new FileTail(logPath, this);
     connect(m_daemonFileTail, &FileTail::newLine, this, &CoreProcess::handleLogLines);

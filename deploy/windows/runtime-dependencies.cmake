@@ -7,7 +7,7 @@ set(SYNERGY_WINDOWS_SYSTEM_DLLS
   comctl32.dll comdlg32.dll crypt32.dll cryptbase.dll cryptsp.dll d2d1.dll
   d3d9.dll d3d11.dll d3d12.dll dbghelp.dll dhcpcsvc.dll dnsapi.dll dwmapi.dll
   dwrite.dll dxcore.dll dxgi.dll gdi32.dll glu32.dll hid.dll icuuc.dll imagehlp.dll imm32.dll iphlpapi.dll
-  hvsifiletrust.dll kernel32.dll kernelbase.dll mpr.dll msimg32.dll msvcrt.dll ncrypt.dll netapi32.dll
+  hvsifiletrust.dll kernel32.dll kernelbase.dll mpr.dll msimg32.dll msi.dll msvcrt.dll ncrypt.dll netapi32.dll
   normaliz.dll ntasn1.dll ntdll.dll ole32.dll oleacc.dll oleaut32.dll opengl32.dll
   pathcch.dll powrprof.dll propsys.dll psapi.dll rpcrt4.dll runtimeobject.dll
   secur32.dll setupapi.dll shcore.dll shell32.dll shlwapi.dll user32.dll

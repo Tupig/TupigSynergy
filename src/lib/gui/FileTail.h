@@ -7,8 +7,9 @@
 
 #pragma once
 
-#include <QFile>
+#include <QByteArray>
 #include <QObject>
+#include <QString>
 
 class QFileSystemWatcher;
 
@@ -21,17 +22,22 @@ class FileTail : public QObject
 public:
   explicit FileTail(const QString &filePath, QObject *parent = nullptr);
   void setWatchedFile(const QString &filePath);
+  void setWatchedDirectory(const QString &directoryPath);
 
 Q_SIGNALS:
   void newLine(const QString &line);
 
 private Q_SLOTS:
-  void handleFileChanged(const QString &);
+  void handlePathChanged(const QString &path);
 
 private:
-  QFile m_file;
   QFileSystemWatcher *m_watcher = nullptr;
-  qint64 m_lastPos;
+  QString m_filePath;
+  QString m_directoryPath;
+  qint64 m_lastPos = 0;
+  QByteArray m_tailAnchor;
+  bool m_directoryMode = false;
+  QString m_currentSegment;
 };
 
 } // namespace synergy::gui

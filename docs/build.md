@@ -6,6 +6,9 @@
 
 ## English
 
+On macOS, the manifest baseline and the native CI package use Qt 6.11.3. It checks the Cocoa event type before reading mouse-click properties, preventing the macOS 27 status-menu exception. The Windows CI Qt version is independent.
+
+
 ### Fixed-version GitHub delivery and translation maintenance
 
 `cmake/Version.cmake` is the committed version authority, matching
@@ -498,6 +501,8 @@ The prebuilt Windows/macOS CI Qt provider carries an exact-version source-notice
 
 Windows packages keep application DLLs and required VC redistributables beside the executables, with Qt plugins selected through package-local `qt.conf`. The portable archive omits the service daemon; the MSI keeps it. Distribute complete packages rather than a GUI executable detached from its runtime files. The current Windows CI Qt deployment selects its Schannel TLS plugin, whose TLS provider is the Windows OS; the application's directly linked OpenSSL runtime is still included. The optional Qt OpenSSL plugin is not forced into the package. PE dependency checks and startup on current CI runners do not establish minimum-Windows-version compatibility.
 
+The MSI places executables and their DLLs under `bin/` and keeps `plugins/`, `translations/`, and `licenses/` alongside it. Run `bin/uninstall.exe` to open Windows Installer removal for that installation. User settings and logs are retained. The portable archive keeps its existing layout with `settings/` beside the executable.
+
 macOS deploys the GUI and `synergy-core`, fixes third-party load commands inside the app, removes build-machine RPATHs, and signs after dependency fixups and resource installation. The verifier copies the DMG's app into a temporary directory, audits all Mach-O files and plugins, starts GUI `QApplication`/Cocoa through `--help`, and connects a real core client to a private TLS loopback server with a disposable identity and trust store. It requires a TLS handshake, client certificate and the core's peer-fingerprint acceptance before stopping without a Synergy greeting. Actual loaded images must remain inside the package or system directories. This is package TLS/startup evidence, not main-window, TCC permission or input-sharing acceptance. Translation catalogues live only in `Contents/Resources/translations`.
 
 The prebuilt Qt 6 OpenSSL plugin resolves OpenSSL ABI 3 dynamically, so import-table scans alone cannot close its dependencies. macOS packaging explicitly copies that runtime and its provider notices into the app when needed; CI installs `openssl@3` for this purpose as part of its prebuilt-Qt dependency exception. Homebrew discovery is restricted to GitHub Actions; local manifest builds use their selected SDK and fail if it lacks a required runtime. The installed app does not depend on Homebrew. A separately statically linked core OpenSSL does not satisfy this plugin runtime. CI runner success also does not establish compatibility with the minimum macOS deployment target; current provider objects may require a newer OS.
@@ -513,6 +518,9 @@ Run package checks with `scripts\ci\verify-package-windows.bat build <x64-or-arm
 ---
 
 ## 中文
+
+macOS 的清单基线和原生 CI 安装包使用 Qt 6.11.3。这个版本会先核对 Cocoa 事件类型再读取鼠标点击属性，修正 macOS 27 状态栏菜单异常。Windows CI 的 Qt 版本独立固定。
+
 
 Windows 最高压缩打包要求 CPack 4.3 或更高版本；现有配置与构建要求保持不变。
 打包前记录 `cmake --version` 与 `cpack --version`，旧 CPack 明确失败关闭，7Z 请求 level 9，
@@ -929,6 +937,8 @@ encoding FAIL count=1 checked=669 allowed=utf-8 mode=fail
 Windows/macOS CI 的预编译 Qt 提供方另附 `qtbase`、`qtsvg` 对应精确版本的源码许可材料。收集器核对 Qt 官方源码归档 SHA256，并记录选定 SDK 提供方哈希、完整许可文本、归属声明及来源记录。CI 在配置前记录原始清单摘要；配置和打包阶段都拒绝之后的清单或许可内容改动。源码归档留在 CI 缓存，本地 manifest 构建继续使用 vcpkg 的许可材料。
 
 Windows 包把应用 DLL 和必需的 VC 可再分发运行库放在可执行文件旁，通过包内 `qt.conf` 定位 Qt 插件。便携包省略服务 daemon，MSI 保留。交付完整软件包，不把 GUI 可执行文件与运行依赖拆开分发。 当前 Windows CI 的 Qt 部署选择 Schannel TLS 插件，其 TLS 提供方属于 Windows 系统；应用直接链接的 OpenSSL 运行库仍随包携带。不强行加入可选的 Qt OpenSSL 插件。PE 依赖检查及当前 CI 系统启动通过，不能证明最低 Windows 版本兼容性。
+
+MSI 把程序和随程序加载的 DLL 放在 `bin/`，其旁分别放置 `plugins/`、`translations/` 和 `licenses/`。运行 `bin/uninstall.exe` 可打开这份安装的 Windows Installer 卸载界面，用户配置和日志会保留。便携包沿用原有布局，`settings/` 与程序仍在同一级。
 
 macOS 同时部署 GUI 与 `synergy-core`，将第三方加载路径改为 app 内部位置，去除构建机 RPATH，并在依赖修复及资源安装后签名。验证器把 DMG 中的 app 复制到临时目录，检查所有 Mach-O 文件和插件，通过 `--help` 启动 GUI 的 `QApplication`/Cocoa，并让真实 core 客户端使用一次性身份和信任库连接私有 TLS 回环服务。必须完成 TLS 握手、客户端证书检查以及 core 对服务端指纹的接受，随后停止且不发送 Synergy 问候消息。实际加载的库必须位于包内或系统目录。这是包 TLS/启动证据，不是主窗口、TCC 权限或输入共享功能验收。翻译文件只放在 `Contents/Resources/translations`。
 

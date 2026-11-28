@@ -11,6 +11,7 @@
 #include "common/Constants.h"
 #include "common/LogLevel.h"
 
+#include <algorithm>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
@@ -140,8 +141,8 @@ Log *Log::getInstance()
 
 void Log::print(const char *file, int line, const char *fmt, ...)
 {
-  const int initBufferSize = 1024;
-  const int bufferResizeScale = 2;
+  constexpr size_t initialCapacity = 1024;
+  constexpr size_t maxCapacity = 256 * 1024;
 
   const auto priority = getPriority(fmt);
   fmt += kPriorityPrefixLength;
@@ -150,21 +151,26 @@ void Log::print(const char *file, int line, const char *fmt, ...)
     return;
   }
 
-  std::vector<char> buffer(initBufferSize);
-  auto length = static_cast<int>(buffer.size());
-
-  while (true) {
+  std::vector<char> buffer(initialCapacity);
+  for (;;) {
     va_list args;
     va_start(args, fmt);
-    int n = vsnprintf(buffer.data(), length, fmt, args);
+    const int required = vsnprintf(buffer.data(), buffer.size(), fmt, args);
     va_end(args);
 
-    if (n < 0 || n > length) {
-      length *= bufferResizeScale;
-      buffer.resize(length);
-    } else {
+    if (required < 0) {
+      return;
+    }
+    if (static_cast<size_t>(required) < buffer.size()) {
       break;
     }
+    if (buffer.size() == maxCapacity) {
+      buffer[maxCapacity - 4] = '.';
+      buffer[maxCapacity - 3] = '.';
+      buffer[maxCapacity - 2] = '.';
+      break;
+    }
+    buffer.resize((std::min)(static_cast<size_t>(required) + 1, maxCapacity));
   }
 
   if (priority == LogLevel::Level::Print) {

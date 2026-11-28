@@ -10,9 +10,12 @@
 
 #include "base/ILogOutputter.h"
 
+#include <QDateTime>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QMutex>
 #include <QString>
+#include <functional>
 //! Stop traversing log chain outputter
 /*!
 This outputter performs no output and returns false from \c write(),
@@ -58,7 +61,14 @@ message is ignored.
 class FileLogOutputter : public ILogOutputter
 {
 public:
+  enum class Mode
+  {
+    SingleFile,
+    SegmentedDirectory
+  };
+  using Clock = std::function<QDateTime()>;
   explicit FileLogOutputter(const QString &logFile);
+  FileLogOutputter(const QString &path, Mode mode, Clock clock = {});
   ~FileLogOutputter() override = default;
 
   // ILogOutputter overrides
@@ -73,6 +83,8 @@ private:
   bool ensureOpen();
   //! Rotate the log file when it exceeds the size limit.
   void rotateIfNeeded();
+  bool ensureSegment(qint64 incomingBytes);
+  void pruneSegments(const QDate &today) const;
 
   // Serialize file writes and path changes across log producers.
   QMutex m_fileMutex;
@@ -81,6 +93,12 @@ private:
   //! Bytes written since the last rotation check; file.size() is only called
   //! once per interval instead of on every line.
   qint64 m_bytesSinceCheck = 0;
+  qint64 m_segmentBytes = 0;
+  Mode m_mode = Mode::SingleFile;
+  QString m_directory;
+  QDate m_segmentDay;
+  QElapsedTimer m_lastFlush;
+  Clock m_clock;
 };
 
 //! Write log to system log

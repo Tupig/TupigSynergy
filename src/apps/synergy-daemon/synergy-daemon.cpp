@@ -109,7 +109,7 @@ int main(int argc, char **argv)
     }
 #endif
 
-    const auto ipcServer = new ipc::DaemonIpcServer(&app, qPrintable(DaemonApp::logFilename())); // NOSONAR - Qt managed
+    const auto ipcServer = new ipc::DaemonIpcServer(&app, DaemonApp::logFilename()); // NOSONAR - Qt managed
     if (!ipcServer->listen()) {
       handleError("ipc server failed to listen");
       return s_exitFailed;

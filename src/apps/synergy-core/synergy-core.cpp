@@ -200,6 +200,9 @@ int main(int argc, char **argv)
 #endif
   QApplication::setApplicationName(QStringLiteral("%1 Core").arg(kAppName));
 
+  coreApp->setServiceLaunch(parser.isServiceLaunch());
+  coreApp->setupFileLogging();
+
   const auto ipcServer = new synergy::core::ipc::CoreIpcServer(&app, parser.serviceLaunchId()); // NOSONAR - Qt managed
   QObject::connect(
       ipcServer, &synergy::core::ipc::IpcServer::stopProcessRequested, coreApp, &App::quit, Qt::DirectConnection
