@@ -20,6 +20,10 @@
 #include "net/SocketException.h"
 #include "net/TlsConfig.h"
 
+#if defined(Q_OS_WIN)
+#include "platform/win32/MSWindowsEventQueueBuffer.h"
+#endif
+
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
@@ -83,6 +87,14 @@ void QtSocketFactoryTests::init()
   qunsetenv("USE_LEGACY_NETWORK");
   delete m_events;
   m_events = new EventQueue();
+#if defined(Q_OS_WIN)
+  m_events->adoptBuffer(new MSWindowsEventQueueBuffer(m_events));
+  m_events->addHandler(EventTypes::System, m_events->getSystemTarget(), [](const auto &event) {
+    const auto *message = static_cast<const MSG *>(event.getData());
+    ::TranslateMessage(message);
+    ::DispatchMessageW(message);
+  });
+#endif
 }
 
 void QtSocketFactoryTests::cleanup()
@@ -128,6 +140,31 @@ void QtSocketFactoryTests::legacyNetworkFlagHonorsEnv()
   qputenv("USE_LEGACY_NETWORK", "0");
   QVERIFY(!shouldUseLegacyNetwork());
 }
+
+#if defined(Q_OS_WIN)
+void QtSocketFactoryTests::windowsQueueRetainsEventsDuringQtDispatch()
+{
+  // This case reads native event IDs itself, so it owns the sole Windows buffer.
+  m_events->adoptBuffer(nullptr);
+  MSWindowsEventQueueBuffer queue(m_events);
+  QVERIFY(queue.addEvent(19));
+  QVERIFY(queue.addEvent(23));
+
+  QCoreApplication::processEvents();
+
+  const auto eventMessage = ::RegisterWindowMessageW(L"SYNERGY_USER_EVENT");
+  QVERIFY(eventMessage != 0);
+  MSG pending{};
+  QVERIFY(!::PeekMessageW(&pending, nullptr, eventMessage, eventMessage, PM_NOREMOVE));
+
+  for (const uint32_t expected : {19u, 23u}) {
+    Event event;
+    uint32_t id = 0;
+    QCOMPARE(queue.getEvent(event, id), IEventQueueBuffer::Type::User);
+    QCOMPARE(id, expected);
+  }
+}
+#endif
 
 void QtSocketFactoryTests::clientBindUsesTheSelectedLocalAddress()
 {

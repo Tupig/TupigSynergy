@@ -37,6 +37,11 @@ create_test(
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/lib/net"
 )
 
+if(WIN32)
+  target_link_libraries(QtSocketFactoryTests platform)
+  set_tests_properties(QtSocketFactoryTests PROPERTIES TIMEOUT 180)
+endif()
+
 create_test(
   NAME QtNetworkTransportTests
   DEPENDS net

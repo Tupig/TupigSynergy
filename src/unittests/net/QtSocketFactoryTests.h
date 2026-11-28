@@ -29,6 +29,9 @@ private Q_SLOTS:
   void cleanup();
 
   void legacyNetworkFlagHonorsEnv();
+#if defined(Q_OS_WIN)
+  void windowsQueueRetainsEventsDuringQtDispatch();
+#endif
   void plaintextRoundTrip();
   void clientBindUsesTheSelectedLocalAddress();
   void refusedConnectionReportsOnce_data();

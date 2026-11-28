@@ -29,6 +29,33 @@ MSWindowsEventQueueBuffer::MSWindowsEventQueueBuffer(IEventQueue *events) : m_ev
   // make sure this thread has a message queue
   MSG dummy;
   PeekMessage(&dummy, nullptr, WM_USER, WM_USER, PM_NOREMOVE);
+
+  m_dispatcher = QAbstractEventDispatcher::instance();
+  if (m_dispatcher) {
+    m_dispatcher->installNativeEventFilter(this);
+  }
+}
+
+MSWindowsEventQueueBuffer::~MSWindowsEventQueueBuffer()
+{
+  if (m_dispatcher) {
+    m_dispatcher->removeNativeEventFilter(this);
+  }
+}
+
+bool MSWindowsEventQueueBuffer::nativeEventFilter(const QByteArray &eventType, void *message, qintptr *)
+{
+  if (eventType != "windows_generic_MSG")
+    return false;
+  const auto &msg = *static_cast<const MSG *>(message);
+  if (msg.hwnd || (msg.message != m_userEvent && (m_daemonQuit == 0 || msg.message != m_daemonQuit)))
+    return false;
+
+  // Qt pumps the same Win32 queue for socket notifications. It removes
+  // private thread messages too, but DispatchMessage cannot deliver them
+  // without a window. Preserve them for the core's normal event dispatch.
+  m_deferredMessages.push(msg);
+  return true;
 }
 
 void MSWindowsEventQueueBuffer::waitForEvent(double timeout)
@@ -37,7 +64,7 @@ void MSWindowsEventQueueBuffer::waitForEvent(double timeout)
   // MsgWaitForMultipleObjects() will block even if the queue isn't
   // empty if the messages in the queue were there before the last
   // call to GetMessage()/PeekMessage().
-  if (HIWORD(GetQueueStatus(m_supportedMessages)) != 0) {
+  if (!isEmpty()) {
     return;
   }
 
@@ -65,18 +92,13 @@ IEventQueueBuffer::Type MSWindowsEventQueueBuffer::getEvent(Event &event, uint32
   // if a message has been sent to our window but GetMessage will
   // dispatch that message behind our backs and block.  PeekMessage
   // will also dispatch behind our backs but won't block.
-  if (!PeekMessage(&m_event, nullptr, 0, 0, PM_NOREMOVE) && !PeekMessage(&m_event, (HWND)-1, 0, 0, PM_NOREMOVE)) {
+  if (!m_deferredMessages.empty()) {
+    m_event = m_deferredMessages.front();
+    m_deferredMessages.pop();
+  } else if (!PeekMessage(&m_event, nullptr, 0, 0, PM_REMOVE)) {
     return Unknown;
   }
-
-  // BOOL.  yeah, right.
-  BOOL result = GetMessage(&m_event, nullptr, 0, 0);
-  if (result == -1) {
-    return Unknown;
-  } else if (result == 0) {
-    event = Event(EventTypes::Quit);
-    return System;
-  } else if (m_daemonQuit != 0 && m_event.message == m_daemonQuit) {
+  if (m_event.message == WM_QUIT || (m_daemonQuit != 0 && m_event.message == m_daemonQuit)) {
     event = Event(EventTypes::Quit);
     return System;
   } else if (m_event.message == m_userEvent) {
@@ -95,5 +117,5 @@ bool MSWindowsEventQueueBuffer::addEvent(uint32_t dataID)
 
 bool MSWindowsEventQueueBuffer::isEmpty() const
 {
-  return (HIWORD(GetQueueStatus(m_supportedMessages)) == 0);
+  return m_deferredMessages.empty() && HIWORD(GetQueueStatus(m_supportedMessages)) == 0;
 }
