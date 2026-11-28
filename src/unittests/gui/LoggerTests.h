@@ -15,6 +15,7 @@ private Q_SLOTS:
   void initTestCase();
   void newLine();
   void noNewLine();
+  void updateLogRedactsDownloadUrls();
 
 private:
   QTemporaryDir m_directory;

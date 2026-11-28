@@ -12,6 +12,7 @@
 #include <QDateTime>
 #include <QDir>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QTextStream>
 #include <QTime>
 
@@ -90,7 +91,16 @@ void Logger::handleMessage(const QtMsgType type, const QString &fileLine, const 
     break;
   }
 
-  const auto logLine = printLine(out, typeString, message, fileLine);
+  auto displayMessage = message;
+  if (update) {
+    // Network error strings can contain a redirected download URL with a
+    // short-lived authorization query. Keep the error text in diagnostic logs.
+    static const QRegularExpression url(
+        QStringLiteral(R"(https?://[^\s<>"']+)"), QRegularExpression::CaseInsensitiveOption
+    );
+    displayMessage.replace(url, QStringLiteral("[URL]"));
+  }
+  const auto logLine = printLine(out, typeString, displayMessage, fileLine);
   auto *output = update && m_updateFileLog ? m_updateFileLog.get() : m_fileLog.get();
   auto level = LogLevel::Level::Info;
   switch (type) {

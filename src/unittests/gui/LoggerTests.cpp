@@ -59,4 +59,25 @@ void LoggerTests::noNewLine()
   QCOMPARE(spy.count(), 0);
 }
 
+void LoggerTests::updateLogRedactsDownloadUrls()
+{
+  QSignalSpy spy(Logger::instance(), &Logger::newLine);
+  Logger::instance()->handleMessage(
+      QtWarningMsg, {}, QStringLiteral("Download failed: https://example.invalid/package?token=fixture-secret"), true
+  );
+  QCOMPARE(spy.count(), 1);
+  const auto visible = spy.takeFirst().first().toString();
+  QVERIFY(visible.contains(QStringLiteral("Download failed: [URL]")));
+  QVERIFY(!visible.contains(QStringLiteral("fixture-secret")));
+
+  const QDir logs(synergy::managedRuntimeLogDirectory(synergy::RuntimeLogRole::Update));
+  const auto files = logs.entryList({QStringLiteral("*.log")}, QDir::Files);
+  QCOMPARE(files.size(), 1);
+  QFile file(logs.absoluteFilePath(files.first()));
+  QVERIFY(file.open(QIODevice::ReadOnly));
+  const auto data = file.readAll();
+  QVERIFY(data.contains("Download failed: [URL]"));
+  QVERIFY(!data.contains("fixture-secret"));
+}
+
 QTEST_MAIN(LoggerTests)
